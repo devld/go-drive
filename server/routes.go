@@ -53,17 +53,6 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 		c.JSON(200, entry)
 	})
 
-	// touch file
-	r.POST("/touch/*path", func(c *gin.Context) {
-		path := c.Param("path")
-		entry, e := dr.Touch(path)
-		if e != nil {
-			dr.handleError(e, c)
-			return
-		}
-		c.JSON(200, entry)
-	})
-
 	// mkdir
 	r.POST("/mkdir/*path", func(c *gin.Context) {
 		path := c.Param("path")
@@ -118,9 +107,12 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 	// write file
 	r.PUT("/content/*path", func(c *gin.Context) {
 		path := c.Param("path")
-		if e := dr.WriteContent(path, c.Request); e != nil {
+		entry, e := dr.WriteContent(path, c.Request)
+		if e != nil {
 			dr.handleError(e, c)
+			return
 		}
+		c.JSON(200, entry)
 	})
 }
 
@@ -167,15 +159,6 @@ func (dr DriveRoute) List(path string) ([]EntryJson, error) {
 func (dr DriveRoute) Get(path string) (*EntryJson, error) {
 	path = fsPath.Clean(path)
 	entry, e := dr.d.Get(path)
-	if e != nil {
-		return nil, e
-	}
-	return NewEntryJson(entry), nil
-}
-
-func (dr DriveRoute) Touch(path string) (*EntryJson, error) {
-	path = fsPath.Clean(path)
-	entry, e := dr.d.Touch(path)
 	if e != nil {
 		return nil, e
 	}
@@ -263,18 +246,13 @@ func (dr DriveRoute) GetContent(path string, w http.ResponseWriter, req *http.Re
 	return common.NewNotAllowedError("could not download this file")
 }
 
-func (dr DriveRoute) WriteContent(path string, req *http.Request) error {
+func (dr DriveRoute) WriteContent(path string, req *http.Request) (*EntryJson, error) {
 	path = fsPath.Clean(path)
-	file, e := dr.d.Get(path)
+	entry, e := dr.d.Save(path, req.Body, func(loaded int64) {})
 	if e != nil {
-		return e
+		return nil, e
 	}
-	writer, ok := file.(common.IWriteable)
-	if !ok {
-		return common.NewNotAllowedError("not allowed")
-	}
-	defer func() { _ = req.Body.Close() }()
-	return writer.Write(req.Body, func(loaded int64) {})
+	return NewEntryJson(entry), nil
 }
 
 func (dr DriveRoute) proxyRequest(url string, w http.ResponseWriter, req *http.Request) error {

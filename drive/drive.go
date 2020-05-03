@@ -47,12 +47,12 @@ func (d Drive) Get(path string) (common.IEntry, error) {
 	return drive.Get(path)
 }
 
-func (d Drive) Touch(path string) (common.IEntry, error) {
+func (d Drive) Save(path string, reader io.Reader, progress common.OnProgress) (common.IEntry, error) {
 	drive, path, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	return drive.Touch(path)
+	return drive.Save(path, reader, progress)
 }
 
 func (d Drive) MakeDir(path string) (common.IEntry, error) {
@@ -66,6 +66,13 @@ func (d Drive) MakeDir(path string) (common.IEntry, error) {
 func (d Drive) Copy(from common.IEntry, to string, progress common.OnProgress) (common.IEntry, error) {
 	driveTo, pathTo, e := d.Resolve(to)
 	if e != nil {
+		return nil, e
+	}
+	_, e = driveTo.Get(pathTo)
+	if e == nil {
+		return nil, common.NewNotAllowedError("dst file exists")
+	}
+	if !common.IsNotFoundError(e) {
 		return nil, e
 	}
 	entry, e := driveTo.Copy(from, pathTo, progress)
@@ -87,7 +94,7 @@ func (d Drive) Copy(from common.IEntry, to string, progress common.OnProgress) (
 			return nil, e
 		}
 		defer func() { _ = resp.Body.Close() }()
-		return attemptCopyFile(driveTo, pathTo, resp.Body, progress)
+		return driveTo.Save(pathTo, resp.Body, progress)
 	}
 	readable, ok := from.(common.IReadable)
 	if ok {
@@ -96,25 +103,9 @@ func (d Drive) Copy(from common.IEntry, to string, progress common.OnProgress) (
 			return nil, e
 		}
 		defer func() { _ = reader.Close() }()
-		return attemptCopyFile(driveTo, pathTo, reader, progress)
+		return driveTo.Save(pathTo, reader, progress)
 	}
 	return nil, common.NewNotAllowedError("source file is not readable")
-}
-
-func attemptCopyFile(driveTo common.IDrive, pathTo string, reader io.Reader, progress common.OnProgress) (common.IEntry, error) {
-	entry, e := driveTo.Touch(pathTo)
-	if e != nil {
-		return nil, e
-	}
-	writeable, ok := entry.(common.IWriteable)
-	if !ok {
-		return nil, common.NewNotAllowedError("destination file is not writeable")
-	}
-	e = writeable.Write(reader, progress)
-	if e != nil {
-		return nil, e
-	}
-	return driveTo.Get(pathTo)
 }
 
 func (d Drive) Move(from string, to string) (common.IEntry, error) {

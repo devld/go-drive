@@ -89,12 +89,14 @@ func (f *FsDrive) Get(path string) (common.IEntry, error) {
 	return f.newFsFile(path, stat)
 }
 
-func (f *FsDrive) Touch(path string) (common.IEntry, error) {
+func (f *FsDrive) Save(path string, reader io.Reader, progress common.OnProgress) (common.IEntry, error) {
 	path = f.getPath(path)
-	if e := requireFile(path, false); e != nil {
+	file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	if e != nil {
 		return nil, e
 	}
-	file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
+	defer func() { _ = file.Close() }()
+	_, e = common.CopyWithProgress(file, reader, progress)
 	if e != nil {
 		return nil, e
 	}
@@ -150,7 +152,7 @@ func (f *FsDrive) List(path string) ([]common.IEntry, error) {
 	path = f.getPath(path)
 	isDir, e := common.IsDir(path)
 	if os.IsNotExist(e) {
-		return nil, common.NewNotFoundError(e.Error())
+		return nil, common.NewNotFoundError("file does not exist")
 	}
 	if !isDir {
 		return nil, common.NewNotAllowedError("cannot list on file")
@@ -242,18 +244,6 @@ func (f *FsFile) GetReader() (io.ReadCloser, error) {
 		return nil, common.NewNotFoundError("file does not exist")
 	}
 	return os.Open(path)
-}
-
-func (f *FsFile) Write(reader io.Reader, progress common.OnProgress) error {
-	if !f.Type().IsFile() {
-		return common.NewNotAllowedError("cannot write to non-file")
-	}
-	file, e := os.OpenFile(f.drive.getPath(f.path), os.O_RDWR|os.O_TRUNC, 0644)
-	if e != nil {
-		return e
-	}
-	_, e = common.CopyWithProgress(file, reader, progress)
-	return e
 }
 
 func (f *fsDriveMeta) CanWrite() bool {

@@ -26,6 +26,11 @@ func IsNotSupportedError(e error) bool {
 	return ok
 }
 
+func IsNotFoundError(e error) bool {
+	_, ok := e.(NotFoundError)
+	return ok
+}
+
 func NewNotFoundError(msg string) NotFoundError {
 	return NotFoundError{msg}
 }

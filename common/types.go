@@ -42,10 +42,6 @@ type IReadable interface {
 	GetReader() (io.ReadCloser, error)
 }
 
-type IWriteable interface {
-	Write(reader io.Reader, progress OnProgress) error
-}
-
 type IDriveMeta interface {
 	CanWrite() bool
 	DirectlyUpload() bool
@@ -55,7 +51,7 @@ type IDriveMeta interface {
 type IDrive interface {
 	Meta() IDriveMeta
 	Get(path string) (IEntry, error)
-	Touch(path string) (IEntry, error)
+	Save(path string, reader io.Reader, progress OnProgress) (IEntry, error)
 	MakeDir(path string) (IEntry, error)
 	Copy(from IEntry, to string, progress OnProgress) (IEntry, error)
 	Move(from string, to string) (IEntry, error)
