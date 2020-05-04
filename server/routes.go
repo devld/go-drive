@@ -21,17 +21,7 @@ func NewDriveRoute(d common.IDrive) DriveRoute {
 }
 
 func (dr DriveRoute) Init(r *gin.Engine) {
-	// list drives
-	r.GET("/drives", func(c *gin.Context) {
-		drives, e := dr.ListDrives()
-		if e != nil {
-			dr.handleError(e, c)
-			return
-		}
-		c.JSON(200, drives)
-	})
-
-	// list entries
+	// list entries/drives
 	r.GET("/entries/*path", func(c *gin.Context) {
 		path := c.Param("path")
 		list, e := dr.List(path)
@@ -129,18 +119,6 @@ func (dr DriveRoute) handleError(e error, c *gin.Context) {
 	}
 	log.Println("unknown error", e)
 	_ = c.AbortWithError(500, e)
-}
-
-func (dr DriveRoute) ListDrives() ([]EntryJson, error) {
-	drives, e := dr.d.List("/")
-	if e != nil {
-		return nil, e
-	}
-	res := make([]EntryJson, 0, len(drives))
-	for _, v := range drives {
-		res = append(res, *NewEntryJson(v))
-	}
-	return res, nil
 }
 
 func (dr DriveRoute) List(path string) ([]EntryJson, error) {

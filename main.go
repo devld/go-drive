@@ -9,11 +9,14 @@ import (
 func main() {
 
 	localDrive, e := drive.NewFsDrive("D:\\data\\Temp\\test\\drive-local")
+	localDrive2, e := drive.NewFsDrive("D:\\coding")
+
 	if e != nil {
 		panic(e)
 	}
 	d := drive.NewDrive()
 	d.AddDrive("local", localDrive)
+	d.AddDrive("local2", localDrive2)
 
 	dr := server.NewDriveRoute(d)
 

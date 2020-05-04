@@ -185,11 +185,11 @@ func (d driveEntry) Meta() common.IEntryMeta {
 }
 
 func (d driveEntry) CreatedAt() int64 {
-	return 0
+	return -1
 }
 
 func (d driveEntry) UpdatedAt() int64 {
-	return 0
+	return -1
 }
 
 type driveEntryMeta struct {
