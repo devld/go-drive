@@ -1,8 +1,10 @@
 <template>
   <div
     class="entry-item"
-    :class="[`entry-item--${entry.type}`, `entry-item--ext-${ext}`]"
-    @click="$emit('click', entry)"
+    :class="[
+      `entry-item--${entry.type}`,
+      entry.type === 'file' ? `entry-item--ext-${ext}` : ''
+    ]"
   >
     <span class="entry-item__icon">
       <svg class="icon" aria-hidden="true">
@@ -45,10 +47,6 @@ export default {
   display: flex;
   cursor: pointer;
   padding: 4px 16px;
-
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.08);
-  }
 }
 
 .entry-item__icon {
@@ -63,6 +61,7 @@ export default {
   flex: 1;
   display: flex;
   align-items: center;
+  overflow: hidden;
 }
 
 .entry-item__name {
@@ -79,7 +78,7 @@ export default {
 }
 
 .entry-item__size {
-  width: 100px;
+  width: 80px;
   font-size: 14px;
   text-align: right;
   white-space: nowrap;

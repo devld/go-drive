@@ -1,7 +1,11 @@
 <template>
   <ul class="path-bar">
-    <li class="path-bar__segment" v-for="(s, i) in segments" :key="i">
-      <span class="path-bar__path" @click="pathChange(i)">{{ s }}</span>
+    <li class="path-bar__segment" v-for="s in segments" :key="s.path">
+      <a
+        class="path-bar__path"
+        :href="entryLink ? entryLink(s.path) : 'javascript:;'"
+        @click="pathChange(s)"
+      >{{ s.name }}</a>
     </li>
   </ul>
 </template>
@@ -16,19 +20,26 @@ export default {
     path: {
       type: String,
       required: true
+    },
+    entryLink: {
+      type: Function
     }
   },
   computed: {
     segments () {
-      const segments = this.path.replace(/\/+/g, '/').split('/').filter(s => !!s)
-      segments.splice(0, 0, '/')
-      return segments
+      if (!this.path) return []
+      const ss = this.path.replace(/\/+/g, '/').split('/').filter(s => !!s)
+      const pathSegments = [{ name: '/', path: '/' }]
+      ss.forEach((s, i) => {
+        pathSegments.push({ name: s, path: '/' + ss.slice(0, i + 1).join('/') })
+      })
+      return pathSegments
     }
   },
   methods: {
-    pathChange (i) {
-      const path = this.segments.slice(0, i + 1).join('/').replace(/\/+/g, '/')
-      this.$emit('path-change', path)
+    pathChange (s) {
+      if (this.entryLink) return
+      this.$emit('path-change', s.path)
     }
   }
 }
@@ -56,5 +67,7 @@ export default {
 
 .path-bar__path {
   cursor: pointer;
+  text-decoration: none;
+  color: unset;
 }
 </style>

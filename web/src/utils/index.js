@@ -1,5 +1,6 @@
 
 import dayjs from 'dayjs'
+import markdown from './directives/markdown'
 
 export function formatTime (d, toFormat) {
   const date = dayjs(d)
@@ -48,15 +49,22 @@ const filters = {
   formatTime, formatBytes
 }
 
+const directives = {
+  markdown
+}
+
 const utils = {
   formatTime, formatBytes, filenameExt, pathJoin
 }
 
 export default {
   install (Vue) {
+    Vue.prototype.$ = utils
     Object.keys(filters).forEach(key => {
       Vue.filter(key, filters[key])
-      Vue.prototype.$ = utils
+    })
+    Object.keys(directives).forEach(key => {
+      Vue.directive(key, directives[key])
     })
   }
 }

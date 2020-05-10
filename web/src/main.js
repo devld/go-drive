@@ -6,6 +6,8 @@ import store from './store'
 import Components from '@/components'
 import Utils from '@/utils'
 
+import '@/components/styles/index.scss'
+
 Vue.config.productionTip = false
 
 Vue.use(Components)

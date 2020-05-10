@@ -1,0 +1,27 @@
+.icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.15em;
+  fill: currentColor;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 880px) {
+  .entry-item__modified-time {
+    display: none;
+  }
+}
+
+// animations
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+
+@import url('~github-markdown-css/github-markdown.css');

@@ -1,15 +1,23 @@
 <template>
   <div class="entry-list">
-    <path-bar :path="path" @path-change="$emit('path-change', $event)" />
-    <div class="entry-list__entries">
-      <entry-item v-if="!isRootPath" :entry="parentDirEntry" @click="entryClicked" />
-      <entry-item
-        v-for="(entry, i) in sortedEntries"
-        :key="i"
-        :entry="entry"
-        @click="entryClicked"
-      />
-    </div>
+    <path-bar
+      v-if="!isRootPath"
+      :path="path"
+      :entry-link="getEntryLink"
+      @path-change="$emit('path-change', $event)"
+    />
+    <ul class="entry-list__entries">
+      <li class="entry-list__item" v-if="!isRootPath">
+        <a :href="getEntryLink(parentDirEntry)" @click="entryClicked(parentDirEntry, $event)">
+          <entry-item :entry="parentDirEntry" />
+        </a>
+      </li>
+      <li class="entry-list__item" v-for="entry in sortedEntries" :key="path + entry.name">
+        <a :href="getEntryLink(entry)" @click="entryClicked(entry, $event)">
+          <entry-item :entry="entry" />
+        </a>
+      </li>
+    </ul>
   </div>
 </template>
 <script>
@@ -50,6 +58,9 @@ export default {
     sort: {
       type: String,
       default: 'default'
+    },
+    entryLink: {
+      type: Function
     }
   },
   data () {
@@ -67,19 +78,63 @@ export default {
     }
   },
   methods: {
-    entryClicked (entry) {
+    entryClicked (entry, e) {
+      e.preventDefault()
       const path = pathClean(pathJoin(this.path, entry.name))
       if (entry.type === 'drive' || entry.type === 'dir') {
         this.$emit('path-change', path)
       } else if (entry.type === 'file') {
-        this.$emit('open-file', path)
+        this.$emit('open-file', { path, entry })
       }
+    },
+    getEntryLink (entry) {
+      let link
+      if (this.entryLink) {
+        if (typeof (entry) === 'string') {
+          link = this.entryLink(entry)
+        } else {
+          link = this.entryLink(entry, this.path)
+        }
+      }
+      if (!link) link = 'javascript:;'
+      return link
     }
   }
 }
 </script>
 <style lang="scss">
-.entry-list .path-bar {
-  margin-bottom: 16px;
+.entry-list {
+  .path-bar {
+    margin-bottom: 16px;
+  }
+}
+
+.entry-list__entries {
+  margin: 0;
+  padding: 0;
+
+  & > li {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+  }
+}
+
+.entry-list__item {
+  animation: fadein 0.3s;
+
+  & > a {
+    display: block;
+    text-decoration: none;
+    color: unset;
+
+    &:focus {
+      background-color: rgba(0, 0, 0, 0.08);
+    }
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.08);
+    }
+  }
 }
 </style>
