@@ -22,6 +22,13 @@ export function formatBytes (bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }
 
+export function filename (path) {
+  if (!path) return ''
+  const i = path.lastIndexOf('/')
+  if (i === -1) return path
+  return path.substr(i + 1)
+}
+
 export function filenameExt (filename) {
   if (!filename) return ''
   const i = filename.lastIndexOf('.')

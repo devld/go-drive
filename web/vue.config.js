@@ -1,3 +1,6 @@
+const CopyWebpackPlugin = require('copy-webpack-plugin')
+const path = require('path')
+
 module.exports = {
   publicPath: './',
   productionSourceMap: false,
@@ -12,5 +15,15 @@ module.exports = {
         }
       }
     }
+  },
+
+  configureWebpack: {
+    plugins: [
+      new CopyWebpackPlugin([{
+        from: path.resolve(__dirname, 'node_modules/codemirror/mode/*/*'),
+        to: path.resolve(__dirname, 'dist/static/codemirror/'),
+        context: path.resolve(__dirname, 'node_modules/codemirror/')
+      }])
+    ]
   }
 }

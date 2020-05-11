@@ -3,8 +3,6 @@ import VueRouter from 'vue-router'
 
 import Home from '@/views/Home'
 
-import ErrorPage from '@/views/ErrorPage.vue'
-
 Vue.use(VueRouter)
 
 const routes = [
@@ -20,9 +18,9 @@ const routes = [
     props: true
   },
   {
-    name: 'ErrorPage',
-    path: '/error/:code',
-    component: ErrorPage,
+    name: 'TextEditor',
+    path: '/editor/:path(.*)',
+    component: () => import('@/views/TextEditPage'),
     props: true
   }
 ]

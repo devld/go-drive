@@ -1,25 +1,34 @@
 <template>
   <div class="home">
     <main class="files-list">
-      <entry-list-view :path="path" @entries-load="entriesLoaded" :entry-link="makeEntryRouteLink" />
+      <entry-list-view
+        :path="path"
+        :entry-link="makeEntryRouteLink"
+        @entries-load="entriesLoaded"
+        @open-file="openFile"
+      />
     </main>
-    <footer>
-      <page-footer v-if="readmeContent" :readme="readmeContent" />
+    <footer class="page-footer" v-if="readmeContent">
+      <div class="markdown-body" v-markdown="readmeContent">
+        <p style="text-align: center;">Loading README...</p>
+      </div>
     </footer>
   </div>
 </template>
 <script>
-import { getContent } from '@/api'
-import PageFooter from './PageFooter.vue'
-import { pathJoin, pathClean } from '@/utils'
 import EntryListView from '@/views/EntryListView'
+
+import { getContent } from '@/api'
+import { pathJoin, pathClean } from '@/utils'
+
+import { resolveEntryHandlerPage, fileList } from './file-handlers'
 
 const README_FILENAME = 'readme.md'
 const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
 
 export default {
   name: 'Home',
-  components: { EntryListView, PageFooter },
+  components: { EntryListView },
   data () {
     return {
       path: '/',
@@ -35,6 +44,12 @@ export default {
     this.path = '/' + (path || '')
   },
   methods: {
+    openFile ({ entry, path }) {
+      const handler = resolveEntryHandlerPage(entry, path)
+      if (handler) {
+        this.$router.push(`/${handler.name}${path}`)
+      }
+    },
     entriesLoaded ({ entries, path }) {
       if (path !== this.path) {
         this.$router.push(`/files${path}`)
@@ -64,21 +79,37 @@ export default {
       }
     },
     makeEntryRouteLink (entryOrPath, path) {
+      let entryPath
+      let handler
       if (typeof (entryOrPath) === 'string') {
-        return `#/files${entryOrPath}`
+        handler = fileList()
+        entryPath = entryOrPath
+      } else {
+        entryPath = pathClean(pathJoin(path, entryOrPath.name))
+        handler = resolveEntryHandlerPage(entryOrPath, entryPath)
       }
-      if (entryOrPath.type === 'file') return
-      return '#/files' + pathClean(pathJoin(path, entryOrPath.name))
+      if (handler) {
+        return `#/${handler.name}${entryPath || ''}`
+      }
     }
   }
 }
 </script>
 <style lang="scss">
-.home {
+.files-list {
+  max-width: 880px;
+  margin: 42px auto 0;
+  background-color: #fff;
+  padding: 16px 0;
+  border-radius: 16px;
+}
+
+.page-footer {
+  box-sizing: border-box;
   max-width: 880px;
   margin: 42px auto;
   background-color: #fff;
-  padding: 16px 0;
+  padding: 16px;
   border-radius: 16px;
 }
 

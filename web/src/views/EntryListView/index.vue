@@ -8,10 +8,7 @@
       @open-file="openFile"
       :entry-link="entryLink"
     />
-    <div v-else class="entry-list__error">
-      <span class="error-code" :title="error.message">{{ error.status }}</span>
-      <span class="error-message">{{ errorMessages[error.status] }}</span>
-    </div>
+    <error-view v-else :status="error.status" :message="error.message" />
   </div>
 </template>
 <script>
@@ -76,10 +73,7 @@ export default {
         this.loadedPath = path
         this.$emit('entries-load', { entries: this.entries, path: this.loadedPath })
       } catch (e) {
-        if (e && e.response) {
-          this.error = { status: e.response.status, message: e.response.data }
-          return
-        }
+        this.error = e
         this.$emit('error', e)
       } finally {
         this.$emit('loading', false)
@@ -88,16 +82,3 @@ export default {
   }
 }
 </script>
-<style lang="scss">
-.entry-list__error {
-  user-select: none;
-  text-align: center;
-  padding: 20px 0;
-
-  .error-code {
-    display: block;
-    font-weight: bold;
-    font-size: 80px;
-  }
-}
-</style>

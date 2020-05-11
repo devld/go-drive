@@ -1,9 +1,10 @@
-import EntryList from './EntryList.vue'
 import EntryItem from './EntryItem'
+import EntryList from './EntryList.vue'
 import PathBar from './PathBar.vue'
+import ErrorView from './ErrorView.vue'
 
 const components = {
-  EntryList, EntryItem, PathBar
+  EntryList, EntryItem, PathBar, ErrorView
 }
 
 export default {
