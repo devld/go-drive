@@ -14,6 +14,7 @@
     "codemirror-github-light": "^0.4.2",
     "core-js": "^3.6.4",
     "dayjs": "^1.8.26",
+    "dompurify": "^2.0.11",
     "github-markdown-css": "^4.0.0",
     "highlight.js": "^10.0.2",
     "marked": "^1.0.0",
