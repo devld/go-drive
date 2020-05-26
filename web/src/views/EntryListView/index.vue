@@ -2,6 +2,7 @@
   <div class="entry-list-view">
     <entry-list
       v-if="!error"
+      ref="entryList"
       :path="loadedPath"
       :entries="entries"
       @path-change="pathChange"
@@ -13,6 +14,19 @@
 </template>
 <script>
 import { listEntries } from '@/api'
+
+const entriesCache = {}
+async function listEntriesWithCache (path) {
+  let entries
+  if (entriesCache[path]) {
+    entries = entriesCache[path]
+    delete entriesCache[path]
+    return entries
+  }
+  entries = await listEntries(path)
+  entriesCache[path] = entries
+  return entries
+}
 
 export default {
   name: 'EntryListView',
@@ -44,8 +58,9 @@ export default {
     }
   },
   watch: {
-    path () {
-      this.commitPathChange(this.path)
+    path (path, oldPath) {
+      this.tryRecoverState(path, oldPath)
+      this.commitPathChange(path)
     }
   },
   created () {
@@ -64,14 +79,31 @@ export default {
       this.loadEntries()
       this.$emit('path-change', this.currentPath)
     },
+    tryRecoverState (newPath, oldPath) {
+      if (!newPath.endsWith('/')) newPath = newPath + '/'
+      if (!oldPath.startsWith(newPath)) return
+      let path = oldPath.substr(newPath.length)
+      const i = path.indexOf('/')
+      if (i >= 0) path = path.substr(0, i)
+      this._lastEntry = path
+    },
+    focusOnEntry (name) {
+      this.$refs.entryList.focusOnEntry(name)
+    },
     async loadEntries () {
       this.error = null
       this.$emit('loading', true)
       try {
         const path = this.currentPath
-        this.entries = await listEntries(path)
+        this.entries = await listEntriesWithCache(path)
         this.loadedPath = path
         this.$emit('entries-load', { entries: this.entries, path: this.loadedPath })
+
+        await this.$nextTick()
+        if (this._lastEntry) {
+          this.focusOnEntry(this._lastEntry)
+          this._lastEntry = null
+        }
       } catch (e) {
         this.error = e
         this.$emit('error', e)

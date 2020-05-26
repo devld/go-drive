@@ -8,12 +8,16 @@
     />
     <ul class="entry-list__entries">
       <li class="entry-list__item" v-if="!isRootPath">
-        <a :href="getEntryLink(parentDirEntry)" @click="entryClicked(parentDirEntry, $event)">
+        <a
+          :href="getEntryLink(parentDirEntry)"
+          @click="entryClicked(parentDirEntry, $event)"
+          ref="parentEntry"
+        >
           <entry-item :entry="parentDirEntry" />
         </a>
       </li>
       <li class="entry-list__item" v-for="entry in sortedEntries" :key="path + entry.name">
-        <a :href="getEntryLink(entry)" @click="entryClicked(entry, $event)">
+        <a :href="getEntryLink(entry)" @click="entryClicked(entry, $event)" ref="entries">
           <entry-item :entry="entry" />
         </a>
       </li>
@@ -98,6 +102,15 @@ export default {
       }
       if (!link) link = 'javascript:;'
       return link
+    },
+    focusOnEntry (name) {
+      let dom
+      if (name === '..') dom = this.$refs.parentEntry
+      else {
+        const index = this.sortedEntries.findIndex(e => e.name === name)
+        if (index >= 0) dom = this.$refs.entries[index]
+      }
+      dom && dom.focus()
     }
   }
 }
