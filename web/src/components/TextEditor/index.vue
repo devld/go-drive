@@ -3,7 +3,7 @@
 </template>
 <script>
 import CodeMirror from './codemirror'
-import { filenameExt } from '../../utils'
+import { filenameExt } from '@/utils'
 
 const THEME_NAME = 'github-light'
 
@@ -21,12 +21,9 @@ export default {
     }
   },
   watch: {
-    filename: {
-      immediate: true,
-      handler () {
-        if (this.filename) {
-          this.setEditorModeByFilename(this.filename)
-        }
+    filename () {
+      if (this.filename) {
+        this.setEditorMode()
       }
     },
     value: {
@@ -48,13 +45,14 @@ export default {
         theme: THEME_NAME, value: this.content || '',
         lineNumbers: this.lineNumbers
       })
+      this.setEditorMode()
       this.editor.on('change', () => {
         this.content = this.editor.getValue()
         this.$emit('input', this.content)
       })
     },
-    async setEditorModeByFilename (filename) {
-      const ext = filenameExt(filename)
+    async setEditorMode () {
+      const ext = filenameExt(this.filename)
       const mode = CodeMirror.findModeByExtension(ext)
       if (mode) {
         this.editor.setOption('mode', mode.mode)

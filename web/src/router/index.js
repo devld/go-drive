@@ -16,11 +16,6 @@ const routes = [
     path: '/files/:path(.*)',
     component: Home,
     props: true
-  },
-  {
-    name: 'TextEditor',
-    path: '/editor/:path(.*)',
-    component: () => import('@/views/TextEditPage')
   }
 ]
 

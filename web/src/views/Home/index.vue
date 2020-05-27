@@ -13,6 +13,15 @@
         <p style="text-align: center;">Loading README...</p>
       </div>
     </footer>
+    <div class="file-viewer-dialog" v-if="fileView">
+      <component
+        :is="fileView.component"
+        :path="fileView.path"
+        :key="fileView.path"
+        @close="closeFileView"
+        @file-change="fileViewChange"
+      />
+    </div>
   </div>
 </template>
 <script>
@@ -21,33 +30,37 @@ import EntryListView from '@/views/EntryListView'
 import { getContent } from '@/api'
 import { pathJoin, pathClean } from '@/utils'
 
-import { resolveEntryHandlerPage, fileList } from './file-handlers'
+import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from './file-handlers'
 
 const README_FILENAME = 'readme.md'
 const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
 
 export default {
   name: 'Home',
-  components: { EntryListView },
+  components: { EntryListView, ...HANDLER_COMPONENTS },
   data () {
     return {
       path: '/',
-      readmeContent: ''
+      readmeContent: '',
+
+      fileView: null
     }
   },
   beforeRouteUpdate (to, from, next) {
     this.path = '/' + to.params.path
     next()
+    this.resolveFileView()
   },
   created () {
     const path = this.$route.params.path
     this.path = '/' + (path || '')
+    this.resolveFileView()
   },
   methods: {
     openFile ({ entry, path }) {
-      const handler = resolveEntryHandlerPage(entry, path)
-      if (handler) {
-        this.$router.push(`/${handler.name}${path}`)
+      const routePath = this.makeEntryRouteLink(entry, path)
+      if (routePath) {
+        location.href = routePath
       }
     },
     entriesLoaded ({ entries, path }) {
@@ -79,18 +92,45 @@ export default {
       }
     },
     makeEntryRouteLink (entryOrPath, path) {
-      let entryPath
-      let handler
+      const basePath = '#/files'
       if (typeof (entryOrPath) === 'string') {
-        handler = fileList()
-        entryPath = entryOrPath
+        return `${basePath}${entryOrPath}`
+      }
+      const entry = entryOrPath
+      if (entry.type === 'drive' || entry.type === 'dir') {
+        return `${basePath}${pathClean(pathJoin(path, entry.name))}`
+      }
+      const handlers = resolveEntryHandler(entry, path)
+      if (handlers.length > 0) {
+        return this.makeEntryHandlerLink(handlers[0], entry)
+      }
+    },
+    makeEntryHandlerLink (handler, entry) {
+      return `#/files${this.path}?` +
+        `v=${handler.name}&` +
+        `f=${encodeURIComponent(entry.name || '')}`
+    },
+    resolveFileView () {
+      const handler = getHandler(this.$route.query.v)
+      const file = this.$route.query.f
+      if (!handler || !file) {
+        this.fileView = null
       } else {
-        entryPath = pathClean(pathJoin(path, entryOrPath.name))
-        handler = resolveEntryHandlerPage(entryOrPath, entryPath)
+        this.fileView = {
+          component: handler.view.name,
+          path: pathClean(pathJoin(this.path, file))
+        }
       }
-      if (handler) {
-        return `#/${handler.name}${entryPath || ''}`
+    },
+    closeFileView () {
+      if (document.referrer && location.href.startsWith(document.referrer)) {
+        this.$router.go(-1)
+      } else {
+        this.$router.replace(`/files${this.path}`)
       }
+    },
+    fileViewChange () {
+
     }
   }
 }
@@ -111,6 +151,14 @@ export default {
   background-color: #fff;
   padding: 16px;
   border-radius: 16px;
+}
+
+.file-viewer-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 @media screen and (max-width: 900px) {

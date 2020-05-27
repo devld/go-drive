@@ -52,6 +52,15 @@ export function pathClean (path) {
   return '/' + paths.join('/')
 }
 
+const DEFAULT_VALUE_FN = e => e
+export function mapOf (list, keyFn, valueFn = DEFAULT_VALUE_FN) {
+  const map = {}
+  list.forEach(e => {
+    map[keyFn(e)] = valueFn(e)
+  })
+  return map
+}
+
 const filters = {
   formatTime, formatBytes
 }

@@ -1,34 +1,33 @@
 /* eslint-disable quote-props */
-import { filenameExt } from '@/utils'
+import { filenameExt, mapOf } from '@/utils'
 
-const codeEditor = (entry, path) => ({ name: 'editor' })
-
-export const fileList = (entry, path) => {
-  return { name: 'files' }
-}
-
-const fileViewers = {
-  'md': codeEditor,
-  'js': codeEditor,
-  'html': codeEditor,
-  'css': codeEditor,
-  'java': codeEditor,
-  'kt': codeEditor,
-  'gradle': codeEditor,
-  'xml': codeEditor
-}
-
-export function resolveEntryHandlerPage (entry, entryPath) {
-  if (entry.type === 'drive' || entry.type === 'dir') {
-    return fileList(entry, entryPath)
+const HANDLERS = [
+  {
+    name: 'editor',
+    view: {
+      name: 'TextEditView',
+      component: () => import('@/views/TextEditView')
+    },
+    supports: (entry, path, ext) => entry.type === 'file' && [
+      'md', 'js', 'html', 'css', 'java', 'kt', 'json',
+      'gradle', 'xml', 'properties', 'yml', 'yaml'
+    ].includes(ext)
   }
+]
 
+export const HANDLER_COMPONENTS = mapOf(HANDLERS, h => h.view.name, h => h.view.component)
+
+const HANDLERS_MAP = mapOf(HANDLERS, h => h.name)
+
+export function getHandler (name) {
+  return HANDLERS_MAP[name]
+}
+
+export function resolveEntryHandler (entry, path) {
   const ext = filenameExt(entry.name)
-
-  if (entry.type === 'file') {
-    const fileViewer = fileViewers[ext]
-    if (fileViewer) {
-      return fileViewer(entry, entryPath)
-    }
+  const matches = []
+  for (const h of HANDLERS) {
+    if (h.supports(entry, path, ext)) matches.push(h)
   }
+  return matches
 }

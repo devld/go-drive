@@ -10,5 +10,7 @@ export function entry (path) {
 }
 
 export function getContent (path) {
-  return axios.get(`/content${path}`)
+  return axios.get(`/content${path}`, {
+    transformResponse: []
+  })
 }
