@@ -2,7 +2,9 @@
   <div class="home">
     <main class="files-list">
       <entry-list-view
+        ref="entryList"
         :path="path"
+        @path-change="pathChanged"
         :entry-link="makeEntryRouteLink"
         @entries-load="entriesLoaded"
         @open-file="openFile"
@@ -13,13 +15,13 @@
         <p style="text-align: center;">Loading README...</p>
       </div>
     </footer>
-    <div class="file-viewer-dialog" v-if="fileView">
+    <div class="file-viewer-dialog" v-if="entryHandlerView && entries">
       <component
-        :is="fileView.component"
-        :path="fileView.path"
-        :key="fileView.path"
-        @close="closeFileView"
-        @file-change="fileViewChange"
+        :is="entryHandlerView.component"
+        :path="entryHandlerView.path"
+        :entries="entries"
+        @close="closeEntryHandlerView"
+        @entry-change="entryHandlerViewChange"
       />
     </div>
   </div>
@@ -30,7 +32,7 @@ import EntryListView from '@/views/EntryListView'
 import { getContent } from '@/api'
 import { pathJoin, pathClean } from '@/utils'
 
-import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from './file-handlers'
+import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from './entry-handlers'
 
 const README_FILENAME = 'readme.md'
 const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
@@ -43,18 +45,19 @@ export default {
       path: '/',
       readmeContent: '',
 
-      fileView: null
+      entryHandlerView: null,
+      entries: null
     }
   },
   beforeRouteUpdate (to, from, next) {
     this.path = '/' + to.params.path
     next()
-    this.resolveFileView()
+    this.resolveEntryHandlerView()
   },
   created () {
     const path = this.$route.params.path
     this.path = '/' + (path || '')
-    this.resolveFileView()
+    this.resolveEntryHandlerView()
   },
   methods: {
     openFile ({ entry, path }) {
@@ -63,10 +66,14 @@ export default {
         location.href = routePath
       }
     },
+    pathChanged () {
+      this.entries = null
+    },
     entriesLoaded ({ entries, path }) {
       if (path !== this.path) {
         this.$router.push(`/files${path}`)
       }
+      this.entries = entries
       this.tryLoadReadme(entries)
     },
     async tryLoadReadme (entries) {
@@ -102,35 +109,43 @@ export default {
       }
       const handlers = resolveEntryHandler(entry, path)
       if (handlers.length > 0) {
-        return this.makeEntryHandlerLink(handlers[0], entry)
+        return this.makeEntryHandlerLink(handlers[0].name, entry.name)
       }
     },
-    makeEntryHandlerLink (handler, entry) {
+    makeEntryHandlerLink (handlerName, entryName) {
       return `#/files${this.path}?` +
-        `v=${handler.name}&` +
-        `f=${encodeURIComponent(entry.name || '')}`
+        `handler=${handlerName}&` +
+        `entry=${encodeURIComponent(entryName || '')}`
     },
-    resolveFileView () {
-      const handler = getHandler(this.$route.query.v)
-      const file = this.$route.query.f
-      if (!handler || !file) {
-        this.fileView = null
+    resolveEntryHandlerView () {
+      const handler = getHandler(this.$route.query.handler)
+      const entry = this.$route.query.entry
+      if (!handler || !entry) {
+        this.entryHandlerView = null
       } else {
-        this.fileView = {
+        this.entryHandlerView = {
+          handler: handler.name,
           component: handler.view.name,
-          path: pathClean(pathJoin(this.path, file))
+          path: pathClean(pathJoin(this.path, entry)),
+          entry
         }
       }
     },
-    closeFileView () {
+    closeEntryHandlerView () {
+      this.focusOnEntry(this.entryHandlerView.entry)
       if (document.referrer && location.href.startsWith(document.referrer)) {
         this.$router.go(-1)
       } else {
         this.$router.replace(`/files${this.path}`)
       }
     },
-    fileViewChange () {
-
+    entryHandlerViewChange (name) {
+      this.focusOnEntry(name)
+      if (this.entries.findIndex(e => e.name === name) === -1) return
+      location.replace(this.makeEntryHandlerLink(this.entryHandlerView.handler, name))
+    },
+    focusOnEntry (name) {
+      this.$refs.entryList.focusOnEntry(name)
     }
   }
 }

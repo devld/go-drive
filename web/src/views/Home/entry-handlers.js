@@ -12,6 +12,15 @@ const HANDLERS = [
       'md', 'js', 'html', 'css', 'java', 'kt', 'json',
       'gradle', 'xml', 'properties', 'yml', 'yaml'
     ].includes(ext)
+  },
+  {
+    name: 'image',
+    view: {
+      name: 'ImageView',
+      component: () => import('@/views/ImageView')
+    },
+    supports: (entry, path, ext) => entry.type === 'file' &&
+      ['jpg', 'jpeg', 'png', 'gif'].includes(ext)
   }
 ]
 

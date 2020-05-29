@@ -14,3 +14,7 @@ export function getContent (path) {
     transformResponse: []
   })
 }
+
+export function fileUrl (path) {
+  return `${process.env.VUE_APP_API}/content${path}`
+}
