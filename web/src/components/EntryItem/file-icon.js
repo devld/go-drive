@@ -9,7 +9,7 @@ const fileExts = {
   'dat': ['dat', 'data'],
   'deb': ['deb', 'rpm', 'msi'],
   'epub': ['epub'],
-  'mp3': ['mp3', 'm4a', 'ogg', 'flac'],
+  'mp': ['mp3', 'm4a', 'ogg', 'flac'],
   'exe': ['exe'],
   'gitignore': ['gitignore'],
   'gitattributes': ['gitattributes'],
@@ -19,7 +19,7 @@ const fileExts = {
   'json': ['json'],
   'log': ['log'],
   'md': ['md'],
-  'mp4': ['mp4', 'mov', 'flv', 'rmvb', 'mkv'],
+  'mp1': ['mp4', 'mov', 'flv', 'rmvb', 'mkv'],
   'pdf': ['pdf'],
   'doc': ['doc', 'docx'],
   'pptx': ['ppt', 'pptx'],
@@ -40,7 +40,6 @@ const fileFallbackIcon = 'file'
 
 export function getIconSVG (entry) {
   let icon
-  if (entry.type === 'drive') icon = dirIcon
   if (entry.type === 'dir') icon = dirIcon
   if (entry.type === 'file') icon = extMapping[filenameExt(entry.name)] || fileFallbackIcon
   if (entry.name === '..') icon = parentDirIcon

@@ -9,9 +9,17 @@
   overflow: hidden;
 }
 
-@media screen and (max-width: 880px) {
-  .entry-item__modified-time {
-    display: none;
+.close-button {
+  font-size: 28px;
+  outline: none;
+  border: none;
+  background-color: transparent;
+  color: #000;
+  user-select: none;
+  cursor: pointer;
+
+  &::before {
+    content: "×";
   }
 }
 
@@ -23,6 +31,16 @@
 
   to {
     opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0);
+  }
+
+  to {
+    transform: scale(1);
   }
 }
 

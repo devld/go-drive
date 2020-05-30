@@ -1,5 +1,8 @@
 /* eslint-disable quote-props */
 import { filenameExt, mapOf } from '@/utils'
+import DownloadView from '@/views/DownloadView'
+
+const TEXT_EDITOR_MAX_FILE_SIZE = 128 * 1024 // 128kb
 
 const HANDLERS = [
   {
@@ -10,8 +13,8 @@ const HANDLERS = [
     },
     supports: (entry, path, ext) => entry.type === 'file' && [
       'md', 'js', 'html', 'css', 'java', 'kt', 'json',
-      'gradle', 'xml', 'properties', 'yml', 'yaml'
-    ].includes(ext)
+      'gradle', 'xml', 'properties', 'yml', 'yaml', 'ini'
+    ].includes(ext) && entry.size <= TEXT_EDITOR_MAX_FILE_SIZE
   },
   {
     name: 'image',
@@ -21,6 +24,14 @@ const HANDLERS = [
     },
     supports: (entry, path, ext) => entry.type === 'file' &&
       ['jpg', 'jpeg', 'png', 'gif'].includes(ext)
+  },
+  {
+    name: 'download',
+    view: {
+      name: 'DownloadView',
+      component: DownloadView
+    },
+    supports: (entry) => entry.type === 'file'
   }
 ]
 

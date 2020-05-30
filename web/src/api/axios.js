@@ -1,7 +1,9 @@
 import Axios from 'axios'
 
+export const API_PATH = window.__api_path__ || process.env.VUE_APP_API
+
 const axios = Axios.create({
-  baseURL: process.env.VUE_APP_API
+  baseURL: API_PATH
 })
 
 class ApiError extends Error {

@@ -2,7 +2,7 @@
   <div class="text-edit-view">
     <h1 class="filename">
       <span>{{ filename }}</span>
-      <span class="button-close" @click="$emit('close')">×</span>
+      <button class="close-button" @click="$emit('close')"></button>
     </h1>
     <text-editor v-if="!error" v-model="content" :filename="filename" line-numbers />
     <error-view v-else :status="error.status" :message="error.message" />
@@ -21,6 +21,9 @@ export default {
     path: {
       type: String,
       required: true
+    },
+    entries: {
+      type: Array
     }
   },
   data () {
@@ -67,11 +70,15 @@ export default {
 
 .text-edit-view {
   position: relative;
-  height: 100%;
+  width: 100%;
+  max-width: 800px;
+  height: calc(100% - 64px);
+  margin: 32px;
   padding-top: 53px;
   background-color: #fff;
   overflow: hidden;
   box-sizing: border-box;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 
   .filename {
     position: absolute;
@@ -88,13 +95,11 @@ export default {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .button-close {
+  .close-button {
     position: absolute;
     top: 50%;
     right: 1em;
     transform: translateY(-50%);
-    user-select: none;
-    cursor: pointer;
   }
 
   .text-editor {
@@ -122,6 +127,15 @@ export default {
     user-select: none;
 
     animation: text-spacing 1s ease-in infinite alternate;
+  }
+}
+
+@media screen and (max-width: 800px) {
+  .text-edit-view {
+    width: 100%;
+    max-width: unset;
+    height: 100%;
+    margin: 0;
   }
 }
 </style>

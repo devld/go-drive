@@ -1,5 +1,5 @@
 
-import axios from './axios'
+import axios, { API_PATH } from './axios'
 
 export function listEntries (path) {
   return axios.get(`/entries${path}`)
@@ -16,5 +16,5 @@ export function getContent (path) {
 }
 
 export function fileUrl (path) {
-  return `${process.env.VUE_APP_API}/content${path}`
+  return `${API_PATH}/content${path}`
 }

@@ -29,10 +29,8 @@ import { pathJoin, pathClean } from '@/utils'
 
 const SORTS_METHOD = {
   default: (a, b) => {
-    const aType = a.type === 'drive' ? 'dir' : a.type
-    const bType = b.type === 'drive' ? 'dir' : b.type
-    if (aType === 'dir' && bType !== 'dir') return -1
-    if (aType !== 'dir' && bType === 'dir') return 1
+    if (a.type === 'dir' && b.type !== 'dir') return -1
+    if (a.type !== 'dir' && b.type === 'dir') return 1
     if (a.name > b.name) return 1
     else if (a.name < b.name) return -1
     return 0
@@ -85,7 +83,7 @@ export default {
     entryClicked (entry, e) {
       e.preventDefault()
       const path = pathClean(pathJoin(this.path, entry.name))
-      if (entry.type === 'drive' || entry.type === 'dir') {
+      if (entry.type === 'dir') {
         this.$emit('path-change', path)
       } else if (entry.type === 'file') {
         this.$emit('open-file', { path, entry })

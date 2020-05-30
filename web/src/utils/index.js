@@ -1,6 +1,7 @@
 
 import dayjs from 'dayjs'
 import markdown from './directives/markdown'
+import { fileUrl } from '@/api'
 
 export function formatTime (d, toFormat) {
   const date = dayjs(d)
@@ -77,7 +78,7 @@ const directives = {
 }
 
 const utils = {
-  formatTime, formatBytes, filenameExt, pathJoin
+  formatTime, formatBytes, filenameExt, pathJoin, fileUrl
 }
 
 export default {

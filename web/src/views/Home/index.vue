@@ -15,14 +15,16 @@
         <p style="text-align: center;">Loading README...</p>
       </div>
     </footer>
-    <div class="file-viewer-dialog" v-if="entryHandlerView && entries">
-      <component
-        :is="entryHandlerView.component"
-        :path="entryHandlerView.path"
-        :entries="entries"
-        @close="closeEntryHandlerView"
-        @entry-change="entryHandlerViewChange"
-      />
+    <div class="enter-handler-dialog" v-if="entryHandlerView && entries">
+      <div class="entry-handler-view">
+        <component
+          :is="entryHandlerView.component"
+          :path="entryHandlerView.path"
+          :entries="entries"
+          @close="closeEntryHandlerView"
+          @entry-change="entryHandlerViewChange"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -104,7 +106,7 @@ export default {
         return `${basePath}${entryOrPath}`
       }
       const entry = entryOrPath
-      if (entry.type === 'drive' || entry.type === 'dir') {
+      if (entry.type === 'dir') {
         return `${basePath}${pathClean(pathJoin(path, entry.name))}`
       }
       const handlers = resolveEntryHandler(entry, path)
@@ -127,12 +129,12 @@ export default {
           handler: handler.name,
           component: handler.view.name,
           path: pathClean(pathJoin(this.path, entry)),
-          entry
+          entryName: entry
         }
       }
     },
     closeEntryHandlerView () {
-      this.focusOnEntry(this.entryHandlerView.entry)
+      this.focusOnEntry(this.entryHandlerView.entryName)
       if (document.referrer && location.href.startsWith(document.referrer)) {
         this.$router.go(-1)
       } else {
@@ -168,12 +170,23 @@ export default {
   border-radius: 16px;
 }
 
-.file-viewer-dialog {
+.enter-handler-dialog {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.entry-handler-view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: scale-in 0.4s;
 }
 
 @media screen and (max-width: 900px) {

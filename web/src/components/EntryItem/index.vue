@@ -6,11 +6,7 @@
       entry.type === 'file' ? `entry-item--ext-${ext}` : ''
     ]"
   >
-    <span class="entry-item__icon">
-      <svg class="icon" aria-hidden="true">
-        <use :xlink:href="entryIcon" />
-      </svg>
-    </span>
+    <entry-icon class="entry-item__icon" :entry="entry" />
     <span class="entry-item__info">
       <span class="entry-item__name">{{ entry.name }}</span>
       <span
@@ -22,7 +18,6 @@
 </template>
 <script>
 import { filenameExt } from '@/utils'
-import { getIconSVG } from './file-icon'
 
 export default {
   name: 'EntryItem',
@@ -35,9 +30,6 @@ export default {
   computed: {
     ext () {
       return filenameExt(this.entry.name)
-    },
-    entryIcon () {
-      return getIconSVG(this.entry)
     }
   }
 }
@@ -82,5 +74,11 @@ export default {
   font-size: 14px;
   text-align: right;
   white-space: nowrap;
+}
+
+@media screen and (max-width: 880px) {
+  .entry-item__modified-time {
+    display: none;
+  }
 }
 </style>
