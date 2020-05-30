@@ -59,7 +59,7 @@ export default {
   created () {
     const path = this.$route.params.path
     this.path = '/' + (path || '')
-    this.resolveEntryHandlerView()
+    this.resolveEntryHandlerView(true)
   },
   methods: {
     openFile ({ entry, path }) {
@@ -119,12 +119,13 @@ export default {
         `handler=${handlerName}&` +
         `entry=${encodeURIComponent(entryName || '')}`
     },
-    resolveEntryHandlerView () {
+    resolveEntryHandlerView (init) {
       const handler = getHandler(this.$route.query.handler)
       const entry = this.$route.query.entry
       if (!handler || !entry) {
         this.entryHandlerView = null
       } else {
+        this.noHistory = init
         this.entryHandlerView = {
           handler: handler.name,
           component: handler.view.name,
@@ -135,10 +136,10 @@ export default {
     },
     closeEntryHandlerView () {
       this.focusOnEntry(this.entryHandlerView.entryName)
-      if (document.referrer && location.href.startsWith(document.referrer)) {
-        this.$router.go(-1)
-      } else {
+      if (this.noHistory) {
         this.$router.replace(`/files${this.path}`)
+      } else {
+        this.$router.go(-1)
       }
     },
     entryHandlerViewChange (name) {
