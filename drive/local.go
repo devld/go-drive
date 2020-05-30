@@ -38,6 +38,9 @@ func NewFsDrive(path string) (*FsDrive, error) {
 	if e != nil {
 		return nil, e
 	}
+	if exists, _ := common.FileExists(path); !exists {
+		return nil, common.NewNotFoundError("path not exist")
+	}
 	return &FsDrive{path}, nil
 }
 

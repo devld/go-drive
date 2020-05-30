@@ -168,7 +168,7 @@ func (d driveEntry) Name() string {
 }
 
 func (d driveEntry) Type() common.EntryType {
-	return "drive"
+	return common.TypeDir
 }
 
 func (d driveEntry) Size() int64 {
