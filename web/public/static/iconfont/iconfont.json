@@ -1,0 +1,191 @@
+{
+  "id": "1797304",
+  "name": "go-drive",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "867859",
+      "name": "icon-返回上一级",
+      "font_class": "iconfanhuishangyiji",
+      "unicode": "e605",
+      "unicode_decimal": 58885
+    },
+    {
+      "icon_id": "1190297",
+      "name": "file",
+      "font_class": "file",
+      "unicode": "e894",
+      "unicode_decimal": 59540
+    },
+    {
+      "icon_id": "1190782",
+      "name": "folder",
+      "font_class": "folder",
+      "unicode": "e652",
+      "unicode_decimal": 58962
+    },
+    {
+      "icon_id": "12600641",
+      "name": "com",
+      "font_class": "com",
+      "unicode": "e61a",
+      "unicode_decimal": 58906
+    },
+    {
+      "icon_id": "12600645",
+      "name": "conf",
+      "font_class": "conf",
+      "unicode": "e61c",
+      "unicode_decimal": 58908
+    },
+    {
+      "icon_id": "12600656",
+      "name": "csv",
+      "font_class": "csv",
+      "unicode": "e622",
+      "unicode_decimal": 58914
+    },
+    {
+      "icon_id": "12600663",
+      "name": "dat",
+      "font_class": "dat",
+      "unicode": "e627",
+      "unicode_decimal": 58919
+    },
+    {
+      "icon_id": "12600666",
+      "name": "deb",
+      "font_class": "deb",
+      "unicode": "e628",
+      "unicode_decimal": 58920
+    },
+    {
+      "icon_id": "12600675",
+      "name": "doc",
+      "font_class": "doc",
+      "unicode": "e62b",
+      "unicode_decimal": 58923
+    },
+    {
+      "icon_id": "12600695",
+      "name": "epub",
+      "font_class": "epub",
+      "unicode": "e62e",
+      "unicode_decimal": 58926
+    },
+    {
+      "icon_id": "12600701",
+      "name": "exe",
+      "font_class": "exe",
+      "unicode": "e630",
+      "unicode_decimal": 58928
+    },
+    {
+      "icon_id": "12600711",
+      "name": "gitignore",
+      "font_class": "gitignore",
+      "unicode": "e632",
+      "unicode_decimal": 58930
+    },
+    {
+      "icon_id": "12600713",
+      "name": "gitattributes",
+      "font_class": "gitattributes",
+      "unicode": "e633",
+      "unicode_decimal": 58931
+    },
+    {
+      "icon_id": "12600746",
+      "name": "iso",
+      "font_class": "iso",
+      "unicode": "e63c",
+      "unicode_decimal": 58940
+    },
+    {
+      "icon_id": "12600751",
+      "name": "jpeg",
+      "font_class": "jpeg",
+      "unicode": "e63e",
+      "unicode_decimal": 58942
+    },
+    {
+      "icon_id": "12600753",
+      "name": "json",
+      "font_class": "json",
+      "unicode": "e63f",
+      "unicode_decimal": 58943
+    },
+    {
+      "icon_id": "12600773",
+      "name": "log",
+      "font_class": "log",
+      "unicode": "e644",
+      "unicode_decimal": 58948
+    },
+    {
+      "icon_id": "12600784",
+      "name": "md",
+      "font_class": "md",
+      "unicode": "e647",
+      "unicode_decimal": 58951
+    },
+    {
+      "icon_id": "12600798",
+      "name": "mp3",
+      "font_class": "mp",
+      "unicode": "e648",
+      "unicode_decimal": 58952
+    },
+    {
+      "icon_id": "12600802",
+      "name": "mp4",
+      "font_class": "mp1",
+      "unicode": "e649",
+      "unicode_decimal": 58953
+    },
+    {
+      "icon_id": "12600840",
+      "name": "pdf",
+      "font_class": "pdf",
+      "unicode": "e64c",
+      "unicode_decimal": 58956
+    },
+    {
+      "icon_id": "12600861",
+      "name": "pptx",
+      "font_class": "pptx",
+      "unicode": "e650",
+      "unicode_decimal": 58960
+    },
+    {
+      "icon_id": "12600980",
+      "name": "xlsx",
+      "font_class": "xlsx",
+      "unicode": "e679",
+      "unicode_decimal": 59001
+    },
+    {
+      "icon_id": "12600984",
+      "name": "xml",
+      "font_class": "xml",
+      "unicode": "e67b",
+      "unicode_decimal": 59003
+    },
+    {
+      "icon_id": "12600994",
+      "name": "zip",
+      "font_class": "zip",
+      "unicode": "e681",
+      "unicode_decimal": 59009
+    },
+    {
+      "icon_id": "12601015",
+      "name": "apk",
+      "font_class": "apk",
+      "unicode": "e68b",
+      "unicode_decimal": 59019
+    }
+  ]
+}
