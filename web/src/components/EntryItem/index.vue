@@ -11,8 +11,8 @@
       <span class="entry-item__name">{{ entry.name }}</span>
       <span
         class="entry-item__modified-time"
-      >{{ entry.updated_at > 0 ? $.formatTime(entry.updated_at) : '' }}</span>
-      <span class="entry-item__size">{{ entry.size > 0 ? $.formatBytes(entry.size) : '' }}</span>
+      >{{ entry.updated_at >= 0 ? $.formatTime(entry.updated_at) : '' }}</span>
+      <span class="entry-item__size">{{ entry.size >= 0 ? $.formatBytes(entry.size) : '' }}</span>
     </span>
   </div>
 </template>

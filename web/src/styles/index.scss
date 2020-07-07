@@ -9,6 +9,26 @@
   overflow: hidden;
 }
 
+.simple-button {
+  font-size: 16px;
+  outline: none;
+  border: none;
+  background-color: #03a9f4;
+  color: #fff;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: 0.3s;
+
+  &:hover {
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  }
+
+  &[disabled] {
+    background-color: #999;
+    cursor: not-allowed;
+  }
+}
+
 .close-button {
   font-size: 28px;
   outline: none;

@@ -1,10 +1,21 @@
 <template>
-  <div class="text-edit-view">
+  <div class="text-edit-view" @keydown="onKeyDown">
     <h1 class="filename">
-      <span>{{ filename }}</span>
-      <button class="close-button" @click="$emit('close')"></button>
+      <button
+        class="header-button simple-button save-button"
+        v-if="!readonly"
+        @click="saveFile"
+      >{{ saving ? 'Saving...' : 'Save' }}</button>
+      <span :title="filename">{{ filename }}</span>
+      <button class="header-button close-button" title="Close" @click="$emit('close')"></button>
     </h1>
-    <text-editor v-if="!error" v-model="content" :filename="filename" line-numbers />
+    <text-editor
+      v-if="!error"
+      v-model="content"
+      :filename="filename"
+      line-numbers
+      :disabled="readonly"
+    />
     <error-view v-else :status="error.status" :message="error.message" />
     <div v-if="!inited" class="loading">Loading...</div>
   </div>
@@ -13,18 +24,17 @@
 import { filename } from '@/utils'
 import { entry, getContent } from '@/api'
 import TextEditor from '@/components/TextEditor'
+import uploadManager from '@/api/upload-manager'
 
 export default {
   name: 'TextEditView',
   components: { TextEditor },
   props: {
-    path: {
-      type: String,
+    entry: {
+      type: Object,
       required: true
     },
-    entries: {
-      type: Array
-    }
+    entries: { type: Array }
   },
   data () {
     return {
@@ -32,22 +42,38 @@ export default {
       inited: false,
 
       file: null,
-      content: ''
+      content: '',
+
+      saving: false
     }
   },
   computed: {
     filename () {
       return filename(this.path)
+    },
+    path () {
+      return this.entry.path
+    },
+    readonly () {
+      return !this.entry.meta.can_write
     }
   },
   created () {
     this.loadFile()
+    window.addEventListener('beforeunload', this.onWindowUnload)
+  },
+  beforeDestroy () {
+    window.removeEventListener('beforeunload', this.onWindowUnload)
+  },
+  watch: {
+    content () {
+      this.changeSaveState(false)
+    }
   },
   methods: {
     async loadFile () {
       this.inited = false
-      let path = this.path
-      if (!path.startsWith('/')) path = '/' + path
+      const path = this.path
       try {
         this.file = await entry(path)
         return await this.loadFileContent()
@@ -59,7 +85,44 @@ export default {
     },
     async loadFileContent () {
       this.content = await getContent(this.path)
+      this.$nextTick(() => {
+        this.changeSaveState(true)
+      })
       return this.content
+    },
+    async saveFile () {
+      if (this.saving) {
+        return
+      }
+      this.saving = true
+      try {
+        await uploadManager.upload({
+          path: this.path,
+          file: this.content,
+          overwrite: true
+        }, true)
+        this.changeSaveState(true)
+      } catch (e) {
+        alert(e.message)
+      } finally {
+        this.saving = false
+      }
+    },
+    changeSaveState (saved) {
+      this.saved = saved
+      this.$emit('save-state', saved)
+    },
+    onKeyDown (e) {
+      if (e.key === 's' && e.ctrlKey && !this.readonly) {
+        e.preventDefault()
+        this.saveFile()
+      }
+    },
+    onWindowUnload (e) {
+      if (!this.saved) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
     }
   }
 }
@@ -74,7 +137,7 @@ export default {
   max-width: 800px;
   height: calc(100% - 64px);
   margin: 32px;
-  padding-top: 53px;
+  padding-top: 60px;
   background-color: #fff;
   overflow: hidden;
   box-sizing: border-box;
@@ -88,18 +151,28 @@ export default {
     margin: 0;
     text-align: center;
     border-bottom: 1px solid #eaecef;
-    padding: 10px 0;
+    padding: 10px 4em;
     font-size: 28px;
     font-weight: normal;
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .save-button {
+    left: 2em;
   }
 
   .close-button {
-    position: absolute;
-    top: 50%;
     right: 1em;
-    transform: translateY(-50%);
   }
 
   .text-editor {

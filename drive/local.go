@@ -52,10 +52,11 @@ func (f *FsDrive) newFsFile(path string, file os.FileInfo) (common.IEntry, error
 	if !strings.HasPrefix(path, f.path) {
 		panic("invalid file path")
 	}
-	path = path[len(f.path):]
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
+	path = path[len(f.path)+1:]
+	for strings.HasPrefix(path, "/") {
+		path = path[1:]
 	}
+	path = strings.ReplaceAll(path, "\\", "/")
 	modTime := file.ModTime().UnixNano() / int64(time.Millisecond)
 	return &FsFile{
 		drive:     f,
@@ -186,6 +187,18 @@ func (f *FsDrive) Delete(path string) error {
 	return os.RemoveAll(path)
 }
 
+var fsDriveUploadConfig = common.DriveUploadConfig{Provider: "local"}
+
+func (f *FsDrive) Upload(path string, overwrite bool) (*common.DriveUploadConfig, error) {
+	path = f.getPath(path)
+	if !overwrite {
+		if e := requireFile(path, false); e != nil {
+			return nil, e
+		}
+	}
+	return &fsDriveUploadConfig, nil
+}
+
 func requireFile(path string, requireExists bool) error {
 	exists, e := common.FileExists(path)
 	if e != nil {
@@ -202,6 +215,10 @@ func requireFile(path string, requireExists bool) error {
 
 func (f *FsDrive) Meta() common.IDriveMeta {
 	return &fsDriveMeta{}
+}
+
+func (f *FsFile) Path() string {
+	return f.path
 }
 
 func (f *FsFile) Name() string {
@@ -255,14 +272,6 @@ func (f *fsDriveMeta) CanWrite() bool {
 
 func (f *fsDriveMeta) Props() map[string]interface{} {
 	return make(map[string]interface{})
-}
-
-func (f *fsDriveMeta) DirectlyUpload() bool {
-	return true
-}
-
-func (f *fsFileMeta) CanRead() bool {
-	return true
 }
 
 func (f *fsFileMeta) CanWrite() bool {

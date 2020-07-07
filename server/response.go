@@ -5,6 +5,7 @@ import (
 )
 
 type EntryJson struct {
+	Path      string                 `json:"path"`
 	Name      string                 `json:"name"`
 	Type      common.EntryType       `json:"type"`
 	Size      int64                  `json:"size"`
@@ -16,7 +17,6 @@ type EntryJson struct {
 func NewEntryJson(e common.IEntry) *EntryJson {
 	entryMeta := e.Meta()
 	meta := make(map[string]interface{})
-	meta["can_read"] = entryMeta.CanRead()
 	meta["can_write"] = entryMeta.CanWrite()
 	if entryMeta != nil {
 		for k, v := range entryMeta.Props() {
@@ -24,6 +24,7 @@ func NewEntryJson(e common.IEntry) *EntryJson {
 		}
 	}
 	return &EntryJson{
+		Path:      e.Path(),
 		Name:      e.Name(),
 		Type:      e.Type(),
 		Size:      e.Size(),
@@ -31,4 +32,13 @@ func NewEntryJson(e common.IEntry) *EntryJson {
 		CreatedAt: e.CreatedAt(),
 		UpdatedAt: e.UpdatedAt(),
 	}
+}
+
+type UploadConfig struct {
+	Provider string      `json:"provider"`
+	Config   interface{} `json:"config"`
+}
+
+func NewUploadConfig(c *common.DriveUploadConfig) *UploadConfig {
+	return &UploadConfig{c.Provider, c.Config}
 }

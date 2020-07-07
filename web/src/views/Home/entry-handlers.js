@@ -4,7 +4,7 @@ import DownloadView from '@/views/DownloadView'
 
 const TEXT_EDITOR_MAX_FILE_SIZE = 128 * 1024 // 128kb
 
-const HANDLERS = [
+export const HANDLERS = Object.freeze([
   {
     name: 'editor',
     view: {
@@ -13,7 +13,8 @@ const HANDLERS = [
     },
     supports: (entry, path, ext) => entry.type === 'file' && [
       'md', 'js', 'html', 'css', 'java', 'kt', 'json',
-      'gradle', 'xml', 'properties', 'yml', 'yaml', 'ini'
+      'gradle', 'xml', 'properties', 'yml', 'yaml', 'ini',
+      'c', 'h', 'cpp', 'txt', 'go'
     ].includes(ext) && entry.size <= TEXT_EDITOR_MAX_FILE_SIZE
   },
   {
@@ -33,7 +34,7 @@ const HANDLERS = [
     },
     supports: (entry) => entry.type === 'file'
   }
-]
+])
 
 export const HANDLER_COMPONENTS = mapOf(HANDLERS, h => h.view.name, h => h.view.component)
 

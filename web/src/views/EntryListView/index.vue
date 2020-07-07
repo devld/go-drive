@@ -73,14 +73,13 @@ export default {
     pathChange (path) {
       this.commitPathChange(path)
     },
-    commitPathChange (path = '/') {
+    commitPathChange (path = '') {
       if (this.currentPath === path) return
       this.currentPath = path
       this.loadEntries()
       this.$emit('path-change', this.currentPath)
     },
     tryRecoverState (newPath, oldPath) {
-      if (!newPath.endsWith('/')) newPath = newPath + '/'
       if (!oldPath.startsWith(newPath)) return
       let path = oldPath.substr(newPath.length)
       const i = path.indexOf('/')

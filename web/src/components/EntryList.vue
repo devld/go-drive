@@ -37,15 +37,6 @@ const SORTS_METHOD = {
   }
 }
 
-const parentDirEntry = {
-  name: '..',
-  meta: {},
-  size: -1,
-  type: 'dir',
-  created_at: -1,
-  updated_at: -1
-}
-
 export default {
   name: 'EntryList',
   props: {
@@ -66,17 +57,26 @@ export default {
     }
   },
   data () {
-    return {
-      parentDirEntry
-    }
+    return {}
   },
   computed: {
+    parentDirEntry () {
+      return {
+        path: pathClean(pathJoin(this.path, '..')),
+        name: '..',
+        meta: {},
+        size: -1,
+        type: 'dir',
+        created_at: -1,
+        updated_at: -1
+      }
+    },
     sortedEntries () {
       const sortMethod = SORTS_METHOD[this.sort]
       return sortMethod ? [...this.entries].sort(sortMethod) : this.entries
     },
     isRootPath () {
-      return this.path === '/'
+      return this.path === ''
     }
   },
   methods: {
@@ -93,9 +93,10 @@ export default {
       let link
       if (this.entryLink) {
         if (typeof (entry) === 'string') {
+          // PathBar
           link = this.entryLink(entry)
         } else {
-          link = this.entryLink(entry, this.path)
+          link = this.entryLink(entry.path, entry)
         }
       }
       if (!link) link = 'javascript:;'

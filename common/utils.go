@@ -45,6 +45,10 @@ func NewNotSupportedError() NotSupportedError {
 	return notSupportedError
 }
 
+func NewRemoteApiError(code int, msg string) RemoteApiError {
+	return RemoteApiError{code, msg}
+}
+
 func CopyWithProgress(dst io.Writer, src io.Reader, progress OnProgress) (written int64, err error) {
 	buf := make([]byte, 32*1024)
 	for {

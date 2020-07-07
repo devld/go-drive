@@ -18,12 +18,12 @@ func (t EntryType) IsDir() bool {
 }
 
 type IEntryMeta interface {
-	CanRead() bool
 	CanWrite() bool
 	Props() map[string]interface{}
 }
 
 type IEntry interface {
+	Path() string
 	Name() string
 	Type() EntryType
 	Size() int64
@@ -44,7 +44,6 @@ type IReadable interface {
 
 type IDriveMeta interface {
 	CanWrite() bool
-	DirectlyUpload() bool
 	Props() map[string]interface{}
 }
 
@@ -57,10 +56,14 @@ type IDrive interface {
 	Move(from string, to string) (IEntry, error)
 	List(path string) ([]IEntry, error)
 	Delete(path string) error
+
+	// Upload returns the upload config of the path
+	Upload(path string, overwrite bool) (*DriveUploadConfig, error)
 }
 
-type IDriveUpload interface {
-	Upload(path string) (interface{}, error)
+type DriveUploadConfig struct {
+	Provider string
+	Config   interface{}
 }
 
 type OnProgress func(loaded int64)
@@ -86,4 +89,13 @@ type NotSupportedError struct {
 
 func (n NotSupportedError) Error() string {
 	return "not supported"
+}
+
+type RemoteApiError struct {
+	code int
+	msg  string
+}
+
+func (r RemoteApiError) Error() string {
+	return "[" + string(r.code) + "] " + r.msg
 }

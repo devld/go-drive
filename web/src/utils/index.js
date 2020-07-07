@@ -45,19 +45,36 @@ export function filenameExt (filename) {
 }
 
 export function pathJoin (...segments) {
-  return segments.join('/').replace(/\/+/g, '/')
+  return segments.filter(Boolean).join('/').replace(/\/+/g, '/')
 }
 
 export function pathClean (path) {
-  if (!path || path.charAt(0) !== '/') throw new Error('invalid path')
-  const segments = path.split('/').filter(s => !!s)
+  if (!path) return ''
+  const segments = path.split('/').filter(Boolean)
   const paths = []
   segments.forEach(s => {
     if (s === '.') return
     if (s === '..') paths.pop()
     else paths.push(s)
   })
-  return '/' + paths.join('/')
+  return (path.charAt(0) === '/' ? '/' : '') +
+    paths.join('/') +
+    (path.charAt(path.length - 1) === '/' ? '/' : '')
+}
+
+/**
+ * remove element from array
+ * @param {Array} array
+ * @param {Function} e
+ */
+export function arrayRemove (array, e) {
+  const index = array.findIndex(e)
+  let el
+  if (index >= 0) {
+    el = array[index]
+    array.splice(index, 1)
+  }
+  return el
 }
 
 const DEFAULT_VALUE_FN = e => e

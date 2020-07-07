@@ -86,6 +86,17 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 		}
 	})
 
+	r.GET("/upload/*path", func(c *gin.Context) {
+		path := c.Param("path")
+		overwrite := c.Query("overwrite")
+		config, e := dr.Upload(path, overwrite != "")
+		if e != nil {
+			dr.handleError(e, c)
+			return
+		}
+		c.JSON(200, config)
+	})
+
 	// get file content
 	r.GET("/content/*path", func(c *gin.Context) {
 		path := c.Param("path")
@@ -179,6 +190,14 @@ func (dr DriveRoute) Delete(path string) error {
 	return dr.d.Delete(path)
 }
 
+func (dr DriveRoute) Upload(path string, overwrite bool) (*UploadConfig, error) {
+	config, err := dr.d.Upload(path, overwrite)
+	if err != nil {
+		return nil, err
+	}
+	return NewUploadConfig(config), nil
+}
+
 func (dr DriveRoute) GetContent(path string, w http.ResponseWriter, req *http.Request) error {
 	path = fsPath.Clean(path)
 	file, e := dr.d.Get(path)
@@ -225,8 +244,12 @@ func (dr DriveRoute) GetContent(path string, w http.ResponseWriter, req *http.Re
 }
 
 func (dr DriveRoute) WriteContent(path string, req *http.Request) (*EntryJson, error) {
+	file, _, err := req.FormFile("file")
+	if err != nil {
+		return nil, err
+	}
 	path = fsPath.Clean(path)
-	entry, e := dr.d.Save(path, req.Body, func(loaded int64) {})
+	entry, e := dr.d.Save(path, file, func(loaded int64) {})
 	if e != nil {
 		return nil, e
 	}
