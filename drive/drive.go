@@ -5,9 +5,10 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strings"
 )
 
-var pathRegexp = regexp.MustCompile(`^/([^/]+)(/(.*))?$`)
+var pathRegexp = regexp.MustCompile(`^/?([^/]+)(/(.*))?$`)
 
 // Drive splits drive name and path from the raw path.
 // Then dispatch request to the specified drive.
@@ -25,46 +26,61 @@ func (d Drive) AddDrive(name string, drive common.IDrive) {
 	d[name] = drive
 }
 
-func (d Drive) Resolve(path string) (common.IDrive, string, error) {
+func (d Drive) Resolve(path string) (common.IDrive, string, string, error) {
 	paths := pathRegexp.FindStringSubmatch(path)
 	if paths == nil {
-		return nil, "", common.NewNotFoundError("not found")
+		return nil, "", "", common.NewNotFoundError("not found")
 	}
 	driveName := paths[1]
 	entryPath := "/" + paths[3]
 	drive, ok := d[driveName]
 	if !ok {
-		return nil, "", common.NewNotFoundError("not found")
+		return nil, "", "", common.NewNotFoundError("not found")
 	}
-	return drive, entryPath, nil
+	return drive, entryPath, driveName, nil
 }
 
 func (d Drive) Get(path string) (common.IEntry, error) {
-	drive, path, e := d.Resolve(path)
+	drive, path, name, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	return drive.Get(path)
+	if path == "" || path == "/" {
+		return &driveEntry{path: name, name: name, meta: drive.Meta()}, nil
+	}
+	entry, e := drive.Get(path)
+	if e != nil {
+		return nil, e
+	}
+	return mapDriveEntry(name, entry), nil
 }
 
 func (d Drive) Save(path string, reader io.Reader, progress common.OnProgress) (common.IEntry, error) {
-	drive, path, e := d.Resolve(path)
+	drive, path, name, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	return drive.Save(path, reader, progress)
+	save, e := drive.Save(path, reader, progress)
+	if e != nil {
+		return nil, e
+	}
+	return mapDriveEntry(name, save), nil
 }
 
 func (d Drive) MakeDir(path string) (common.IEntry, error) {
-	drive, path, e := d.Resolve(path)
+	drive, path, name, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	return drive.MakeDir(path)
+	dir, e := drive.MakeDir(path)
+	if e != nil {
+		return nil, e
+	}
+	return mapDriveEntry(name, dir), nil
 }
 
 func (d Drive) Copy(from common.IEntry, to string, progress common.OnProgress) (common.IEntry, error) {
-	driveTo, pathTo, e := d.Resolve(to)
+	driveTo, pathTo, name, e := d.Resolve(to)
 	if e != nil {
 		return nil, e
 	}
@@ -93,8 +109,15 @@ func (d Drive) Copy(from common.IEntry, to string, progress common.OnProgress) (
 		if e != nil {
 			return nil, e
 		}
+		if resp.StatusCode != 200 {
+			return nil, common.NewRemoteApiError(resp.StatusCode, "failed to copy file")
+		}
 		defer func() { _ = resp.Body.Close() }()
-		return driveTo.Save(pathTo, resp.Body, progress)
+		save, e := driveTo.Save(pathTo, resp.Body, progress)
+		if e != nil {
+			return nil, e
+		}
+		return mapDriveEntry(name, save), nil
 	}
 	readable, ok := from.(common.IReadable)
 	if ok {
@@ -103,102 +126,191 @@ func (d Drive) Copy(from common.IEntry, to string, progress common.OnProgress) (
 			return nil, e
 		}
 		defer func() { _ = reader.Close() }()
-		return driveTo.Save(pathTo, reader, progress)
+		save, e := driveTo.Save(pathTo, reader, progress)
+		if e != nil {
+			return nil, e
+		}
+		return mapDriveEntry(name, save), nil
 	}
 	return nil, common.NewNotAllowedError("source file is not readable")
 }
 
 func (d Drive) Move(from string, to string) (common.IEntry, error) {
-	driveFrom, pathFrom, e := d.Resolve(from)
+	driveFrom, pathFrom, name, e := d.Resolve(from)
 	if e != nil {
 		return nil, e
 	}
-	driveTo, pathTo, e := d.Resolve(to)
+	driveTo, pathTo, _, e := d.Resolve(to)
 	if e != nil {
 		return nil, e
 	}
 	if driveFrom != driveTo {
 		return nil, common.NewNotAllowedError("not allowed")
 	}
-	return driveTo.Move(pathFrom, pathTo)
+	move, e := driveTo.Move(pathFrom, pathTo)
+	if e != nil {
+		return nil, e
+	}
+	return mapDriveEntry(name, move), nil
 }
 
 func (d Drive) List(path string) ([]common.IEntry, error) {
 	if path == "" || path == "/" {
 		drives := make([]common.IEntry, 0, len(d))
 		for k, v := range d {
-			drives = append(drives, driveEntry{name: k, meta: v.Meta()})
+			drives = append(drives, &driveEntry{path: k, name: k, meta: v.Meta()})
 		}
 		return drives, nil
 	}
-	drive, path, e := d.Resolve(path)
+	drive, path, name, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	return drive.List(path)
+	list, e := drive.List(path)
+	if e != nil {
+		return nil, e
+	}
+	return mapDriveEntries(name, list), nil
 }
 
 func (d Drive) Delete(path string) error {
-	drive, path, e := d.Resolve(path)
+	drive, path, _, e := d.Resolve(path)
 	if e != nil {
 		return e
 	}
 	return drive.Delete(path)
 }
 
-func (d Drive) Upload(path string) (interface{}, error) {
-	drive, path, e := d.Resolve(path)
+func (d Drive) Upload(path string, overwrite bool) (*common.DriveUploadConfig, error) {
+	drive, path, _, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	driveUpload, ok := drive.(common.IDriveUpload)
-	if !ok {
-		return nil, common.NewNotAllowedError("not supported")
+	return drive.Upload(path, overwrite)
+}
+
+func mapDriveEntry(driveName string, entry common.IEntry) common.IEntry {
+	_, downloadable := entry.(common.IDownloadable)
+	_, readable := entry.(common.IReadable)
+	entryWrapper := driveEntryWrapper{driveName: driveName, entry: entry}
+	if downloadable && readable {
+		return &driveEntryWrapperDownloadableReadable{entryWrapper}
+	} else if downloadable {
+		return &driveEntryWrapperDownloadable{entryWrapper}
+	} else if readable {
+		return &driveEntryWrapperReadable{entryWrapper}
 	}
-	return driveUpload.Upload(path)
+	return &entryWrapper
+}
+
+func mapDriveEntries(driveName string, entries []common.IEntry) []common.IEntry {
+	mappedEntries := make([]common.IEntry, 0, len(entries))
+	for _, e := range entries {
+		mappedEntries = append(mappedEntries, mapDriveEntry(driveName, e))
+	}
+	return mappedEntries
+}
+
+type driveEntryWrapper struct {
+	driveName string
+	entry     common.IEntry
+}
+
+type driveEntryWrapperDownloadable struct {
+	driveEntryWrapper
+}
+
+type driveEntryWrapperReadable struct {
+	driveEntryWrapper
+}
+
+type driveEntryWrapperDownloadableReadable struct {
+	driveEntryWrapper
+}
+
+func (d driveEntryWrapperDownloadable) GetURL() (string, bool, error) {
+	downloadable := d.entry.(common.IDownloadable)
+	return downloadable.GetURL()
+}
+
+func (d driveEntryWrapperReadable) GetReader() (io.ReadCloser, error) {
+	readable := d.entry.(common.IReadable)
+	return readable.GetReader()
+}
+
+func (d *driveEntryWrapper) Path() string {
+	path := d.entry.Path()
+	for strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+	return d.driveName + "/" + path
+}
+
+func (d *driveEntryWrapper) Name() string {
+	return d.entry.Name()
+}
+
+func (d *driveEntryWrapper) Type() common.EntryType {
+	return d.entry.Type()
+}
+
+func (d *driveEntryWrapper) Size() int64 {
+	return d.entry.Size()
+}
+
+func (d *driveEntryWrapper) Meta() common.IEntryMeta {
+	return d.entry.Meta()
+}
+
+func (d *driveEntryWrapper) CreatedAt() int64 {
+	return d.entry.CreatedAt()
+}
+
+func (d *driveEntryWrapper) UpdatedAt() int64 {
+	return d.entry.UpdatedAt()
 }
 
 type driveEntry struct {
+	path string
 	name string
 	meta common.IDriveMeta
 }
 
-func (d driveEntry) Name() string {
+func (d *driveEntry) Path() string {
+	return d.path
+}
+
+func (d *driveEntry) Name() string {
 	return d.name
 }
 
-func (d driveEntry) Type() common.EntryType {
+func (d *driveEntry) Type() common.EntryType {
 	return common.TypeDir
 }
 
-func (d driveEntry) Size() int64 {
+func (d *driveEntry) Size() int64 {
 	return -1
 }
 
-func (d driveEntry) Meta() common.IEntryMeta {
+func (d *driveEntry) Meta() common.IEntryMeta {
 	props := make(map[string]interface{})
-	props["direct_upload"] = d.meta.DirectlyUpload()
 	for k, v := range d.meta.Props() {
 		props[k] = v
 	}
 	return driveEntryMeta{canWrite: d.meta.CanWrite(), props: props}
 }
 
-func (d driveEntry) CreatedAt() int64 {
+func (d *driveEntry) CreatedAt() int64 {
 	return -1
 }
 
-func (d driveEntry) UpdatedAt() int64 {
+func (d *driveEntry) UpdatedAt() int64 {
 	return -1
 }
 
 type driveEntryMeta struct {
 	canWrite bool
 	props    map[string]interface{}
-}
-
-func (d driveEntryMeta) CanRead() bool {
-	return true
 }
 
 func (d driveEntryMeta) CanWrite() bool {

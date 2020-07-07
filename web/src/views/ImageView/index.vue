@@ -67,8 +67,8 @@ function isSupportedImageExt (ext) {
 export default {
   name: 'ImageView',
   props: {
-    path: {
-      type: String,
+    entry: {
+      type: Object,
       required: true
     },
     entries: {
@@ -79,6 +79,9 @@ export default {
   computed: {
     images () {
       return this.entries.filter(e => e.type === 'file' && isSupportedImageExt(filenameExt(e.name)))
+    },
+    path () {
+      return this.entry.path
     },
     filename () {
       return filename(this.path)
@@ -97,7 +100,8 @@ export default {
           w: 0, h: 0
         })), {
         history: false,
-        index: this.index
+        index: this.index,
+        loop: false
       })
       ps.listen('gettingData', (index, item) => {
         if (item.w !== 0 || item.h !== 0) return
@@ -114,9 +118,12 @@ export default {
         this.$emit('close')
       })
       ps.listen('beforeChange', (offset) => {
-        if (offset === 0) return
-        this.index += offset
-        this.$emit('entry-change', this.images[this.index].name)
+        if (!offset) return
+        let newIndex = this.index += offset
+        if (newIndex < 0) newIndex += this.images.length
+        if (newIndex >= this.images.length) newIndex -= this.images.length
+        this.index = newIndex
+        this.$emit('entry-change', this.images[this.index].path)
       })
       ps.init()
       this.ps = ps

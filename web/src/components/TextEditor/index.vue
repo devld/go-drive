@@ -18,6 +18,9 @@ export default {
     },
     lineNumbers: {
       type: Boolean
+    },
+    disabled: {
+      type: Boolean
     }
   },
   watch: {
@@ -34,6 +37,9 @@ export default {
     },
     lineNumbers (val) {
       this.setEditorOption('lineNumbers', val)
+    },
+    disabled (val) {
+      this.setEditorOption('readOnly', val ? 'nocursor' : false)
     }
   },
   mounted () {
@@ -43,7 +49,8 @@ export default {
     initEditor () {
       this.editor = CodeMirror(this.$refs.editor, {
         theme: THEME_NAME, value: this.content || '',
-        lineNumbers: this.lineNumbers
+        lineNumbers: this.lineNumbers,
+        readOnly: this.disabled ? 'nocursor' : false
       })
       this.setEditorMode()
       this.editor.on('change', () => {
@@ -55,7 +62,7 @@ export default {
       const ext = filenameExt(this.filename)
       const mode = CodeMirror.findModeByExtension(ext)
       if (mode) {
-        this.editor.setOption('mode', mode.mode)
+        this.setEditorOption('mode', mode.mode)
         CodeMirror.autoLoadMode(this.editor, mode.mode)
       } else {
         console.warn(`[CodeMirror] language mode of '${ext}' not found`)
@@ -69,7 +76,9 @@ export default {
       }
     },
     setEditorOption (name, value) {
-      this.editor.setOption(name, value)
+      if (this.editor) {
+        this.editor.setOption(name, value)
+      }
     }
   }
 }

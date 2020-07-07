@@ -28,10 +28,10 @@ export default {
   computed: {
     segments () {
       if (!this.path) return []
-      const ss = this.path.replace(/\/+/g, '/').split('/').filter(s => !!s)
-      const pathSegments = [{ name: '/', path: '/' }]
+      const ss = this.path.replace(/\/+/g, '/').split('/').filter(Boolean)
+      const pathSegments = [{ name: 'Root', path: '' }]
       ss.forEach((s, i) => {
-        pathSegments.push({ name: s, path: '/' + ss.slice(0, i + 1).join('/') })
+        pathSegments.push({ name: s, path: ss.slice(0, i + 1).join('/') })
       })
       return pathSegments
     }

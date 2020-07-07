@@ -7,29 +7,22 @@
     <div class="page-content">
       <entry-icon :entry="entry" />
       <h2 class="filename">{{ entry.name }}</h2>
-      <a class="download-button" target="_blank" :href="$.fileUrl(path)">Download</a>
+      <a class="download-button" target="_blank" :href="$.fileUrl(entry.path)">
+        Download
+        <span class="file-size">{{ $.formatBytes(entry.size) }}</span>
+      </a>
     </div>
   </div>
 </template>
 <script>
-import { filename } from '@/utils'
-
 export default {
   name: 'DownloadView',
   props: {
-    path: {
-      type: String,
+    entry: {
+      type: Object,
       required: true
     },
-    entries: {
-      type: Array,
-      required: true
-    }
-  },
-  computed: {
-    entry () {
-      return this.entries.find(e => e.name === filename(this.path))
-    }
+    entries: { type: Array }
   }
 }
 </script>
