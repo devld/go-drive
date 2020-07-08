@@ -84,7 +84,7 @@ export default {
       }
     },
     async loadFileContent () {
-      this.content = await getContent(this.path)
+      this.content = await getContent(this.path, true)
       this.$nextTick(() => {
         this.changeSaveState(true)
       })

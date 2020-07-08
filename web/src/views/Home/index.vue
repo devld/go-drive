@@ -36,7 +36,7 @@
 import EntryListView from '@/views/EntryListView'
 
 import { getContent } from '@/api'
-import { pathJoin, filename, dir } from '@/utils'
+import { filename, dir } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from './entry-handlers'
 
@@ -100,14 +100,14 @@ export default {
         }
       }
       if (readmeFound) {
-        await this.loadReadme(readmeFound.name)
+        await this.loadReadme(readmeFound.path)
       } else {
         this.readmeContent = ''
       }
     },
-    async loadReadme (name) {
+    async loadReadme (path) {
       try {
-        this.readmeContent = await getContent(pathJoin(this.path, name))
+        this.readmeContent = await getContent(path)
       } catch (e) {
         this.readmeContent = README_FAILED_CONTENT
       }

@@ -9,9 +9,14 @@ export function entry (path) {
   return axios.get(`/entry/${path}`)
 }
 
-export function getContent (path) {
+export function getContent (path, noCache) {
+  const params = {}
+  if (noCache) {
+    params.r = Math.random()
+  }
   return axios.get(`/content/${path}`, {
-    transformResponse: []
+    transformResponse: [],
+    params
   })
 }
 
