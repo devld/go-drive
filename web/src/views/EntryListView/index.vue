@@ -5,9 +5,8 @@
       ref="entryList"
       :path="loadedPath"
       :entries="entries"
-      @path-change="pathChange"
-      @open-file="openFile"
       :entry-link="entryLink"
+      @entry-click="entryClicked"
     />
     <error-view v-else :status="error.status" :message="error.message" />
   </div>
@@ -67,17 +66,17 @@ export default {
     this.commitPathChange(this.path)
   },
   methods: {
-    openFile (e) {
-      this.$emit('open-file', e)
-    },
-    pathChange (path) {
-      this.commitPathChange(path)
+    entryClicked (e) {
+      if (e.entry.type === 'dir') {
+        this.$emit('path-change', e)
+      } else {
+        this.$emit('open-file', e)
+      }
     },
     commitPathChange (path = '') {
       if (this.currentPath === path) return
       this.currentPath = path
       this.loadEntries()
-      this.$emit('path-change', this.currentPath)
     },
     tryRecoverState (newPath, oldPath) {
       if (!oldPath.startsWith(newPath)) return
