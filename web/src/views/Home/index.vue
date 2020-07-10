@@ -4,8 +4,8 @@
       <entry-list-view
         ref="entryList"
         :path="path"
+        :entry-link="makeEntryLink"
         @path-change="pathChanged"
-        :entry-link="makeEntryRouteLink"
         @entries-load="entriesLoaded"
         @open-file="openFile"
       />
@@ -15,21 +15,25 @@
         <p style="text-align: center;">Loading README...</p>
       </div>
     </footer>
-    <div
-      class="enter-handler-dialog"
-      v-if="entryHandlerView && entries && findEntry(entryHandlerView.entryName)"
-    >
-      <div class="entry-handler-view">
-        <component
-          :is="entryHandlerView.component"
-          :entry="findEntry(entryHandlerView.entryName)"
-          :entries="entries"
-          @close="closeEntryHandlerView"
-          @entry-change="entryHandlerViewChange"
-          @save-state="entryHandlerViewSaveStateChange"
-        />
-      </div>
+    <!-- entry handler view dialog -->
+    <div class="enter-handler-dialog" v-if="handlerViewDialogShowing">
+      <transition name="top-fade" @after-leave="afterHandlerViewLeave">
+        <div
+          class="entry-handler-view"
+          v-if="entryHandlerView && entries && entryHandlerView.entry"
+        >
+          <component
+            :is="entryHandlerView.component"
+            :entry="entryHandlerView.entry"
+            :entries="entries"
+            @close="closeEntryHandlerView"
+            @entry-change="entryHandlerViewChange"
+            @save-state="entryHandlerViewSaveStateChange"
+          />
+        </div>
+      </transition>
     </div>
+    <!-- entry handler view dialog -->
   </div>
 </template>
 <script>
@@ -45,6 +49,8 @@ const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load REA
 
 const THIS_PATH_NAME = 'files'
 
+const HISTORY_FLAG = '_h'
+
 export default {
   name: 'Home',
   components: { EntryListView, ...HANDLER_COMPONENTS },
@@ -59,7 +65,9 @@ export default {
       readmeContent: '',
 
       entryHandlerView: null,
-      entries: null
+      entries: null,
+
+      handlerViewDialogShowing: false
     }
   },
   beforeRouteUpdate (to, from, next) {
@@ -74,21 +82,99 @@ export default {
     this.resolveEntryHandlerView()
   },
   methods: {
-    openFile ({ entry, path }) {
-      const routePath = this.makeEntryRouteLink(path, entry)
-      if (routePath) {
-        location.href = routePath
-      }
+    openFile ({ entry, event }) {
+      sessionStorage.setItem(HISTORY_FLAG, '1')
     },
     pathChanged () {
       this.entries = null
     },
     entriesLoaded ({ entries, path }) {
       if (path !== this.path) {
-        this.$router.push(`/${THIS_PATH_NAME}/${path}`)
+        this.$router.push(this.makeRoutePath(path))
       }
       this.entries = entries
+      if (this.entryHandlerView) {
+        this.entryHandlerView.entry =
+          entries.find(e => e.name === this.entryHandlerView.entryName)
+      }
       this.tryLoadReadme(entries)
+    },
+    resolveEntryHandlerView () {
+      const handler = getHandler(this.$route.query.handler)
+      const entryName = this.$route.query.entry
+      if (!handler || !entryName) {
+        this.entryHandlerView = null
+        sessionStorage.removeItem(HISTORY_FLAG)
+      } else {
+        this.handlerViewDialogShowing = true
+        this.$nextTick(() => {
+          this.entryHandlerView = {
+            handler: handler.name,
+            component: handler.view.name,
+            entryName,
+            savedState: true,
+            entry: this.entries && this.entries.find(e => e.name === entryName)
+          }
+        })
+      }
+    },
+    async closeEntryHandlerView () {
+      try { await this.confirmUnsavedState() } catch { return }
+      this.focusOnEntry(this.entryHandlerView.entryName)
+      if (sessionStorage.getItem(HISTORY_FLAG)) {
+        this.$router.go(-1)
+      } else {
+        this.$router.replace(this.$route.path)
+      }
+    },
+    async entryHandlerViewChange (path) {
+      try { await this.confirmUnsavedState() } catch { return }
+      const dirPath = dir(path)
+      const name = filename(path)
+      this.focusOnEntry(name)
+      const newPath = this.makeEntryHandlerPath(this.entryHandlerView.handler, name, dirPath)
+      if (decodeURIComponent(this.$route.fullPath) !== decodeURIComponent(newPath)) {
+        this.$router.replace(newPath)
+      }
+    },
+    entryHandlerViewSaveStateChange (saved) {
+      this.entryHandlerView.savedState = saved
+    },
+    confirmUnsavedState () {
+      if (!this.entryHandlerView || this.entryHandlerView.savedState) return Promise.resolve()
+      return new Promise((resolve, reject) => {
+        if (confirm('You have some unsaved changes, are you sure to leave?')) {
+          resolve()
+        } else {
+          // eslint-disable-next-line prefer-promise-reject-errors
+          reject()
+        }
+      })
+    },
+    makeEntryLink (path, entry) {
+      if (!entry || entry.type === 'dir') {
+        return '#' + this.makeRoutePath(path)
+      }
+      const handlers = resolveEntryHandler(entry, path)
+      if (handlers.length > 0) {
+        return '#' + this.makeEntryHandlerPath(handlers[0].name, entry.name)
+      }
+    },
+    makeEntryHandlerPath (handlerName, entryName, path) {
+      return this.makeRoutePath(encodeURI(path || this.path)) +
+        `?handler=${handlerName}&entry=${encodeURIComponent(entryName)}`
+    },
+    makeRoutePath (path) {
+      return `/${THIS_PATH_NAME}/${path}`
+    },
+    afterHandlerViewLeave () {
+      this.handlerViewDialogShowing = false
+    },
+    focusOnEntry (name) {
+      this.$refs.entryList.focusOnEntry(name)
+    },
+    getHandlerViewEntry (name) {
+      return this.entries.find(e => e.name === name)
     },
     async tryLoadReadme (entries) {
       let readmeFound
@@ -111,68 +197,6 @@ export default {
       } catch (e) {
         this.readmeContent = README_FAILED_CONTENT
       }
-    },
-    makeEntryRouteLink (path, entry) {
-      if (!entry || entry.type === 'dir') {
-        return `#/${THIS_PATH_NAME}/${path}`
-      }
-      const handlers = resolveEntryHandler(entry, path)
-      if (handlers.length > 0) {
-        return this.makeEntryHandlerLink(handlers[0].name, entry.name)
-      }
-    },
-    makeEntryHandlerLink (handlerName, entryName) {
-      return `#${this.$route.path}?handler=${handlerName}&entry=${encodeURIComponent(entryName)}`
-    },
-    resolveEntryHandlerView () {
-      const handler = getHandler(this.$route.query.handler)
-      const entry = this.$route.query.entry
-      if (!handler || !entry) {
-        this.entryHandlerView = null
-      } else {
-        this.entryHandlerView = {
-          handler: handler.name,
-          component: handler.view.name,
-          entryName: entry,
-          savedState: true
-        }
-      }
-    },
-    async closeEntryHandlerView () {
-      try { await this.confirmUnsavedState() } catch { return }
-      this.focusOnEntry(this.entryHandlerView.entryName)
-      this.$router.replace(this.$route.path)
-    },
-    async entryHandlerViewChange (path) {
-      try { await this.confirmUnsavedState() } catch { return }
-      const dirPath = dir(path)
-      const name = filename(path)
-      this.focusOnEntry(name)
-      const newPath = `/${THIS_PATH_NAME}/${dirPath}` +
-        `?handler=${this.entryHandlerView.handler}&entry=${encodeURIComponent(name)}`
-      if (decodeURIComponent(this.$route.fullPath) !== decodeURIComponent(newPath)) {
-        this.$router.replace(newPath)
-      }
-    },
-    entryHandlerViewSaveStateChange (saved) {
-      this.entryHandlerView.savedState = saved
-    },
-    confirmUnsavedState () {
-      if (!this.entryHandlerView || this.entryHandlerView.savedState) return Promise.resolve()
-      return new Promise((resolve, reject) => {
-        if (confirm('You have some unsaved changes, are you sure to leave?')) {
-          resolve()
-        } else {
-          // eslint-disable-next-line prefer-promise-reject-errors
-          reject()
-        }
-      })
-    },
-    focusOnEntry (name) {
-      this.$refs.entryList.focusOnEntry(name)
-    },
-    findEntry (name) {
-      return this.entries.find(e => e.name === name)
     }
   }
 }

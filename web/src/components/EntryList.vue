@@ -81,13 +81,7 @@ export default {
   },
   methods: {
     entryClicked (entry, e) {
-      e.preventDefault()
-      const path = pathClean(pathJoin(this.path, entry.name))
-      if (entry.type === 'dir') {
-        this.$emit('path-change', path)
-      } else if (entry.type === 'file') {
-        this.$emit('open-file', { path, entry })
-      }
+      this.$emit('entry-click', { entry, event: e })
     },
     getEntryLink (entry) {
       let link
