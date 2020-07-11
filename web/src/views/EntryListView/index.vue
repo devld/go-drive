@@ -6,7 +6,8 @@
       :path="loadedPath"
       :entries="entries"
       :entry-link="entryLink"
-      @entry-click="entryClicked"
+      @entry-click="$emit('entry-click', $event)"
+      @entry-menu="$emit('entry-menu', $event)"
     />
     <error-view v-else :status="error.status" :message="error.message" />
   </div>
@@ -66,13 +67,6 @@ export default {
     this.commitPathChange(this.path)
   },
   methods: {
-    entryClicked (e) {
-      if (e.entry.type === 'dir') {
-        this.$emit('path-change', e)
-      } else {
-        this.$emit('open-file', e)
-      }
-    },
     commitPathChange (path = '') {
       if (this.currentPath === path) return
       this.currentPath = path

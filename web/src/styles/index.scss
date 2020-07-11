@@ -261,3 +261,23 @@
 .top-fade-leave-active {
   animation: top-fade-in 0.3s ease-out reverse;
 }
+
+@keyframes scale-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.scale-fade-enter-active {
+  animation: scale-fade-in 0.3s cubic-bezier(0, .01, .77, 1.79);
+}
+
+.scale-fade-leave-active {
+  animation: scale-fade-in 0.3s reverse;
+}

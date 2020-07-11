@@ -17,7 +17,14 @@
         </a>
       </li>
       <li class="entry-list__item" v-for="entry in sortedEntries" :key="path + entry.name">
-        <a :href="getEntryLink(entry)" @click="entryClicked(entry, $event)" ref="entries">
+        <a
+          :href="getEntryLink(entry)"
+          @click="entryClicked(entry, $event)"
+          ref="entries"
+          v-long-press
+          @contextmenu="entryContextMenu(entry, $event)"
+          @long-press="entryContextMenu(entry)"
+        >
           <entry-item :entry="entry" />
         </a>
       </li>
@@ -82,6 +89,9 @@ export default {
   methods: {
     entryClicked (entry, e) {
       this.$emit('entry-click', { entry, event: e })
+    },
+    entryContextMenu (entry, e) {
+      this.$emit('entry-menu', { entry, event: e })
     },
     getEntryLink (entry) {
       let link
