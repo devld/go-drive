@@ -58,7 +58,7 @@
 import { fileUrl } from '@/api'
 import PhotoSwipe from 'photoswipe'
 import PhotoSwipeUIDefault from 'photoswipe/dist/photoswipe-ui-default'
-import { filenameExt, filename, dir, pathJoin } from '../../utils'
+import { filenameExt, filename, dir, pathJoin } from '@/utils'
 
 function isSupportedImageExt (ext) {
   return ['jpg', 'jpeg', 'png', 'gif'].includes(ext)

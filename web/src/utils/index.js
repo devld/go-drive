@@ -1,6 +1,7 @@
 
 import dayjs from 'dayjs'
 import markdown from './directives/markdown'
+import longPress from './directives/long-press'
 import { fileUrl } from '@/api'
 
 export function formatTime (d, toFormat) {
@@ -77,6 +78,16 @@ export function arrayRemove (array, e) {
   return el
 }
 
+export function cloneObject (obj) {
+  if (typeof (obj) !== 'object') return obj
+  if (Array.isArray(obj)) return [...obj]
+  const o = {}
+  for (const k of Object.keys(obj)) {
+    o[k] = cloneObject(obj[k])
+  }
+  return o
+}
+
 const DEFAULT_VALUE_FN = e => e
 export function mapOf (list, keyFn, valueFn = DEFAULT_VALUE_FN) {
   const map = {}
@@ -91,7 +102,7 @@ const filters = {
 }
 
 const directives = {
-  markdown
+  markdown, longPress
 }
 
 const utils = {

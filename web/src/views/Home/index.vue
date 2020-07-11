@@ -1,13 +1,13 @@
 <template>
-  <div class="home">
+  <div class="home" @keydown.esc="closeEntryHandlerView">
     <main class="files-list">
       <entry-list-view
         ref="entryList"
         :path="path"
         :entry-link="makeEntryLink"
-        @path-change="pathChanged"
         @entries-load="entriesLoaded"
-        @open-file="openFile"
+        @entry-click="entryClicked"
+        @entry-menu="showEntryMenu"
       />
     </main>
     <footer class="page-footer" v-if="readmeContent">
@@ -16,33 +16,39 @@
       </div>
     </footer>
     <!-- entry handler view dialog -->
-    <div class="enter-handler-dialog" v-if="handlerViewDialogShowing">
-      <transition name="top-fade" @after-leave="afterHandlerViewLeave">
-        <div
-          class="entry-handler-view"
-          v-if="entryHandlerView && entries && entryHandlerView.entry"
-        >
-          <component
-            :is="entryHandlerView.component"
-            :entry="entryHandlerView.entry"
-            :entries="entries"
-            @close="closeEntryHandlerView"
-            @entry-change="entryHandlerViewChange"
-            @save-state="entryHandlerViewSaveStateChange"
-          />
-        </div>
-      </transition>
-    </div>
+    <dialog-view :show="entryHandlerViewShowing">
+      <component
+        v-if="entryHandlerViewShowing"
+        :is="entryHandlerView.component"
+        :entry="entryHandlerView.entry"
+        :entries="entries"
+        @close="closeEntryHandlerView"
+        @entry-change="entryHandlerViewChange"
+        @save-state="entryHandlerViewSaveStateChange"
+      />
+    </dialog-view>
     <!-- entry handler view dialog -->
+
+    <!-- entry menu -->
+    <dialog-view v-model="entryMenuShowing" overlay-close transition="scale-fade">
+      <entry-menu
+        v-if="entryMenu"
+        :menus="entryMenu.menus"
+        :entry="entryMenu.entry"
+        @click="menuClicked"
+      />
+    </dialog-view>
+    <!-- entry menu -->
   </div>
 </template>
 <script>
 import EntryListView from '@/views/EntryListView'
+import EntryMenu from './EntryMenu'
 
 import { getContent } from '@/api'
 import { filename, dir } from '@/utils'
 
-import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from './entry-handlers'
+import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/views/handlers'
 
 const README_FILENAME = 'readme.md'
 const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
@@ -50,10 +56,18 @@ const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load REA
 const THIS_PATH_NAME = 'files'
 
 const HISTORY_FLAG = '_h'
+const setHistoryFlag = () => {
+  sessionStorage.setItem(HISTORY_FLAG, '1')
+}
+const getHistoryFlag = () => {
+  const val = sessionStorage.getItem(HISTORY_FLAG)
+  sessionStorage.removeItem(HISTORY_FLAG)
+  return !!val
+}
 
 export default {
   name: 'Home',
-  components: { EntryListView, ...HANDLER_COMPONENTS },
+  components: { EntryListView, EntryMenu, ...HANDLER_COMPONENTS },
   props: {
     path: {
       type: String,
@@ -65,67 +79,121 @@ export default {
       readmeContent: '',
 
       entryHandlerView: null,
-      entries: null,
 
-      handlerViewDialogShowing: false
+      entryMenu: null,
+      entryMenuShowing: false,
+
+      entries: null
+    }
+  },
+  computed: {
+    entryHandlerViewShowing () {
+      return !!(this.entryHandlerView && this.entries && this.entryHandlerView.entry)
     }
   },
   beforeRouteUpdate (to, from, next) {
+    if (!this.resolveHandlerByRoute(from) && this.resolveHandlerByRoute(to)) {
+      setHistoryFlag()
+    }
     this.confirmUnsavedState().then(() => {
       next()
-      this.resolveEntryHandlerView()
+      this.resolveRouteAndHandleEntry()
     }, () => {
       next(false)
     })
   },
   created () {
-    this.resolveEntryHandlerView()
+    this.resolveRouteAndHandleEntry()
   },
   methods: {
-    openFile ({ entry, event }) {
-      sessionStorage.setItem(HISTORY_FLAG, '1')
+    entryClicked ({ entry, event }) {
+      if (entry.type === 'dir') {
+        // path changed
+        this.entries = null
+      }
     },
-    pathChanged () {
-      this.entries = null
+    menuClicked ({ entry, menu }) {
+      this.entryMenuShowing = false
+      const handler = getHandler(menu.name)
+      if (!handler) return
+      this.$router.push(
+        this.makeEntryHandlerPath(handler.name, entry.name)
+      )
+    },
+    showEntryMenu ({ entry, event }) {
+      const handlers = resolveEntryHandler(entry)
+      if (handlers.length === 0) return
+
+      event && event.preventDefault()
+
+      this.entryMenu = {
+        entry,
+        menus: handlers
+          .filter(h => h.display)
+          .map(h => ({
+            name: h.name,
+            display: typeof (h.display) === 'function' ? h.display(entry) : h.display
+          }))
+      }
+      this.entryMenuShowing = true
     },
     entriesLoaded ({ entries, path }) {
       if (path !== this.path) {
         this.$router.push(this.makeRoutePath(path))
       }
+      this.tryLoadReadme(entries)
       this.entries = entries
+
       if (this.entryHandlerView) {
         this.entryHandlerView.entry =
           entries.find(e => e.name === this.entryHandlerView.entryName)
       }
-      this.tryLoadReadme(entries)
-    },
-    resolveEntryHandlerView () {
-      const handler = getHandler(this.$route.query.handler)
-      const entryName = this.$route.query.entry
-      if (!handler || !entryName) {
-        this.entryHandlerView = null
-        sessionStorage.removeItem(HISTORY_FLAG)
-      } else {
-        this.handlerViewDialogShowing = true
-        this.$nextTick(() => {
-          this.entryHandlerView = {
-            handler: handler.name,
-            component: handler.view.name,
-            entryName,
-            savedState: true,
-            entry: this.entries && this.entries.find(e => e.name === entryName)
-          }
-        })
+
+      if (this._pendingHandler) {
+        const { handler, entryName } = this._pendingHandler
+        const entry = entries.find(e => e.name === entryName)
+        if (entry) handler.handler(entry)
+        this._pendingHandler = null
       }
+    },
+    resolveRouteAndHandleEntry () {
+      const matched = this.resolveHandlerByRoute(this.$route)
+      if (!matched) {
+        this.entryHandlerView = null
+        return false
+      }
+      const { handler, entryName } = matched
+      const entry = this.entries && this.entries.find(e => e.name === entryName)
+
+      if (handler.view) {
+        // handler view dialog
+        this.entryHandlerView = {
+          handler: handler.name,
+          component: handler.view && handler.view.name,
+          entryName, entry,
+          savedState: true
+        }
+        return
+      }
+
+      if (handler.handler) {
+        // handler function
+        if (entry) {
+          handler.handler(entry)
+        } else {
+          this._pendingHandler = { handler, entryName }
+        }
+      }
+
+      this.$nextTick(() => {
+        this.replaceHandlerRoute()
+      })
     },
     async closeEntryHandlerView () {
+      if (!this.entryHandlerView) return
       try { await this.confirmUnsavedState() } catch { return }
       this.focusOnEntry(this.entryHandlerView.entryName)
-      if (sessionStorage.getItem(HISTORY_FLAG)) {
-        this.$router.go(-1)
-      } else {
-        this.$router.replace(this.$route.path)
-      }
+      this.replaceHandlerRoute()
     },
     async entryHandlerViewChange (path) {
       try { await this.confirmUnsavedState() } catch { return }
@@ -144,6 +212,7 @@ export default {
       if (!this.entryHandlerView || this.entryHandlerView.savedState) return Promise.resolve()
       return new Promise((resolve, reject) => {
         if (confirm('You have some unsaved changes, are you sure to leave?')) {
+          this.entryHandlerView.savedState = true
           resolve()
         } else {
           // eslint-disable-next-line prefer-promise-reject-errors
@@ -151,11 +220,26 @@ export default {
         }
       })
     },
+    resolveHandlerByRoute (route) {
+      const handler = getHandler(route.query.handler)
+      const entryName = route.query.entry
+      if (!handler || !entryName) {
+        return null
+      }
+      return { handler, entryName }
+    },
+    replaceHandlerRoute () {
+      if (getHistoryFlag()) {
+        this.$router.go(-1)
+      } else {
+        this.$router.replace(this.$route.path)
+      }
+    },
     makeEntryLink (path, entry) {
       if (!entry || entry.type === 'dir') {
         return '#' + this.makeRoutePath(path)
       }
-      const handlers = resolveEntryHandler(entry, path)
+      const handlers = resolveEntryHandler(entry)
       if (handlers.length > 0) {
         return '#' + this.makeEntryHandlerPath(handlers[0].name, entry.name)
       }
@@ -166,9 +250,6 @@ export default {
     },
     makeRoutePath (path) {
       return `/${THIS_PATH_NAME}/${path}`
-    },
-    afterHandlerViewLeave () {
-      this.handlerViewDialogShowing = false
     },
     focusOnEntry (name) {
       this.$refs.entryList.focusOnEntry(name)
@@ -217,24 +298,6 @@ export default {
   background-color: #fff;
   padding: 16px;
   border-radius: 16px;
-}
-
-.enter-handler-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.entry-handler-view {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 @media screen and (max-width: 900px) {
