@@ -1,8 +1,9 @@
 <template>
   <div class="upload-task-item" :class="`task-status-${task.status}`">
     <div
+      v-if="progress && progress !== 1"
       class="upload-task-item__progress-bar"
-      :style="{ 'width': progress !== null ? `${progress * 100}%` : '' }"
+      :style="{ 'width': `${progress * 100}%` }"
     ></div>
     <span class="upload-task-item__filename" :title="filename">
       <entry-icon class="upload-task-item__icon" :entry="entry" />
@@ -56,7 +57,7 @@
 import { filename, dir, formatPercent } from '@/utils'
 import {
   STATUS_CREATED, STATUS_PAUSED, STATUS_UPLOADING,
-  STATUS_STOPPED, STATUS_ERROR, STATUS_COMPLETED, STATUS_MASK_CAN_START, STATUS_MASK_CAN_PAUSE, STATUS_MASK_CAN_STOP
+  STATUS_STOPPED, STATUS_ERROR, STATUS_COMPLETED, STATUS_MASK_CAN_START, STATUS_MASK_CAN_PAUSE, STATUS_MASK_CAN_STOP, STATUS_STARTING
 } from '@/api/upload-manager/task'
 
 export default {
@@ -85,6 +86,8 @@ export default {
       switch (this.task.status) {
         case STATUS_CREATED:
           return 'Created'
+        case STATUS_STARTING:
+          return 'Starting'
         case STATUS_PAUSED:
           return 'Paused'
         case STATUS_UPLOADING:

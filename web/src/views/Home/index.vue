@@ -56,7 +56,7 @@ import EntryMenu from './EntryMenu'
 import NewEntryArea from './NewEntryArea'
 
 import { getContent } from '@/api'
-import { filename, dir, isRootPath } from '@/utils'
+import { filename, dir, isRootPath, debounce } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
 import { makeEntryHandlerLink, getBaseLink } from '../../utils/routes'
@@ -252,9 +252,9 @@ export default {
         this.readmeContent = README_FAILED_CONTENT
       }
     },
-    reloadEntryList () {
+    reloadEntryList: debounce(function () {
       this.$refs.entryList.reload(true)
-    }
+    }, 500)
   }
 }
 </script>

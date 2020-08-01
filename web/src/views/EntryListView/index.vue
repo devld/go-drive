@@ -70,9 +70,7 @@ export default {
     },
     tryRecoverState (newPath, oldPath) {
       if (!oldPath.startsWith(newPath)) return
-      let path = oldPath.substr(newPath.length)
-      const i = path.indexOf('/')
-      if (i >= 0) path = path.substr(0, i)
+      const path = oldPath.substr(newPath.length + 1)
       this._lastEntry = path
     },
     focusOnEntry (name) {
