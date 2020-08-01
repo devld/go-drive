@@ -6,6 +6,76 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "1444361",
+      "name": "cursor-text",
+      "font_class": "cursor-text",
+      "unicode": "e6ec",
+      "unicode_decimal": 59116
+    },
+    {
+      "icon_id": "1444369",
+      "name": "delete",
+      "font_class": "delete",
+      "unicode": "e6f1",
+      "unicode_decimal": 59121
+    },
+    {
+      "icon_id": "1444416",
+      "name": "download",
+      "font_class": "download",
+      "unicode": "e707",
+      "unicode_decimal": 59143
+    },
+    {
+      "icon_id": "1444752",
+      "name": "image",
+      "font_class": "image",
+      "unicode": "e7ac",
+      "unicode_decimal": 59308
+    },
+    {
+      "icon_id": "1445372",
+      "name": "stop",
+      "font_class": "stop",
+      "unicode": "e8c4",
+      "unicode_decimal": 59588
+    },
+    {
+      "icon_id": "1444252",
+      "name": "close",
+      "font_class": "close",
+      "unicode": "e6b7",
+      "unicode_decimal": 59063
+    },
+    {
+      "icon_id": "1445050",
+      "name": "pause",
+      "font_class": "pause",
+      "unicode": "e836",
+      "unicode_decimal": 59446
+    },
+    {
+      "icon_id": "1445099",
+      "name": "play",
+      "font_class": "play",
+      "unicode": "e84d",
+      "unicode_decimal": 59469
+    },
+    {
+      "icon_id": "1418250",
+      "name": "loading",
+      "font_class": "loading",
+      "unicode": "e61c",
+      "unicode_decimal": 58908
+    },
+    {
+      "icon_id": "122722",
+      "name": "add",
+      "font_class": "add",
+      "unicode": "e6b9",
+      "unicode_decimal": 59065
+    },
+    {
       "icon_id": "867859",
       "name": "icon-返回上一级",
       "font_class": "iconfanhuishangyiji",
@@ -27,53 +97,11 @@
       "unicode_decimal": 58962
     },
     {
-      "icon_id": "12600641",
-      "name": "com",
-      "font_class": "com",
-      "unicode": "e61a",
-      "unicode_decimal": 58906
-    },
-    {
-      "icon_id": "12600645",
-      "name": "conf",
-      "font_class": "conf",
-      "unicode": "e61c",
-      "unicode_decimal": 58908
-    },
-    {
-      "icon_id": "12600656",
-      "name": "csv",
-      "font_class": "csv",
-      "unicode": "e622",
-      "unicode_decimal": 58914
-    },
-    {
-      "icon_id": "12600663",
-      "name": "dat",
-      "font_class": "dat",
-      "unicode": "e627",
-      "unicode_decimal": 58919
-    },
-    {
-      "icon_id": "12600666",
-      "name": "deb",
-      "font_class": "deb",
-      "unicode": "e628",
-      "unicode_decimal": 58920
-    },
-    {
       "icon_id": "12600675",
       "name": "doc",
       "font_class": "doc",
       "unicode": "e62b",
       "unicode_decimal": 58923
-    },
-    {
-      "icon_id": "12600695",
-      "name": "epub",
-      "font_class": "epub",
-      "unicode": "e62e",
-      "unicode_decimal": 58926
     },
     {
       "icon_id": "12600701",
@@ -83,39 +111,11 @@
       "unicode_decimal": 58928
     },
     {
-      "icon_id": "12600711",
-      "name": "gitignore",
-      "font_class": "gitignore",
-      "unicode": "e632",
-      "unicode_decimal": 58930
-    },
-    {
-      "icon_id": "12600713",
-      "name": "gitattributes",
-      "font_class": "gitattributes",
-      "unicode": "e633",
-      "unicode_decimal": 58931
-    },
-    {
-      "icon_id": "12600746",
-      "name": "iso",
-      "font_class": "iso",
-      "unicode": "e63c",
-      "unicode_decimal": 58940
-    },
-    {
       "icon_id": "12600751",
       "name": "jpeg",
       "font_class": "jpeg",
       "unicode": "e63e",
       "unicode_decimal": 58942
-    },
-    {
-      "icon_id": "12600753",
-      "name": "json",
-      "font_class": "json",
-      "unicode": "e63f",
-      "unicode_decimal": 58943
     },
     {
       "icon_id": "12600773",

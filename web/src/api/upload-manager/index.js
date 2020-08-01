@@ -1,6 +1,9 @@
 import { arrayRemove } from '@/utils'
 // eslint-disable-next-line no-unused-vars
-import UploadTask from './task'
+import UploadTask, {
+  UploadTaskItem, STATUS_UPLOADING, STATUS_CREATED,
+  STATUS_ERROR, STATUS_COMPLETED, STATUS_MASK_PENDING, STATUS_MASK_FREEZED
+} from './task'
 import { getUploadConfig } from '@/api'
 
 import LocalUploadTask from './upload-providers/local'
@@ -25,11 +28,8 @@ const TASK_PROVIDERS = {
  */
 
 /**
- * @typedef UploadTaskItem
- * @property {number} id task id
- * @property {import('./task').TaskDef} task task
- * @property {number} status task status
- * @property {{ loaded: number, total: number }} [progress] upload progress
+ * @typedef UploadManagerConfig
+ * @property {number} concurrent max concurrent uploading tasks
  */
 
 export class UploadManager {
@@ -57,12 +57,21 @@ export class UploadManager {
    */
   _taskFinishedCallbacks
 
-  constructor () {
+  /**
+   * @type {UploadManagerConfig}
+   */
+  _config
+
+  /**
+   * @param {UploadManagerConfig} config
+   */
+  constructor (config) {
     this._tasks = []
     this._taskMap = {}
     this._events = {}
     this._taskFinishedCallbacks = {}
     this._idSeq = 0
+    this._config = { ...config }
   }
 
   /**
@@ -92,13 +101,13 @@ export class UploadManager {
     return new Promise((resolve, reject) => {
       this.submitTask(taskDef).then(id => {
         this._taskFinishedCallbacks[id] = (task, e) => {
-          if (task.status === UploadTask.STATUS_COMPLETED) {
+          if (task.status === STATUS_COMPLETED) {
             resolve()
           } else {
             // eslint-disable-next-line prefer-promise-reject-errors
             reject({
               status: task.status,
-              message: task.status === UploadTask.STATUS_ERROR ? e.message : 'task stopped'
+              message: task.status === STATUS_ERROR ? e.message : 'task stopped'
             })
           }
           if (removeIfFinished) {
@@ -138,20 +147,27 @@ export class UploadManager {
    * remove a finished task
    * @param {number} id task id
    * @param {boolean} [force] force remove (will stop the task)
+   * @returns {boolean}
    */
   removeTask (id, force) {
     const task = this._taskMap[id]
-    if (!task) return
-    this._removeTask(task, force)
+    if (!task) return false
+    return this._removeTask(task, force)
+  }
+
+  rescheduleTasks () {
+    const uploading = this._tasks.filter(t => t.status === STATUS_UPLOADING).length
+    const needStart = this._config.concurrent - uploading
+    if (needStart <= 0) return
+    this._tasks.filter(t => t.status === STATUS_CREATED)
+      .slice(0, needStart).forEach(t => t.start())
   }
 
   /**
-   * @returns {Array.<UploadTaskItem>}
+   * @returns {UploadTaskItem}
    */
   getTasks () {
-    return this._tasks.map(t => ({
-      id: t.id, task: t._task, status: t.status, progress: t.progress
-    }))
+    return this._tasks.map(t => new UploadTaskItem(t))
   }
 
   /**
@@ -171,7 +187,6 @@ export class UploadManager {
   off (event, fn) {
     const events = this._events[event]
     if (events) {
-      fn()
       arrayRemove(events, e => e === fn)
     }
   }
@@ -194,7 +209,7 @@ export class UploadManager {
 
     this._emitTaskChanged(task)
 
-    if (task.isFinished) {
+    if (task.isStatus(STATUS_MASK_FREEZED)) {
       const cb = this._taskFinishedCallbacks[task.id]
       if (typeof (cb) === 'function') {
         cb.call(this, task, e)
@@ -215,29 +230,34 @@ export class UploadManager {
   /**
    * @param {UploadTask} task
    * @param {boolean} force
+   * @returns {boolean}
    */
   _removeTask (task, force) {
-    if (task.isPending) {
+    if (task.isStatus(STATUS_MASK_PENDING)) {
       if (force) task.stop()
-      else {
-        throw new Error('cannot remove pending task')
-      }
+      else return false
     }
     const index = this._tasks.findIndex(t => t.id === task.id)
-    if (index === -1) {
-      throw new Error('task not found')
-    }
+    if (index === -1) return false
     this._tasks.splice(index, 1)
     delete this._taskMap[task.id]
+    this._emitTaskChanged()
+    return true
   }
 
+  /**
+   * @param {UploadTask} task
+   */
   _emitTaskChanged (task) {
     const tasks = this.getTasks()
     this._emitEvent('taskChanged', [{ task, tasks }])
+    if (task && task.status !== STATUS_UPLOADING) {
+      setTimeout(() => { this.rescheduleTasks() }, 0)
+    }
   }
 }
 
-const defaultUploadManager = new UploadManager()
+const defaultUploadManager = new UploadManager({ concurrent: 3 })
 
 if (process.env.NODE_ENV === 'development') {
   window.uploadManager = defaultUploadManager

@@ -6,11 +6,12 @@ export default {
   name: 'editor',
   display: (entry) => ({
     name: entry.meta.can_write ? 'Edit' : 'View',
-    description: entry.meta.can_write ? 'Edit this file' : 'View this file'
+    description: entry.meta.can_write ? 'Edit this file' : 'View this file',
+    icon: '#icon-cursor-text'
   }),
   view: {
     name: 'TextEditView',
-    component: () => import('./View.vue')
+    component: () => import('@/views/HandlerViews/TextEditView.vue')
   },
   supports: (entry) => entry.type === 'file' && [
     'txt', 'md',

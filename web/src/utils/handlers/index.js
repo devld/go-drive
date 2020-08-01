@@ -1,11 +1,12 @@
 import { mapOf, cloneObject } from '@/utils'
 
-import TextEditView from './TextEditView'
-import ImageView from './ImageView'
-import DownloadView from './DownloadView'
+import textEdit from './text-edit'
+import image from './image'
+import download from './download'
+import deleteEntry from './delete'
 
 export const HANDLERS = Object.freeze([
-  TextEditView, ImageView, DownloadView
+  textEdit, image, download, deleteEntry
 ])
 
 export const HANDLER_COMPONENTS = mapOf(HANDLERS.filter(h => h.view), h => h.view.name, h => h.view.component)

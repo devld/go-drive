@@ -1,11 +1,7 @@
 <template>
   <ul class="path-bar">
     <li class="path-bar__segment" v-for="s in segments" :key="s.path">
-      <a
-        class="path-bar__path"
-        :href="entryLink ? entryLink(s.path) : 'javascript:;'"
-        @click="pathChange(s)"
-      >{{ s.name }}</a>
+      <entry-link class="path-bar__path" :path="s.path" @click="pathChange">{{ s.name }}</entry-link>
     </li>
   </ul>
 </template>
@@ -20,9 +16,6 @@ export default {
     path: {
       type: String,
       required: true
-    },
-    entryLink: {
-      type: Function
     }
   },
   computed: {
@@ -37,9 +30,8 @@ export default {
     }
   },
   methods: {
-    pathChange (s) {
-      if (this.entryLink) return
-      this.$emit('path-change', s.path)
+    pathChange (e) {
+      this.$emit('path-change', e)
     }
   }
 }

@@ -20,6 +20,14 @@ export function getContent (path, noCache) {
   })
 }
 
+export function makeDir (path) {
+  return axios.post(`/mkdir/${path}`)
+}
+
+export function deleteEntry (path) {
+  return axios.delete(`/entry/${path}`)
+}
+
 export function getUploadConfig (path, overwrite) {
   return axios.get(`/upload/${path}`, {
     params: { overwrite }

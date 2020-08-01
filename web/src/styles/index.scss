@@ -1,6 +1,10 @@
 @import url('~github-markdown-css/github-markdown.css');
 @import url('~highlight.js/scss/github-gist.scss');
 
+.iconfont {
+  font-size: inherit;
+}
+
 .icon {
   width: 1em;
   height: 1em;
@@ -13,7 +17,7 @@
   font-size: 16px;
   outline: none;
   border: none;
-  background-color: #03a9f4;
+  background-color: #409eff;
   color: #fff;
   padding: 4px 10px;
   cursor: pointer;
@@ -24,12 +28,45 @@
   }
 
   &[disabled] {
-    background-color: #999;
     cursor: not-allowed;
+    background-color: #a0cfff;
   }
+
+  &.info {
+    background-color: #909399;
+
+    &[disabled] {
+      background-color: #c8c9cc;
+    }
+  }
+
+  &.success {
+    background-color: #67c23a;
+
+    &[disabled] {
+      background-color: #b3e19d;
+    }
+  }
+
+  &.warning {
+    background-color: #e6a23c;
+
+    &[disabled] {
+      background-color: #f3d19e;
+    }
+  }
+
+  &.danger {
+    background-color: #f56c6c;
+
+    &[disabled] {
+      background-color: #fab6b6;
+    }
+  }
+
 }
 
-.close-button {
+.plain-button {
   font-size: 28px;
   outline: none;
   border: none;
@@ -37,14 +74,10 @@
   color: #000;
   user-select: none;
   cursor: pointer;
-
-  &::before {
-    content: "×";
-  }
 }
 
 // animations
-@keyframes fadein {
+@keyframes fade-in {
   from {
     opacity: 0;
   }
@@ -71,6 +104,16 @@
 
   to {
     letter-spacing: 1em;
+  }
+}
+
+@keyframes spinning {
+  from {
+    transform: rotate(0);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -242,10 +285,10 @@
   }
 }
 
-@keyframes top-fade-in {
+@keyframes bottom-fade-in {
   from {
     opacity: 0;
-    transform: translateY(-50%);
+    transform: translateY(50%);
   }
 
   to {
@@ -254,12 +297,12 @@
   }
 }
 
-.top-fade-enter-active {
-  animation: top-fade-in 0.3s ease-in;
+.bottom-fade-enter-active {
+  animation: bottom-fade-in 0.3s ease-in;
 }
 
-.top-fade-leave-active {
-  animation: top-fade-in 0.3s ease-out reverse;
+.bottom-fade-leave-active {
+  animation: bottom-fade-in 0.3s ease-out reverse;
 }
 
 @keyframes scale-fade-in {
@@ -280,4 +323,23 @@
 
 .scale-fade-leave-active {
   animation: scale-fade-in 0.3s reverse;
+}
+
+@keyframes flip-fade-in {
+  from {
+    opacity: 0;
+    transform: perspective(100px) translateY(-154px) rotateX(20deg);
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.flip-fade-enter-active {
+  animation: flip-fade-in 0.3s cubic-bezier(0, .01, .77, 1.79);
+}
+
+.flip-fade-leave-active {
+  animation: flip-fade-in 0.3s reverse;
 }

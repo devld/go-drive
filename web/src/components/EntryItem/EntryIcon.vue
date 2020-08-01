@@ -1,9 +1,5 @@
 <template>
-  <span class="entry-icon">
-    <svg class="icon" aria-hidden="true">
-      <use :xlink:href="entryIcon" />
-    </svg>
-  </span>
+  <i-icon class="entry-icon" :svg="entryIcon" />
 </template>
 <script>
 import { getIconSVG } from './file-icon'

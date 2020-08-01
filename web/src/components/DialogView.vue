@@ -1,13 +1,32 @@
 <template>
-  <div class="dialog-view dialog-view__overlay" v-if="overlayShowing">
-    <transition v-if="transition" :name="transition" @after-leave="overlayShowing = false">
-      <div ref="overlay" class="dialog-view__content" v-if="contentShowing" @click="overlayClicked">
-        <slot />
+  <div
+    class="dialog-view dialog-view__overlay"
+    v-if="overlayShowing"
+    ref="overlay"
+    @click="overlayClicked"
+  >
+    <transition :name="transition" @after-leave="onDialogClosed">
+      <div class="dialog-view__content" v-if="contentShowing">
+        <div v-if="$slots.header || title" class="dialog-view__header">
+          <slot name="header">
+            <span>{{ title }}</span>
+          </slot>
+          <button
+            v-if="closeable"
+            class="dialog-view__close-button plain-button"
+            @click="closeButtonClicked"
+          >
+            <i-icon svg="#icon-close" />
+          </button>
+        </div>
+        <div class="dialog-view__body">
+          <slot />
+        </div>
+        <div v-if="$slots.footer" class="dialog-view__footer">
+          <slot name="footer" />
+        </div>
       </div>
     </transition>
-    <div class="dialog-view__content" v-else-if="contentShowing">
-      <slot />
-    </div>
   </div>
 </template>
 <script>
@@ -21,12 +40,22 @@ export default {
     show: {
       type: Boolean
     },
+    title: {
+      type: String
+    },
     transition: {
       type: String,
-      default: 'top-fade'
+      default: 'bottom-fade'
     },
     overlayClose: {
       type: Boolean
+    },
+    escClose: {
+      type: Boolean
+    },
+    closeable: {
+      type: Boolean,
+      default: true
     }
   },
   watch: {
@@ -53,12 +82,35 @@ export default {
       contentShowing: false
     }
   },
+  created () {
+    window.addEventListener('keydown', this.onKeyDown)
+  },
+  beforeDestroy () {
+    window.removeEventListener('keydown', this.onKeyDown)
+  },
   methods: {
     overlayClicked (e) {
       if (!this.overlayClose) return
-      if (e.target === this.$refs.overlay) {
-        this.$emit('input', false)
+      if (this.closeable && e.target === this.$refs.overlay) {
+        this.close()
       }
+    },
+    closeButtonClicked () {
+      this.close()
+    },
+    onKeyDown (e) {
+      if (!this.escClose) return
+      if (this.closeable && e.key === 'Escape' && this.show) {
+        this.close()
+        e.preventDefault()
+      }
+    },
+    close () {
+      this.$emit('input', false)
+    },
+    onDialogClosed () {
+      this.overlayShowing = false
+      this.$emit('closed')
     }
   }
 }
@@ -72,13 +124,37 @@ export default {
   bottom: 0;
   overflow: hidden;
   background-color: rgba(0, 0, 0, 0.1);
-}
+  z-index: 1000;
 
-.dialog-view__content {
-  width: 100%;
-  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.dialog-view__content {
+  background-color: #fff;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dialog-view__header {
+  position: relative;
+  min-width: 200px;
+  font-size: 28px;
+  font-weight: normal;
+  user-select: none;
+  padding: 16px 48px 16px 16px;
+}
+
+.dialog-view__close-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.dialog-view__body {
+  overflow: hidden;
 }
 </style>

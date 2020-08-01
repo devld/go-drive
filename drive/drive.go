@@ -98,13 +98,9 @@ func (d Drive) Copy(from common.IEntry, to string, progress common.OnProgress) (
 	if !common.IsNotSupportedError(e) {
 		return nil, e
 	}
-	// copy file
-	download, ok := from.(common.IDownloadable)
-	if ok {
-		url, _, e := download.GetURL()
-		if e != nil {
-			return nil, e
-		}
+	// copy file from url
+	url, _, e := from.GetURL()
+	if e == nil {
 		resp, e := http.Get(url)
 		if e != nil {
 			return nil, e
@@ -119,20 +115,20 @@ func (d Drive) Copy(from common.IEntry, to string, progress common.OnProgress) (
 		}
 		return mapDriveEntry(name, save), nil
 	}
-	readable, ok := from.(common.IReadable)
-	if ok {
-		reader, e := readable.GetReader()
-		if e != nil {
-			return nil, e
-		}
-		defer func() { _ = reader.Close() }()
-		save, e := driveTo.Save(pathTo, reader, progress)
-		if e != nil {
-			return nil, e
-		}
-		return mapDriveEntry(name, save), nil
+	if !common.IsNotSupportedError(e) {
+		return nil, e
 	}
-	return nil, common.NewNotAllowedError("source file is not readable")
+	// copy file from reader
+	reader, e := from.GetReader()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = reader.Close() }()
+	save, e := driveTo.Save(pathTo, reader, progress)
+	if e != nil {
+		return nil, e
+	}
+	return mapDriveEntry(name, save), nil
 }
 
 func (d Drive) Move(from string, to string) (common.IEntry, error) {
@@ -190,17 +186,7 @@ func (d Drive) Upload(path string, overwrite bool) (*common.DriveUploadConfig, e
 }
 
 func mapDriveEntry(driveName string, entry common.IEntry) common.IEntry {
-	_, downloadable := entry.(common.IDownloadable)
-	_, readable := entry.(common.IReadable)
-	entryWrapper := driveEntryWrapper{driveName: driveName, entry: entry}
-	if downloadable && readable {
-		return &driveEntryWrapperDownloadableReadable{entryWrapper}
-	} else if downloadable {
-		return &driveEntryWrapperDownloadable{entryWrapper}
-	} else if readable {
-		return &driveEntryWrapperReadable{entryWrapper}
-	}
-	return &entryWrapper
+	return &entryWrapper{driveName: driveName, entry: entry}
 }
 
 func mapDriveEntries(driveName string, entries []common.IEntry) []common.IEntry {
@@ -211,34 +197,12 @@ func mapDriveEntries(driveName string, entries []common.IEntry) []common.IEntry 
 	return mappedEntries
 }
 
-type driveEntryWrapper struct {
+type entryWrapper struct {
 	driveName string
 	entry     common.IEntry
 }
 
-type driveEntryWrapperDownloadable struct {
-	driveEntryWrapper
-}
-
-type driveEntryWrapperReadable struct {
-	driveEntryWrapper
-}
-
-type driveEntryWrapperDownloadableReadable struct {
-	driveEntryWrapper
-}
-
-func (d driveEntryWrapperDownloadable) GetURL() (string, bool, error) {
-	downloadable := d.entry.(common.IDownloadable)
-	return downloadable.GetURL()
-}
-
-func (d driveEntryWrapperReadable) GetReader() (io.ReadCloser, error) {
-	readable := d.entry.(common.IReadable)
-	return readable.GetReader()
-}
-
-func (d *driveEntryWrapper) Path() string {
+func (d *entryWrapper) Path() string {
 	path := d.entry.Path()
 	for strings.HasPrefix(path, "/") {
 		path = path[1:]
@@ -246,28 +210,36 @@ func (d *driveEntryWrapper) Path() string {
 	return d.driveName + "/" + path
 }
 
-func (d *driveEntryWrapper) Name() string {
+func (d *entryWrapper) Name() string {
 	return d.entry.Name()
 }
 
-func (d *driveEntryWrapper) Type() common.EntryType {
+func (d *entryWrapper) Type() common.EntryType {
 	return d.entry.Type()
 }
 
-func (d *driveEntryWrapper) Size() int64 {
+func (d *entryWrapper) Size() int64 {
 	return d.entry.Size()
 }
 
-func (d *driveEntryWrapper) Meta() common.IEntryMeta {
+func (d *entryWrapper) Meta() common.IEntryMeta {
 	return d.entry.Meta()
 }
 
-func (d *driveEntryWrapper) CreatedAt() int64 {
+func (d *entryWrapper) CreatedAt() int64 {
 	return d.entry.CreatedAt()
 }
 
-func (d *driveEntryWrapper) UpdatedAt() int64 {
+func (d *entryWrapper) UpdatedAt() int64 {
 	return d.entry.UpdatedAt()
+}
+
+func (d *entryWrapper) GetReader() (io.ReadCloser, error) {
+	return d.entry.GetReader()
+}
+
+func (d *entryWrapper) GetURL() (string, bool, error) {
+	return d.entry.GetURL()
 }
 
 type driveEntry struct {
@@ -306,6 +278,14 @@ func (d *driveEntry) CreatedAt() int64 {
 
 func (d *driveEntry) UpdatedAt() int64 {
 	return -1
+}
+
+func (d *driveEntry) GetReader() (io.ReadCloser, error) {
+	return nil, common.NewUnsupportedError()
+}
+
+func (d *driveEntry) GetURL() (string, bool, error) {
+	return "", false, common.NewUnsupportedError()
 }
 
 type driveEntryMeta struct {

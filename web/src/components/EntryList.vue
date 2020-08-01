@@ -1,38 +1,22 @@
 <template>
   <div class="entry-list">
-    <path-bar
-      v-if="!isRootPath"
-      :path="path"
-      :entry-link="getEntryLink"
-      @path-change="$emit('path-change', $event)"
-    />
+    <path-bar v-if="!isRootPath" :path="path" @path-change="$emit('path-change', $event)" />
     <ul class="entry-list__entries">
       <li class="entry-list__item" v-if="!isRootPath">
-        <a
-          :href="getEntryLink(parentDirEntry)"
-          @click="entryClicked(parentDirEntry, $event)"
-          ref="parentEntry"
-        >
+        <entry-link ref="parentEntry" :entry="parentDirEntry" @click="entryClicked">
           <entry-item :entry="parentDirEntry" />
-        </a>
+        </entry-link>
       </li>
       <li class="entry-list__item" v-for="entry in sortedEntries" :key="path + entry.name">
-        <a
-          :href="getEntryLink(entry)"
-          @click="entryClicked(entry, $event)"
-          ref="entries"
-          v-long-press
-          @contextmenu="entryContextMenu(entry, $event)"
-          @long-press="entryContextMenu(entry)"
-        >
+        <entry-link ref="entries" :entry="entry" @click="entryClicked" @menu="entryContextMenu">
           <entry-item :entry="entry" />
-        </a>
+        </entry-link>
       </li>
     </ul>
   </div>
 </template>
 <script>
-import { pathJoin, pathClean } from '@/utils'
+import { pathJoin, pathClean, isRootPath } from '@/utils'
 
 const SORTS_METHOD = {
   default: (a, b) => {
@@ -58,9 +42,6 @@ export default {
     sort: {
       type: String,
       default: 'default'
-    },
-    entryLink: {
-      type: Function
     }
   },
   data () {
@@ -83,28 +64,15 @@ export default {
       return sortMethod ? [...this.entries].sort(sortMethod) : this.entries
     },
     isRootPath () {
-      return this.path === ''
+      return isRootPath(this.path)
     }
   },
   methods: {
-    entryClicked (entry, e) {
-      this.$emit('entry-click', { entry, event: e })
+    entryClicked (e) {
+      this.$emit('entry-click', e)
     },
-    entryContextMenu (entry, e) {
-      this.$emit('entry-menu', { entry, event: e })
-    },
-    getEntryLink (entry) {
-      let link
-      if (this.entryLink) {
-        if (typeof (entry) === 'string') {
-          // PathBar
-          link = this.entryLink(entry)
-        } else {
-          link = this.entryLink(entry.path, entry)
-        }
-      }
-      if (!link) link = 'javascript:;'
-      return link
+    entryContextMenu (e) {
+      this.$emit('entry-menu', e)
     },
     focusOnEntry (name) {
       let dom
@@ -113,6 +81,7 @@ export default {
         const index = this.sortedEntries.findIndex(e => e.name === name)
         if (index >= 0) dom = this.$refs.entries[index]
       }
+      dom = (dom && dom.$el) || dom
       dom && dom.focus()
     }
   }
@@ -137,7 +106,7 @@ export default {
 }
 
 .entry-list__item {
-  animation: fadein 0.3s;
+  animation: fade-in 0.3s;
 
   & > a {
     display: block;
