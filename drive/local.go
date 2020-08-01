@@ -127,7 +127,7 @@ func (f *FsDrive) MakeDir(path string) (common.IEntry, error) {
 }
 
 func (f *FsDrive) Copy(from common.IEntry, to string, progress common.OnProgress) (common.IEntry, error) {
-	return nil, common.NewNotSupportedError()
+	return nil, common.NewUnsupportedError()
 }
 
 func (f *FsDrive) Move(from string, to string) (common.IEntry, error) {
@@ -264,6 +264,10 @@ func (f *FsFile) GetReader() (io.ReadCloser, error) {
 		return nil, common.NewNotFoundError("file does not exist")
 	}
 	return os.Open(path)
+}
+
+func (f *FsFile) GetURL() (string, bool, error) {
+	return "", false, common.NewUnsupportedError()
 }
 
 func (f *fsDriveMeta) CanWrite() bool {

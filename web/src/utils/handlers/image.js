@@ -4,11 +4,12 @@ export default {
   name: 'image',
   display: {
     name: 'Gallery',
-    description: 'View images'
+    description: 'View images',
+    icon: '#icon-image'
   },
   view: {
     name: 'ImageView',
-    component: () => import('./View.vue')
+    component: () => import('@/views/HandlerViews/ImageView.vue')
   },
   supports: (entry) => entry.type === 'file' &&
     ['jpg', 'jpeg', 'png', 'gif'].includes(filenameExt(entry.name))

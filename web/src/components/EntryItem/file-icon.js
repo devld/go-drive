@@ -3,21 +3,10 @@
 import { filenameExt } from '@/utils'
 
 const fileExts = {
-  'com': ['com', 'sh', 'bat'],
-  'conf': ['conf', 'config', 'ini', 'yml', 'yaml', 'properties'],
-  'csv': ['csv'],
-  'dat': ['dat', 'data'],
-  'deb': ['deb', 'rpm', 'msi'],
-  'epub': ['epub'],
+  'log': ['conf', 'config', 'ini', 'yml', 'yaml', 'properties', 'log'],
   'mp': ['mp3', 'm4a', 'ogg', 'flac'],
-  'exe': ['exe'],
-  'gitignore': ['gitignore'],
-  'gitattributes': ['gitattributes'],
-  'ico': ['icon'],
-  'iso': ['iso', 'img'],
+  'exe': ['exe', 'deb', 'sh', 'rpm'],
   'jpeg': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
-  'json': ['json'],
-  'log': ['log'],
   'md': ['md'],
   'mp1': ['mp4', 'mov', 'flv', 'rmvb', 'mkv'],
   'pdf': ['pdf'],

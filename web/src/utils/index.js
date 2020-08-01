@@ -2,7 +2,12 @@
 import dayjs from 'dayjs'
 import markdown from './directives/markdown'
 import longPress from './directives/long-press'
+import focus from './directives/focus'
 import { fileUrl } from '@/api'
+
+import UiUtils from './ui-utils'
+
+export const IS_DEBUG = process.env.NODE_ENV === 'development'
 
 export function formatTime (d, toFormat) {
   const date = dayjs(d)
@@ -17,11 +22,20 @@ export function formatBytes (bytes, decimals = 2) {
 
   const k = 1024
   const dm = decimals < 0 ? 0 : decimals
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+  const sizes = ['B', 'K', 'M', 'G', 'T']
 
   const i = Math.floor(Math.log(bytes) / Math.log(k))
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
+}
+
+export function formatPercent (n, based) {
+  if (typeof (n) !== 'number') return ''
+  if (typeof (based) === 'number') {
+    if (based === 0) return ''
+    n /= based
+  }
+  return (n * 100).toFixed(1) + '%'
 }
 
 export function dir (path) {
@@ -97,16 +111,26 @@ export function mapOf (list, keyFn, valueFn = DEFAULT_VALUE_FN) {
   return map
 }
 
+export function val (val, defVal) {
+  if (val === undefined) return defVal
+  return val
+}
+
+export function isRootPath (path) {
+  return path === ''
+}
+
 const filters = {
   formatTime, formatBytes
 }
 
 const directives = {
-  markdown, longPress
+  markdown, longPress, focus
 }
 
 const utils = {
-  formatTime, formatBytes, filenameExt, pathJoin, fileUrl
+  formatTime, formatBytes, formatPercent,
+  filenameExt, pathJoin, fileUrl, filename, dir
 }
 
 export default {
@@ -118,5 +142,7 @@ export default {
     Object.keys(directives).forEach(key => {
       Vue.directive(key, directives[key])
     })
+
+    Vue.use(UiUtils)
   }
 }

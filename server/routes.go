@@ -204,12 +204,8 @@ func (dr DriveRoute) GetContent(path string, w http.ResponseWriter, req *http.Re
 	if e != nil {
 		return e
 	}
-	download, ok := file.(common.IDownloadable)
-	if ok {
-		url, proxy, e := download.GetURL()
-		if e != nil {
-			return e
-		}
+	url, proxy, e := file.GetURL()
+	if e == nil {
 		if proxy {
 			e = dr.proxyRequest(url, w, req)
 		} else {
@@ -218,29 +214,23 @@ func (dr DriveRoute) GetContent(path string, w http.ResponseWriter, req *http.Re
 		}
 		return e
 	}
-	readable, ok := file.(common.IReadable)
-	if ok {
-		reader, e := readable.GetReader()
-		if e != nil {
-			return e
-		}
-		defer func() { _ = reader.Close() }()
-		readSeeker, ok := reader.(io.ReadSeeker)
-		if ok {
-			http.ServeContent(
-				w, req, file.Name(),
-				time.Unix(0, file.UpdatedAt()*int64(time.Millisecond)),
-				readSeeker)
-			return nil
-		}
-
-		w.Header().Set("Content-Length", string(file.Size()))
-		_, e = io.Copy(w, reader)
-		if e != nil {
-			return e
-		}
+	reader, e := file.GetReader()
+	if e != nil {
+		return e
 	}
-	return common.NewNotAllowedError("could not download this file")
+	defer func() { _ = reader.Close() }()
+	readSeeker, ok := reader.(io.ReadSeeker)
+	if ok {
+		http.ServeContent(
+			w, req, file.Name(),
+			time.Unix(0, file.UpdatedAt()*int64(time.Millisecond)),
+			readSeeker)
+		return nil
+	}
+
+	w.Header().Set("Content-Length", string(file.Size()))
+	_, e = io.Copy(w, reader)
+	return e
 }
 
 func (dr DriveRoute) WriteContent(path string, req *http.Request) (*EntryJson, error) {

@@ -43,10 +43,7 @@ export default {
 
 .entry-item__icon {
   margin-right: 0.5em;
-
-  .icon {
-    font-size: 42px;
-  }
+  font-size: 42px;
 }
 
 .entry-item__info {

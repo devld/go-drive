@@ -7,7 +7,9 @@
         @click="saveFile"
       >{{ saving ? 'Saving...' : 'Save' }}</button>
       <span :title="filename">{{ filename }}</span>
-      <button class="header-button close-button" title="Close" @click="$emit('close')"></button>
+      <button class="header-button close-button plain-button" title="Close" @click="$emit('close')">
+        <i-icon svg="#icon-close" />
+      </button>
     </h1>
     <text-editor
       v-if="!error"
@@ -103,7 +105,7 @@ export default {
         }, true)
         this.changeSaveState(true)
       } catch (e) {
-        alert(e.message)
+        this.$alert(e.message)
       } finally {
         this.saving = false
       }
@@ -133,10 +135,8 @@ export default {
 
 .text-edit-view {
   position: relative;
-  width: 100%;
-  max-width: 800px;
-  height: calc(100% - 64px);
-  margin: 32px;
+  width: 800px;
+  height: calc(100vh - 64px);
   padding-top: 60px;
   background-color: #fff;
   overflow: hidden;
@@ -205,9 +205,9 @@ export default {
 
 @media screen and (max-width: 800px) {
   .text-edit-view {
-    width: 100%;
+    width: 100vw;
+    height: 100vh;
     max-width: unset;
-    height: 100%;
     margin: 0;
   }
 }

@@ -1,11 +1,12 @@
 
-import DownloadView from './View.vue'
+import DownloadView from '@/views/HandlerViews/DownloadView.vue'
 
 export default {
   name: 'download',
   display: {
     name: 'Download',
-    description: 'Download this file'
+    description: 'Download this file',
+    icon: '#icon-download'
   },
   view: {
     name: 'DownloadView',

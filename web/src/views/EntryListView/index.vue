@@ -5,7 +5,6 @@
       ref="entryList"
       :path="loadedPath"
       :entries="entries"
-      :entry-link="entryLink"
       @entry-click="$emit('entry-click', $event)"
       @entry-menu="$emit('entry-menu', $event)"
     />
@@ -13,17 +12,17 @@
   </div>
 </template>
 <script>
-import { listEntries } from '@/api'
+import { listEntries as listEntries_ } from '@/api'
 
 const entriesCache = {}
-async function listEntriesWithCache (path) {
+async function listEntries (path, force) {
   let entries
-  if (entriesCache[path]) {
+  if (!force && entriesCache[path]) {
     entries = entriesCache[path]
     delete entriesCache[path]
     return entries
   }
-  entries = await listEntries(path)
+  entries = await listEntries_(path)
   entriesCache[path] = entries
   return entries
 }
@@ -37,9 +36,6 @@ export default {
   props: {
     path: {
       type: String
-    },
-    entryLink: {
-      type: Function
     }
   },
   data () {
@@ -82,12 +78,12 @@ export default {
     focusOnEntry (name) {
       this.$refs.entryList.focusOnEntry(name)
     },
-    async loadEntries () {
+    async loadEntries (force) {
       this.error = null
       this.$emit('loading', true)
       try {
         const path = this.currentPath
-        this.entries = await listEntriesWithCache(path)
+        this.entries = await listEntries(path, force)
         this.loadedPath = path
         this.$emit('entries-load', { entries: this.entries, path: this.loadedPath })
 
@@ -102,6 +98,9 @@ export default {
       } finally {
         this.$emit('loading', false)
       }
+    },
+    reload (force) {
+      this.loadEntries(force)
     }
   }
 }

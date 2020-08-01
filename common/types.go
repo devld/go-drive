@@ -30,16 +30,11 @@ type IEntry interface {
 	Meta() IEntryMeta
 	CreatedAt() int64
 	UpdatedAt() int64
-}
 
-type IDownloadable interface {
+	GetReader() (io.ReadCloser, error)
 	// GetURL gets the download url of the file.
 	// if second parameter is `true`, this file will be downloaded by proxy
 	GetURL() (string, bool, error)
-}
-
-type IReadable interface {
-	GetReader() (io.ReadCloser, error)
 }
 
 type IDriveMeta interface {
@@ -84,10 +79,10 @@ func (d NotAllowedError) Error() string {
 	return d.msg
 }
 
-type NotSupportedError struct {
+type UnsupportedError struct {
 }
 
-func (n NotSupportedError) Error() string {
+func (n UnsupportedError) Error() string {
 	return "not supported"
 }
 

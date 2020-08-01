@@ -1,22 +1,27 @@
 <template>
   <div class="home" @keydown.esc="closeEntryHandlerView">
+    <!-- file list main area -->
     <main class="files-list">
       <entry-list-view
         ref="entryList"
         :path="path"
-        :entry-link="makeEntryLink"
         @entries-load="entriesLoaded"
         @entry-click="entryClicked"
         @entry-menu="showEntryMenu"
       />
     </main>
+    <!-- file list main area -->
+
+    <!-- README -->
     <footer class="page-footer" v-if="readmeContent">
       <div class="markdown-body" v-markdown="readmeContent">
         <p style="text-align: center;">Loading README...</p>
       </div>
     </footer>
+    <!-- README -->
+
     <!-- entry handler view dialog -->
-    <dialog-view :show="entryHandlerViewShowing">
+    <dialog-view class="entry-handler-dialog" :show="entryHandlerViewShowing">
       <component
         v-if="entryHandlerViewShowing"
         :is="entryHandlerView.component"
@@ -30,7 +35,7 @@
     <!-- entry handler view dialog -->
 
     <!-- entry menu -->
-    <dialog-view v-model="entryMenuShowing" overlay-close transition="scale-fade">
+    <dialog-view v-model="entryMenuShowing" overlay-close esc-close transition="flip-fade">
       <entry-menu
         v-if="entryMenu"
         :menus="entryMenu.menus"
@@ -39,21 +44,25 @@
       />
     </dialog-view>
     <!-- entry menu -->
+
+    <!-- new entry menu -->
+    <new-entry-area ref="newEntryArea" v-if="!isRootPath" :path="path" @update="reloadEntryList" />
+    <!-- new entry menu -->
   </div>
 </template>
 <script>
 import EntryListView from '@/views/EntryListView'
 import EntryMenu from './EntryMenu'
+import NewEntryArea from './NewEntryArea'
 
 import { getContent } from '@/api'
-import { filename, dir } from '@/utils'
+import { filename, dir, isRootPath } from '@/utils'
 
-import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/views/handlers'
+import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
+import { makeEntryHandlerLink, getBaseLink } from '../../utils/routes'
 
 const README_FILENAME = 'readme.md'
 const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
-
-const THIS_PATH_NAME = 'files'
 
 const HISTORY_FLAG = '_h'
 const setHistoryFlag = () => {
@@ -67,7 +76,7 @@ const getHistoryFlag = () => {
 
 export default {
   name: 'Home',
-  components: { EntryListView, EntryMenu, ...HANDLER_COMPONENTS },
+  components: { EntryListView, EntryMenu, NewEntryArea, ...HANDLER_COMPONENTS },
   props: {
     path: {
       type: String,
@@ -89,6 +98,9 @@ export default {
   computed: {
     entryHandlerViewShowing () {
       return !!(this.entryHandlerView && this.entries && this.entryHandlerView.entry)
+    },
+    isRootPath () {
+      return isRootPath(this.path)
     }
   },
   beforeRouteUpdate (to, from, next) {
@@ -116,9 +128,15 @@ export default {
       this.entryMenuShowing = false
       const handler = getHandler(menu.name)
       if (!handler) return
-      this.$router.push(
-        this.makeEntryHandlerPath(handler.name, entry.name)
-      )
+      if (handler.view) {
+        this.$router.push(makeEntryHandlerLink(handler.name, entry.name, this.path))
+        return
+      }
+      if (typeof (handler.handler) === 'function') {
+        handler.handler(entry, this.$uiUtils).then(r => {
+          if (r && r.update) this.reloadEntryList()
+        }, () => { })
+      }
     },
     showEntryMenu ({ entry, event }) {
       const handlers = resolveEntryHandler(entry)
@@ -139,7 +157,7 @@ export default {
     },
     entriesLoaded ({ entries, path }) {
       if (path !== this.path) {
-        this.$router.push(this.makeRoutePath(path))
+        this.$router.push(getBaseLink(path))
       }
       this.tryLoadReadme(entries)
       this.entries = entries
@@ -147,13 +165,6 @@ export default {
       if (this.entryHandlerView) {
         this.entryHandlerView.entry =
           entries.find(e => e.name === this.entryHandlerView.entryName)
-      }
-
-      if (this._pendingHandler) {
-        const { handler, entryName } = this._pendingHandler
-        const entry = entries.find(e => e.name === entryName)
-        if (entry) handler.handler(entry)
-        this._pendingHandler = null
       }
     },
     resolveRouteAndHandleEntry () {
@@ -173,21 +184,7 @@ export default {
           entryName, entry,
           savedState: true
         }
-        return
       }
-
-      if (handler.handler) {
-        // handler function
-        if (entry) {
-          handler.handler(entry)
-        } else {
-          this._pendingHandler = { handler, entryName }
-        }
-      }
-
-      this.$nextTick(() => {
-        this.replaceHandlerRoute()
-      })
     },
     async closeEntryHandlerView () {
       if (!this.entryHandlerView) return
@@ -200,7 +197,7 @@ export default {
       const dirPath = dir(path)
       const name = filename(path)
       this.focusOnEntry(name)
-      const newPath = this.makeEntryHandlerPath(this.entryHandlerView.handler, name, dirPath)
+      const newPath = makeEntryHandlerLink(this.entryHandlerView.handler, name, dirPath)
       if (decodeURIComponent(this.$route.fullPath) !== decodeURIComponent(newPath)) {
         this.$router.replace(newPath)
       }
@@ -210,15 +207,7 @@ export default {
     },
     confirmUnsavedState () {
       if (!this.entryHandlerView || this.entryHandlerView.savedState) return Promise.resolve()
-      return new Promise((resolve, reject) => {
-        if (confirm('You have some unsaved changes, are you sure to leave?')) {
-          this.entryHandlerView.savedState = true
-          resolve()
-        } else {
-          // eslint-disable-next-line prefer-promise-reject-errors
-          reject()
-        }
-      })
+      return this.$confirm('You have some unsaved changes, are you sure to leave?')
     },
     resolveHandlerByRoute (route) {
       const handler = getHandler(route.query.handler)
@@ -234,22 +223,6 @@ export default {
       } else {
         this.$router.replace(this.$route.path)
       }
-    },
-    makeEntryLink (path, entry) {
-      if (!entry || entry.type === 'dir') {
-        return '#' + this.makeRoutePath(path)
-      }
-      const handlers = resolveEntryHandler(entry)
-      if (handlers.length > 0) {
-        return '#' + this.makeEntryHandlerPath(handlers[0].name, entry.name)
-      }
-    },
-    makeEntryHandlerPath (handlerName, entryName, path) {
-      return this.makeRoutePath(encodeURI(path || this.path)) +
-        `?handler=${handlerName}&entry=${encodeURIComponent(entryName)}`
-    },
-    makeRoutePath (path) {
-      return `/${THIS_PATH_NAME}/${path}`
     },
     focusOnEntry (name) {
       this.$refs.entryList.focusOnEntry(name)
@@ -278,6 +251,9 @@ export default {
       } catch (e) {
         this.readmeContent = README_FAILED_CONTENT
       }
+    },
+    reloadEntryList () {
+      this.$refs.entryList.reload(true)
     }
   }
 }
@@ -298,6 +274,12 @@ export default {
   background-color: #fff;
   padding: 16px;
   border-radius: 16px;
+}
+
+.entry-handler-dialog {
+  .dialog-view__content {
+    background-color: transparent;
+  }
 }
 
 @media screen and (max-width: 900px) {

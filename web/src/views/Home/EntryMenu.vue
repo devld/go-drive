@@ -8,10 +8,16 @@
       <li
         @click="$emit('click', { entry, menu: m })"
         class="entry-menu__menu-item"
+        :class="m.display.type && `entry-menu__menu-item-${m.display.type}`"
         v-for="(m, i) in menus"
         :key="i"
         :title="m.display.description"
-      >{{ m.display.name }}</li>
+      >
+        <span class="entry-menu__icon">
+          <i-icon v-if="m.display.icon" :svg="m.display.icon" />
+        </span>
+        <span class="entry-menu__text">{{ m.display.name }}</span>
+      </li>
     </ul>
   </div>
 </template>
@@ -36,7 +42,7 @@ export default {
   background-color: #fff;
   padding: 20px 0;
   min-width: 280px;
-  max-width: 90vw;
+  max-width: 400px;
 }
 
 .entry-menu__entry {
@@ -62,12 +68,37 @@ export default {
 }
 
 .entry-menu__menu-item {
+  display: flex;
+  align-items: center;
   list-style-type: none;
-  padding: 10px 20px;
+  padding: 0 20px;
   cursor: pointer;
+  transition: 0.4s;
 
   &:hover {
     background-color: rgba(0, 0, 0, 0.08);
+  }
+}
+
+.entry-menu__icon {
+  margin: 6px 10px 6px 0;
+  .icon {
+    display: flex;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.entry-menu__menu-item-danger {
+  &:hover {
+    color: #fff;
+    background-color: #f56c6c;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .entry-menu {
+    max-width: 90vw;
   }
 }
 </style>

@@ -22,7 +22,7 @@ func IsDir(path string) (bool, error) {
 }
 
 func IsNotSupportedError(e error) bool {
-	_, ok := e.(NotSupportedError)
+	_, ok := e.(UnsupportedError)
 	return ok
 }
 
@@ -39,10 +39,10 @@ func NewNotAllowedError(msg string) NotAllowedError {
 	return NotAllowedError{msg}
 }
 
-var notSupportedError = NotSupportedError{}
+var unsupportedError = UnsupportedError{}
 
-func NewNotSupportedError() NotSupportedError {
-	return notSupportedError
+func NewUnsupportedError() UnsupportedError {
+	return unsupportedError
 }
 
 func NewRemoteApiError(code int, msg string) RemoteApiError {

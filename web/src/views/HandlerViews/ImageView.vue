@@ -135,4 +135,8 @@ export default {
 <style lang="scss">
 @import url("~photoswipe/dist/photoswipe.css");
 @import url("~photoswipe/dist/default-skin/default-skin.css");
+.image-view-page {
+  width: 100vw;
+  height: 100vh;
+}
 </style>

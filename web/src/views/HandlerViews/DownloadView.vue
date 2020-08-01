@@ -2,7 +2,9 @@
   <div class="download-view-page">
     <h1 class="page-title">
       <span>Download</span>
-      <button class="close-button" @click="$emit('close')"></button>
+      <button class="plain-button close-button" @click="$emit('close')">
+        <i-icon svg="#icon-close" />
+      </button>
     </h1>
     <div class="page-content">
       <entry-icon :entry="entry" />
@@ -46,10 +48,8 @@ export default {
   }
 
   .entry-icon {
-    .icon {
-      width: 150px;
-      height: 150px;
-    }
+    width: 150px;
+    height: 150px;
   }
 
   .page-content {
