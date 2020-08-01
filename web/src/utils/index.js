@@ -102,6 +102,18 @@ export function cloneObject (obj) {
   return o
 }
 
+export const debounce = (func, wait) => {
+  let timeout
+  return function executedFunction () {
+    const later = () => {
+      timeout = null
+      func.call(this, arguments)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
 const DEFAULT_VALUE_FN = e => e
 export function mapOf (list, keyFn, valueFn = DEFAULT_VALUE_FN) {
   const map = {}

@@ -7,6 +7,17 @@
  */
 
 /**
+ * @typedef TaskChangeEvent
+ * @property {UploadTask} task task
+ * @property {any} [data] payload
+ */
+
+/**
+ * @callback TaskChangeListener
+ * @param {TaskChangeEvent} event
+ */
+
+/**
  * @param {TaskDef} task
  * @returns {TaskDef}
  */
@@ -28,43 +39,42 @@ const matchStatus = (mask, status) => !!(mask & status)
  */
 export const STATUS_CREATED = 1 << 0
 /**
+ * task starting
+ */
+export const STATUS_STARTING = 1 << 1
+/**
  * task is uploading
  */
-export const STATUS_UPLOADING = 1 << 1
+export const STATUS_UPLOADING = 1 << 2
 /**
  * task paused
  */
-export const STATUS_PAUSED = 1 << 2
+export const STATUS_PAUSED = 1 << 3
 /**
  * task completed successfully
  */
-export const STATUS_COMPLETED = 1 << 3
+export const STATUS_COMPLETED = 1 << 4
 /**
  * task stopped
  */
-export const STATUS_STOPPED = 1 << 4
+export const STATUS_STOPPED = 1 << 5
 /**
  * task error
  */
-export const STATUS_ERROR = 1 << 5
+export const STATUS_ERROR = 1 << 6
 
-export const STATUS_MASK_PENDING = STATUS_CREATED | STATUS_PAUSED | STATUS_UPLOADING
+export const STATUS_MASK_PENDING = STATUS_CREATED | STATUS_STARTING | STATUS_PAUSED | STATUS_UPLOADING
 export const STATUS_MASK_FREEZED = STATUS_COMPLETED | STATUS_ERROR | STATUS_STOPPED
 
 export const STATUS_MASK_CAN_START = STATUS_CREATED | STATUS_PAUSED | STATUS_ERROR | STATUS_STOPPED
-export const STATUS_MASK_CAN_PAUSE = STATUS_UPLOADING
-export const STATUS_MASK_CAN_STOP = STATUS_UPLOADING | STATUS_PAUSED
+export const STATUS_MASK_CAN_PAUSE = STATUS_STARTING | STATUS_UPLOADING
+export const STATUS_MASK_CAN_STOP = STATUS_STARTING | STATUS_UPLOADING | STATUS_PAUSED
 
 export default class UploadTask {
   /**
    * @type {number}
    */
   _id
-
-  /**
-   * @type {UploadManager}
-   */
-  _manager
 
   /**
    * @type {TaskDef}
@@ -87,21 +97,25 @@ export default class UploadTask {
   _progress
 
   /**
+   * @type {TaskChangeListener}
+   */
+  _changeListener
+
+  /**
    * @param {number} id task id
-   * @param {UploadManager} manager upload manager
+   * @param {TaskChangeListener} changeListener task changed listener
    * @param {TaskDef} task task definition
    * @param {any} [config] task specified config
    */
-  constructor (id, manager, task, config) {
+  constructor (id, changeListener, task, config) {
     if (new.target === UploadTask) {
       throw new Error('Cannot construct abstract UploadTask')
     }
     this._id = id
-    this._manager = manager
+    this._changeListener = changeListener
     this._status = STATUS_CREATED
     this._task = processTaskDef(task)
     this._config = config
-    this._taskInit(task, config)
   }
 
   /**
@@ -127,14 +141,6 @@ export default class UploadTask {
     if (!this.isStatus(STATUS_MASK_CAN_STOP)) return false
   }
 
-  /**
-   * task init
-   * @param {TaskDef} task
-   * @param {any} config
-   */
-  _taskInit (task, config) {
-  }
-
   get id () { return this._id }
   get status () { return this._status }
   get progress () { return this._progress }
@@ -144,40 +150,20 @@ export default class UploadTask {
     return matchStatus(mask, this._status)
   }
 
-  _onStart () {
-    this._status = STATUS_UPLOADING
-    this._manager._taskChanged(this)
-  }
-
-  _onPause () {
-    this._status = STATUS_PAUSED
-    this._manager._taskChanged(this)
-  }
-
-  _onStop () {
-    this._status = STATUS_STOPPED
-    this._manager._taskChanged(this)
-  }
-
   /**
-   * @param {number} loaded uploaded size
-   * @param {number} total total size
+   * @param {string} status
+   * @param {any} data
    */
-  _onProgress (loaded, total) {
-    this._status = STATUS_UPLOADING
-    this._progress = Object.freeze({ loaded, total })
-    this._manager._taskChanged(this)
-  }
+  _onChange (status, data) {
+    this._status = status
+    if (status === STATUS_UPLOADING) {
+      this._progress = Object.freeze({ loaded: data.loaded, total: data.total })
+    }
+    if (status === STATUS_COMPLETED) {
+      this._task.file = null
+    }
 
-  _onError (e) {
-    this._status = STATUS_ERROR
-    this._manager._taskChanged(this, e)
-  }
-
-  _onComplete () {
-    this._task.file = null
-    this._status = STATUS_COMPLETED
-    this._manager._taskChanged(this)
+    this._changeListener({ task: this, data })
   }
 }
 

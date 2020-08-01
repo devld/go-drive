@@ -108,7 +108,7 @@ export function createDialog (name, component) {
         if (this._callback && this._callback.onOk) {
           this.toggleLoading(confirm)
           try {
-            await confirm ? this._callback.onOk(val) : this._callback.onCancel(val || 'cancel')
+            await (confirm ? this._callback.onOk(val) : this._callback.onCancel(val || 'cancel'))
           } catch {
             return
           } finally {

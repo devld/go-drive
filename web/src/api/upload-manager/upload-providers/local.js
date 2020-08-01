@@ -2,7 +2,7 @@
 
 import axios from '@/api/axios'
 import Axios from 'axios'
-import UploadTask, { STATUS_STOPPED } from '../task'
+import UploadTask, { STATUS_STOPPED, STATUS_UPLOADING, STATUS_COMPLETED, STATUS_ERROR } from '../task'
 
 /**
  * local upload task provider
@@ -23,13 +23,13 @@ export default class LocalUploadTask extends UploadTask {
     axios.put(`/content/${this._task.path}`, formData, {
       cancelToken: this._axiosSource.token,
       onUploadProgress: ({ loaded, total }) => {
-        this._onProgress(loaded, total)
+        this._onChange(STATUS_UPLOADING, { loaded, total })
       }
     }).then(() => {
-      this._onComplete()
+      this._onChange(STATUS_COMPLETED)
     }, e => {
       if (this._status === STATUS_STOPPED) return
-      this._onError(e)
+      this._onChange(STATUS_ERROR, e)
     })
   }
 
@@ -39,7 +39,7 @@ export default class LocalUploadTask extends UploadTask {
 
   stop () {
     if (this._axiosSource) {
-      this._onStop()
+      this._onChange(STATUS_STOPPED)
       this._axiosSource.cancel()
     }
   }

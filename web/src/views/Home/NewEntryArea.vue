@@ -88,30 +88,16 @@ export default {
     window.removeEventListener('beforeunload', this.onWindowUnload)
   },
   methods: {
-    async * submitUploadTasks (files) {
-      let i = 0
-      for (const file of files) {
-        await uploadManager.submitTask({
-          path: pathClean(pathJoin(this.path, file.name)),
-          file
-        })
-        yield i++
-      }
-    },
-    async onFilesChosen () {
+    onFilesChosen () {
       const files = [...this.$refs.file.files]
       this.$refs.file.value = null
       if (!files.length) return
-      this.$loading({ text: `Submitting task 0 of ${files.length}` })
-      try {
-        for await (const p of this.submitUploadTasks(files)) {
-          this.$loading({ text: `Submitting task ${p} of ${files.length}` })
-        }
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.$loading()
-      }
+      files.forEach(file => {
+        uploadManager.submitTask({
+          path: pathClean(pathJoin(this.path, file.name)),
+          file
+        })
+      })
       this.showTaskManager()
     },
     uploadFile () {
