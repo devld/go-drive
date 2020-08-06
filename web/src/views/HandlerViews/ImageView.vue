@@ -104,12 +104,12 @@ export default {
         loop: false
       })
       ps.listen('gettingData', (index, item) => {
-        if (item.w !== 0 || item.h !== 0) return
+        // https://github.com/dimsemenov/PhotoSwipe/issues/796
+        if (item.w > 0 && item.h > 0) return
         const img = new Image()
         img.onload = function () {
           item.w = this.width
           item.h = this.height
-          ps.invalidateCurrItems()
           ps.updateSize(true)
         }
         img.src = item.src
