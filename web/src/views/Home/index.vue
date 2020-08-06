@@ -59,7 +59,7 @@ import { getContent } from '@/api'
 import { filename, dir, isRootPath, debounce } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
-import { makeEntryHandlerLink, getBaseLink } from '../../utils/routes'
+import { makeEntryHandlerLink, getBaseLink } from '@/utils/routes'
 
 const README_FILENAME = 'readme.md'
 const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
@@ -139,6 +139,7 @@ export default {
       }
     },
     showEntryMenu ({ entry, event }) {
+      if (isRootPath(this.path)) return
       const handlers = resolveEntryHandler(entry)
       if (handlers.length === 0) return
 
