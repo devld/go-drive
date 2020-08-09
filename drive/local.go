@@ -189,7 +189,7 @@ func (f *FsDrive) Delete(path string) error {
 
 var fsDriveUploadConfig = common.DriveUploadConfig{Provider: "local"}
 
-func (f *FsDrive) Upload(path string, overwrite bool) (*common.DriveUploadConfig, error) {
+func (f *FsDrive) Upload(path string, size int64, overwrite bool) (*common.DriveUploadConfig, error) {
 	path = f.getPath(path)
 	if !overwrite {
 		if e := requireFile(path, false); e != nil {
@@ -279,6 +279,10 @@ func (f *fsDriveMeta) Props() map[string]interface{} {
 }
 
 func (f *fsFileMeta) CanWrite() bool {
+	return true
+}
+
+func (f *fsFileMeta) CanRead() bool {
 	return true
 }
 

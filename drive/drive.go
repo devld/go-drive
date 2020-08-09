@@ -177,12 +177,12 @@ func (d Drive) Delete(path string) error {
 	return drive.Delete(path)
 }
 
-func (d Drive) Upload(path string, overwrite bool) (*common.DriveUploadConfig, error) {
+func (d Drive) Upload(path string, size int64, overwrite bool) (*common.DriveUploadConfig, error) {
 	drive, path, _, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	return drive.Upload(path, overwrite)
+	return drive.Upload(path, size, overwrite)
 }
 
 func mapDriveEntry(driveName string, entry common.IEntry) common.IEntry {
@@ -265,11 +265,7 @@ func (d *driveEntry) Size() int64 {
 }
 
 func (d *driveEntry) Meta() common.IEntryMeta {
-	props := make(map[string]interface{})
-	for k, v := range d.meta.Props() {
-		props[k] = v
-	}
-	return driveEntryMeta{canWrite: d.meta.CanWrite(), props: props}
+	return driveEntryMeta{d.meta.CanWrite(), d.meta.Props()}
 }
 
 func (d *driveEntry) CreatedAt() int64 {
@@ -295,6 +291,10 @@ type driveEntryMeta struct {
 
 func (d driveEntryMeta) CanWrite() bool {
 	return d.canWrite
+}
+
+func (d driveEntryMeta) CanRead() bool {
+	return true
 }
 
 func (d driveEntryMeta) Props() map[string]interface{} {

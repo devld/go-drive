@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	url2 "net/url"
 	fsPath "path"
+	"strconv"
 	"time"
 )
 
@@ -86,10 +87,15 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 		}
 	})
 
-	r.GET("/upload/*path", func(c *gin.Context) {
+	r.POST("/upload/*path", func(c *gin.Context) {
 		path := c.Param("path")
 		overwrite := c.Query("overwrite")
-		config, e := dr.Upload(path, overwrite != "")
+		size, e := strconv.ParseInt(c.Query("size"), 10, 64)
+		if e != nil || size < 0 {
+			_ = c.AbortWithError(400, e)
+			return
+		}
+		config, e := dr.Upload(path, size, overwrite != "")
 		if e != nil {
 			dr.handleError(e, c)
 			return
@@ -190,8 +196,8 @@ func (dr DriveRoute) Delete(path string) error {
 	return dr.d.Delete(path)
 }
 
-func (dr DriveRoute) Upload(path string, overwrite bool) (*UploadConfig, error) {
-	config, err := dr.d.Upload(path, overwrite)
+func (dr DriveRoute) Upload(path string, size int64, overwrite bool) (*UploadConfig, error) {
+	config, err := dr.d.Upload(path, size, overwrite)
 	if err != nil {
 		return nil, err
 	}
