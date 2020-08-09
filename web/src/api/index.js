@@ -28,9 +28,9 @@ export function deleteEntry (path) {
   return axios.delete(`/entry/${path}`)
 }
 
-export function getUploadConfig (path, overwrite) {
-  return axios.get(`/upload/${path}`, {
-    params: { overwrite }
+export function getUploadConfig (path, size, overwrite) {
+  return axios.post(`/upload/${path}`, null, {
+    params: { overwrite, size }
   })
 }
 

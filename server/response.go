@@ -18,6 +18,7 @@ func NewEntryJson(e common.IEntry) *EntryJson {
 	entryMeta := e.Meta()
 	meta := make(map[string]interface{})
 	meta["can_write"] = entryMeta.CanWrite()
+	meta["can_read"] = entryMeta.CanRead()
 	if entryMeta != nil {
 		for k, v := range entryMeta.Props() {
 			meta[k] = v

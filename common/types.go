@@ -1,6 +1,9 @@
 package common
 
-import "io"
+import (
+	"io"
+	"strconv"
+)
 
 const (
 	TypeFile = "file"
@@ -18,6 +21,7 @@ func (t EntryType) IsDir() bool {
 }
 
 type IEntryMeta interface {
+	CanRead() bool
 	CanWrite() bool
 	Props() map[string]interface{}
 }
@@ -53,7 +57,7 @@ type IDrive interface {
 	Delete(path string) error
 
 	// Upload returns the upload config of the path
-	Upload(path string, overwrite bool) (*DriveUploadConfig, error)
+	Upload(path string, size int64, overwrite bool) (*DriveUploadConfig, error)
 }
 
 type DriveUploadConfig struct {
@@ -92,5 +96,5 @@ type RemoteApiError struct {
 }
 
 func (r RemoteApiError) Error() string {
-	return "[" + string(r.code) + "] " + r.msg
+	return "[" + strconv.Itoa(r.code) + "] " + r.msg
 }
