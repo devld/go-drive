@@ -87,6 +87,14 @@
   }
 }
 
+.fade-enter-active {
+  animation: fade-in 0.3s ease-in;
+}
+
+.fade-leave-active {
+  animation: fade-in 0.3s ease-out reverse;
+}
+
 @keyframes scale-in {
   from {
     transform: scale(0);

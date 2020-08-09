@@ -46,7 +46,13 @@
     <!-- entry menu -->
 
     <!-- new entry menu -->
-    <new-entry-area ref="newEntryArea" v-if="!isRootPath" :path="path" @update="reloadEntryList" />
+    <new-entry-area
+      ref="newEntryArea"
+      v-if="!isRootPath"
+      :path="path"
+      :entries="entries"
+      @update="reloadEntryList"
+    />
     <!-- new entry menu -->
   </div>
 </template>

@@ -21,7 +21,7 @@
       <div class="base-dialog__footer">
         <button
           v-if="cancelText"
-          class="simple-button info base-dialog__button-cancel"
+          class="simple-button base-dialog__button-cancel"
           :class="{ loading, [cancelType]: true }"
           @click="$emit('cancel')"
           :disabled="!!loading"
@@ -70,7 +70,8 @@ export default {
       type: String
     },
     cancelType: {
-      type: String
+      type: String,
+      default: 'info'
     },
     transition: {
       type: String

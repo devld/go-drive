@@ -88,8 +88,8 @@ export function createDialog (name, component) {
         const inner = this.$refs.inner
         if (!inner) return
         let cb
-        if (confirm && (cb = inner.beforeConfirm)) return cb()
-        if (!confirm && (cb = inner.beforeCancel)) return cb()
+        if (confirm && (cb = inner.beforeConfirm)) return cb && cb()
+        if (!confirm && (cb = inner.beforeCancel)) return cb && cb()
       },
       async onConfirmOrCancel (confirm) {
         let val
@@ -119,7 +119,7 @@ export function createDialog (name, component) {
 
         if (this._promise) {
           if (confirm) this._promise.resolve(val)
-          else this._promise.reject('cancel')
+          else this._promise.reject(val || 'cancel')
           this.close()
         }
       },
