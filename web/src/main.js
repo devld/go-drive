@@ -7,6 +7,7 @@ import Components from '@/components'
 import Utils from '@/utils'
 
 import '@/styles/index.scss'
+import './registerServiceWorker'
 
 Vue.config.productionTip = false
 
