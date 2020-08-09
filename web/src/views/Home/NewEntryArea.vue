@@ -42,6 +42,8 @@
       @click="showTaskManager"
     >Tasks{{ (uploadStatus && uploadStatus.total > 0) ? `: ${uploadStatus.completed}/${uploadStatus.total}` : '' }}</button>
     <input class="hidden-input-file" ref="file" type="file" @change="onFilesChosen" multiple />
+
+    <div v-if="dropZoneActive" class="drop-zone-indicator">Drop files here to upload</div>
   </div>
 </template>
 <script>
@@ -51,6 +53,10 @@ import { pathClean, pathJoin } from '@/utils'
 import uploadManager from '@/api/upload-manager'
 // eslint-disable-next-line no-unused-vars
 import { UploadTaskItem, STATUS_COMPLETED } from '@/api/upload-manager/task'
+import { createDialog } from '@/utils/ui-utils/base-dialog'
+import FileExistsDialogInner from './FileExistsConfirmDialog'
+
+const FileExistsDialog = createDialog('FileExistsDialog', FileExistsDialogInner)
 
 export default {
   name: 'NewEntryArea',
@@ -58,6 +64,10 @@ export default {
   props: {
     path: {
       type: String,
+      required: true
+    },
+    entries: {
+      type: null,
       required: true
     }
   },
@@ -73,7 +83,9 @@ export default {
       /**
        * @type {Array.<UploadTaskItem>}
        */
-      tasks: []
+      tasks: [],
+
+      dropZoneActive: false
     }
   },
   created () {
@@ -82,22 +94,53 @@ export default {
     uploadManager.on('taskChanged', this.onTasksChanged)
 
     window.addEventListener('beforeunload', this.onWindowUnload)
+
+    window.addEventListener('dragover', this.onDragEnter)
+    window.addEventListener('dragleave', this.onDragLeave)
+    window.addEventListener('drop', this.onItemsDropped)
   },
   beforeDestroy () {
     uploadManager.off('taskChanged', this.onTasksChanged)
     window.removeEventListener('beforeunload', this.onWindowUnload)
+
+    window.removeEventListener('dragover', this.onDragEnter)
+    window.removeEventListener('dragleave', this.onDragLeave)
+    window.removeEventListener('drop', this.onItemsDropped)
   },
   methods: {
+    onItemsDropped (e) {
+      this.toggleDropZoneActive(false)
+      e.preventDefault()
+      const files = []
+      for (const f of e.dataTransfer.items) {
+        if (typeof (f.webkitGetAsEntry) === 'function' && !f.webkitGetAsEntry().isFile) continue
+        files.push(f.getAsFile())
+      }
+      this.submitUploadTasks(files)
+    },
     onFilesChosen () {
       const files = [...this.$refs.file.files]
       this.$refs.file.value = null
+      this.submitUploadTasks(files)
+    },
+    async submitUploadTasks (files) {
       if (!files.length) return
-      files.forEach(file => {
+      let applyAll, overwrite
+      for (const file of files) {
+        if (this.entries && this.entries.find(e => e.name === file.name)) {
+          if (!applyAll) {
+            const { overwrite: overwrite_, all } = await this.confirmFileExists(file)
+            applyAll = all
+            overwrite = overwrite_
+          }
+        }
+        if (overwrite === false) continue
         uploadManager.submitTask({
           path: pathClean(pathJoin(this.path, file.name)),
-          file
+          file, overwrite
         })
-      })
+        console.log('submit')
+      }
       this.showTaskManager()
     },
     uploadFile () {
@@ -152,6 +195,21 @@ export default {
       const completed = this.tasks.filter(t => t.status === STATUS_COMPLETED).length
       this.uploadStatus = { completed, total: this.tasks.length }
     },
+    async confirmFileExists (file) {
+      try {
+        const all = (await this.$dialog(FileExistsDialog, {
+          title: 'File exists',
+          message: `'${file.name}' already exists, overwrite or skip?`,
+          confirmText: 'Skip',
+          cancelText: 'Overwrite', cancelType: 'danger',
+          filename: file.name
+        })).all
+        return { all, overwrite: false }
+      } catch (e) {
+        if (!e) return { all: false, overwrite: false }
+        return { all: e.all, overwrite: true }
+      }
+    },
     newButtonClicked ({ button, index }) {
       if (index === 0) this.uploadFile()
       if (index === 1) this.createDir()
@@ -171,6 +229,20 @@ export default {
         e.preventDefault()
         e.returnValue = ''
       }
+    },
+    onDragEnter (e) {
+      e.preventDefault()
+      this.toggleDropZoneActive(true)
+    },
+    onDragLeave (e) {
+      e.preventDefault()
+      clearTimeout(this._dragLeaveTimeout)
+      this._dragLeaveTimeout = setTimeout(() => {
+        this.toggleDropZoneActive(false)
+      }, 100)
+    },
+    toggleDropZoneActive (active) {
+      this.dropZoneActive = active
     }
   }
 }
@@ -223,6 +295,24 @@ export default {
     width: 50vw;
     max-width: 700px;
     min-width: 600px;
+  }
+
+  .drop-zone-indicator {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    z-index: 1000;
+    border: solid 2px #66ccff;
+    border-radius: 6px;
+    pointer-events: none;
+    background-color: rgba(102, 204, 255, 0.4);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
   }
 
   @media screen and (max-width: 600px) {
