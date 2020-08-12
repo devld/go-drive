@@ -3,29 +3,25 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
-	"io"
 	"log"
 	"net/http"
-	"net/http/httputil"
-	url2 "net/url"
 	fsPath "path"
 	"strconv"
-	"time"
 )
 
-type DriveRoute struct {
+type driveRoute struct {
 	d common.IDrive
 }
 
-func NewDriveRoute(d common.IDrive) DriveRoute {
-	return DriveRoute{d}
+func newDriveRoute(d common.IDrive) driveRoute {
+	return driveRoute{d}
 }
 
-func (dr DriveRoute) Init(r *gin.Engine) {
+func (dr driveRoute) init(r *gin.Engine) {
 	// list entries/drives
 	r.GET("/entries/*path", func(c *gin.Context) {
 		path := c.Param("path")
-		list, e := dr.List(path)
+		list, e := dr.list(path)
 		if e != nil {
 			dr.handleError(e, c)
 			return
@@ -36,7 +32,7 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 	// get entry info
 	r.GET("/entry/*path", func(c *gin.Context) {
 		path := c.Param("path")
-		entry, e := dr.Get(path)
+		entry, e := dr.get(path)
 		if e != nil {
 			dr.handleError(e, c)
 			return
@@ -47,7 +43,7 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 	// mkdir
 	r.POST("/mkdir/*path", func(c *gin.Context) {
 		path := c.Param("path")
-		entry, e := dr.MakeDir(path)
+		entry, e := dr.makeDir(path)
 		if e != nil {
 			dr.handleError(e, c)
 			return
@@ -58,7 +54,7 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 	r.POST("/copy", func(c *gin.Context) {
 		from := c.Query("from")
 		to := c.Query("to")
-		entry, e := dr.Copy(from, to)
+		entry, e := dr.copy(from, to)
 		if e != nil {
 			dr.handleError(e, c)
 			return
@@ -70,7 +66,7 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 	r.POST("/move", func(c *gin.Context) {
 		from := c.Query("from")
 		to := c.Query("to")
-		entry, e := dr.Move(from, to)
+		entry, e := dr.move(from, to)
 		if e != nil {
 			dr.handleError(e, c)
 			return
@@ -81,7 +77,7 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 	// delete entry
 	r.DELETE("/entry/*path", func(c *gin.Context) {
 		path := c.Param("path")
-		e := dr.Delete(path)
+		e := dr.delete(path)
 		if e != nil {
 			dr.handleError(e, c)
 		}
@@ -95,7 +91,7 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 			_ = c.AbortWithError(400, e)
 			return
 		}
-		config, e := dr.Upload(path, size, overwrite != "")
+		config, e := dr.upload(path, size, overwrite != "")
 		if e != nil {
 			dr.handleError(e, c)
 			return
@@ -106,7 +102,7 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 	// get file content
 	r.GET("/content/*path", func(c *gin.Context) {
 		path := c.Param("path")
-		if e := dr.GetContent(path, c.Writer, c.Request); e != nil {
+		if e := dr.getContent(path, c.Writer, c.Request); e != nil {
 			dr.handleError(e, c)
 		}
 	})
@@ -114,7 +110,7 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 	// write file
 	r.PUT("/content/*path", func(c *gin.Context) {
 		path := c.Param("path")
-		entry, e := dr.WriteContent(path, c.Request)
+		entry, e := dr.writeContent(path, c.Request)
 		if e != nil {
 			dr.handleError(e, c)
 			return
@@ -123,7 +119,7 @@ func (dr DriveRoute) Init(r *gin.Engine) {
 	})
 }
 
-func (dr DriveRoute) handleError(e error, c *gin.Context) {
+func (dr driveRoute) handleError(e error, c *gin.Context) {
 	if _, ok := e.(common.NotFoundError); ok {
 		c.AbortWithStatus(404)
 		_, _ = c.Writer.Write([]byte(e.Error()))
@@ -138,38 +134,38 @@ func (dr DriveRoute) handleError(e error, c *gin.Context) {
 	_ = c.AbortWithError(500, e)
 }
 
-func (dr DriveRoute) List(path string) ([]EntryJson, error) {
+func (dr driveRoute) list(path string) ([]entryJson, error) {
 	path = fsPath.Clean(path)
 	entries, e := dr.d.List(path)
 	if e != nil {
 		return nil, e
 	}
-	res := make([]EntryJson, 0, len(entries))
+	res := make([]entryJson, 0, len(entries))
 	for _, v := range entries {
-		res = append(res, *NewEntryJson(v))
+		res = append(res, *newEntryJson(v))
 	}
 	return res, nil
 }
 
-func (dr DriveRoute) Get(path string) (*EntryJson, error) {
+func (dr driveRoute) get(path string) (*entryJson, error) {
 	path = fsPath.Clean(path)
 	entry, e := dr.d.Get(path)
 	if e != nil {
 		return nil, e
 	}
-	return NewEntryJson(entry), nil
+	return newEntryJson(entry), nil
 }
 
-func (dr DriveRoute) MakeDir(path string) (*EntryJson, error) {
+func (dr driveRoute) makeDir(path string) (*entryJson, error) {
 	path = fsPath.Clean(path)
 	entry, e := dr.d.MakeDir(path)
 	if e != nil {
 		return nil, e
 	}
-	return NewEntryJson(entry), nil
+	return newEntryJson(entry), nil
 }
 
-func (dr DriveRoute) Copy(from string, to string) (*EntryJson, error) {
+func (dr driveRoute) copy(from string, to string) (*entryJson, error) {
 	fromEntry, e := dr.d.Get(from)
 	if e != nil {
 		return nil, e
@@ -178,68 +174,46 @@ func (dr DriveRoute) Copy(from string, to string) (*EntryJson, error) {
 	if e != nil {
 		return nil, e
 	}
-	return NewEntryJson(entry), nil
+	return newEntryJson(entry), nil
 }
 
-func (dr DriveRoute) Move(from string, to string) (*EntryJson, error) {
+func (dr driveRoute) move(from string, to string) (*entryJson, error) {
 	from = fsPath.Clean(from)
 	to = fsPath.Clean(to)
 	entry, e := dr.d.Move(from, to)
 	if e != nil {
 		return nil, e
 	}
-	return NewEntryJson(entry), nil
+	return newEntryJson(entry), nil
 }
 
-func (dr DriveRoute) Delete(path string) error {
+func (dr driveRoute) delete(path string) error {
 	path = fsPath.Clean(path)
 	return dr.d.Delete(path)
 }
 
-func (dr DriveRoute) Upload(path string, size int64, overwrite bool) (*UploadConfig, error) {
+func (dr driveRoute) upload(path string, size int64, overwrite bool) (*uploadConfig, error) {
 	config, err := dr.d.Upload(path, size, overwrite)
 	if err != nil {
 		return nil, err
 	}
-	return NewUploadConfig(config), nil
+	return newUploadConfig(config), nil
 }
 
-func (dr DriveRoute) GetContent(path string, w http.ResponseWriter, req *http.Request) error {
+func (dr driveRoute) getContent(path string, w http.ResponseWriter, req *http.Request) error {
 	path = fsPath.Clean(path)
 	file, e := dr.d.Get(path)
 	if e != nil {
 		return e
 	}
-	url, proxy, e := file.GetURL()
-	if e == nil {
-		if proxy {
-			e = dr.proxyRequest(url, w, req)
-		} else {
-			w.WriteHeader(302)
-			w.Header().Set("Location", url)
-		}
-		return e
+	content, ok := file.(common.IContent)
+	if !ok {
+		return common.NewNotAllowedError()
 	}
-	reader, e := file.GetReader()
-	if e != nil {
-		return e
-	}
-	defer func() { _ = reader.Close() }()
-	readSeeker, ok := reader.(io.ReadSeeker)
-	if ok {
-		http.ServeContent(
-			w, req, file.Name(),
-			time.Unix(0, file.UpdatedAt()*int64(time.Millisecond)),
-			readSeeker)
-		return nil
-	}
-
-	w.Header().Set("Content-Length", string(file.Size()))
-	_, e = io.Copy(w, reader)
-	return e
+	return common.DownloadIContent(content, w, req)
 }
 
-func (dr DriveRoute) WriteContent(path string, req *http.Request) (*EntryJson, error) {
+func (dr driveRoute) writeContent(path string, req *http.Request) (*entryJson, error) {
 	file, _, err := req.FormFile("file")
 	if err != nil {
 		return nil, err
@@ -249,20 +223,45 @@ func (dr DriveRoute) WriteContent(path string, req *http.Request) (*EntryJson, e
 	if e != nil {
 		return nil, e
 	}
-	return NewEntryJson(entry), nil
+	return newEntryJson(entry), nil
 }
 
-func (dr DriveRoute) proxyRequest(url string, w http.ResponseWriter, req *http.Request) error {
-	dest, e := url2.Parse(url)
-	if e != nil {
-		return e
-	}
-	proxy := httputil.ReverseProxy{Director: func(r *http.Request) {
-		r.URL = dest
-		r.Header.Set("Host", dest.Host)
-		r.Header.Del("Referer")
-	}}
+type entryJson struct {
+	Path      string                 `json:"path"`
+	Name      string                 `json:"name"`
+	Type      common.EntryType       `json:"type"`
+	Size      int64                  `json:"size"`
+	Meta      map[string]interface{} `json:"meta"`
+	CreatedAt int64                  `json:"created_at"`
+	UpdatedAt int64                  `json:"updated_at"`
+}
 
-	proxy.ServeHTTP(w, req)
-	return nil
+func newEntryJson(e common.IEntry) *entryJson {
+	entryMeta := e.Meta()
+	meta := make(map[string]interface{})
+	meta["can_write"] = entryMeta.CanWrite()
+	meta["can_read"] = entryMeta.CanRead()
+	if entryMeta != nil {
+		for k, v := range entryMeta.Props() {
+			meta[k] = v
+		}
+	}
+	return &entryJson{
+		Path:      e.Path(),
+		Name:      e.Name(),
+		Type:      e.Type(),
+		Size:      e.Size(),
+		Meta:      meta,
+		CreatedAt: e.CreatedAt(),
+		UpdatedAt: e.UpdatedAt(),
+	}
+}
+
+type uploadConfig struct {
+	Provider string      `json:"provider"`
+	Config   interface{} `json:"config"`
+}
+
+func newUploadConfig(c *common.DriveUploadConfig) *uploadConfig {
+	return &uploadConfig{c.Provider, c.Config}
 }

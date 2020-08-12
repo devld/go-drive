@@ -33,8 +33,11 @@ type fsDriveMeta struct {
 type fsFileMeta struct {
 }
 
-func NewFsDrive(path string) (*FsDrive, error) {
-	path, e := filepath.Abs(path)
+// NewFsDrive creates a file system drive
+// params:
+//   - path: root path of this drive
+func NewFsDrive(config map[string]string) (common.IDrive, error) {
+	path, e := filepath.Abs(config["path"])
 	if e != nil {
 		return nil, e
 	}
@@ -134,7 +137,7 @@ func (f *FsDrive) Move(from string, to string) (common.IEntry, error) {
 	fromPath := f.getPath(from)
 	toPath := f.getPath(to)
 	if f.isRootPath(fromPath) || f.isRootPath(toPath) {
-		return nil, common.NewNotAllowedError("not allowed")
+		return nil, common.NewNotAllowedError()
 	}
 	if e := requireFile(fromPath, true); e != nil {
 		return nil, e
@@ -159,7 +162,7 @@ func (f *FsDrive) List(path string) ([]common.IEntry, error) {
 		return nil, common.NewNotFoundError("file does not exist")
 	}
 	if !isDir {
-		return nil, common.NewNotAllowedError("cannot list on file")
+		return nil, common.NewNotAllowedMessageError("cannot list on file")
 	}
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -179,7 +182,7 @@ func (f *FsDrive) List(path string) ([]common.IEntry, error) {
 func (f *FsDrive) Delete(path string) error {
 	path = f.getPath(path)
 	if f.isRootPath(path) {
-		return common.NewNotAllowedError("root cannot be deleted")
+		return common.NewNotAllowedMessageError("root cannot be deleted")
 	}
 	if e := requireFile(path, true); e != nil {
 		return e
@@ -208,7 +211,7 @@ func requireFile(path string, requireExists bool) error {
 		return common.NewNotFoundError("file does not exist")
 	}
 	if !requireExists && exists {
-		return common.NewNotAllowedError("file exists")
+		return common.NewNotAllowedMessageError("file exists")
 	}
 	return nil
 }
@@ -253,7 +256,7 @@ func (f *FsFile) UpdatedAt() int64 {
 
 func (f *FsFile) GetReader() (io.ReadCloser, error) {
 	if !f.Type().IsFile() {
-		return nil, common.NewNotAllowedError("cannot read non-file")
+		return nil, common.NewNotAllowedError()
 	}
 	path := f.drive.getPath(f.path)
 	exists, e := common.FileExists(path)
@@ -267,7 +270,7 @@ func (f *FsFile) GetReader() (io.ReadCloser, error) {
 }
 
 func (f *FsFile) GetURL() (string, bool, error) {
-	return "", false, common.NewUnsupportedError()
+	return "", false, common.NewNotAllowedError()
 }
 
 func (f *fsDriveMeta) CanWrite() bool {

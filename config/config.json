@@ -1,9 +1,0 @@
-{
-  "listen": ":8089",
-  "locals": [
-    {
-      "name": "localDrive",
-      "path": "/path/to/drive"
-    }
-  ]
-}
