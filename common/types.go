@@ -26,6 +26,17 @@ type IEntryMeta interface {
 	Props() map[string]interface{}
 }
 
+type IContent interface {
+	Name() string
+	Size() int64
+	UpdatedAt() int64
+
+	GetReader() (io.ReadCloser, error)
+	// GetURL gets the download url of the file.
+	// if second parameter is `true`, this file will be downloaded by proxy
+	GetURL() (string, bool, error)
+}
+
 type IEntry interface {
 	Path() string
 	Name() string
@@ -34,11 +45,6 @@ type IEntry interface {
 	Meta() IEntryMeta
 	CreatedAt() int64
 	UpdatedAt() int64
-
-	GetReader() (io.ReadCloser, error)
-	// GetURL gets the download url of the file.
-	// if second parameter is `true`, this file will be downloaded by proxy
-	GetURL() (string, bool, error)
 }
 
 type IDriveMeta interface {
