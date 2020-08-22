@@ -1,14 +1,15 @@
-package common
+package types
 
 import (
 	"io"
-	"strconv"
 )
 
 const (
 	TypeFile = "file"
 	TypeDir  = "dir"
 )
+
+type DriveCreator = func(map[string]string) (IDrive, error)
 
 type EntryType string
 
@@ -72,35 +73,3 @@ type DriveUploadConfig struct {
 }
 
 type OnProgress func(loaded int64)
-
-type NotFoundError struct {
-	msg string
-}
-
-func (d NotFoundError) Error() string {
-	return d.msg
-}
-
-type NotAllowedError struct {
-	msg string
-}
-
-func (d NotAllowedError) Error() string {
-	return d.msg
-}
-
-type UnsupportedError struct {
-}
-
-func (n UnsupportedError) Error() string {
-	return "not supported"
-}
-
-type RemoteApiError struct {
-	code int
-	msg  string
-}
-
-func (r RemoteApiError) Error() string {
-	return "[" + strconv.Itoa(r.code) + "] " + r.msg
-}

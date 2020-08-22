@@ -1,6 +1,7 @@
 package common
 
 import (
+	"go-drive/common/types"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,38 +28,6 @@ func IsDir(path string) (bool, error) {
 	return stat.IsDir(), nil
 }
 
-func IsNotSupportedError(e error) bool {
-	_, ok := e.(UnsupportedError)
-	return ok
-}
-
-func IsNotFoundError(e error) bool {
-	_, ok := e.(NotFoundError)
-	return ok
-}
-
-func NewNotFoundError(msg string) NotFoundError {
-	return NotFoundError{msg}
-}
-
-func NewNotAllowedError() NotAllowedError {
-	return NotAllowedError{"operation not allowed"}
-}
-
-func NewNotAllowedMessageError(msg string) NotAllowedError {
-	return NotAllowedError{msg}
-}
-
-var unsupportedError = UnsupportedError{}
-
-func NewUnsupportedError() UnsupportedError {
-	return unsupportedError
-}
-
-func NewRemoteApiError(code int, msg string) RemoteApiError {
-	return RemoteApiError{code, msg}
-}
-
 func PanicIfError(e error) {
 	if e != nil {
 		panic(e)
@@ -71,7 +40,7 @@ func RequireNotNil(v interface{}, msg string) {
 	}
 }
 
-func CopyWithProgress(dst io.Writer, src io.Reader, progress OnProgress) (written int64, err error) {
+func CopyWithProgress(dst io.Writer, src io.Reader, progress types.OnProgress) (written int64, err error) {
 	buf := make([]byte, 32*1024)
 	for {
 		w, err := io.CopyBuffer(dst, src, buf)
@@ -87,7 +56,7 @@ func CopyWithProgress(dst io.Writer, src io.Reader, progress OnProgress) (writte
 	return
 }
 
-func CopyIContent(content IContent, w io.Writer, progress OnProgress) (int64, error) {
+func CopyIContent(content types.IContent, w io.Writer, progress types.OnProgress) (int64, error) {
 	// copy file from url
 	url, _, e := content.GetURL()
 	if e == nil {
@@ -110,7 +79,7 @@ func CopyIContent(content IContent, w io.Writer, progress OnProgress) (int64, er
 	return CopyWithProgress(w, reader, progress)
 }
 
-func CopyIContentToTempFile(content IContent, progress OnProgress) (*os.File, error) {
+func CopyIContentToTempFile(content types.IContent, progress types.OnProgress) (*os.File, error) {
 	file, e := ioutil.TempFile("", "drive-copy")
 	if e != nil {
 		return nil, e
@@ -130,7 +99,7 @@ func CopyIContentToTempFile(content IContent, progress OnProgress) (*os.File, er
 	return file, nil
 }
 
-func DownloadIContent(content IContent, w http.ResponseWriter, req *http.Request) error {
+func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.Request) error {
 	url, proxy, e := content.GetURL()
 	if e == nil {
 		if proxy {
