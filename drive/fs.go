@@ -2,6 +2,7 @@ package drive
 
 import (
 	"go-drive/common"
+	"go-drive/common/types"
 	"io"
 	"io/ioutil"
 	"os"
@@ -36,7 +37,7 @@ type fsFileMeta struct {
 // NewFsDrive creates a file system drive
 // params:
 //   - path: root path of this drive
-func NewFsDrive(config map[string]string) (common.IDrive, error) {
+func NewFsDrive(config map[string]string) (types.IDrive, error) {
 	path, e := filepath.Abs(config["path"])
 	if e != nil {
 		return nil, e
@@ -47,7 +48,7 @@ func NewFsDrive(config map[string]string) (common.IDrive, error) {
 	return &FsDrive{path}, nil
 }
 
-func (f *FsDrive) newFsFile(path string, file os.FileInfo) (common.IEntry, error) {
+func (f *FsDrive) newFsFile(path string, file os.FileInfo) (types.IEntry, error) {
 	path, e := filepath.Abs(path)
 	if e != nil {
 		return nil, common.NewNotFoundError("invalid path")
@@ -81,7 +82,7 @@ func (f *FsDrive) isRootPath(path string) bool {
 	return fsPath.Clean(path) == f.path
 }
 
-func (f *FsDrive) Get(path string) (common.IEntry, error) {
+func (f *FsDrive) Get(path string) (types.IEntry, error) {
 	path = f.getPath(path)
 	if f.isRootPath(path) {
 		return nil, common.NewNotFoundError("not found")
@@ -96,7 +97,7 @@ func (f *FsDrive) Get(path string) (common.IEntry, error) {
 	return f.newFsFile(path, stat)
 }
 
-func (f *FsDrive) Save(path string, reader io.Reader, progress common.OnProgress) (common.IEntry, error) {
+func (f *FsDrive) Save(path string, reader io.Reader, progress types.OnProgress) (types.IEntry, error) {
 	path = f.getPath(path)
 	file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if e != nil {
@@ -114,7 +115,7 @@ func (f *FsDrive) Save(path string, reader io.Reader, progress common.OnProgress
 	return f.newFsFile(path, stat)
 }
 
-func (f *FsDrive) MakeDir(path string) (common.IEntry, error) {
+func (f *FsDrive) MakeDir(path string) (types.IEntry, error) {
 	path = f.getPath(path)
 	if e := requireFile(path, false); e != nil {
 		return nil, e
@@ -129,11 +130,11 @@ func (f *FsDrive) MakeDir(path string) (common.IEntry, error) {
 	return f.newFsFile(path, stat)
 }
 
-func (f *FsDrive) Copy(from common.IEntry, to string, progress common.OnProgress) (common.IEntry, error) {
+func (f *FsDrive) Copy(from types.IEntry, to string, progress types.OnProgress) (types.IEntry, error) {
 	return nil, common.NewUnsupportedError()
 }
 
-func (f *FsDrive) Move(from string, to string) (common.IEntry, error) {
+func (f *FsDrive) Move(from string, to string) (types.IEntry, error) {
 	fromPath := f.getPath(from)
 	toPath := f.getPath(to)
 	if f.isRootPath(fromPath) || f.isRootPath(toPath) {
@@ -155,7 +156,7 @@ func (f *FsDrive) Move(from string, to string) (common.IEntry, error) {
 	return f.newFsFile(toPath, stat)
 }
 
-func (f *FsDrive) List(path string) ([]common.IEntry, error) {
+func (f *FsDrive) List(path string) ([]types.IEntry, error) {
 	path = f.getPath(path)
 	isDir, e := common.IsDir(path)
 	if os.IsNotExist(e) {
@@ -168,7 +169,7 @@ func (f *FsDrive) List(path string) ([]common.IEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	entries := make([]common.IEntry, len(files))
+	entries := make([]types.IEntry, len(files))
 	for i, file := range files {
 		entry, e := f.newFsFile(fsPath.Join(path, file.Name()), file)
 		if e != nil {
@@ -190,9 +191,9 @@ func (f *FsDrive) Delete(path string) error {
 	return os.RemoveAll(path)
 }
 
-var fsDriveUploadConfig = common.DriveUploadConfig{Provider: "local"}
+var fsDriveUploadConfig = types.DriveUploadConfig{Provider: "local"}
 
-func (f *FsDrive) Upload(path string, size int64, overwrite bool) (*common.DriveUploadConfig, error) {
+func (f *FsDrive) Upload(path string, size int64, overwrite bool) (*types.DriveUploadConfig, error) {
 	path = f.getPath(path)
 	if !overwrite {
 		if e := requireFile(path, false); e != nil {
@@ -216,7 +217,7 @@ func requireFile(path string, requireExists bool) error {
 	return nil
 }
 
-func (f *FsDrive) Meta() common.IDriveMeta {
+func (f *FsDrive) Meta() types.IDriveMeta {
 	return &fsDriveMeta{}
 }
 
@@ -228,11 +229,11 @@ func (f *FsFile) Name() string {
 	return f.name
 }
 
-func (f *FsFile) Type() common.EntryType {
+func (f *FsFile) Type() types.EntryType {
 	if f.isDir {
-		return common.TypeDir
+		return types.TypeDir
 	}
-	return common.TypeFile
+	return types.TypeFile
 }
 
 func (f *FsFile) Size() int64 {
@@ -242,7 +243,7 @@ func (f *FsFile) Size() int64 {
 	return f.size
 }
 
-func (f *FsFile) Meta() common.IEntryMeta {
+func (f *FsFile) Meta() types.IEntryMeta {
 	return &fsFileMeta{}
 }
 

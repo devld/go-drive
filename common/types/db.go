@@ -1,0 +1,31 @@
+package types
+
+type User struct {
+	Username string  `gorm:"COLUMN:username;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32" json:"username"`
+	Password string  `gorm:"COLUMN:password;NOT NULL;TYPE:VARCHAR;SIZE:64" json:"password"`
+	Groups   []Group `gorm:"MANY2MANY:user_groups;ASSOCIATION_JOINTABLE_FOREIGNKEY:username;JOINTABLE_FOREIGNKEY:group_name" json:"groups"`
+}
+
+type Group struct {
+	Name string `gorm:"COLUMN:name;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32" json:"name"`
+}
+
+type UserGroup struct {
+	Username  string `gorm:"COLUMN:username;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32"`
+	GroupName string `gorm:"COLUMN:group_name;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32"`
+}
+
+type Drive struct {
+	Name   string `gorm:"COLUMN:name;PRIMARY_KEY;TYPE:VARCHAR;SIZE:255" json:"name"`
+	Type   string `gorm:"COLUMN:type;NOT NULL;TYPE:VARCHAR;SIZE:32" json:"type"`
+	Config string `gorm:"COLUMN:config;NOT NULL;TYPE:VARCHAR;SIZE:4096" json:"config"`
+}
+
+type PathPermission struct {
+	Path    string `gorm:"COLUMN:path;PRIMARY_KEY;TYPE:VARCHAR;SIZE:4096" json:"path"`
+	Subject string `gorm:"COLUMN:subject;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:34" json:"subject"`
+	// Permission bits for the path which subject accessed: 1: read, 2: write
+	Permission int8 `gorm:"COLUMN:permission;NOT NULL;TYPE:INTEGER" json:"permission"`
+	// Policy to apply to the permission when subject access this path: 0: REJECT, 1: ACCEPT
+	Policy int8 `gorm:"COLUMN:policy;NOT NULL;TYPE:INTEGER" json:"policy"`
+}

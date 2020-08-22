@@ -2,37 +2,35 @@ package storage
 
 import (
 	"encoding/json"
-	"go-drive/common"
+	"go-drive/common/types"
 	"go-drive/drive"
-	"go-drive/storage/db"
 	"log"
 )
 
-var (
-	rootDrive = drive.NewDrive()
-)
-
-type DriveCreator = func(map[string]string) (common.IDrive, error)
-
-var drivesFactory = map[string]DriveCreator{
+var drivesFactory = map[string]types.DriveCreator{
 	"fs": drive.NewFsDrive,
 }
 
-func InitRootDrive() error {
-	return ReloadDrive()
+type DriveStorage struct {
+	db   *DB
+	root *drive.DispatcherDrive
 }
 
-func GetRootDrive() common.IDrive {
-	common.RequireNotNil(rootDrive, "drives not initialized")
-	return rootDrive
+func NewDriveStorage(db *DB) (*DriveStorage, error) {
+	ds := DriveStorage{root: drive.NewDispatcherDrive(), db: db}
+	return &ds, ds.ReloadDrive()
 }
 
-func ReloadDrive() error {
-	var drivesConfig []db.Drive
-	if e := db.GetDB().Find(&drivesConfig).Error; e != nil {
+func (d *DriveStorage) GetRootDrive() types.IDrive {
+	return d.root
+}
+
+func (d *DriveStorage) ReloadDrive() error {
+	var drivesConfig []types.Drive
+	if e := d.db.C().Find(&drivesConfig).Error; e != nil {
 		return e
 	}
-	drives := make(map[string]common.IDrive)
+	drives := make(map[string]types.IDrive)
 	for _, d := range drivesConfig {
 		create, ok := drivesFactory[d.Type]
 		if !ok {
@@ -53,6 +51,6 @@ func ReloadDrive() error {
 		drives[d.Name] = iDrive
 		log.Printf("drive '%s' of type '%s' added", d.Name, d.Type)
 	}
-	rootDrive.SetDrives(drives)
+	d.root.SetDrives(drives)
 	return nil
 }
