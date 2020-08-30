@@ -20,11 +20,16 @@ func main() {
 	common.PanicIfError(e)
 	userStorage, e := storage.NewUserStorage(db)
 	common.PanicIfError(e)
+	permissionStorage, e := storage.NewPathPermissionStorage(db)
+	common.PanicIfError(e)
 
 	engine, e := server.InitServer(
-		tokenStore,
-		driveStorage,
-		userStorage,
+		&server.ComponentsHolder{
+			TokenStore:        tokenStore,
+			DriveStorage:      driveStorage,
+			UserStorage:       userStorage,
+			PermissionStorage: permissionStorage,
+		},
 	)
 	common.PanicIfError(e)
 

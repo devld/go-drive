@@ -7,25 +7,38 @@ import (
 )
 
 const (
-	keyTokenStore   = "tokenStore"
-	keyDriveStorage = "driveStorage"
-	keyUserStorage  = "userStorage"
+	keyComponentsHolder = "componentsHolder"
 
 	keyToken   = "token"
 	keySession = "session"
 	keyResult  = "apiResult"
 )
 
+type ComponentsHolder struct {
+	TokenStore        TokenStore
+	DriveStorage      *storage.DriveStorage
+	UserStorage       *storage.UserStorage
+	PermissionStorage *storage.PathPermissionStorage
+}
+
+func GetComponentsHolder(c *gin.Context) *ComponentsHolder {
+	return c.MustGet(keyComponentsHolder).(*ComponentsHolder)
+}
+
 func GetTokenStore(c *gin.Context) TokenStore {
-	return c.MustGet(keyTokenStore).(TokenStore)
+	return GetComponentsHolder(c).TokenStore
 }
 
 func GetDriveStorage(c *gin.Context) *storage.DriveStorage {
-	return c.MustGet(keyDriveStorage).(*storage.DriveStorage)
+	return GetComponentsHolder(c).DriveStorage
 }
 
 func GetUserStorage(c *gin.Context) *storage.UserStorage {
-	return c.MustGet(keyUserStorage).(*storage.UserStorage)
+	return GetComponentsHolder(c).UserStorage
+}
+
+func GetPermissionStorage(c *gin.Context) *storage.PathPermissionStorage {
+	return GetComponentsHolder(c).PermissionStorage
 }
 
 func SetResult(c *gin.Context, result interface{}) {

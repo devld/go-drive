@@ -5,7 +5,6 @@ import (
 	"go-drive/common"
 	"go-drive/common/types"
 	"go-drive/drive"
-	fsPath "path"
 	"strconv"
 )
 
@@ -31,7 +30,7 @@ func InitDriveRoutes(router gin.IRouter) {
 	})
 
 	r.POST("/copy", func(c *gin.Context) {
-		entry, e := copy(c)
+		entry, e := copyEntry(c)
 		writeResponse(c, e, entry)
 	})
 
@@ -41,9 +40,9 @@ func InitDriveRoutes(router gin.IRouter) {
 		writeResponse(c, e, entry)
 	})
 
-	// delete entry
+	// deleteEntry entry
 	r.DELETE("/entry/*path", func(c *gin.Context) {
-		e := delete(c)
+		e := deleteEntry(c)
 		if e != nil {
 			_ = c.Error(e)
 		}
@@ -81,11 +80,19 @@ func getDrive(c *gin.Context) types.IDrive {
 	return drive.NewPermissionWrapperDrive(
 		session,
 		GetDriveStorage(c).GetRootDrive(),
+		GetPermissionStorage(c).GetByPaths,
+		func(subjects []string, path string, immediate bool) ([]types.PathPermission, error) {
+			depth := -1
+			if immediate {
+				depth = common.PathDepth(path) + 1
+			}
+			return GetPermissionStorage(c).GetChildrenByPath(subjects, path, int8(depth))
+		},
 	)
 }
 
 func list(c *gin.Context) ([]entryJson, error) {
-	path := fsPath.Clean(c.Param("path"))
+	path := common.CleanPath(c.Param("path"))
 	entries, e := getDrive(c).List(path)
 	if e != nil {
 		return nil, e
@@ -98,7 +105,7 @@ func list(c *gin.Context) ([]entryJson, error) {
 }
 
 func get(c *gin.Context) (*entryJson, error) {
-	path := fsPath.Clean(c.Param("path"))
+	path := common.CleanPath(c.Param("path"))
 	entry, e := getDrive(c).Get(path)
 	if e != nil {
 		return nil, e
@@ -107,7 +114,7 @@ func get(c *gin.Context) (*entryJson, error) {
 }
 
 func makeDir(c *gin.Context) (*entryJson, error) {
-	path := fsPath.Clean(c.Param("path"))
+	path := common.CleanPath(c.Param("path"))
 	entry, e := getDrive(c).MakeDir(path)
 	if e != nil {
 		return nil, e
@@ -115,10 +122,10 @@ func makeDir(c *gin.Context) (*entryJson, error) {
 	return newEntryJson(entry), nil
 }
 
-func copy(c *gin.Context) (*entryJson, error) {
+func copyEntry(c *gin.Context) (*entryJson, error) {
 	drive_ := getDrive(c)
 	fromEntry, e := drive_.Get(c.Query("from"))
-	to := fsPath.Clean(c.Query("to"))
+	to := common.CleanPath(c.Query("to"))
 	if e != nil {
 		return nil, e
 	}
@@ -130,8 +137,8 @@ func copy(c *gin.Context) (*entryJson, error) {
 }
 
 func move(c *gin.Context) (*entryJson, error) {
-	from := fsPath.Clean(c.Query("from"))
-	to := fsPath.Clean(c.Query("to"))
+	from := common.CleanPath(c.Query("from"))
+	to := common.CleanPath(c.Query("to"))
 	entry, e := getDrive(c).Move(from, to)
 	if e != nil {
 		return nil, e
@@ -139,8 +146,8 @@ func move(c *gin.Context) (*entryJson, error) {
 	return newEntryJson(entry), nil
 }
 
-func delete(c *gin.Context) error {
-	path := fsPath.Clean(c.Param("path"))
+func deleteEntry(c *gin.Context) error {
+	path := common.CleanPath(c.Param("path"))
 	return getDrive(c).Delete(path)
 }
 
@@ -159,7 +166,7 @@ func upload(c *gin.Context) (*uploadConfig, error) {
 }
 
 func getContent(c *gin.Context) error {
-	path := fsPath.Clean(c.Param("path"))
+	path := common.CleanPath(c.Param("path"))
 	file, e := getDrive(c).Get(path)
 	if e != nil {
 		return e
@@ -175,7 +182,7 @@ func writeContent(c *gin.Context) (*entryJson, error) {
 	if err != nil {
 		return nil, err
 	}
-	path := fsPath.Clean(c.Param("path"))
+	path := common.CleanPath(c.Param("path"))
 	entry, e := getDrive(c).Save(path, file, func(loaded int64) {})
 	if e != nil {
 		return nil, e
@@ -196,10 +203,9 @@ type entryJson struct {
 func newEntryJson(e types.IEntry) *entryJson {
 	entryMeta := e.Meta()
 	meta := make(map[string]interface{})
-	meta["can_write"] = entryMeta.CanWrite()
-	meta["can_read"] = entryMeta.CanRead()
-	if entryMeta != nil {
-		for k, v := range entryMeta.Props() {
+	meta["can_write"] = entryMeta.CanWrite
+	if entryMeta.Props != nil {
+		for k, v := range entryMeta.Props {
 			meta[k] = v
 		}
 	}
