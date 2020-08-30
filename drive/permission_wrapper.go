@@ -17,7 +17,7 @@ type GetChildrenPermissions = func(subjects []string, path string, immediate boo
 // REJECT takes precedence over ACCEPT
 type PermissionWrapperDrive struct {
 	drive                  types.IDrive
-	session                types.Session
+	subjects               []string
 	getPermissions         GetPermissions
 	getChildrenPermissions GetChildrenPermissions
 }
@@ -27,9 +27,20 @@ func NewPermissionWrapperDrive(
 	getPermissions GetPermissions,
 	getChildrenPermissions GetChildrenPermissions) *PermissionWrapperDrive {
 
+	subjects := make([]string, 0, 3)
+	subjects = append(subjects, "") // Anonymous
+	if !session.IsAnonymous() {
+		subjects = append(subjects, "u:"+session.User.Username)
+		if session.User.Groups != nil {
+			for _, g := range session.User.Groups {
+				subjects = append(subjects, "g:"+g.Name)
+			}
+		}
+	}
+
 	return &PermissionWrapperDrive{
 		drive:                  drive,
-		session:                session,
+		subjects:               subjects,
 		getPermissions:         getPermissions,
 		getChildrenPermissions: getChildrenPermissions,
 	}
@@ -152,37 +163,21 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 }
 
 func (p *PermissionWrapperDrive) resolvePathPermission(path string) (types.Permission, error) {
-	if common.IsRootPath(path) {
-		return types.PermissionRead, nil
+	paths := make([]string, 0, 1)
+	if !common.IsRootPath(path) {
+		paths = common.PathParentTree(path)
 	}
-	paths := common.PathParentTree(path)
-	if paths == nil {
-		return types.PermissionEmpty, nil
-	}
+	paths = append(paths, "") // for Root
 
-	items, e := p.getPermissions(p.getSubjects(), paths)
+	items, e := p.getPermissions(p.subjects, paths)
 	if e != nil {
 		return types.PermissionEmpty, e
 	}
 	return common.ResolveAcceptedPermissions(items), nil
 }
 
-func (p *PermissionWrapperDrive) getSubjects() []string {
-	subjects := make([]string, 0, 3)
-	subjects = append(subjects, "") // Anonymous
-	if !p.session.IsAnonymous() {
-		subjects = append(subjects, "u:"+p.session.User.Username)
-		if p.session.User.Groups != nil {
-			for _, g := range p.session.User.Groups {
-				subjects = append(subjects, "g:"+g.Name)
-			}
-		}
-	}
-	return subjects
-}
-
 func (p *PermissionWrapperDrive) removeUnreadableEntries(entries []types.IEntry, path string, parent types.Permission) ([]types.IEntry, error) {
-	permissions, e := p.getChildrenPermissions(p.getSubjects(), path, true)
+	permissions, e := p.getChildrenPermissions(p.subjects, path, true)
 	if e != nil {
 		return nil, e
 	}
