@@ -8,7 +8,11 @@ import (
 	"net/http/httputil"
 	url2 "net/url"
 	"os"
+	fsPath "path"
+	"regexp"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,6 +32,53 @@ func IsDir(path string) (bool, error) {
 	return stat.IsDir(), nil
 }
 
+func IsRootPath(path string) bool {
+	return path == "" || path == "/"
+}
+
+func CleanPath(path string) string {
+	path = fsPath.Clean(path)
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+	for strings.HasPrefix(path, "../") {
+		path = path[3:]
+	}
+	return path
+}
+
+func PathParent(path string) string {
+	path = CleanPath(path)
+	parent := fsPath.Dir(path)
+	if parent == "/" || parent == "." {
+		parent = ""
+	}
+	return parent
+}
+
+func PathParentTree(path string) []string {
+	if path == "" {
+		return nil
+	}
+	path = CleanPath(path)
+	r := make([]string, 0, PathDepth(path))
+	for path != "" {
+		r = append(r, path)
+		path = PathParent(path)
+	}
+	return r
+}
+
+var slashPattern = regexp.MustCompile("/")
+
+func PathDepth(path string) int {
+	path = CleanPath(path)
+	if path == "" {
+		return 0
+	}
+	return len(slashPattern.FindAll([]byte(path), -1)) + 1
+}
+
 func PanicIfError(e error) {
 	if e != nil {
 		panic(e)
@@ -38,6 +89,54 @@ func RequireNotNil(v interface{}, msg string) {
 	if v == nil {
 		panic(msg)
 	}
+}
+
+func pathPermissionLess(a, b types.PathPermission) bool {
+	if a.Depth != b.Depth {
+		return a.Depth > b.Depth
+	}
+	if a.IsForAnonymous() {
+		if b.IsForAnonymous() {
+			return a.Policy < b.Policy
+		} else {
+			return false
+		}
+	} else {
+		if b.IsForAnonymous() {
+			return true
+		} else {
+			if a.IsForUser() {
+				if b.IsForUser() {
+					return a.Policy < b.Policy
+				} else {
+					return true
+				}
+			} else {
+				if b.IsForUser() {
+					return false
+				} else {
+					return a.Policy < b.Policy
+				}
+			}
+		}
+	}
+}
+
+func ResolveAcceptedPermissions(items []types.PathPermission) types.Permission {
+	sort.Slice(items, func(i, j int) bool { return pathPermissionLess(items[i], items[j]) })
+	acceptedPermission := types.PermissionEmpty
+	rejectedPermission := types.PermissionEmpty
+	for _, item := range items {
+		if item.IsAccept() {
+			acceptedPermission |= item.Permission & ^rejectedPermission
+		}
+		if item.IsReject() {
+			// acceptedPermission - ( item.Permission(reject) - acceptedPermission )
+			acceptedPermission &= ^(item.Permission & (^acceptedPermission))
+			rejectedPermission |= item.Permission
+		}
+	}
+	return acceptedPermission
 }
 
 func CopyWithProgress(dst io.Writer, src io.Reader, progress types.OnProgress) (written int64, err error) {

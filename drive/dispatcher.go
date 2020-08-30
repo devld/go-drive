@@ -33,7 +33,7 @@ func (d *DispatcherDrive) SetDrives(drives map[string]types.IDrive) {
 	d.drives = newDrives
 }
 
-func (d *DispatcherDrive) Meta() types.IDriveMeta {
+func (d *DispatcherDrive) Meta() types.DriveMeta {
 	panic("not supported")
 }
 
@@ -56,7 +56,7 @@ func (d *DispatcherDrive) Get(path string) (types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	if path == "" || path == "/" {
+	if common.IsRootPath(path) {
 		return &driveEntry{path: name, name: name, meta: drive.Meta()}, nil
 	}
 	entry, e := drive.Get(path)
@@ -144,7 +144,7 @@ func (d *DispatcherDrive) Move(from string, to string) (types.IEntry, error) {
 }
 
 func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
-	if path == "" || path == "/" {
+	if common.IsRootPath(path) {
 		drives := make([]types.IEntry, 0, len(d.drives))
 		for k, v := range d.drives {
 			drives = append(drives, &driveEntry{path: k, name: k, meta: v.Meta()})
@@ -215,7 +215,7 @@ func (d *entryWrapper) Size() int64 {
 	return d.entry.Size()
 }
 
-func (d *entryWrapper) Meta() types.IEntryMeta {
+func (d *entryWrapper) Meta() types.EntryMeta {
 	return d.entry.Meta()
 }
 
@@ -244,7 +244,7 @@ func (d *entryWrapper) GetURL() (string, bool, error) {
 type driveEntry struct {
 	path string
 	name string
-	meta types.IDriveMeta
+	meta types.DriveMeta
 }
 
 func (d *driveEntry) Path() string {
@@ -263,8 +263,8 @@ func (d *driveEntry) Size() int64 {
 	return -1
 }
 
-func (d *driveEntry) Meta() types.IEntryMeta {
-	return driveEntryMeta{d.meta.CanWrite(), d.meta.Props()}
+func (d *driveEntry) Meta() types.EntryMeta {
+	return types.EntryMeta{CanRead: true, CanWrite: d.meta.CanWrite, Props: d.meta.Props}
 }
 
 func (d *driveEntry) CreatedAt() int64 {
@@ -281,21 +281,4 @@ func (d *driveEntry) GetReader() (io.ReadCloser, error) {
 
 func (d *driveEntry) GetURL() (string, bool, error) {
 	return "", false, common.NewNotAllowedError()
-}
-
-type driveEntryMeta struct {
-	canWrite bool
-	props    map[string]interface{}
-}
-
-func (d driveEntryMeta) CanWrite() bool {
-	return d.canWrite
-}
-
-func (d driveEntryMeta) CanRead() bool {
-	return true
-}
-
-func (d driveEntryMeta) Props() map[string]interface{} {
-	return d.props
 }

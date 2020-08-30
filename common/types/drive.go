@@ -21,10 +21,10 @@ func (t EntryType) IsDir() bool {
 	return t == TypeDir
 }
 
-type IEntryMeta interface {
-	CanRead() bool
-	CanWrite() bool
-	Props() map[string]interface{}
+type EntryMeta struct {
+	CanRead  bool
+	CanWrite bool
+	Props    map[string]interface{}
 }
 
 type IContent interface {
@@ -43,18 +43,18 @@ type IEntry interface {
 	Name() string
 	Type() EntryType
 	Size() int64
-	Meta() IEntryMeta
+	Meta() EntryMeta
 	CreatedAt() int64
 	UpdatedAt() int64
 }
 
-type IDriveMeta interface {
-	CanWrite() bool
-	Props() map[string]interface{}
+type DriveMeta struct {
+	CanWrite bool
+	Props    map[string]interface{}
 }
 
 type IDrive interface {
-	Meta() IDriveMeta
+	Meta() DriveMeta
 	Get(path string) (IEntry, error)
 	Save(path string, reader io.Reader, progress OnProgress) (IEntry, error)
 	MakeDir(path string) (IEntry, error)

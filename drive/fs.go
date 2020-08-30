@@ -28,12 +28,6 @@ type FsFile struct {
 	updatedAt int64
 }
 
-type fsDriveMeta struct {
-}
-
-type fsFileMeta struct {
-}
-
 // NewFsDrive creates a file system drive
 // params:
 //   - path: root path of this drive
@@ -217,8 +211,8 @@ func requireFile(path string, requireExists bool) error {
 	return nil
 }
 
-func (f *FsDrive) Meta() types.IDriveMeta {
-	return &fsDriveMeta{}
+func (f *FsDrive) Meta() types.DriveMeta {
+	return types.DriveMeta{CanWrite: true}
 }
 
 func (f *FsFile) Path() string {
@@ -243,8 +237,8 @@ func (f *FsFile) Size() int64 {
 	return f.size
 }
 
-func (f *FsFile) Meta() types.IEntryMeta {
-	return &fsFileMeta{}
+func (f *FsFile) Meta() types.EntryMeta {
+	return types.EntryMeta{CanRead: true, CanWrite: true}
 }
 
 func (f *FsFile) CreatedAt() int64 {
@@ -272,24 +266,4 @@ func (f *FsFile) GetReader() (io.ReadCloser, error) {
 
 func (f *FsFile) GetURL() (string, bool, error) {
 	return "", false, common.NewNotAllowedError()
-}
-
-func (f *fsDriveMeta) CanWrite() bool {
-	return true
-}
-
-func (f *fsDriveMeta) Props() map[string]interface{} {
-	return make(map[string]interface{})
-}
-
-func (f *fsFileMeta) CanWrite() bool {
-	return true
-}
-
-func (f *fsFileMeta) CanRead() bool {
-	return true
-}
-
-func (f *fsFileMeta) Props() map[string]interface{} {
-	return make(map[string]interface{})
 }

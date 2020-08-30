@@ -3,20 +3,14 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
-	"go-drive/storage"
 )
 
-func InitServer(
-	tokenStore TokenStore,
-	driveStorage *storage.DriveStorage,
-	userStorage *storage.UserStorage) (*gin.Engine, error) {
+func InitServer(components *ComponentsHolder) (*gin.Engine, error) {
 
 	engine := gin.New()
 
 	engine.Use(func(c *gin.Context) {
-		c.Set(keyTokenStore, tokenStore)
-		c.Set(keyDriveStorage, driveStorage)
-		c.Set(keyUserStorage, userStorage)
+		c.Set(keyComponentsHolder, components)
 	})
 
 	engine.Use(gin.Recovery())
