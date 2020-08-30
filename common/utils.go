@@ -33,7 +33,7 @@ func IsDir(path string) (bool, error) {
 }
 
 func IsRootPath(path string) bool {
-	return path == "" || path == "/"
+	return path == ""
 }
 
 func CleanPath(path string) string {
