@@ -2,6 +2,7 @@ package main
 
 import (
 	"go-drive/common"
+	"go-drive/drive"
 	"go-drive/server"
 	"go-drive/storage"
 	"time"
@@ -22,10 +23,13 @@ func main() {
 	common.PanicIfError(e)
 	permissionStorage, e := storage.NewPathPermissionStorage(db)
 	common.PanicIfError(e)
+	rootDrive, e := drive.NewRootDrive(driveStorage)
+	common.PanicIfError(e)
 
 	engine, e := server.InitServer(
 		&server.ComponentsHolder{
 			TokenStore:        tokenStore,
+			RootDrive:         rootDrive,
 			DriveStorage:      driveStorage,
 			UserStorage:       userStorage,
 			PermissionStorage: permissionStorage,

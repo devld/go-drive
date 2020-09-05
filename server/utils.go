@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common/types"
+	"go-drive/drive"
 	"go-drive/storage"
 )
 
@@ -16,6 +17,7 @@ const (
 
 type ComponentsHolder struct {
 	TokenStore        TokenStore
+	RootDrive         *drive.RootDrive
 	DriveStorage      *storage.DriveStorage
 	UserStorage       *storage.UserStorage
 	PermissionStorage *storage.PathPermissionStorage
@@ -27,6 +29,10 @@ func GetComponentsHolder(c *gin.Context) *ComponentsHolder {
 
 func GetTokenStore(c *gin.Context) TokenStore {
 	return GetComponentsHolder(c).TokenStore
+}
+
+func GetRootDrive(c *gin.Context) *drive.RootDrive {
+	return GetComponentsHolder(c).RootDrive
 }
 
 func GetDriveStorage(c *gin.Context) *storage.DriveStorage {

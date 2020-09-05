@@ -114,6 +114,27 @@ export const debounce = (func, wait) => {
   }
 }
 
+export function waitPromise (fn) {
+  const promises = []
+  let waiting = false
+  return function () {
+    if (!waiting) {
+      waiting = true
+      fn.apply(this, arguments).then(v => {
+        promises.forEach(p => { p.resolve(v) })
+      }, e => {
+        promises.forEach(p => { p.reject(e) })
+      }).then(() => {
+        promises.splice(0)
+        waiting = false
+      })
+    }
+    return new Promise((resolve, reject) => {
+      promises.push({ resolve, reject })
+    })
+  }
+}
+
 const DEFAULT_VALUE_FN = e => e
 export function mapOf (list, keyFn, valueFn = DEFAULT_VALUE_FN) {
   const map = {}

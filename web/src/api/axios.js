@@ -1,4 +1,5 @@
 import Axios from 'axios'
+import { waitPromise } from '@/utils'
 
 const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
@@ -25,12 +26,12 @@ function getToken () {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-async function doAuth () {
+const doAuth = waitPromise(async () => {
   const data = await axios.post('/auth/init')
   const token = data.token
   setToken(token)
   return token
-}
+})
 
 const axios = Axios.create(BASE_CONFIG)
 
