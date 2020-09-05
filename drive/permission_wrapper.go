@@ -3,6 +3,7 @@ package drive
 import (
 	"go-drive/common"
 	"go-drive/common/types"
+	"go-drive/storage"
 	"io"
 )
 
@@ -16,16 +17,14 @@ type GetChildrenPermissions = func(subjects []string, path string, immediate boo
 // Permissions for users take precedence over permissions for user groups.
 // REJECT takes precedence over ACCEPT
 type PermissionWrapperDrive struct {
-	drive                  types.IDrive
-	subjects               []string
-	getPermissions         GetPermissions
-	getChildrenPermissions GetChildrenPermissions
+	drive             types.IDrive
+	subjects          []string
+	permissionStorage *storage.PathPermissionStorage
 }
 
 func NewPermissionWrapperDrive(
 	session types.Session, drive types.IDrive,
-	getPermissions GetPermissions,
-	getChildrenPermissions GetChildrenPermissions) *PermissionWrapperDrive {
+	permissionStorage *storage.PathPermissionStorage) *PermissionWrapperDrive {
 
 	subjects := make([]string, 0, 3)
 	subjects = append(subjects, "") // Anonymous
@@ -39,10 +38,9 @@ func NewPermissionWrapperDrive(
 	}
 
 	return &PermissionWrapperDrive{
-		drive:                  drive,
-		subjects:               subjects,
-		getPermissions:         getPermissions,
-		getChildrenPermissions: getChildrenPermissions,
+		drive:             drive,
+		subjects:          subjects,
+		permissionStorage: permissionStorage,
 	}
 }
 
@@ -151,44 +149,10 @@ func (p *PermissionWrapperDrive) Upload(path string, size int64, overwrite bool)
 	return p.drive.Upload(path, size, overwrite)
 }
 
-func (p *PermissionWrapperDrive) requirePermission(path string, require types.Permission) (types.Permission, error) {
-	resolved, e := p.resolvePathPermission(path)
-	if e != nil {
-		return types.PermissionEmpty, e
-	}
-	if resolved&require != require {
-		return resolved, common.NewNotFoundError("not found")
-	}
-	return resolved, nil
-}
-
-func (p *PermissionWrapperDrive) resolvePathPermission(path string) (types.Permission, error) {
-	paths := make([]string, 0, 1)
-	if !common.IsRootPath(path) {
-		paths = common.PathParentTree(path)
-	}
-	paths = append(paths, "") // for Root
-
-	items, e := p.getPermissions(p.subjects, paths)
-	if e != nil {
-		return types.PermissionEmpty, e
-	}
-	return common.ResolveAcceptedPermissions(items), nil
-}
-
 func (p *PermissionWrapperDrive) removeUnreadableEntries(entries []types.IEntry, path string, parent types.Permission) ([]types.IEntry, error) {
-	permissions, e := p.getChildrenPermissions(p.subjects, path, true)
+	pMap, e := p.permissionStorage.ResolvePathChildrenPermission(p.subjects, path)
 	if e != nil {
 		return nil, e
-	}
-	pMap := make(map[string][]types.PathPermission)
-	for _, p := range permissions {
-		ps, ok := pMap[p.Path]
-		if !ok {
-			ps = make([]types.PathPermission, 0, 1)
-		}
-		ps = append(ps, p)
-		pMap[p.Path] = ps
 	}
 	result := make([]types.IEntry, 0, len(entries))
 	for _, e := range entries {
@@ -196,15 +160,25 @@ func (p *PermissionWrapperDrive) removeUnreadableEntries(entries []types.IEntry,
 			continue
 		}
 		p := parent
-		ps, ok := pMap[e.Path()]
-		if ok {
-			p &= common.ResolveAcceptedPermissions(ps)
+		if temp, ok := pMap[e.Path()]; ok {
+			p = temp
 		}
 		if p.CanRead() {
 			result = append(result, &PermissionWrapperEntry{entry: e, permission: p})
 		}
 	}
 	return result, nil
+}
+
+func (p *PermissionWrapperDrive) requirePermission(path string, require types.Permission) (types.Permission, error) {
+	resolved, e := p.permissionStorage.ResolvePathPermission(p.subjects, path)
+	if e != nil {
+		return types.PermissionEmpty, e
+	}
+	if resolved&require != require {
+		return resolved, common.NewNotFoundError("not found")
+	}
+	return resolved, nil
 }
 
 type PermissionWrapperEntry struct {

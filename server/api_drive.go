@@ -79,15 +79,8 @@ func getDrive(c *gin.Context) types.IDrive {
 	session := GetSession(c)
 	return drive.NewPermissionWrapperDrive(
 		session,
-		GetDriveStorage(c).GetRootDrive(),
-		GetPermissionStorage(c).GetByPaths,
-		func(subjects []string, path string, immediate bool) ([]types.PathPermission, error) {
-			depth := -1
-			if immediate {
-				depth = common.PathDepth(path) + 1
-			}
-			return GetPermissionStorage(c).GetChildrenByPath(subjects, path, int8(depth))
-		},
+		GetRootDrive(c).Get(),
+		GetPermissionStorage(c),
 	)
 }
 

@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	DbType     = "sqlite3"
 	DbFilename = "data.db"
 )
 
@@ -32,5 +33,5 @@ func (c Config) GetListen() string {
 }
 
 func (c Config) GetDB() (string, string) {
-	return "sqlite3", path.Join(c.dataDir, DbFilename)
+	return DbType, path.Join(c.dataDir, DbFilename)
 }

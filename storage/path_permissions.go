@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/jinzhu/gorm"
+	"go-drive/common"
 	"go-drive/common/types"
 )
 
@@ -64,4 +65,39 @@ func (p *PathPermissionStorage) Save(items []types.PathPermission) error {
 		}
 		return nil
 	})
+}
+
+func (p *PathPermissionStorage) ResolvePathPermission(subjects []string, path string) (types.Permission, error) {
+	paths := make([]string, 0, 1)
+	if !common.IsRootPath(path) {
+		paths = common.PathParentTree(path)
+	}
+	paths = append(paths, "") // for Root
+
+	items, e := p.GetByPaths(subjects, paths)
+	if e != nil {
+		return types.PermissionEmpty, e
+	}
+	return common.ResolveAcceptedPermissions(items), nil
+}
+
+func (p *PathPermissionStorage) ResolvePathChildrenPermission(subjects []string, parentPath string) (map[string]types.Permission, error) {
+	permissions, e := p.GetChildrenByPath(subjects, parentPath, int8(common.PathDepth(parentPath)+1))
+	if e != nil {
+		return nil, e
+	}
+	pMap := make(map[string][]types.PathPermission)
+	for _, p := range permissions {
+		ps, ok := pMap[p.Path]
+		if !ok {
+			ps = make([]types.PathPermission, 0, 1)
+		}
+		ps = append(ps, p)
+		pMap[p.Path] = ps
+	}
+	result := make(map[string]types.Permission, len(pMap))
+	for k, v := range pMap {
+		result[k] = common.ResolveAcceptedPermissions(v)
+	}
+	return result, nil
 }
