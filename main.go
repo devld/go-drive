@@ -5,10 +5,13 @@ import (
 	"go-drive/drive"
 	"go-drive/server"
 	"go-drive/storage"
+	"math/rand"
 	"time"
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	config := common.InitConfig()
 	dbDialect, dbArg := config.GetDB()
 
