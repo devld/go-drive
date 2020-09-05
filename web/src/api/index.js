@@ -9,12 +9,12 @@ export function entry (path) {
   return axios.get(`/entry/${path}`)
 }
 
-export function getContent (path, noCache) {
+export function getContent (path, accessKey, noCache) {
   const params = {}
   if (noCache) {
     params.r = Math.random()
   }
-  return axios.get(`/content/${path}`, {
+  return axios.get(_fileUrl(path, accessKey), {
     transformResponse: [],
     params
   })
@@ -34,8 +34,12 @@ export function getUploadConfig (path, size, overwrite) {
   })
 }
 
+function _fileUrl (path, accessKey) {
+  return `/content/${path}${accessKey ? `?k=${encodeURIComponent(accessKey)}` : ''}`
+}
+
 export function fileUrl (path, accessKey) {
-  return `${API_PATH}/content/${path}${accessKey ? `?k=${encodeURIComponent(accessKey)}` : ''}`
+  return `${API_PATH}${_fileUrl(path, accessKey)}`
 }
 
 /// auth

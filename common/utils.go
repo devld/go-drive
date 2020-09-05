@@ -45,6 +45,9 @@ func CleanPath(path string) string {
 	for strings.HasPrefix(path, "../") {
 		path = path[3:]
 	}
+	if path == "." {
+		path = ""
+	}
 	return path
 }
 
