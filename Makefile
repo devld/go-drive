@@ -10,7 +10,6 @@ $(build_dir)/$(target_name).tar.gz: $(build_dir)/go-drive $(build_dir)/web
 
 $(build_dir)/go-drive: $(build_dir)
 	go build -o $(build_dir)
-	cp config/config.json $(build_dir)
 
 $(build_dir)/web: $(build_dir)
 	cd web; npm install && npm run build

@@ -247,14 +247,14 @@ export default {
         }
       }
       if (readmeFound) {
-        await this.loadReadme(readmeFound.path)
+        await this.loadReadme(readmeFound)
       } else {
         this.readmeContent = ''
       }
     },
-    async loadReadme (path) {
+    async loadReadme (entry) {
       try {
-        this.readmeContent = await getContent(path)
+        this.readmeContent = await getContent(entry.path, entry.meta.access_key)
       } catch (e) {
         this.readmeContent = README_FAILED_CONTENT
       }

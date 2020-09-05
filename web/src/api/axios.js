@@ -1,5 +1,5 @@
-import Axios from 'axios'
 import { waitPromise } from '@/utils'
+import Axios from 'axios'
 
 const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
@@ -27,7 +27,7 @@ function getToken () {
 }
 
 const doAuth = waitPromise(async () => {
-  const data = await axios.post('/auth/init')
+  const data = (await Axios.post('/auth/init', null, BASE_CONFIG)).data
   const token = data.token
   setToken(token)
   return token
