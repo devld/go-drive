@@ -1,21 +1,25 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 
+import AppWrapper from '@/views/AppWrapper'
+
 import Home from '@/views/Home'
 
 Vue.use(VueRouter)
 
 const routes = [
   {
-    name: 'Index',
+    component: AppWrapper,
     path: '/',
-    redirect: '/files/'
-  },
-  {
-    name: 'Home',
-    path: '/files/:path(.*)',
-    component: Home,
-    props: true
+    redirect: '/files/',
+    children: [
+      {
+        name: 'Home',
+        path: '/files/:path(.*)',
+        component: Home,
+        props: true
+      }
+    ]
   }
 ]
 

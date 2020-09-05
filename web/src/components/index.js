@@ -7,9 +7,10 @@ import PathBar from './PathBar.vue'
 import ErrorView from './ErrorView.vue'
 import DialogView from './DialogView.vue'
 import FloatButton from './FloatButton.vue'
+import SimpleButton from './SimpleButton.vue'
 
 const components = {
-  IIcon,
+  IIcon, SimpleButton,
   EntryIcon, EntryLink, EntryList, EntryItem,
   PathBar, ErrorView, DialogView, FloatButton
 }

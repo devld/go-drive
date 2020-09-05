@@ -37,3 +37,19 @@ export function getUploadConfig (path, size, overwrite) {
 export function fileUrl (path) {
   return `${API_PATH}/content/${path}`
 }
+
+/// auth
+
+export function login (username, password) {
+  return axios.post('/auth/login', {
+    username, password
+  })
+}
+
+export function logout () {
+  return axios.post('/auth/logout')
+}
+
+export function getUser () {
+  return axios.get('/auth/user')
+}
