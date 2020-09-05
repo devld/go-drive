@@ -50,11 +50,11 @@ func (f *FsDrive) newFsFile(path string, file os.FileInfo) (types.IEntry, error)
 	if !strings.HasPrefix(path, f.path) {
 		panic("invalid file path")
 	}
-	path = path[len(f.path)+1:]
+	path = strings.ReplaceAll(path, "\\", "/")
+	path = path[len(f.path):]
 	for strings.HasPrefix(path, "/") {
 		path = path[1:]
 	}
-	path = strings.ReplaceAll(path, "\\", "/")
 	modTime := file.ModTime().UnixNano() / int64(time.Millisecond)
 	return &FsFile{
 		drive:     f,
@@ -78,9 +78,6 @@ func (f *FsDrive) isRootPath(path string) bool {
 
 func (f *FsDrive) Get(path string) (types.IEntry, error) {
 	path = f.getPath(path)
-	if f.isRootPath(path) {
-		return nil, common.NewNotFoundError("not found")
-	}
 	stat, e := os.Stat(path)
 	if os.IsNotExist(e) {
 		return nil, common.NewNotFoundError("not found")

@@ -48,10 +48,10 @@
     <!-- new entry menu -->
     <new-entry-area
       ref="newEntryArea"
-      v-if="!isRootPath"
       :path="path"
       :entries="entries"
       @update="reloadEntryList"
+      :readonly="isCurrentDirReadonly"
     />
     <!-- new entry menu -->
   </div>
@@ -61,7 +61,7 @@ import EntryListView from '@/views/EntryListView'
 import EntryMenu from './EntryMenu'
 import NewEntryArea from './NewEntryArea'
 
-import { getContent } from '@/api'
+import { entry, getContent } from '@/api'
 import { filename, dir, isRootPath, debounce } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
@@ -98,15 +98,17 @@ export default {
       entryMenu: null,
       entryMenuShowing: false,
 
-      entries: null
+      entries: null,
+
+      currentDirEntry: null
     }
   },
   computed: {
     entryHandlerViewShowing () {
       return !!(this.entryHandlerView && this.entries && this.entryHandlerView.entry)
     },
-    isRootPath () {
-      return isRootPath(this.path)
+    isCurrentDirReadonly () {
+      return !this.currentDirEntry || !this.currentDirEntry.meta.can_write
     }
   },
   beforeRouteUpdate (to, from, next) {
@@ -128,6 +130,7 @@ export default {
       if (entry.type === 'dir') {
         // path changed
         this.entries = null
+        this.currentDirEntry = null
       }
     },
     menuClicked ({ entry, menu }) {
@@ -172,6 +175,11 @@ export default {
       if (this.entryHandlerView) {
         this.entryHandlerView.entry =
           entries.find(e => e.name === this.entryHandlerView.entryName)
+      }
+
+      // load current path
+      if (!isRootPath(path)) {
+        entry(path).then(entry => { this.currentDirEntry = entry }, () => { })
       }
     },
     resolveRouteAndHandleEntry () {

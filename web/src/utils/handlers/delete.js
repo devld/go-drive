@@ -8,7 +8,7 @@ export default {
     type: 'danger',
     icon: '#icon-delete'
   },
-  supports: (entry) => true,
+  supports: (entry) => entry.meta.can_write,
   handler: async (entry, { confirm, alert, loading }) => {
     try {
       await confirm({

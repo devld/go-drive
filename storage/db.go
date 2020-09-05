@@ -16,8 +16,6 @@ func InitDB(dialect string, args ...interface{}) (*DB, error) {
 		return nil, e
 	}
 
-	db.LogMode(true)
-
 	db.AutoMigrate(
 		&types.User{},
 		&types.Group{},

@@ -1,6 +1,7 @@
 <template>
   <div class="new-entry-area">
     <float-button
+      v-if="!readonly"
       class="button-new-item"
       v-model="floatMenuShowing"
       title="New Item"
@@ -69,6 +70,9 @@ export default {
     entries: {
       type: null,
       required: true
+    },
+    readonly: {
+      type: Boolean
     }
   },
   data () {
@@ -231,6 +235,7 @@ export default {
       }
     },
     onDragEnter (e) {
+      if (this.readonly) return
       e.preventDefault()
       this.toggleDropZoneActive(true)
     },
