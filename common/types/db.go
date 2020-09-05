@@ -23,7 +23,7 @@ type Drive struct {
 	Config string `gorm:"COLUMN:config;NOT NULL;TYPE:VARCHAR;SIZE:4096" json:"config"`
 }
 
-type Permission int8
+type Permission uint8
 
 func (p Permission) CanRead() bool {
 	return p&PermissionRead == PermissionRead
@@ -41,8 +41,8 @@ const (
 )
 
 const (
-	PolicyReject int8 = 0
-	PolicyAccept int8 = 1
+	PolicyReject uint8 = 0
+	PolicyAccept uint8 = 1
 )
 
 type PathPermission struct {
@@ -51,8 +51,8 @@ type PathPermission struct {
 	// Permission bits for the path which subject accessed: 1: read, 2: write
 	Permission Permission `gorm:"COLUMN:permission;NOT NULL;TYPE:INTEGER" json:"permission"`
 	// Policy to apply to the permission when subject access this path: 0: REJECT, 1: ACCEPT
-	Policy int8 `gorm:"COLUMN:policy;NOT NULL;TYPE:INTEGER" json:"policy"`
-	Depth  int8 `gorm:"COLUMN:depth;NOT NULL;TYPE:INTEGER" json:"-"`
+	Policy uint8 `gorm:"COLUMN:policy;NOT NULL;TYPE:INTEGER" json:"policy"`
+	Depth  uint8 `gorm:"COLUMN:depth;NOT NULL;TYPE:INTEGER" json:"-"`
 }
 
 func (p PathPermission) IsForAnonymous() bool {

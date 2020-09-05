@@ -1,14 +1,13 @@
-package drive
+package server
 
 import (
 	"go-drive/common"
 	"go-drive/common/types"
 	"go-drive/storage"
 	"io"
+	"net/http"
+	"time"
 )
-
-type GetPermissions = func(subjects []string, paths []string) ([]types.PathPermission, error)
-type GetChildrenPermissions = func(subjects []string, path string, immediate bool) ([]types.PathPermission, error)
 
 // PermissionWrapperDrive intercept the request
 // based on the permission information in the database.
@@ -19,12 +18,15 @@ type GetChildrenPermissions = func(subjects []string, path string, immediate boo
 type PermissionWrapperDrive struct {
 	drive             types.IDrive
 	subjects          []string
+	request           *http.Request
 	permissionStorage *storage.PathPermissionStorage
+	requestSigner     *common.Signer
 }
 
 func NewPermissionWrapperDrive(
-	session types.Session, drive types.IDrive,
-	permissionStorage *storage.PathPermissionStorage) *PermissionWrapperDrive {
+	request *http.Request, session types.Session, drive types.IDrive,
+	permissionStorage *storage.PathPermissionStorage,
+	requestSigner *common.Signer) *PermissionWrapperDrive {
 
 	subjects := make([]string, 0, 3)
 	subjects = append(subjects, "") // Anonymous
@@ -40,7 +42,9 @@ func NewPermissionWrapperDrive(
 	return &PermissionWrapperDrive{
 		drive:             drive,
 		subjects:          subjects,
+		request:           request,
 		permissionStorage: permissionStorage,
+		requestSigner:     requestSigner,
 	}
 }
 
@@ -51,13 +55,20 @@ func (p *PermissionWrapperDrive) Meta() types.DriveMeta {
 func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
 	permission, e := p.requirePermission(path, types.PermissionRead)
 	if e != nil {
+		e = p.requirePermissionBySignature(path)
+	}
+	if e != nil {
 		return nil, e
 	}
 	entry, e := p.drive.Get(path)
 	if e != nil {
 		return nil, e
 	}
-	return &PermissionWrapperEntry{entry: entry, permission: permission}, nil
+	return &PermissionWrapperEntry{
+		entry:      entry,
+		permission: permission,
+		accessKey:  p.signPathAccess(entry.Path()),
+	}, nil
 }
 
 func (p *PermissionWrapperDrive) Save(path string, reader io.Reader, progress types.OnProgress) (types.IEntry, error) {
@@ -126,11 +137,32 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	entries, e = p.removeUnreadableEntries(entries, path, permission)
+
+	pMap, e := p.permissionStorage.ResolvePathChildrenPermission(p.subjects, path)
 	if e != nil {
 		return nil, e
 	}
-	return entries, nil
+	result := make([]types.IEntry, 0, len(entries))
+	for _, e := range entries {
+		if !e.Meta().CanRead {
+			continue
+		}
+		per := permission
+		if temp, ok := pMap[e.Path()]; ok {
+			per = temp
+		}
+		if per.CanRead() {
+			result = append(
+				result,
+				&PermissionWrapperEntry{
+					entry:      e,
+					permission: per,
+					accessKey:  p.signPathAccess(e.Path()),
+				},
+			)
+		}
+	}
+	return result, nil
 }
 
 func (p *PermissionWrapperDrive) Delete(path string) error {
@@ -149,25 +181,20 @@ func (p *PermissionWrapperDrive) Upload(path string, size int64, overwrite bool)
 	return p.drive.Upload(path, size, overwrite)
 }
 
-func (p *PermissionWrapperDrive) removeUnreadableEntries(entries []types.IEntry, path string, parent types.Permission) ([]types.IEntry, error) {
-	pMap, e := p.permissionStorage.ResolvePathChildrenPermission(p.subjects, path)
-	if e != nil {
-		return nil, e
+func (p *PermissionWrapperDrive) requirePermissionBySignature(path string) error {
+	signature := p.request.URL.Query().Get("k")
+	if !p.requestSigner.Validate(p.getSignPayload(path), signature) {
+		return common.NewNotFoundError("not found")
 	}
-	result := make([]types.IEntry, 0, len(entries))
-	for _, e := range entries {
-		if !e.Meta().CanRead {
-			continue
-		}
-		p := parent
-		if temp, ok := pMap[e.Path()]; ok {
-			p = temp
-		}
-		if p.CanRead() {
-			result = append(result, &PermissionWrapperEntry{entry: e, permission: p})
-		}
-	}
-	return result, nil
+	return nil
+}
+
+func (p *PermissionWrapperDrive) signPathAccess(path string) string {
+	return p.requestSigner.Sign(p.getSignPayload(path), time.Now().Add(12*time.Hour))
+}
+
+func (p *PermissionWrapperDrive) getSignPayload(path string) string {
+	return p.request.Host + "." + path + "." + common.GetRealIP(p.request)
 }
 
 func (p *PermissionWrapperDrive) requirePermission(path string, require types.Permission) (types.Permission, error) {
@@ -184,6 +211,7 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 type PermissionWrapperEntry struct {
 	entry      types.IEntry
 	permission types.Permission
+	accessKey  string
 }
 
 func (p *PermissionWrapperEntry) Path() string {
@@ -204,10 +232,17 @@ func (p *PermissionWrapperEntry) Size() int64 {
 
 func (p *PermissionWrapperEntry) Meta() types.EntryMeta {
 	meta := p.entry.Meta()
+	props := make(map[string]interface{})
+	if meta.Props != nil {
+		for k, v := range meta.Props {
+			props[k] = v
+		}
+	}
+	props["access_key"] = p.accessKey
 	return types.EntryMeta{
 		CanRead:  meta.CanRead && p.permission.CanRead(),
 		CanWrite: meta.CanWrite && p.permission.CanWrite(),
-		Props:    meta.Props,
+		Props:    props,
 	}
 }
 

@@ -96,7 +96,7 @@ export default {
       const basePath = dir(this.path)
       const ps = new PhotoSwipe(this.$refs.ps, PhotoSwipeUIDefault,
         this.images.map(i => ({
-          src: fileUrl(pathJoin(basePath, i.name)),
+          src: fileUrl(pathJoin(basePath, i.name), i.meta.access_key),
           w: 0, h: 0
         })), {
         history: false,
@@ -127,8 +127,7 @@ export default {
       })
       ps.init()
       this.ps = ps
-    },
-    fileUrl
+    }
   }
 }
 </script>

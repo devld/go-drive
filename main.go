@@ -17,6 +17,8 @@ func main() {
 
 	tokenStore := server.NewMemTokenStore(12*time.Hour, true, 1*time.Hour)
 
+	requestSigner := common.NewSigner(common.RandString(32))
+
 	driveStorage, e := storage.NewDriveStorage(db)
 	common.PanicIfError(e)
 	userStorage, e := storage.NewUserStorage(db)
@@ -33,6 +35,7 @@ func main() {
 			DriveStorage:      driveStorage,
 			UserStorage:       userStorage,
 			PermissionStorage: permissionStorage,
+			RequestSigner:     requestSigner,
 		},
 	)
 	common.PanicIfError(e)
