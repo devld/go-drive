@@ -53,21 +53,23 @@ func (p *PermissionWrapperDrive) Meta() types.DriveMeta {
 }
 
 func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
-	permission, e := p.requirePermission(path, types.PermissionRead)
-	if e != nil {
-		e = p.requirePermissionBySignature(path)
-	}
-	if e != nil {
-		return nil, e
+	downloadable := p.requireContentPermission(path)
+	var permission types.Permission
+	if !downloadable {
+		var e error
+		permission, e = p.requirePermission(path, types.PermissionRead)
+		if e != nil {
+			return nil, e
+		}
 	}
 	entry, e := p.drive.Get(path)
 	if e != nil {
 		return nil, e
 	}
 	return &PermissionWrapperEntry{
-		entry:      entry,
-		permission: permission,
-		accessKey:  p.signPathAccess(entry.Path()),
+		entry:        entry,
+		permission:   permission,
+		downloadable: downloadable,
 	}, nil
 }
 
@@ -181,12 +183,9 @@ func (p *PermissionWrapperDrive) Upload(path string, size int64, overwrite bool)
 	return p.drive.Upload(path, size, overwrite)
 }
 
-func (p *PermissionWrapperDrive) requirePermissionBySignature(path string) error {
+func (p *PermissionWrapperDrive) requireContentPermission(path string) bool {
 	signature := p.request.URL.Query().Get("k")
-	if !p.requestSigner.Validate(p.getSignPayload(path), signature) {
-		return common.NewNotFoundError("not found")
-	}
-	return nil
+	return p.requestSigner.Validate(p.getSignPayload(path), signature)
 }
 
 func (p *PermissionWrapperDrive) signPathAccess(path string) string {
@@ -209,9 +208,10 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 }
 
 type PermissionWrapperEntry struct {
-	entry      types.IEntry
-	permission types.Permission
-	accessKey  string
+	entry        types.IEntry
+	permission   types.Permission
+	accessKey    string
+	downloadable bool
 }
 
 func (p *PermissionWrapperEntry) Path() string {
@@ -255,6 +255,9 @@ func (p *PermissionWrapperEntry) UpdatedAt() int64 {
 }
 
 func (p *PermissionWrapperEntry) GetReader() (io.ReadCloser, error) {
+	if !p.downloadable {
+		return nil, common.NewNotFoundError("not found")
+	}
 	if c, ok := p.entry.(types.IContent); ok {
 		return c.GetReader()
 	}
@@ -262,6 +265,9 @@ func (p *PermissionWrapperEntry) GetReader() (io.ReadCloser, error) {
 }
 
 func (p *PermissionWrapperEntry) GetURL() (string, bool, error) {
+	if !p.downloadable {
+		return "", false, common.NewNotFoundError("not found")
+	}
 	if c, ok := p.entry.(types.IContent); ok {
 		return c.GetURL()
 	}
