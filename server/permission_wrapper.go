@@ -154,12 +154,16 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 			per = temp
 		}
 		if per.CanRead() {
+			accessKey := ""
+			if e.Type().IsFile() {
+				accessKey = p.signPathAccess(e.Path())
+			}
 			result = append(
 				result,
 				&PermissionWrapperEntry{
 					entry:      e,
 					permission: per,
-					accessKey:  p.signPathAccess(e.Path()),
+					accessKey:  accessKey,
 				},
 			)
 		}
