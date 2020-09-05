@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
+	"go-drive/common"
 	"go-drive/common/types"
 	"go-drive/drive"
 	"go-drive/storage"
@@ -17,6 +18,7 @@ const (
 
 type ComponentsHolder struct {
 	TokenStore        TokenStore
+	RequestSigner     *common.Signer
 	RootDrive         *drive.RootDrive
 	DriveStorage      *storage.DriveStorage
 	UserStorage       *storage.UserStorage
@@ -29,6 +31,10 @@ func GetComponentsHolder(c *gin.Context) *ComponentsHolder {
 
 func GetTokenStore(c *gin.Context) TokenStore {
 	return GetComponentsHolder(c).TokenStore
+}
+
+func GetRequestSigner(c *gin.Context) *common.Signer {
+	return GetComponentsHolder(c).RequestSigner
 }
 
 func GetRootDrive(c *gin.Context) *drive.RootDrive {
@@ -64,7 +70,10 @@ func SetToken(c *gin.Context, token string) {
 }
 
 func GetSession(c *gin.Context) types.Session {
-	return c.MustGet(keySession).(types.Session)
+	if s, exists := c.Get(keySession); exists {
+		return s.(types.Session)
+	}
+	return types.Session{}
 }
 
 func SetSession(c *gin.Context, session types.Session) {

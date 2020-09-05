@@ -1,6 +1,9 @@
 package common
 
-import "testing"
+import (
+	"regexp"
+	"testing"
+)
 
 func TestPathParent(t *testing.T) {
 	if p := PathParent("/"); p != "" {
@@ -41,5 +44,16 @@ func TestPathParentTree(t *testing.T) {
 	r := PathParentTree(path)
 	if r[2] != "a" || r[1] != "a/b" || r[0] != "a/b/c" {
 		t.Errorf("'%s': expect '%v', but is '%v'", path, []string{"a/b/c", "a/b", "a"}, r)
+	}
+}
+
+func TestRegSplit(t *testing.T) {
+	ss := RegSplit("a, b,c;d", regexp.MustCompile("[,;]\\s*"))
+	if len(ss) != 4 || ss[0] != "a" || ss[1] != "b" || ss[2] != "c" || ss[3] != "d" {
+		t.Errorf("RegSplit: 'a, b,c;d', expect '[a, b, c, d]', but '%v'", ss)
+	}
+	ss = RegSplit("abcd", regexp.MustCompile("[,;]\\s*"))
+	if len(ss) != 1 || ss[0] != "abcd" {
+		t.Errorf("RegSplit: 'abcd', expect '[abcd]', but '%v'", ss)
 	}
 }

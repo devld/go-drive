@@ -9,7 +9,11 @@
     <div class="page-content">
       <entry-icon :entry="entry" />
       <h2 class="filename">{{ entry.name }}</h2>
-      <a class="download-button" target="_blank" :href="$.fileUrl(entry.path)">
+      <a
+        class="download-button"
+        target="_blank"
+        :href="$.fileUrl(entry.path, entry.meta.access_key)"
+      >
         Download
         <span class="file-size">{{ $.formatBytes(entry.size) }}</span>
       </a>

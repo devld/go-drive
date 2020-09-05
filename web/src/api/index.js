@@ -34,8 +34,8 @@ export function getUploadConfig (path, size, overwrite) {
   })
 }
 
-export function fileUrl (path) {
-  return `${API_PATH}/content/${path}`
+export function fileUrl (path, accessKey) {
+  return `${API_PATH}/content/${path}${accessKey ? `?k=${encodeURIComponent(accessKey)}` : ''}`
 }
 
 /// auth

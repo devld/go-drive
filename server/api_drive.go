@@ -4,11 +4,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/types"
-	"go-drive/drive"
 	"strconv"
 )
 
 func InitDriveRoutes(router gin.IRouter) {
+
+	// get file content
+	router.GET("/content/*path", func(c *gin.Context) {
+		if e := getContent(c); e != nil {
+			_ = c.Error(e)
+		}
+	})
+
 	r := router.Group("/", Auth())
 
 	// list entries/drives
@@ -53,13 +60,6 @@ func InitDriveRoutes(router gin.IRouter) {
 		writeResponse(c, e, config)
 	})
 
-	// get file content
-	r.GET("/content/*path", func(c *gin.Context) {
-		if e := getContent(c); e != nil {
-			_ = c.Error(e)
-		}
-	})
-
 	// write file
 	r.PUT("/content/*path", func(c *gin.Context) {
 		entry, e := writeContent(c)
@@ -77,10 +77,11 @@ func writeResponse(c *gin.Context, e error, result interface{}) {
 
 func getDrive(c *gin.Context) types.IDrive {
 	session := GetSession(c)
-	return drive.NewPermissionWrapperDrive(
-		session,
+	return NewPermissionWrapperDrive(
+		c.Request, session,
 		GetRootDrive(c).Get(),
 		GetPermissionStorage(c),
+		GetRequestSigner(c),
 	)
 }
 

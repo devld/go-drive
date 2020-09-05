@@ -4,6 +4,7 @@ import (
 	"go-drive/common/types"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	url2 "net/url"
@@ -77,6 +78,16 @@ func PathDepth(path string) int {
 		return 0
 	}
 	return len(slashPattern.FindAll([]byte(path), -1)) + 1
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func RandString(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
 
 func PanicIfError(e error) {
@@ -237,4 +248,26 @@ func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.R
 	w.Header().Set("Content-Length", strconv.FormatInt(content.Size(), 10))
 	_, e = io.Copy(w, reader)
 	return e
+}
+
+func RegSplit(text string, reg *regexp.Regexp) []string {
+	indexes := reg.FindAllStringIndex(text, -1)
+	lastStart := 0
+	result := make([]string, len(indexes)+1)
+	for i, element := range indexes {
+		result[i] = text[lastStart:element[0]]
+		lastStart = element[1]
+	}
+	result[len(indexes)] = text[lastStart:]
+	return result
+}
+
+func GetRealIP(r *http.Request) string {
+	clientIP := r.RemoteAddr[:strings.LastIndex(r.RemoteAddr, ":")]
+	forwarded := r.Header.Get("X-Forwarded-For")
+	if forwarded == "" {
+		return clientIP
+	}
+	ips := RegSplit(forwarded, regexp.MustCompile(",\\s*"))
+	return ips[0]
 }
