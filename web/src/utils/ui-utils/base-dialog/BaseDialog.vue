@@ -19,25 +19,22 @@
 
     <template slot="footer">
       <div class="base-dialog__footer">
-        <button
+        <simple-button
           v-if="cancelText"
-          class="simple-button base-dialog__button-cancel"
-          :class="{ loading, [cancelType]: true }"
+          class="base-dialog__button-cancel"
+          :loading="loading === 'cancel'"
+          :type="cancelType"
           @click="$emit('cancel')"
           :disabled="!!loading"
-        >
-          <i-icon v-if="loading === 'cancel'" svg="#icon-loading" />
-          <template v-else>{{ cancelText }}</template>
-        </button>
-        <button
-          class="simple-button base-dialog__button-ok"
-          :class="{ loading, [confirmType]: true }"
+        >{{ cancelText }}</simple-button>
+        <simple-button
+          ref="confirmButton"
+          class="base-dialog__button-ok"
+          :loading="loading === 'confirm'"
+          :type="confirmType"
           @click="$emit('confirm')"
           :disabled="!!loading"
-        >
-          <i-icon v-if="loading === 'confirm'" svg="#icon-loading" />
-          <template v-else>{{ confirmText }}</template>
-        </button>
+        >{{ confirmText }}</simple-button>
       </div>
     </template>
   </dialog-view>

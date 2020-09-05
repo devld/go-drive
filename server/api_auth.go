@@ -17,9 +17,11 @@ func InitAuthRoutes(r gin.IRouter) {
 	r.POST("/auth/init", initAuth)
 
 	auth := r.Group("/auth", Auth())
-
-	auth.POST("/login", login)
-	auth.POST("/logout", logout)
+	{
+		auth.POST("/login", login)
+		auth.POST("/logout", logout)
+		auth.GET("/user", getUser)
+	}
 
 }
 
@@ -55,6 +57,15 @@ func login(c *gin.Context) {
 
 func logout(c *gin.Context) {
 	_ = UpdateSessionUser(c, types.User{})
+}
+
+func getUser(c *gin.Context) {
+	s := GetSession(c)
+	if !s.IsAnonymous() {
+		u := s.User
+		u.Password = ""
+		SetResult(c, u)
+	}
 }
 
 func Auth() gin.HandlerFunc {

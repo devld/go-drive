@@ -15,7 +15,6 @@
 
 .simple-button {
   font-size: 16px;
-  outline: none;
   border: none;
   background-color: #409eff;
   color: #fff;
@@ -74,6 +73,10 @@
   color: #000;
   user-select: none;
   cursor: pointer;
+
+  &.small {
+    font-size: 16px;
+  }
 }
 
 // animations
