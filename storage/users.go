@@ -54,12 +54,14 @@ func (u *UserStorage) UpdateUser(username string, user types.User) error {
 	}
 
 	return u.db.C().Transaction(func(tx *gorm.DB) error {
-		s := tx.Model(&types.User{}).Where("username = ?", username).Updates(data)
-		if s.Error != nil {
-			return s.Error
-		}
-		if s.RowsAffected != 1 {
-			return common.NewNotFoundError(fmt.Sprintf("user '%s' not found", username))
+		if len(data) > 0 {
+			s := tx.Model(&types.User{}).Where("username = ?", username).Updates(data)
+			if s.Error != nil {
+				return s.Error
+			}
+			if s.RowsAffected != 1 {
+				return common.NewNotFoundError(fmt.Sprintf("user '%s' not found", username))
+			}
 		}
 		if user.Groups != nil {
 			if e := tx.Where("username = ?", username).Delete(&types.UserGroup{}).Error; e != nil {

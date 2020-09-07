@@ -18,6 +18,29 @@ const routes = [
         path: '/files/:path(.*)',
         component: Home,
         props: true
+      },
+      {
+        name: 'Admin',
+        path: '/admin',
+        component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin'),
+        redirect: '/admin/users',
+        children: [
+          {
+            name: 'UsersManager',
+            path: '/admin/users',
+            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Users')
+          },
+          {
+            name: 'GroupsManager',
+            path: '/admin/groups',
+            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Groups')
+          },
+          {
+            name: 'DrivesManager',
+            path: '/admin/drives',
+            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Drives')
+          }
+        ]
       }
     ]
   }

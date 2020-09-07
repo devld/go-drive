@@ -17,6 +17,11 @@ import (
 	"time"
 )
 
+func IsDebugOn() bool {
+	_, exists := os.LookupEnv("DEBUG")
+	return exists
+}
+
 func FileExists(path string) (bool, error) {
 	_, e := os.Stat(path)
 	if os.IsNotExist(e) {

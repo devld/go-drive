@@ -276,7 +276,7 @@ export default {
 <style lang="scss">
 .files-list {
   max-width: 880px;
-  margin: 42px auto 0;
+  margin: 16px auto 0;
   background-color: #fff;
   padding: 16px 0;
   border-radius: 16px;

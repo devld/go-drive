@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	ts.Dispose()
+	_ = ts.Dispose()
 
 	os.Exit(code)
 }

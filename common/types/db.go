@@ -35,8 +35,8 @@ func (p Permission) CanWrite() bool {
 
 const (
 	PermissionEmpty     Permission = 0
-	PermissionRead      Permission = 1
-	PermissionWrite     Permission = 2
+	PermissionRead      Permission = 1 << 0
+	PermissionWrite     Permission = 1 << 1
 	PermissionReadWrite            = PermissionRead | PermissionWrite
 )
 

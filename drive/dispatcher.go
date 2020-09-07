@@ -25,7 +25,11 @@ func NewDispatcherDrive() *DispatcherDrive {
 func (d *DispatcherDrive) SetDrives(drives map[string]types.IDrive) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
-	d.drives = drives
+	for _, d := range d.drives {
+		if disposable, ok := d.(types.IDisposable); ok {
+			_ = disposable.Dispose()
+		}
+	}
 	newDrives := make(map[string]types.IDrive, len(drives))
 	for k, v := range drives {
 		newDrives[k] = v

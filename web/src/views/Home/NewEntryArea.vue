@@ -12,7 +12,7 @@
       @click="newButtonClicked"
     >
       <span class="icon-new-item" :class="{ 'active': floatMenuShowing }">
-        <i-icon svg="#icon-add" />
+        <i-icon svg="#icon-add1" />
       </span>
       <i-icon slot="file" svg="#icon-file" />
       <i-icon slot="folder" svg="#icon-folder" />

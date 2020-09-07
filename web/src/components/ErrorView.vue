@@ -2,6 +2,9 @@
   <div class="error-view">
     <span class="error-code" :title="message">{{ status || 'ERROR' }}</span>
     <span class="error-message">{{ ERROR_MESSAGES[status] || message }}</span>
+    <div class="back-button">
+      <simple-button @click="$router.go(-1)">Go Back</simple-button>
+    </div>
   </div>
 </template>
 <script>
@@ -39,6 +42,10 @@ export default {
     font-size: 80px;
     color: #787878;
     animation: text-flicker-in-glow 4s 2s linear infinite reverse both;
+  }
+
+  .back-button {
+    margin-top: 42px;
   }
 }
 </style>

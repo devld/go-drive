@@ -1,13 +1,16 @@
 <template>
   <button
     class="simple-button"
-    :class="{ loading, [type]: true }"
+    :class="{ loading, [type]: true, small }"
     @click="$emit('click')"
     :disabled="!!loading || disabled"
     :type="nativeType"
   >
     <i-icon v-if="loading" svg="#icon-loading" />
-    <slot v-else />
+    <template v-else>
+      <i-icon v-if="icon" :svg="icon" />
+      <slot />
+    </template>
   </button>
 </template>
 <script>
@@ -18,6 +21,12 @@ export default {
       type: Boolean
     },
     type: {
+      type: String
+    },
+    small: {
+      type: Boolean
+    },
+    icon: {
       type: String
     },
     disabled: {
