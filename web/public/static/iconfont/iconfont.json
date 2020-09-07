@@ -6,6 +6,20 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "122722",
+      "name": "add",
+      "font_class": "add1",
+      "unicode": "e6b9",
+      "unicode_decimal": 59065
+    },
+    {
+      "icon_id": "1226274",
+      "name": "edit",
+      "font_class": "edit",
+      "unicode": "e68d",
+      "unicode_decimal": 59021
+    },
+    {
       "icon_id": "1444361",
       "name": "cursor-text",
       "font_class": "cursor-text",
@@ -69,11 +83,11 @@
       "unicode_decimal": 58908
     },
     {
-      "icon_id": "122722",
+      "icon_id": "7684978",
       "name": "add",
       "font_class": "add",
-      "unicode": "e6b9",
-      "unicode_decimal": 59065
+      "unicode": "e6d4",
+      "unicode_decimal": 59092
     },
     {
       "icon_id": "867859",

@@ -21,9 +21,14 @@
   padding: 4px 10px;
   cursor: pointer;
   transition: 0.3s;
+  user-select: none;
 
   &:hover {
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  }
+
+  &.small {
+    font-size: 14px;
   }
 
   &[disabled] {
@@ -73,9 +78,93 @@
   color: #000;
   user-select: none;
   cursor: pointer;
+  text-decoration: none;
 
   &.small {
     font-size: 16px;
+  }
+}
+
+.simple-table {
+  border: none;
+  border-spacing: 0;
+
+  $border: solid 1px #ebebeb;
+
+  th,
+  td {
+    border: none;
+    padding: 8px;
+  }
+
+  th {
+    font-weight: normal;
+    text-align: center;
+    user-select: none;
+  }
+
+  thead {
+    background-color: #ebebeb;
+  }
+
+  tbody {
+    tr {
+      &:not(:last-child) td {
+        border-bottom: $border;
+      }
+
+      &:hover {
+        background-color: #ebebeb;
+
+      }
+
+      td:first-child {
+        border-left: $border;
+      }
+
+      td:last-child {
+        border-right: $border;
+      }
+
+      td {
+        border-bottom: $border;
+      }
+    }
+  }
+
+  .center {
+    text-align: center;
+  }
+}
+
+.form-item {
+  display: flex;
+  align-items: center;
+
+  &:not(:last-child) {
+    margin-bottom: 10px;
+  }
+
+  .label {
+    user-select: none;
+    display: inline-block;
+    width: 90px;
+
+    &:after {
+      content: ":";
+      margin-right: 0.5em;
+    }
+  }
+
+  input.value {
+    border: solid 1px rgba(0, 0, 0, 0.1);
+    font-size: 16px;
+    outline: none;
+    padding: 6px 8px;
+
+    &:disabled {
+      background-color: rgba(239, 239, 239, 0.3);
+    }
   }
 }
 

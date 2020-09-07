@@ -26,6 +26,8 @@ func main() {
 	common.PanicIfError(e)
 	userStorage, e := storage.NewUserStorage(db)
 	common.PanicIfError(e)
+	groupStorage, e := storage.NewGroupStorage(db)
+	common.PanicIfError(e)
 	permissionStorage, e := storage.NewPathPermissionStorage(db)
 	common.PanicIfError(e)
 	rootDrive, e := drive.NewRootDrive(driveStorage)
@@ -37,6 +39,7 @@ func main() {
 			RootDrive:         rootDrive,
 			DriveStorage:      driveStorage,
 			UserStorage:       userStorage,
+			GroupStorage:      groupStorage,
 			PermissionStorage: permissionStorage,
 			RequestSigner:     requestSigner,
 		},

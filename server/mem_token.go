@@ -128,7 +128,8 @@ func (m *MemTokenStore) clean() {
 	log.Printf("%d expired tokens cleaned", len(keys))
 }
 
-func (m *MemTokenStore) Dispose() {
+func (m *MemTokenStore) Dispose() error {
 	m.dispose <- true
 	m.ticker.Stop()
+	return nil
 }

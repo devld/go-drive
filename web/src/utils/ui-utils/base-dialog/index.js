@@ -62,7 +62,7 @@ export function createDialog (name, component) {
       ])
     },
     methods: {
-      async show (opts) {
+      show (opts) {
         this.opts = opts
 
         this.title = opts.title || ''
@@ -105,10 +105,15 @@ export function createDialog (name, component) {
           this.toggleLoading()
         }
 
-        if (this._callback && this._callback.onOk) {
+        if (this._callback) {
           this.toggleLoading(confirm)
           try {
-            await (confirm ? this._callback.onOk(val) : this._callback.onCancel(val || 'cancel'))
+            if (confirm && this._callback.onOk) {
+              await this._callback.onOk(val)
+            }
+            if (!confirm && this._callback.onCancel) {
+              await this._callback.onCancel(val || 'cancel')
+            }
           } catch {
             return
           } finally {

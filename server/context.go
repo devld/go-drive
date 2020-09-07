@@ -22,6 +22,7 @@ type ComponentsHolder struct {
 	RootDrive         *drive.RootDrive
 	DriveStorage      *storage.DriveStorage
 	UserStorage       *storage.UserStorage
+	GroupStorage      *storage.GroupStorage
 	PermissionStorage *storage.PathPermissionStorage
 }
 
@@ -47,6 +48,10 @@ func GetDriveStorage(c *gin.Context) *storage.DriveStorage {
 
 func GetUserStorage(c *gin.Context) *storage.UserStorage {
 	return GetComponentsHolder(c).UserStorage
+}
+
+func GetGroupStorage(c *gin.Context) *storage.GroupStorage {
+	return GetComponentsHolder(c).GroupStorage
 }
 
 func GetPermissionStorage(c *gin.Context) *storage.PathPermissionStorage {

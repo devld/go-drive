@@ -3,6 +3,7 @@ package storage
 import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
+	"go-drive/common"
 	"go-drive/common/types"
 )
 
@@ -14,6 +15,10 @@ func InitDB(dialect string, args ...interface{}) (*DB, error) {
 	db, e := gorm.Open(dialect, args...)
 	if e != nil {
 		return nil, e
+	}
+
+	if common.IsDebugOn() {
+		db.LogMode(true)
 	}
 
 	db.AutoMigrate(

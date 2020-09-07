@@ -67,6 +67,10 @@ type IDrive interface {
 	Upload(path string, size int64, overwrite bool) (*DriveUploadConfig, error)
 }
 
+type IDisposable interface {
+	Dispose() error
+}
+
 type DriveUploadConfig struct {
 	Provider string
 	Config   interface{}

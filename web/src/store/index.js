@@ -10,9 +10,14 @@ export default new Vuex.Store({
 
     showLogin: false
   },
+  getters: {
+    isAdmin (state) {
+      return !!(state.user && state.user.groups && state.user.groups.find(g => g.name === 'admin'))
+    }
+  },
   mutations: {
     setUser (state, user) {
-      state.user = user
+      state.user = user || null
     },
     showLogin (state, show) {
       state.showLogin = show
