@@ -44,8 +44,16 @@ export function getDrives () {
   return axios.get('/admin/drives')
 }
 
-export function updateDrives (drives) {
-  return axios.put('/admin/drives', drives)
+export function createDrive (drive) {
+  return axios.post('/admin/drive', drive)
+}
+
+export function updateDrive (name, drive) {
+  return axios.put(`/admin/drive/${name}`, drive)
+}
+
+export function deleteDrive (name) {
+  return axios.delete(`/admin/drive/${name}`)
 }
 
 export function reloadDrives () {

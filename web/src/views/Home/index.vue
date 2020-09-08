@@ -111,6 +111,15 @@ export default {
       return !this.currentDirEntry || !this.currentDirEntry.meta.can_write
     }
   },
+  watch: {
+    entryHandlerViewShowing (show) {
+      if (show) {
+        document.body.classList.add('scroll-lock')
+      } else {
+        document.body.classList.remove('scroll-lock')
+      }
+    }
+  },
   beforeRouteUpdate (to, from, next) {
     if (!this.resolveHandlerByRoute(from) && this.resolveHandlerByRoute(to)) {
       setHistoryFlag()
@@ -203,7 +212,6 @@ export default {
     },
     async closeEntryHandlerView () {
       if (!this.entryHandlerView) return
-      try { await this.confirmUnsavedState() } catch { return }
       this.focusOnEntry(this.entryHandlerView.entryName)
       this.replaceHandlerRoute()
     },
@@ -274,6 +282,10 @@ export default {
 }
 </script>
 <style lang="scss">
+body.scroll-lock {
+  overflow: hidden;
+}
+
 .files-list {
   max-width: 880px;
   margin: 16px auto 0;

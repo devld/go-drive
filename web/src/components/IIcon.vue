@@ -1,6 +1,14 @@
-<template>
-  <svg class="icon" aria-hidden>
-    <use :xlink:href="svg" />
+<template functional>
+  <svg
+    class="icon"
+    aria-hidden
+    @click="listeners.click && listeners.click()"
+    :class="[
+      data.class,
+      data.staticClass
+    ]"
+  >
+    <use :xlink:href="props.svg" />
   </svg>
 </template>
 <script>

@@ -142,19 +142,6 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// region drive
 
-	// update drives
-	r.PUT("/drives", func(c *gin.Context) {
-		drives := make([]types.Drive, 0)
-		if e := c.Bind(&drives); e != nil {
-			_ = c.Error(e)
-			return
-		}
-		if e := GetDriveStorage(c).SaveDrives(drives); e != nil {
-			_ = c.Error(e)
-			return
-		}
-	})
-
 	// get drives
 	r.GET("/drives", func(c *gin.Context) {
 		drives, e := GetDriveStorage(c).GetDrives()
@@ -163,6 +150,46 @@ func InitAdminRoutes(r gin.IRouter) {
 			return
 		}
 		SetResult(c, drives)
+	})
+
+	// add drive
+	r.POST("/drive", func(c *gin.Context) {
+		drive := types.Drive{}
+		if e := c.Bind(&drive); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		drive, e := GetDriveStorage(c).AddDrive(drive)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, drive)
+	})
+
+	// update drive
+	r.PUT("/drive/:name", func(c *gin.Context) {
+		name := c.Param("name")
+		drive := types.Drive{}
+		if e := c.Bind(&drive); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		e := GetDriveStorage(c).UpdateDrive(name, drive)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+	})
+
+	// delete drive
+	r.DELETE("/drive/:name", func(c *gin.Context) {
+		name := c.Param("name")
+		e := GetDriveStorage(c).DeleteDrive(name)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
 	})
 
 	// reload drives

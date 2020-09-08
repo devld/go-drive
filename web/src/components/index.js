@@ -8,9 +8,10 @@ import ErrorView from './ErrorView.vue'
 import DialogView from './DialogView.vue'
 import FloatButton from './FloatButton.vue'
 import SimpleButton from './SimpleButton.vue'
+import SimpleForm from './Form'
 
 const components = {
-  IIcon, SimpleButton,
+  IIcon, SimpleButton, SimpleForm,
   EntryIcon, EntryLink, EntryList, EntryItem,
   PathBar, ErrorView, DialogView, FloatButton
 }
