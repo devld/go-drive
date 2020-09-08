@@ -59,7 +59,7 @@
 import { createGroup, deleteGroup, getGroup, getGroups, getUsers, updateGroup } from '@/api/admin'
 
 export default {
-  name: 'UsersGroupsManager',
+  name: 'GroupsManager',
   data () {
     return {
       users: [],

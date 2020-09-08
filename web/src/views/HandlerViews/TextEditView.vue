@@ -63,9 +63,14 @@ export default {
   created () {
     this.loadFile()
     window.addEventListener('beforeunload', this.onWindowUnload)
+    window.addEventListener('resize', this.onWindowResize)
+  },
+  mounted () {
+    this.onWindowResize()
   },
   beforeDestroy () {
     window.removeEventListener('beforeunload', this.onWindowUnload)
+    window.removeEventListener('resize', this.onWindowResize)
   },
   watch: {
     content () {
@@ -124,6 +129,12 @@ export default {
       if (!this.saved) {
         e.preventDefault()
         e.returnValue = ''
+      }
+    },
+    onWindowResize () {
+      const el = this.$el
+      if (window.innerWidth <= 800) {
+        el.style.height = `${window.innerHeight}px`
       }
     }
   }
