@@ -63,6 +63,10 @@ export default {
     padding: 6px;
   }
 
+  .username {
+    margin-bottom: 0 !important;
+  }
+
   .username input {
     border-bottom: none;
   }
