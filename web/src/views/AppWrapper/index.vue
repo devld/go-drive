@@ -8,7 +8,7 @@
             class="username"
             :title="`Username: ${user.username}\nGroups: ${user.groups.map(g => g.name).join(', ')}`"
           >{{ user.username }}</span>
-          <router-link class="plain-button small" to="/admin">Admin</router-link>
+          <router-link v-if="isAdmin" class="plain-button small" to="/admin">Admin</router-link>
           <button class="plain-button small logout-button" @click="logout">Logout</button>
         </span>
       </div>
@@ -33,7 +33,7 @@
 import LoginView from '@/views/Login/LoginView'
 
 import { logout } from '@/api'
-import { mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 
 export default {
   name: 'AppWrapper',
@@ -47,7 +47,8 @@ export default {
       get () { return this.$store.state.showLogin },
       set (v) { this.$store.commit('showLogin', v) }
     },
-    ...mapState(['user', 'isAdmin']),
+    ...mapState(['user']),
+    ...mapGetters(['isAdmin']),
     isLoggedIn () {
       return !!this.user
     }

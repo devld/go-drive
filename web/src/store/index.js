@@ -1,6 +1,7 @@
+import { getUser } from '@/api'
+import { isAdmin } from '@/utils'
 import Vue from 'vue'
 import Vuex from 'vuex'
-import { getUser } from '@/api'
 
 Vue.use(Vuex)
 
@@ -12,7 +13,7 @@ export default new Vuex.Store({
   },
   getters: {
     isAdmin (state) {
-      return !!(state.user && state.user.groups && state.user.groups.find(g => g.name === 'admin'))
+      return isAdmin(state.user)
     }
   },
   mutations: {

@@ -1,6 +1,6 @@
 /// local storage provider
 
-import axios from '@/api/axios'
+import axios, { ApiError } from '@/api/axios'
 import Axios from 'axios'
 import UploadTask, { STATUS_STOPPED, STATUS_UPLOADING, STATUS_COMPLETED, STATUS_ERROR } from '../task'
 
@@ -29,7 +29,7 @@ export default class LocalUploadTask extends UploadTask {
       this._onChange(STATUS_COMPLETED)
     }, e => {
       if (this._status === STATUS_STOPPED) return
-      this._onChange(STATUS_ERROR, e)
+      this._onChange(STATUS_ERROR, ApiError.from(e))
     })
   }
 

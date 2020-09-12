@@ -23,7 +23,8 @@ export default {
       menus: [
         { name: 'Users', path: '/admin/users' },
         { name: 'Groups', path: '/admin/groups' },
-        { name: 'Drives', path: '/admin/drives' }
+        { name: 'Drives', path: '/admin/drives' },
+        { name: 'Misc', path: '/admin/misc' }
       ]
     }
   },

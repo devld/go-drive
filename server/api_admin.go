@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
+	"go-drive/common"
 	"go-drive/common/types"
 	"go-drive/storage"
 )
@@ -196,6 +197,37 @@ func InitAdminRoutes(r gin.IRouter) {
 	r.POST("/drives/reload", func(c *gin.Context) {
 		if e := GetRootDrive(c).ReloadDrive(); e != nil {
 			_ = c.Error(e)
+		}
+	})
+
+	// endregion
+
+	// region permissions
+
+	// get by path
+	r.GET("/path-permissions/*path", func(c *gin.Context) {
+		path := c.Param("path")
+		path = common.CleanPath(path)
+		permissions, e := GetPermissionStorage(c).GetByPath(path)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, permissions)
+	})
+
+	// save path permissions
+	r.PUT("/path-permissions/*path", func(c *gin.Context) {
+		path := c.Param("path")
+		path = common.CleanPath(path)
+		permissions := make([]types.PathPermission, 0)
+		if e := c.Bind(&permissions); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		if e := GetPermissionStorage(c).SavePathPermissions(path, permissions); e != nil {
+			_ = c.Error(e)
+			return
 		}
 	})
 

@@ -151,7 +151,7 @@ func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 	if common.IsRootPath(path) {
 		drives := make([]types.IEntry, 0, len(d.drives))
 		for k, v := range d.drives {
-			drives = append(drives, &driveEntry{path: k, name: k, meta: v.Meta()})
+			drives = append(drives, &driveEntry{path: k, name: k, meta: v.Meta(), isDrive: true})
 		}
 		return drives, nil
 	}
@@ -170,6 +170,9 @@ func (d *DispatcherDrive) Delete(path string) error {
 	drive, path, _, e := d.Resolve(path)
 	if e != nil {
 		return e
+	}
+	if path == "/" {
+		return common.NewNotAllowedError()
 	}
 	return drive.Delete(path)
 }
@@ -246,9 +249,10 @@ func (d *entryWrapper) GetURL() (string, bool, error) {
 }
 
 type driveEntry struct {
-	path string
-	name string
-	meta types.DriveMeta
+	path    string
+	name    string
+	meta    types.DriveMeta
+	isDrive bool
 }
 
 func (d *driveEntry) Path() string {
@@ -268,7 +272,7 @@ func (d *driveEntry) Size() int64 {
 }
 
 func (d *driveEntry) Meta() types.EntryMeta {
-	return types.EntryMeta{CanRead: true, CanWrite: d.meta.CanWrite, Props: d.meta.Props}
+	return types.EntryMeta{CanRead: true, CanWrite: d.meta.CanWrite && !d.isDrive, Props: d.meta.Props}
 }
 
 func (d *driveEntry) CreatedAt() int64 {

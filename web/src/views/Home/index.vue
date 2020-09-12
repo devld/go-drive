@@ -66,6 +66,7 @@ import { filename, dir, isRootPath, debounce } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
 import { makeEntryHandlerLink, getBaseLink } from '@/utils/routes'
+import { mapState } from 'vuex'
 
 const README_FILENAME = 'readme.md'
 const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
@@ -109,7 +110,8 @@ export default {
     },
     isCurrentDirReadonly () {
       return !this.currentDirEntry || !this.currentDirEntry.meta.can_write
-    }
+    },
+    ...mapState(['user'])
   },
   watch: {
     entryHandlerViewShowing (show) {
@@ -132,7 +134,11 @@ export default {
     })
   },
   created () {
+    window.addEventListener('beforeunload', this.onWindowUnload)
     this.resolveRouteAndHandleEntry()
+  },
+  beforeDestroy () {
+    window.removeEventListener('beforeunload', this.onWindowUnload)
   },
   methods: {
     entryClicked ({ entry, event }) {
@@ -157,8 +163,7 @@ export default {
       }
     },
     showEntryMenu ({ entry, event }) {
-      if (isRootPath(this.path)) return
-      const handlers = resolveEntryHandler(entry)
+      const handlers = resolveEntryHandler(entry, this.user)
       if (handlers.length === 0) return
 
       event && event.preventDefault()
@@ -231,6 +236,11 @@ export default {
     confirmUnsavedState () {
       if (!this.entryHandlerView || this.entryHandlerView.savedState) return Promise.resolve()
       return this.$confirm('You have some unsaved changes, are you sure to leave?')
+    },
+    onWindowUnload (e) {
+      if (!this.entryHandlerView || this.entryHandlerView.savedState) return
+      e.preventDefault()
+      e.returnValue = ''
     },
     resolveHandlerByRoute (route) {
       const handler = getHandler(route.query.handler)

@@ -113,6 +113,9 @@ func (g *GroupStorage) DeleteGroup(name string) error {
 		if s.RowsAffected != 1 {
 			return common.NewNotFoundError(fmt.Sprintf("group '%s' not found", name))
 		}
-		return tx.Where("group_name = ?", name).Delete(&types.UserGroup{}).Error
+		if e := tx.Where("group_name = ?", name).Delete(&types.UserGroup{}).Error; e != nil {
+			return e
+		}
+		return tx.Where("subject = ?", types.GroupSubject(name)).Delete(&types.PathPermission{}).Error
 	})
 }

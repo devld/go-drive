@@ -59,3 +59,11 @@ export function deleteDrive (name) {
 export function reloadDrives () {
   return axios.post('/admin/drives/reload')
 }
+
+export function getPermissions (path) {
+  return axios.get(`/admin/path-permissions/${path}`)
+}
+
+export function savePermissions (path, permissions) {
+  return axios.put(`/admin/path-permissions/${path}`, permissions)
+}

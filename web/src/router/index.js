@@ -39,6 +39,11 @@ const routes = [
             name: 'DrivesManager',
             path: '/admin/drives',
             component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Drives')
+          },
+          {
+            name: 'MiscSettings',
+            path: '/admin/misc',
+            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Misc')
           }
         ]
       }

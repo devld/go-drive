@@ -29,12 +29,12 @@ func NewPermissionWrapperDrive(
 	requestSigner *common.Signer) *PermissionWrapperDrive {
 
 	subjects := make([]string, 0, 3)
-	subjects = append(subjects, "") // Anonymous
+	subjects = append(subjects, types.AnySubject) // Anonymous
 	if !session.IsAnonymous() {
-		subjects = append(subjects, "u:"+session.User.Username)
+		subjects = append(subjects, types.UserSubject(session.User.Username))
 		if session.User.Groups != nil {
 			for _, g := range session.User.Groups {
-				subjects = append(subjects, "g:"+g.Name)
+				subjects = append(subjects, types.GroupSubject(g.Name))
 			}
 		}
 	}
@@ -130,9 +130,14 @@ func (p *PermissionWrapperDrive) Move(from string, to string) (types.IEntry, err
 }
 
 func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
-	permission, e := p.requirePermission(path, types.PermissionRead)
+	permission, e := p.permissionStorage.ResolvePathPermission(p.subjects, path)
 	if e != nil {
 		return nil, e
+	}
+	if !common.IsRootPath(path) {
+		if !permission.CanRead() {
+			return nil, common.NewNotFoundError("not found")
+		}
 	}
 	entries, e := p.drive.List(path)
 	if e != nil {

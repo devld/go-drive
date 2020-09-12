@@ -1,11 +1,12 @@
 <template>
   <div class="text-edit-view" @keydown="onKeyDown">
     <h1 class="filename">
-      <button
-        class="header-button simple-button save-button"
+      <simple-button
+        class="header-button save-button"
         v-if="!readonly"
         @click="saveFile"
-      >{{ saving ? 'Saving...' : 'Save' }}</button>
+        :loading="saving"
+      >Save</simple-button>
       <span :title="filename">{{ filename }}</span>
       <button class="header-button close-button plain-button" title="Close" @click="$emit('close')">
         <i-icon svg="#icon-close" />
@@ -19,7 +20,7 @@
       :disabled="readonly"
     />
     <error-view v-else :status="error.status" :message="error.message" />
-    <div v-if="!inited" class="loading">Loading...</div>
+    <div v-if="!inited" class="loading-tips">Loading...</div>
   </div>
 </template>
 <script>
@@ -62,14 +63,12 @@ export default {
   },
   created () {
     this.loadFile()
-    window.addEventListener('beforeunload', this.onWindowUnload)
     window.addEventListener('resize', this.onWindowResize)
   },
   mounted () {
     this.onWindowResize()
   },
   beforeDestroy () {
-    window.removeEventListener('beforeunload', this.onWindowUnload)
     window.removeEventListener('resize', this.onWindowResize)
   },
   watch: {
@@ -116,19 +115,12 @@ export default {
       }
     },
     changeSaveState (saved) {
-      this.saved = saved
       this.$emit('save-state', saved)
     },
     onKeyDown (e) {
       if (e.key === 's' && e.ctrlKey && !this.readonly) {
         e.preventDefault()
         this.saveFile()
-      }
-    },
-    onWindowUnload (e) {
-      if (!this.saved) {
-        e.preventDefault()
-        e.returnValue = ''
       }
     },
     onWindowResize () {
@@ -194,7 +186,7 @@ export default {
     }
   }
 
-  .loading {
+  .loading-tips {
     position: absolute;
     top: 0;
     left: 0;

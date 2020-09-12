@@ -46,8 +46,8 @@ const (
 )
 
 type PathPermission struct {
-	Path    string `gorm:"COLUMN:path;PRIMARY_KEY;TYPE:VARCHAR;SIZE:4096" json:"path"`
-	Subject string `gorm:"COLUMN:subject;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:34" json:"subject"`
+	Path    *string `gorm:"COLUMN:path;PRIMARY_KEY;TYPE:VARCHAR;SIZE:4096" json:"path"`
+	Subject string  `gorm:"COLUMN:subject;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:34" json:"subject"`
 	// Permission bits for the path which subject accessed: 1: read, 2: write
 	Permission Permission `gorm:"COLUMN:permission;NOT NULL;TYPE:INTEGER" json:"permission"`
 	// Policy to apply to the permission when subject access this path: 0: REJECT, 1: ACCEPT
@@ -55,8 +55,18 @@ type PathPermission struct {
 	Depth  uint8 `gorm:"COLUMN:depth;NOT NULL;TYPE:INTEGER" json:"-"`
 }
 
+func UserSubject(username string) string {
+	return "u:" + username
+}
+
+func GroupSubject(name string) string {
+	return "g:" + name
+}
+
+const AnySubject = "ANY"
+
 func (p PathPermission) IsForAnonymous() bool {
-	return p.Subject == ""
+	return p.Subject == AnySubject
 }
 
 func (p PathPermission) IsForUser() bool {
