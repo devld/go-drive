@@ -87,7 +87,10 @@ func (u *UserStorage) DeleteUser(username string) error {
 			return common.NewNotFoundError(fmt.Sprintf("user '%s' not found", username))
 
 		}
-		return tx.Where("username = ?", username).Delete(&types.UserGroup{}).Error
+		if e := tx.Where("username = ?", username).Delete(&types.UserGroup{}).Error; e != nil {
+			return e
+		}
+		return tx.Where("subject = ?", types.UserSubject(username)).Delete(&types.PathPermission{}).Error
 	})
 }
 

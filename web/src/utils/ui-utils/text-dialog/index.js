@@ -4,7 +4,7 @@ import showBaseDialog, { createDialog } from '../base-dialog'
 const TextDialog = createDialog('TextDialog', TextDialogInner)
 
 export function showAlertDialog (Vue, opts) {
-  if (typeof (opts) === 'string') {
+  if (typeof (opts) !== 'object') {
     opts = { message: opts }
   }
   return showBaseDialog(Vue, TextDialog, { ...opts, transition: opts.transition || 'flip-fade' })

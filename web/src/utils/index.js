@@ -153,6 +153,10 @@ export function isRootPath (path) {
   return path === ''
 }
 
+export function isAdmin (user) {
+  return !!(user && user.groups && user.groups.findIndex(g => g.name === 'admin') !== -1)
+}
+
 const filters = {
   formatTime, formatBytes
 }

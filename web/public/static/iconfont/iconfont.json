@@ -6,6 +6,27 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "15535808",
+      "name": "accept",
+      "font_class": "accept",
+      "unicode": "e65f",
+      "unicode_decimal": 58975
+    },
+    {
+      "icon_id": "16423763",
+      "name": "reject",
+      "font_class": "reject",
+      "unicode": "e620",
+      "unicode_decimal": 58912
+    },
+    {
+      "icon_id": "10793023",
+      "name": "permission",
+      "font_class": "permission",
+      "unicode": "e61b",
+      "unicode_decimal": 58907
+    },
+    {
       "icon_id": "12578929",
       "name": "refresh",
       "font_class": "refresh2",

@@ -1,12 +1,13 @@
-import { mapOf, cloneObject } from '@/utils'
-
-import textEdit from './text-edit'
-import image from './image'
-import download from './download'
+import { cloneObject, mapOf } from '@/utils'
 import deleteEntry from './delete'
+import download from './download'
+import image from './image'
+import permission from './permission'
+import textEdit from './text-edit'
 
 export const HANDLERS = Object.freeze([
-  textEdit, image, download, deleteEntry
+  textEdit, image, download, deleteEntry,
+  permission
 ])
 
 export const HANDLER_COMPONENTS = mapOf(HANDLERS.filter(h => h.view), h => h.view.name, h => h.view.component)
@@ -17,12 +18,10 @@ export function getHandler (name) {
   return HANDLERS_MAP[name] && cloneObject(HANDLERS_MAP[name])
 }
 
-export function resolveEntryHandler (entry) {
+export function resolveEntryHandler (entry, user) {
   const matches = []
   for (const h of HANDLERS) {
-    if (h.supports(entry)) matches.push(cloneObject(h))
+    if (h.supports(entry, user)) matches.push(cloneObject(h))
   }
   return matches
 }
-
-window.resolveEntryHandler = resolveEntryHandler

@@ -92,10 +92,8 @@ export class UploadManager {
           resolve()
         } else {
           // eslint-disable-next-line prefer-promise-reject-errors
-          reject({
-            status: task.status,
-            message: task.status === STATUS_ERROR ? e.message : 'task stopped'
-          })
+          reject(task.status === STATUS_ERROR ? e.data
+            : { status: task.status, message: 'task stopped' })
         }
         if (removeIfFinished) {
           this.removeTask(id)

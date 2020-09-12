@@ -38,28 +38,22 @@ func (p *PathPermissionStorage) GetChildrenByPath(subjects []string, path string
 	return r, e
 }
 
-func (p *PathPermissionStorage) save(item types.PathPermission, db *gorm.DB) error {
-	old := types.PathPermission{}
-	exists := true
-	if e := db.First(&old, "path = ? AND subject = ?", item.Path, item.Subject).Error; e != nil {
-		if !gorm.IsRecordNotFoundError(e) {
-			return e
-		}
-		exists = false
+func (p *PathPermissionStorage) GetByPath(path string) ([]types.PathPermission, error) {
+	r := make([]types.PathPermission, 0)
+	if e := p.db.C().Find(&r, "path = ?", path).Error; e != nil {
+		return nil, e
 	}
-	var e error
-	if exists {
-		e = db.Save(item).Error
-	} else {
-		e = db.Create(&item).Error
-	}
-	return e
+	return r, nil
 }
 
-func (p *PathPermissionStorage) Save(items []types.PathPermission) error {
+func (p *PathPermissionStorage) SavePathPermissions(path string, permissions []types.PathPermission) error {
 	return p.db.C().Transaction(func(tx *gorm.DB) error {
-		for _, item := range items {
-			if e := p.save(item, tx); e != nil {
+		if e := tx.Delete(&types.PathPermission{}, "path = ?", path).Error; e != nil {
+			return e
+		}
+		for _, p := range permissions {
+			p.Path = &path
+			if e := tx.Create(&p).Error; e != nil {
 				return e
 			}
 		}
@@ -88,12 +82,12 @@ func (p *PathPermissionStorage) ResolvePathChildrenPermission(subjects []string,
 	}
 	pMap := make(map[string][]types.PathPermission)
 	for _, p := range permissions {
-		ps, ok := pMap[p.Path]
+		ps, ok := pMap[*p.Path]
 		if !ok {
 			ps = make([]types.PathPermission, 0, 1)
 		}
 		ps = append(ps, p)
-		pMap[p.Path] = ps
+		pMap[*p.Path] = ps
 	}
 	result := make(map[string]types.Permission, len(pMap))
 	for k, v := range pMap {

@@ -10,7 +10,14 @@ const BASE_CONFIG = {
   baseURL: API_PATH
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
+  static from (e) {
+    if (!e.response) return e
+    const status = e.response.status
+    const res = e.response.data
+    return new ApiError(status, res.msg, res.data)
+  }
+
   constructor (status, message, data) {
     super(message)
     this.status = status
@@ -50,14 +57,13 @@ async function handlerError (e) {
   if (!e.response) throw e
 
   const status = e.response.status
-  const res = e.response.data
 
   if (status === 401) {
     await doAuth()
     return axios(e.config)
   }
 
-  throw new ApiError(status, res.msg, res.data)
+  throw ApiError.from(e)
 }
 
 axios.interceptors.request.use(processConfig)

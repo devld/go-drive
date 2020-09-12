@@ -13,6 +13,7 @@
         </entry-link>
       </li>
     </ul>
+    <div class="entry-list__empty" v-if="sortedEntries.length === 0">Nothing here</div>
   </div>
 </template>
 <script>
@@ -122,5 +123,12 @@ export default {
       background-color: rgba(0, 0, 0, 0.08);
     }
   }
+}
+
+.entry-list__empty {
+  user-select: none;
+  text-align: center;
+  padding: 32px 0;
+  color: gray;
 }
 </style>
