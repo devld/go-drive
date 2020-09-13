@@ -1,10 +1,9 @@
 
+import { fileUrl, getTask } from '@/api'
 import dayjs from 'dayjs'
-import markdown from './directives/markdown'
-import longPress from './directives/long-press'
 import focus from './directives/focus'
-import { fileUrl } from '@/api'
-
+import longPress from './directives/long-press'
+import markdown from './directives/markdown'
 import UiUtils from './ui-utils'
 
 export const IS_DEBUG = process.env.NODE_ENV === 'development'
@@ -92,16 +91,6 @@ export function arrayRemove (array, e) {
   return el
 }
 
-export function cloneObject (obj) {
-  if (typeof (obj) !== 'object') return obj
-  if (Array.isArray(obj)) return [...obj]
-  const o = {}
-  for (const k of Object.keys(obj)) {
-    o[k] = cloneObject(obj[k])
-  }
-  return o
-}
-
 export const debounce = (func, wait) => {
   let timeout
   return function executedFunction () {
@@ -155,6 +144,20 @@ export function isRootPath (path) {
 
 export function isAdmin (user) {
   return !!(user && user.groups && user.groups.findIndex(g => g.name === 'admin') !== -1)
+}
+
+export function wait (ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+export async function taskDone (task, cb) {
+  while (task.status === 'pending' || task.status === 'running') {
+    await cb(task)
+    task = await getTask(task.id)
+  }
+  return task
 }
 
 const filters = {

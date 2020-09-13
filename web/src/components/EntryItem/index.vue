@@ -5,8 +5,15 @@
       `entry-item--${entry.type}`,
       entry.type === 'file' ? `entry-item--ext-${ext}` : ''
     ]"
+    @click="$emit('click', $event)"
   >
-    <entry-icon class="entry-item__icon" :entry="entry" />
+    <i-icon class="entry-item__icon" v-if="icon" :svg="icon" @click="$emit('icon-click', $event)" />
+    <entry-icon
+      v-else
+      class="entry-item__icon"
+      :entry="entry"
+      @click="$emit('icon-click', $event)"
+    />
     <span class="entry-item__info">
       <span class="entry-item__name">{{ entry.name }}</span>
       <span
@@ -25,6 +32,9 @@ export default {
     entry: {
       type: Object,
       required: true
+    },
+    icon: {
+      type: String
     }
   },
   computed: {
@@ -71,11 +81,5 @@ export default {
   font-size: 14px;
   text-align: right;
   white-space: nowrap;
-}
-
-@media screen and (max-width: 880px) {
-  .entry-item__modified-time {
-    display: none;
-  }
 }
 </style>

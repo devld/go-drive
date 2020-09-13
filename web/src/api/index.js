@@ -5,7 +5,7 @@ export function listEntries (path) {
   return axios.get(`/entries/${path}`)
 }
 
-export function entry (path) {
+export function getEntry (path) {
   return axios.get(`/entry/${path}`)
 }
 
@@ -28,9 +28,29 @@ export function deleteEntry (path) {
   return axios.delete(`/entry/${path}`)
 }
 
-export function getUploadConfig (path, size, overwrite) {
+export function copyEntry (from, to, override) {
+  return axios.post('/copy', null, {
+    params: { from, to, override: override ? '1' : '' }
+  })
+}
+
+export function moveEntry (from, to, override) {
+  return axios.post('/move', null, {
+    params: { from, to, override: override ? '1' : '' }
+  })
+}
+
+export function getTask (id) {
+  return axios.get(`/task/${id}`)
+}
+
+export function deleteTask (id) {
+  return axios.delete(`/task/${id}`)
+}
+
+export function getUploadConfig (path, size, override) {
   return axios.post(`/upload/${path}`, null, {
-    params: { overwrite, size }
+    params: { override, size }
   })
 }
 

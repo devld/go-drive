@@ -1,5 +1,5 @@
 <template>
-  <i-icon class="entry-icon" :svg="entryIcon" />
+  <i-icon @click="$emit('click', $event)" class="entry-icon" :svg="entryIcon" />
 </template>
 <script>
 import { getIconSVG } from './file-icon'

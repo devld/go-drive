@@ -2,7 +2,7 @@
   <svg
     class="icon"
     aria-hidden
-    @click="listeners.click && listeners.click()"
+    @click="listeners.click && listeners.click($event)"
     :class="[
       data.class,
       data.staticClass

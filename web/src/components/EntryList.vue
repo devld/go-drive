@@ -4,12 +4,21 @@
     <ul class="entry-list__entries">
       <li class="entry-list__item" v-if="!isRootPath">
         <entry-link ref="parentEntry" :entry="parentDirEntry" @click="entryClicked">
-          <entry-item :entry="parentDirEntry" />
+          <entry-item
+            :entry="parentDirEntry"
+            :icon="selected.length > 0 ? '#icon-duigou' : undefined"
+            @icon-click="toggleSelectAll($event)"
+          />
         </entry-link>
       </li>
-      <li class="entry-list__item" v-for="entry in sortedEntries" :key="path + entry.name">
+      <li
+        class="entry-list__item"
+        v-for="entry in sortedEntries"
+        :key="entry.path"
+        :class="{ 'selected': selectionMap[entry.path] }"
+      >
         <entry-link ref="entries" :entry="entry" @click="entryClicked" @menu="entryContextMenu">
-          <entry-item :entry="entry" />
+          <entry-item :entry="entry" @icon-click="toggleSelect(entry, $event)" />
         </entry-link>
       </li>
     </ul>
@@ -17,7 +26,7 @@
   </div>
 </template>
 <script>
-import { pathJoin, pathClean, isRootPath } from '@/utils'
+import { pathJoin, pathClean, isRootPath, mapOf } from '@/utils'
 
 const SORTS_METHOD = {
   default: (a, b) => {
@@ -43,10 +52,27 @@ export default {
     sort: {
       type: String,
       default: 'default'
+    },
+    selectable: {
+      type: Boolean
+    },
+    selection: {
+      type: Array
+    }
+  },
+  watch: {
+    selection: {
+      immediate: true,
+      handler (val) {
+        if (val === this.selection) return
+        this.selection = [...(val || [])]
+      }
     }
   },
   data () {
-    return {}
+    return {
+      selected: []
+    }
   },
   computed: {
     parentDirEntry () {
@@ -66,6 +92,9 @@ export default {
     },
     isRootPath () {
       return isRootPath(this.path)
+    },
+    selectionMap () {
+      return mapOf(this.selected, e => e.path)
     }
   },
   methods: {
@@ -74,6 +103,28 @@ export default {
     },
     entryContextMenu (e) {
       this.$emit('entry-menu', e)
+    },
+    toggleSelect (entry, e) {
+      if (!this.selectable) return
+      e.stopPropagation()
+      e.preventDefault()
+      if (this.selectionMap[entry.path]) {
+        this.selected.splice(this.selected.findIndex(e => e.path === entry.path), 1)
+      } else {
+        this.selected.push(entry)
+      }
+      this.$emit('update:selection', this.selected)
+    },
+    toggleSelectAll (e) {
+      if (!this.selectable) return
+      e.stopPropagation()
+      e.preventDefault()
+      if (this.selected.length === this.entries.length) {
+        this.selected.splice(0)
+      } else {
+        this.selected = [...this.entries]
+      }
+      this.$emit('update:selection', this.selected)
     },
     focusOnEntry (name) {
       let dom
@@ -120,8 +171,12 @@ export default {
     }
 
     &:hover {
-      background-color: rgba(0, 0, 0, 0.08);
+      background-color: #f6f6f6;
     }
+  }
+
+  &.selected > a {
+    background-color: #c1ecff;
   }
 }
 

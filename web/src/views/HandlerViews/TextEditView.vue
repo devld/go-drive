@@ -25,7 +25,7 @@
 </template>
 <script>
 import { filename } from '@/utils'
-import { entry, getContent } from '@/api'
+import { getContent } from '@/api'
 import TextEditor from '@/components/TextEditor'
 import uploadManager from '@/api/upload-manager'
 
@@ -44,7 +44,6 @@ export default {
       error: null,
       inited: false,
 
-      file: null,
       content: '',
 
       saving: false
@@ -79,9 +78,7 @@ export default {
   methods: {
     async loadFile () {
       this.inited = false
-      const path = this.path
       try {
-        this.file = await entry(path)
         return await this.loadFileContent()
       } catch (e) {
         this.error = e
@@ -105,7 +102,7 @@ export default {
         await uploadManager.upload({
           path: this.path,
           file: this.content,
-          overwrite: true
+          override: true
         }, true)
         this.changeSaveState(true)
       } catch (e) {

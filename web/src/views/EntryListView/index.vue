@@ -4,9 +4,13 @@
       v-if="!error"
       ref="entryList"
       :path="loadedPath"
-      :entries="entries"
+      :entries="filteredEntries"
       @entry-click="$emit('entry-click', $event)"
       @entry-menu="$emit('entry-menu', $event)"
+      @path-change="$emit('path-change', $event)"
+      :selection="selection"
+      @update:selection="$emit('update:selection', $event)"
+      :selectable="selectable"
     />
     <error-view v-else :status="error.status" :message="error.message" />
   </div>
@@ -36,6 +40,16 @@ export default {
   props: {
     path: {
       type: String
+    },
+    filter: {
+      type: Function
+    },
+    selection: {
+      type: Array
+    },
+    selectable: {
+      type: Boolean,
+      default: true
     }
   },
   data () {
@@ -51,6 +65,11 @@ export default {
         404: 'Resource Not Found',
         500: 'Server Error'
       }
+    }
+  },
+  computed: {
+    filteredEntries () {
+      return this.filter ? this.entries.filter(this.filter) : this.entries
     }
   },
   watch: {
@@ -70,7 +89,7 @@ export default {
     },
     tryRecoverState (newPath, oldPath) {
       if (!oldPath.startsWith(newPath)) return
-      const path = oldPath.substr(newPath.length + 1)
+      const path = oldPath.substr(newPath ? (newPath.length + 1) : newPath.length)
       this._lastEntry = path
     },
     focusOnEntry (name) {

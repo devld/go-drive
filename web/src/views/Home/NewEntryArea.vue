@@ -129,19 +129,19 @@ export default {
     },
     async submitUploadTasks (files) {
       if (!files.length) return
-      let applyAll, overwrite
+      let applyAll, override
       for (const file of files) {
         if (this.entries && this.entries.find(e => e.name === file.name)) {
           if (!applyAll) {
-            const { overwrite: overwrite_, all } = await this.confirmFileExists(file)
+            const { override: override_, all } = await this.confirmFileExists(file)
             applyAll = all
-            overwrite = overwrite_
+            override = override_
           }
         }
-        if (overwrite === false) continue
+        if (override === false) continue
         uploadManager.submitTask({
           path: pathClean(pathJoin(this.path, file.name)),
-          file, overwrite
+          file, override
         })
         console.log('submit')
       }
@@ -161,8 +161,7 @@ export default {
           return makeDir(pathClean(pathJoin(this.path, text)))
             .then(() => {
               this.$emit('update')
-            })
-            .catch(e => {
+            }).catch(e => {
               this.$alert(e.message).catch(() => { })
               return Promise.reject(e)
             })
@@ -203,15 +202,15 @@ export default {
       try {
         const all = (await this.$dialog(FileExistsDialog, {
           title: 'File exists',
-          message: `'${file.name}' already exists, overwrite or skip?`,
+          message: `'${file.name}' already exists, override or skip?`,
           confirmText: 'Skip',
-          cancelText: 'Overwrite', cancelType: 'danger',
+          cancelText: 'Override', cancelType: 'danger',
           filename: file.name
         })).all
-        return { all, overwrite: false }
+        return { all, override: false }
       } catch (e) {
-        if (!e) return { all: false, overwrite: false }
-        return { all: e.all, overwrite: true }
+        if (!e) return { all: false, override: false }
+        return { all: e.all, override: true }
       }
     },
     newButtonClicked ({ button, index }) {

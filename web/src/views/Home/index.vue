@@ -8,6 +8,7 @@
         @entries-load="entriesLoaded"
         @entry-click="entryClicked"
         @entry-menu="showEntryMenu"
+        :selection.sync="selectedEntries"
       />
     </main>
     <!-- file list main area -->
@@ -27,6 +28,7 @@
         :is="entryHandlerView.component"
         :entry="entryHandlerView.entry"
         :entries="entries"
+        @update="reloadEntryList"
         @close="closeEntryHandlerView"
         @entry-change="entryHandlerViewChange"
         @save-state="entryHandlerViewSaveStateChange"
@@ -61,8 +63,8 @@ import EntryListView from '@/views/EntryListView'
 import EntryMenu from './EntryMenu'
 import NewEntryArea from './NewEntryArea'
 
-import { entry, getContent } from '@/api'
-import { filename, dir, isRootPath, debounce } from '@/utils'
+import { getEntry, getContent } from '@/api'
+import { filename, dir, debounce } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
 import { makeEntryHandlerLink, getBaseLink } from '@/utils/routes'
@@ -100,6 +102,7 @@ export default {
       entryMenuShowing: false,
 
       entries: null,
+      selectedEntries: [],
 
       currentDirEntry: null
     }
@@ -142,6 +145,11 @@ export default {
   },
   methods: {
     entryClicked ({ entry, event }) {
+      if (this.selectedEntries.length > 0) {
+        this.selectedEntries.splice(0)
+        event.preventDefault()
+        return
+      }
       if (entry.type === 'dir') {
         // path changed
         this.entries = null
@@ -152,10 +160,20 @@ export default {
       this.entryMenuShowing = false
       const handler = getHandler(menu.name)
       if (!handler) return
+
       if (handler.view) {
-        this.$router.push(makeEntryHandlerLink(handler.name, entry.name, this.path))
+        if (Array.isArray(entry)) { // selected entries
+          this.entryHandlerView = {
+            handler: handler.name,
+            component: handler.view && handler.view.name, entry,
+            savedState: true
+          }
+        } else {
+          this.$router.push(makeEntryHandlerLink(handler.name, entry.name, this.path))
+        }
         return
       }
+      // execute handler
       if (typeof (handler.handler) === 'function') {
         handler.handler(entry, this.$uiUtils).then(r => {
           if (r && r.update) this.reloadEntryList()
@@ -163,6 +181,9 @@ export default {
       }
     },
     showEntryMenu ({ entry, event }) {
+      if (this.selectedEntries.length > 0) {
+        entry = [...this.selectedEntries] // selected entries
+      }
       const handlers = resolveEntryHandler(entry, this.user)
       if (handlers.length === 0) return
 
@@ -185,16 +206,15 @@ export default {
       }
       this.tryLoadReadme(entries)
       this.entries = entries
+      this.selectedEntries.splice(0)
 
-      if (this.entryHandlerView) {
+      if (this.entryHandlerView && this.entryHandlerView.entryName) {
         this.entryHandlerView.entry =
           entries.find(e => e.name === this.entryHandlerView.entryName)
       }
 
       // load current path
-      if (!isRootPath(path)) {
-        entry(path).then(entry => { this.currentDirEntry = entry }, () => { })
-      }
+      getEntry(path).then(entry => { this.currentDirEntry = entry }, () => { })
     },
     resolveRouteAndHandleEntry () {
       const matched = this.resolveHandlerByRoute(this.$route)
@@ -217,7 +237,10 @@ export default {
     },
     async closeEntryHandlerView () {
       if (!this.entryHandlerView) return
-      this.focusOnEntry(this.entryHandlerView.entryName)
+      if (this.entryHandlerView.entryName) {
+        this.focusOnEntry(this.entryHandlerView.entryName)
+      }
+      this.entryHandlerView = null
       this.replaceHandlerRoute()
     },
     async entryHandlerViewChange (path) {
@@ -254,7 +277,9 @@ export default {
       if (getHistoryFlag()) {
         this.$router.go(-1)
       } else {
-        this.$router.replace(this.$route.path)
+        if (this.$route.fullPath !== this.$route.path) {
+          this.$router.replace(this.$route.path)
+        }
       }
     },
     focusOnEntry (name) {
@@ -322,6 +347,9 @@ body.scroll-lock {
 @media screen and (max-width: 900px) {
   .home {
     margin: 16px;
+  }
+  .entry-item__modified-time {
+    display: none;
   }
 }
 </style>

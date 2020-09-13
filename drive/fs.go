@@ -2,6 +2,7 @@ package drive
 
 import (
 	"go-drive/common"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"io"
 	"io/ioutil"
@@ -16,7 +17,7 @@ type FsDrive struct {
 	path string
 }
 
-type FsFile struct {
+type fsFile struct {
 	drive *FsDrive
 	path  string
 
@@ -56,7 +57,7 @@ func (f *FsDrive) newFsFile(path string, file os.FileInfo) (types.IEntry, error)
 		path = path[1:]
 	}
 	modTime := file.ModTime().UnixNano() / int64(time.Millisecond)
-	return &FsFile{
+	return &fsFile{
 		drive:     f,
 		path:      path,
 		name:      file.Name(),
@@ -88,14 +89,14 @@ func (f *FsDrive) Get(path string) (types.IEntry, error) {
 	return f.newFsFile(path, stat)
 }
 
-func (f *FsDrive) Save(path string, reader io.Reader, progress types.OnProgress) (types.IEntry, error) {
+func (f *FsDrive) Save(path string, reader io.Reader, ctx task.Context) (types.IEntry, error) {
 	path = f.getPath(path)
 	file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if e != nil {
 		return nil, e
 	}
 	defer func() { _ = file.Close() }()
-	_, e = common.CopyWithProgress(file, reader, progress)
+	_, e = common.CopyWithProgress(file, reader, ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -121,12 +122,23 @@ func (f *FsDrive) MakeDir(path string) (types.IEntry, error) {
 	return f.newFsFile(path, stat)
 }
 
-func (f *FsDrive) Copy(from types.IEntry, to string, progress types.OnProgress) (types.IEntry, error) {
+func (f *FsDrive) Copy(types.IEntry, string, bool, task.Context) (types.IEntry, error) {
 	return nil, common.NewUnsupportedError()
 }
 
-func (f *FsDrive) Move(from string, to string) (types.IEntry, error) {
-	fromPath := f.getPath(from)
+func (f *FsDrive) isSelf(entry types.IEntry) bool {
+	if fe, ok := entry.(*fsFile); ok {
+		return fe.drive == f
+	}
+	return false
+}
+
+func (f *FsDrive) Move(from types.IEntry, to string, _ bool, _ task.Context) (types.IEntry, error) {
+	from = common.GetIEntry(from, f.isSelf)
+	if from == nil {
+		return nil, common.NewUnsupportedError()
+	}
+	fromPath := f.getPath(from.(*fsFile).path)
 	toPath := f.getPath(to)
 	if f.isRootPath(fromPath) || f.isRootPath(toPath) {
 		return nil, common.NewNotAllowedError()
@@ -134,8 +146,12 @@ func (f *FsDrive) Move(from string, to string) (types.IEntry, error) {
 	if e := requireFile(fromPath, true); e != nil {
 		return nil, e
 	}
-	if e := requireFile(toPath, false); e != nil {
+	exists, e := common.FileExists(toPath)
+	if e != nil {
 		return nil, e
+	}
+	if exists {
+		return nil, common.NewUnsupportedMessageError("file exists")
 	}
 	if e := os.Rename(fromPath, toPath); e != nil {
 		return nil, e
@@ -184,9 +200,9 @@ func (f *FsDrive) Delete(path string) error {
 
 var fsDriveUploadConfig = types.DriveUploadConfig{Provider: "local"}
 
-func (f *FsDrive) Upload(path string, size int64, overwrite bool) (*types.DriveUploadConfig, error) {
+func (f *FsDrive) Upload(path string, _ int64, override bool) (*types.DriveUploadConfig, error) {
 	path = f.getPath(path)
-	if !overwrite {
+	if !override {
 		if e := requireFile(path, false); e != nil {
 			return nil, e
 		}
@@ -212,41 +228,45 @@ func (f *FsDrive) Meta() types.DriveMeta {
 	return types.DriveMeta{CanWrite: true}
 }
 
-func (f *FsFile) Path() string {
+func (f *fsFile) Path() string {
 	return f.path
 }
 
-func (f *FsFile) Name() string {
+func (f *fsFile) Name() string {
 	return f.name
 }
 
-func (f *FsFile) Type() types.EntryType {
+func (f *fsFile) Type() types.EntryType {
 	if f.isDir {
 		return types.TypeDir
 	}
 	return types.TypeFile
 }
 
-func (f *FsFile) Size() int64 {
+func (f *fsFile) Size() int64 {
 	if f.Type().IsDir() {
 		return -1
 	}
 	return f.size
 }
 
-func (f *FsFile) Meta() types.EntryMeta {
+func (f *fsFile) Meta() types.EntryMeta {
 	return types.EntryMeta{CanRead: true, CanWrite: true}
 }
 
-func (f *FsFile) CreatedAt() int64 {
+func (f *fsFile) CreatedAt() int64 {
 	return f.createdAt
 }
 
-func (f *FsFile) UpdatedAt() int64 {
+func (f *fsFile) UpdatedAt() int64 {
 	return f.updatedAt
 }
 
-func (f *FsFile) GetReader() (io.ReadCloser, error) {
+func (f *fsFile) Drive() types.IDrive {
+	return f.drive
+}
+
+func (f *fsFile) GetReader() (io.ReadCloser, error) {
 	if !f.Type().IsFile() {
 		return nil, common.NewNotAllowedError()
 	}
@@ -261,6 +281,6 @@ func (f *FsFile) GetReader() (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
-func (f *FsFile) GetURL() (string, bool, error) {
+func (f *fsFile) GetURL() (string, bool, error) {
 	return "", false, common.NewNotAllowedError()
 }
