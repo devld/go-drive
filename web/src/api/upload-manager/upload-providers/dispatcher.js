@@ -38,7 +38,7 @@ class DispatcherUploadTask extends UploadTask {
     this._onChange(STATUS_STARTING)
     let uploadConfig
     try {
-      uploadConfig = await getUploadConfig(this._task.path, this._task.size, this._task.overwrite)
+      uploadConfig = await getUploadConfig(this._task.path, this._task.size, this._task.override)
     } catch (e) {
       this._started = false
       this._onChange(STATUS_ERROR, e)

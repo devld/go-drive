@@ -2,6 +2,7 @@ package drive
 
 import (
 	"go-drive/common"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"io"
 	"regexp"
@@ -56,30 +57,32 @@ func (d *DispatcherDrive) Resolve(path string) (types.IDrive, string, string, er
 }
 
 func (d *DispatcherDrive) Get(path string) (types.IEntry, error) {
+	if common.IsRootPath(path) {
+		return &driveEntry{d: d, path: "", name: "", meta: types.DriveMeta{
+			CanWrite: false,
+		}}, nil
+	}
 	drive, path, name, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
-	}
-	if common.IsRootPath(path) {
-		return &driveEntry{path: name, name: name, meta: drive.Meta()}, nil
 	}
 	entry, e := drive.Get(path)
 	if e != nil {
 		return nil, e
 	}
-	return mapDriveEntry(name, entry), nil
+	return d.mapDriveEntry(name, entry), nil
 }
 
-func (d *DispatcherDrive) Save(path string, reader io.Reader, progress types.OnProgress) (types.IEntry, error) {
+func (d *DispatcherDrive) Save(path string, reader io.Reader, ctx task.Context) (types.IEntry, error) {
 	drive, path, name, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	save, e := drive.Save(path, reader, progress)
+	save, e := drive.Save(path, reader, ctx)
 	if e != nil {
 		return nil, e
 	}
-	return mapDriveEntry(name, save), nil
+	return d.mapDriveEntry(name, save), nil
 }
 
 func (d *DispatcherDrive) MakeDir(path string) (types.IEntry, error) {
@@ -91,67 +94,49 @@ func (d *DispatcherDrive) MakeDir(path string) (types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	return mapDriveEntry(name, dir), nil
+	return d.mapDriveEntry(name, dir), nil
 }
 
-func (d *DispatcherDrive) Copy(from types.IEntry, to string, progress types.OnProgress) (types.IEntry, error) {
+func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
 	driveTo, pathTo, name, e := d.Resolve(to)
 	if e != nil {
 		return nil, e
 	}
-	_, e = driveTo.Get(pathTo)
-	if e == nil {
-		return nil, common.NewNotAllowedMessageError("dst file exists")
-	}
-	if !common.IsNotFoundError(e) {
-		return nil, e
-	}
-	entry, e := driveTo.Copy(from, pathTo, progress)
+	entry, e := driveTo.Copy(from, pathTo, override, ctx)
 	if e == nil {
 		return entry, nil
 	}
 	if !common.IsUnsupportedError(e) {
 		return nil, e
 	}
-	content, ok := from.(types.IContent)
-	if !ok {
-		return nil, common.NewNotAllowedMessageError("not allowed")
-	}
-	file, e := common.CopyIContentToTempFile(content, progress)
+	e = common.CopyAll(from, d, to, override, ctx, nil)
 	if e != nil {
 		return nil, e
 	}
-	save, e := driveTo.Save(pathTo, file, progress)
+	copied, e := driveTo.Get(pathTo)
 	if e != nil {
 		return nil, e
 	}
-	return mapDriveEntry(name, save), nil
+	return d.mapDriveEntry(name, copied), nil
 }
 
-func (d *DispatcherDrive) Move(from string, to string) (types.IEntry, error) {
-	driveFrom, pathFrom, name, e := d.Resolve(from)
+func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
+	driveTo, pathTo, name, e := d.Resolve(to)
 	if e != nil {
 		return nil, e
 	}
-	driveTo, pathTo, _, e := d.Resolve(to)
+	move, e := driveTo.Move(from, pathTo, override, ctx)
 	if e != nil {
 		return nil, e
 	}
-	if driveFrom != driveTo {
-		return nil, common.NewNotAllowedError()
-	}
-	move, e := driveTo.Move(pathFrom, pathTo)
-	if e != nil {
-		return nil, e
-	}
-	return mapDriveEntry(name, move), nil
+	return d.mapDriveEntry(name, move), nil
 }
 
 func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 	if common.IsRootPath(path) {
 		drives := make([]types.IEntry, 0, len(d.drives))
 		for k, v := range d.drives {
-			drives = append(drives, &driveEntry{path: k, name: k, meta: v.Meta(), isDrive: true})
+			drives = append(drives, &driveEntry{d: d, path: k, name: k, meta: v.Meta(), isDrive: true})
 		}
 		return drives, nil
 	}
@@ -163,7 +148,7 @@ func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	return mapDriveEntries(name, list), nil
+	return d.mapDriveEntries(name, list), nil
 }
 
 func (d *DispatcherDrive) Delete(path string) error {
@@ -177,37 +162,38 @@ func (d *DispatcherDrive) Delete(path string) error {
 	return drive.Delete(path)
 }
 
-func (d *DispatcherDrive) Upload(path string, size int64, overwrite bool) (*types.DriveUploadConfig, error) {
+func (d *DispatcherDrive) Upload(path string, size int64, override bool) (*types.DriveUploadConfig, error) {
 	drive, path, _, e := d.Resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	return drive.Upload(path, size, overwrite)
+	return drive.Upload(path, size, override)
 }
 
-func mapDriveEntry(driveName string, entry types.IEntry) types.IEntry {
-	return &entryWrapper{driveName: driveName, entry: entry}
+func (d *DispatcherDrive) mapDriveEntry(driveName string, entry types.IEntry) types.IEntry {
+	return &entryWrapper{d: d, driveName: driveName, entry: entry}
 }
 
-func mapDriveEntries(driveName string, entries []types.IEntry) []types.IEntry {
+func (d *DispatcherDrive) mapDriveEntries(driveName string, entries []types.IEntry) []types.IEntry {
 	mappedEntries := make([]types.IEntry, 0, len(entries))
 	for _, e := range entries {
-		mappedEntries = append(mappedEntries, mapDriveEntry(driveName, e))
+		mappedEntries = append(mappedEntries, d.mapDriveEntry(driveName, e))
 	}
 	return mappedEntries
 }
 
 type entryWrapper struct {
+	d         *DispatcherDrive
 	driveName string
 	entry     types.IEntry
 }
 
 func (d *entryWrapper) Path() string {
 	path := d.entry.Path()
-	for strings.HasPrefix(path, "/") {
-		path = path[1:]
+	if path != "" && !strings.HasPrefix(path, "/") {
+		path = "/" + path
 	}
-	return d.driveName + "/" + path
+	return d.driveName + path
 }
 
 func (d *entryWrapper) Name() string {
@@ -248,7 +234,16 @@ func (d *entryWrapper) GetURL() (string, bool, error) {
 	return "", false, common.NewNotAllowedError()
 }
 
+func (d *entryWrapper) Drive() types.IDrive {
+	return d.d
+}
+
+func (d *entryWrapper) GetIEntry() types.IEntry {
+	return d.entry
+}
+
 type driveEntry struct {
+	d       *DispatcherDrive
 	path    string
 	name    string
 	meta    types.DriveMeta
@@ -289,4 +284,8 @@ func (d *driveEntry) GetReader() (io.ReadCloser, error) {
 
 func (d *driveEntry) GetURL() (string, bool, error) {
 	return "", false, common.NewNotAllowedError()
+}
+
+func (d *driveEntry) Drive() types.IDrive {
+	return d.d
 }

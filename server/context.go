@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/drive"
 	"go-drive/storage"
@@ -24,6 +25,7 @@ type ComponentsHolder struct {
 	UserStorage       *storage.UserStorage
 	GroupStorage      *storage.GroupStorage
 	PermissionStorage *storage.PathPermissionStorage
+	TaskRunner        task.Runner
 }
 
 func GetComponentsHolder(c *gin.Context) *ComponentsHolder {
@@ -56,6 +58,10 @@ func GetGroupStorage(c *gin.Context) *storage.GroupStorage {
 
 func GetPermissionStorage(c *gin.Context) *storage.PathPermissionStorage {
 	return GetComponentsHolder(c).PermissionStorage
+}
+
+func GetTaskRunner(c *gin.Context) task.Runner {
+	return GetComponentsHolder(c).TaskRunner
 }
 
 func SetResult(c *gin.Context, result interface{}) {

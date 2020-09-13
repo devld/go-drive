@@ -77,7 +77,7 @@ func (p PermissionDeniedError) Error() string {
 	return p.msg
 }
 
-// UnsupportedError 403
+// UnsupportedError 405
 type UnsupportedError struct {
 	msg string
 }
@@ -87,7 +87,7 @@ func (n UnsupportedError) Error() string {
 }
 
 func (n UnsupportedError) Code() int {
-	return 403
+	return 405
 }
 
 // RemoteApiError
@@ -114,11 +114,9 @@ func IsNotFoundError(e error) bool {
 	return ok
 }
 
-func IsUnauthorizedError(e error) bool {
-	if _, ok := e.(UnauthorizedError); ok {
-		return true
-	}
-	return false
+func IsNotAllowedError(e error) bool {
+	_, ok := e.(NotAllowedError)
+	return ok
 }
 
 func NewBadRequestError(msg string) BadRequestError {
@@ -147,6 +145,10 @@ func NewNotAllowedMessageError(msg string) NotAllowedError {
 
 func NewUnsupportedError() UnsupportedError {
 	return UnsupportedError{}
+}
+
+func NewUnsupportedMessageError(msg string) UnsupportedError {
+	return UnsupportedError{msg}
 }
 
 func NewRemoteApiError(code int, msg string) RemoteApiError {

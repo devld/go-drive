@@ -3,6 +3,13 @@
     <div class="loading-dialog__content">
       <i-icon class="loading-dialog__icon" svg="#icon-loading" />
       <span class="loading-dialog__text">{{ text }}</span>
+      <simple-button
+        class="loading-dialog__cancel"
+        v-if="cancelText"
+        :type="cancelType"
+        :loading="cancelLoading"
+        @click="cancel"
+      >{{ cancelText }}</simple-button>
     </div>
   </dialog-view>
 </template>
@@ -12,24 +19,44 @@ export default {
   data () {
     return {
       showing: false,
-      text: ''
+      text: '',
+      cancelText: '',
+      cancelType: '',
+
+      cancelLoading: false
     }
   },
   methods: {
     show (opts = {}) {
       this.text = opts.text || ''
 
+      this._cancelCallback = opts.onCancel
+
+      this.cancelText = this._cancelCallback ? (opts.cancelText || 'Cancel') : ''
+      this.cancelType = opts.cancelType || 'info'
+
       this.showing = true
     },
     hide () {
       this.showing = false
+    },
+    async cancel () {
+      this.cancelLoading = true
+      try {
+        await this._cancelCallback()
+        this.hide()
+      } catch (e) {
+        /* nothing */
+      } finally {
+        this.cancelLoading = false
+      }
     }
   }
 }
 </script>
 <style lang="scss">
 .dialog-view.loading-dialog {
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.6);
 
   .dialog-view__content {
     box-shadow: none;
@@ -44,6 +71,11 @@ export default {
 }
 
 .loading-dialog__text {
+  user-select: none;
+  margin-top: 1em;
+}
+
+.loading-dialog__cancel {
   margin-top: 1em;
 }
 

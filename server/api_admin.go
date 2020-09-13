@@ -5,6 +5,7 @@ import (
 	"go-drive/common"
 	"go-drive/common/types"
 	"go-drive/storage"
+	"regexp"
 )
 
 func InitAdminRoutes(r gin.IRouter) {
@@ -160,6 +161,10 @@ func InitAdminRoutes(r gin.IRouter) {
 			_ = c.Error(e)
 			return
 		}
+		if e := checkDriveName(drive.Name); e != nil {
+			_ = c.Error(e)
+			return
+		}
 		drive, e := GetDriveStorage(c).AddDrive(drive)
 		if e != nil {
 			_ = c.Error(e)
@@ -171,6 +176,10 @@ func InitAdminRoutes(r gin.IRouter) {
 	// update drive
 	r.PUT("/drive/:name", func(c *gin.Context) {
 		name := c.Param("name")
+		if e := checkDriveName(name); e != nil {
+			_ = c.Error(e)
+			return
+		}
 		drive := types.Drive{}
 		if e := c.Bind(&drive); e != nil {
 			_ = c.Error(e)
@@ -233,4 +242,13 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// endregion
 
+}
+
+var driveNamePattern = regexp.MustCompile("^[^/\\\\0:*\"<>|]+$")
+
+func checkDriveName(name string) error {
+	if name == "" || name == "." || name == "..." || !driveNamePattern.MatchString(name) {
+		return common.NewBadRequestError("invalid drive name '" + name + "'")
+	}
+	return nil
 }

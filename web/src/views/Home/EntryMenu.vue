@@ -1,6 +1,6 @@
 <template>
   <div class="entry-menu">
-    <h2 class="entry-menu__entry">
+    <h2 class="entry-menu__entry" v-if="!multiple">
       <entry-icon :entry="entry" />
       <span class="entry-menu__entry-name">{{ entry.name }}</span>
     </h2>
@@ -30,8 +30,13 @@ export default {
       required: true
     },
     entry: {
-      type: Object,
+      type: [Object, Array],
       required: true
+    }
+  },
+  computed: {
+    multiple () {
+      return Array.isArray(this.entry) && this.entry.length > 1
     }
   }
 }

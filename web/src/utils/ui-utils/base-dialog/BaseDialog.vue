@@ -6,8 +6,8 @@
     :transition="transition"
     @input="$emit('close')"
     @closed="$emit('closed')"
-    esc-close
-    overlay-close
+    :esc-close="escClose"
+    :overlay-close="overlayClose"
     :closeable="!loading"
     @keydown.13.native="$emit('confirm')"
     tabindex="-1"
@@ -72,6 +72,12 @@ export default {
     },
     transition: {
       type: String
+    },
+    escClose: {
+      type: Boolean
+    },
+    overlayClose: {
+      type: Boolean
     }
   }
 }

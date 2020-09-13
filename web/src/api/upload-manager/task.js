@@ -3,7 +3,7 @@
  * @property {string} path file path
  * @property {any} file file payload
  * @property {number} [size] payload size (bytes)
- * @property {boolean} [overwrite] overwrite file if it exists
+ * @property {boolean} [override] override file if it exists
  */
 
 /**

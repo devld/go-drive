@@ -2,6 +2,7 @@ package main
 
 import (
 	"go-drive/common"
+	"go-drive/common/task"
 	"go-drive/drive"
 	"go-drive/server"
 	"go-drive/storage"
@@ -42,6 +43,7 @@ func main() {
 			GroupStorage:      groupStorage,
 			PermissionStorage: permissionStorage,
 			RequestSigner:     requestSigner,
+			TaskRunner:        task.NewTunnyRunner(100),
 		},
 	)
 	common.PanicIfError(e)

@@ -2,6 +2,7 @@ package server
 
 import (
 	"go-drive/common"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/storage"
 	"io"
@@ -67,21 +68,22 @@ func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
 		return nil, e
 	}
 	return &PermissionWrapperEntry{
+		p:          p,
 		entry:      entry,
 		permission: permission,
 	}, nil
 }
 
-func (p *PermissionWrapperDrive) Save(path string, reader io.Reader, progress types.OnProgress) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) Save(path string, reader io.Reader, ctx task.Context) (types.IEntry, error) {
 	permission, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
 	}
-	entry, e := p.drive.Save(path, reader, progress)
+	entry, e := p.drive.Save(path, reader, ctx)
 	if e != nil {
 		return nil, e
 	}
-	return &PermissionWrapperEntry{entry: entry, permission: permission}, nil
+	return &PermissionWrapperEntry{p: p, entry: entry, permission: permission}, nil
 }
 
 func (p *PermissionWrapperDrive) MakeDir(path string) (types.IEntry, error) {
@@ -93,10 +95,10 @@ func (p *PermissionWrapperDrive) MakeDir(path string) (types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	return &PermissionWrapperEntry{entry: entry, permission: permission}, nil
+	return &PermissionWrapperEntry{p: p, entry: entry, permission: permission}, nil
 }
 
-func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, progress types.OnProgress) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
 	_, e := p.requirePermission(from.Path(), types.PermissionRead)
 	if e != nil {
 		return nil, e
@@ -105,15 +107,15 @@ func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, progress typ
 	if e != nil {
 		return nil, e
 	}
-	entry, e := p.drive.Copy(from, to, progress)
+	entry, e := p.drive.Copy(from, to, override, ctx)
 	if e != nil {
 		return nil, e
 	}
-	return &PermissionWrapperEntry{entry: entry, permission: toPermission}, nil
+	return &PermissionWrapperEntry{p: p, entry: entry, permission: toPermission}, nil
 }
 
-func (p *PermissionWrapperDrive) Move(from string, to string) (types.IEntry, error) {
-	_, e := p.requirePermission(from, types.PermissionReadWrite)
+func (p *PermissionWrapperDrive) Move(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
+	_, e := p.requirePermission(from.Path(), types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
 	}
@@ -122,11 +124,11 @@ func (p *PermissionWrapperDrive) Move(from string, to string) (types.IEntry, err
 		return nil, e
 	}
 
-	entry, e := p.drive.Move(from, to)
+	entry, e := p.drive.Move(from, to, override, ctx)
 	if e != nil {
 		return nil, e
 	}
-	return &PermissionWrapperEntry{entry: entry, permission: toPermission}, nil
+	return &PermissionWrapperEntry{p: p, entry: entry, permission: toPermission}, nil
 }
 
 func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
@@ -165,6 +167,7 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 			result = append(
 				result,
 				&PermissionWrapperEntry{
+					p:          p,
 					entry:      e,
 					permission: per,
 					accessKey:  accessKey,
@@ -183,12 +186,12 @@ func (p *PermissionWrapperDrive) Delete(path string) error {
 	return p.drive.Delete(path)
 }
 
-func (p *PermissionWrapperDrive) Upload(path string, size int64, overwrite bool) (*types.DriveUploadConfig, error) {
+func (p *PermissionWrapperDrive) Upload(path string, size int64, override bool) (*types.DriveUploadConfig, error) {
 	_, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
 	}
-	return p.drive.Upload(path, size, overwrite)
+	return p.drive.Upload(path, size, override)
 }
 
 func (p *PermissionWrapperDrive) requireContentPermission(path string) bool {
@@ -216,6 +219,7 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 }
 
 type PermissionWrapperEntry struct {
+	p          *PermissionWrapperDrive
 	entry      types.IEntry
 	permission types.Permission
 	accessKey  string
@@ -261,6 +265,10 @@ func (p *PermissionWrapperEntry) UpdatedAt() int64 {
 	return p.entry.UpdatedAt()
 }
 
+func (p *PermissionWrapperEntry) Drive() types.IDrive {
+	return p.p
+}
+
 func (p *PermissionWrapperEntry) GetReader() (io.ReadCloser, error) {
 	if c, ok := p.entry.(types.IContent); ok {
 		return c.GetReader()
@@ -273,4 +281,8 @@ func (p *PermissionWrapperEntry) GetURL() (string, bool, error) {
 		return c.GetURL()
 	}
 	return "", false, common.NewUnsupportedError()
+}
+
+func (p *PermissionWrapperEntry) GetIEntry() types.IEntry {
+	return p.entry
 }

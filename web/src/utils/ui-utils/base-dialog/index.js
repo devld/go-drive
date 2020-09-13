@@ -24,7 +24,9 @@ export function createDialog (name, component) {
         cancelType: '',
         showing: false,
 
-        transition: ''
+        transition: '',
+        escClose: false,
+        overlayClose: false
 
       }
     },
@@ -39,7 +41,9 @@ export function createDialog (name, component) {
           confirmType: this.confirmType,
           cancelText: this.cancelText,
           cancelType: this.cancelType,
-          transition: this.transition
+          transition: this.transition,
+          escClose: this.escClose,
+          overlayClose: this.overlayClose
         },
         on: {
           close: () => this.close(),
@@ -71,6 +75,8 @@ export function createDialog (name, component) {
         this.cancelText = opts.cancelText
         this.cancelType = opts.cancelType || 'info'
         this.transition = opts.transition || 'bottom-fade'
+        this.escClose = !!opts.escClose
+        this.overlayClose = !!opts.overlayClose
 
         if (typeof opts.onOk === 'function' || typeof opts.onCancel === 'function') {
           this._callback = { onOk: opts.onOk, onCancel: opts.onCancel }

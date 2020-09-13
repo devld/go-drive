@@ -7,6 +7,12 @@ import (
 
 func InitServer(components *ComponentsHolder) (*gin.Engine, error) {
 
+	if common.IsDebugOn() {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	engine := gin.New()
 
 	engine.Use(func(c *gin.Context) {

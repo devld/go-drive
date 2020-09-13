@@ -3,8 +3,11 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"strconv"
+	"strings"
+	"time"
 )
 
 func InitDriveRoutes(router gin.IRouter) {
@@ -37,14 +40,14 @@ func InitDriveRoutes(router gin.IRouter) {
 	})
 
 	r.POST("/copy", func(c *gin.Context) {
-		entry, e := copyEntry(c)
-		writeResponse(c, e, entry)
+		t, e := copyEntry(c)
+		writeResponse(c, e, t)
 	})
 
 	// move file
 	r.POST("/move", func(c *gin.Context) {
-		entry, e := move(c)
-		writeResponse(c, e, entry)
+		t, e := move(c)
+		writeResponse(c, e, t)
 	})
 
 	// deleteEntry entry
@@ -64,6 +67,23 @@ func InitDriveRoutes(router gin.IRouter) {
 	r.PUT("/content/*path", func(c *gin.Context) {
 		entry, e := writeContent(c)
 		writeResponse(c, e, entry)
+	})
+
+	// get task
+	r.GET("/task/:id", func(c *gin.Context) {
+		t, e := GetTaskRunner(c).GetTask(c.Param("id"))
+		if e != nil && e == task.ErrorNotFound {
+			e = common.NewNotFoundError(e.Error())
+		}
+		writeResponse(c, e, t)
+	})
+
+	r.DELETE("/task/:id", func(c *gin.Context) {
+		e := GetTaskRunner(c).RemoveTask(c.Param("id"))
+		if e != nil && e == task.ErrorNotFound {
+			e = common.NewNotFoundError(e.Error())
+		}
+		writeResponse(c, e, nil)
 	})
 }
 
@@ -116,28 +136,65 @@ func makeDir(c *gin.Context) (*entryJson, error) {
 	return newEntryJson(entry), nil
 }
 
-func copyEntry(c *gin.Context) (*entryJson, error) {
+func copyEntry(c *gin.Context) (*task.Task, error) {
 	drive_ := getDrive(c)
-	fromEntry, e := drive_.Get(c.Query("from"))
+	from := common.CleanPath(c.Query("from"))
+	fromEntry, e := drive_.Get(from)
+	if e != nil {
+		return nil, e
+	}
 	to := common.CleanPath(c.Query("to"))
-	if e != nil {
+	if e := checkCopyOrMove(from, to); e != nil {
 		return nil, e
 	}
-	entry, e := drive_.Copy(fromEntry, to, func(loaded int64) {})
+	override := c.Query("override")
+	t, e := GetTaskRunner(c).ExecuteAndWait(func(ctx task.Context) (interface{}, error) {
+		r, e := drive_.Copy(fromEntry, to, override != "", ctx)
+		if e != nil {
+			return nil, e
+		}
+		return newEntryJson(r), nil
+	}, 2*time.Second)
+
 	if e != nil {
-		return nil, e
+		return nil, nil
 	}
-	return newEntryJson(entry), nil
+	t, e = GetTaskRunner(c).GetTask(t.Id)
+	return &t, e
 }
 
-func move(c *gin.Context) (*entryJson, error) {
+func move(c *gin.Context) (*task.Task, error) {
+	drive_ := getDrive(c)
 	from := common.CleanPath(c.Query("from"))
-	to := common.CleanPath(c.Query("to"))
-	entry, e := getDrive(c).Move(from, to)
+	fromEntry, e := drive_.Get(from)
 	if e != nil {
 		return nil, e
 	}
-	return newEntryJson(entry), nil
+	to := common.CleanPath(c.Query("to"))
+	if e := checkCopyOrMove(from, to); e != nil {
+		return nil, e
+	}
+	override := c.Query("override")
+	t, e := GetTaskRunner(c).ExecuteAndWait(func(ctx task.Context) (interface{}, error) {
+		r, e := drive_.Move(fromEntry, to, override != "", ctx)
+		if e != nil {
+			return nil, e
+		}
+		return newEntryJson(r), nil
+	}, 2*time.Second)
+
+	if e != nil {
+		return nil, nil
+	}
+	t, e = GetTaskRunner(c).GetTask(t.Id)
+	return &t, e
+}
+
+func checkCopyOrMove(from, to string) error {
+	if strings.HasPrefix(to, from) {
+		return common.NewNotAllowedMessageError("not allowed")
+	}
+	return nil
 }
 
 func deleteEntry(c *gin.Context) error {
@@ -147,12 +204,12 @@ func deleteEntry(c *gin.Context) error {
 
 func upload(c *gin.Context) (*uploadConfig, error) {
 	path := c.Param("path")
-	overwrite := c.Query("overwrite")
+	override := c.Query("override")
 	size, e := strconv.ParseInt(c.Query("size"), 10, 64)
 	if e != nil || size < 0 {
 		return nil, common.NewBadRequestError("invalid file size")
 	}
-	config, err := getDrive(c).Upload(path, size, overwrite != "")
+	config, err := getDrive(c).Upload(path, size, override != "")
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +234,7 @@ func writeContent(c *gin.Context) (*entryJson, error) {
 		return nil, err
 	}
 	path := common.CleanPath(c.Param("path"))
-	entry, e := getDrive(c).Save(path, file, func(loaded int64) {})
+	entry, e := getDrive(c).Save(path, file, task.DummyContext())
 	if e != nil {
 		return nil, e
 	}

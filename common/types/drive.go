@@ -1,6 +1,7 @@
 package types
 
 import (
+	"go-drive/common/task"
 	"io"
 )
 
@@ -46,6 +47,12 @@ type IEntry interface {
 	Meta() EntryMeta
 	CreatedAt() int64
 	UpdatedAt() int64
+
+	Drive() IDrive
+}
+
+type IEntryWrapper interface {
+	GetIEntry() IEntry
 }
 
 type DriveMeta struct {
@@ -56,24 +63,18 @@ type DriveMeta struct {
 type IDrive interface {
 	Meta() DriveMeta
 	Get(path string) (IEntry, error)
-	Save(path string, reader io.Reader, progress OnProgress) (IEntry, error)
+	Save(path string, reader io.Reader, ctx task.Context) (IEntry, error)
 	MakeDir(path string) (IEntry, error)
-	Copy(from IEntry, to string, progress OnProgress) (IEntry, error)
-	Move(from string, to string) (IEntry, error)
+	Copy(from IEntry, to string, override bool, ctx task.Context) (IEntry, error)
+	Move(from IEntry, to string, override bool, ctx task.Context) (IEntry, error)
 	List(path string) ([]IEntry, error)
 	Delete(path string) error
 
 	// Upload returns the upload config of the path
-	Upload(path string, size int64, overwrite bool) (*DriveUploadConfig, error)
-}
-
-type IDisposable interface {
-	Dispose() error
+	Upload(path string, size int64, override bool) (*DriveUploadConfig, error)
 }
 
 type DriveUploadConfig struct {
 	Provider string
 	Config   interface{}
 }
-
-type OnProgress func(loaded int64)

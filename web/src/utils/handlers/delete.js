@@ -8,17 +8,28 @@ export default {
     type: 'danger',
     icon: '#icon-delete'
   },
-  supports: (entry) => entry.meta.can_write,
+  supports: (entry) => Array.isArray(entry) ? !entry.some(e => !e.meta.can_write) : entry.meta.can_write,
+  multiple: true,
   handler: async (entry, { confirm, alert, loading }) => {
+    if (!Array.isArray(entry)) entry = [entry]
     try {
       await confirm({
-        message: 'Delete this file?',
+        message: entry.length > 1 ? `Delete these ${entry.length} files?` : 'Delete this file?',
         confirmType: 'danger'
       })
     } catch { return }
     loading(true)
     try {
-      await deleteEntry(entry.path)
+      let canceled = false
+      for (const i in entry) {
+        if (canceled) break
+        const e = entry[i]
+        loading({
+          text: `deleting ${i + 1}/${entry.length}`,
+          onCancel: () => { canceled = true }
+        })
+        await deleteEntry(e.path)
+      }
       return { update: true }
     } catch (e) {
       alert(e.message)

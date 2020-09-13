@@ -3,6 +3,7 @@ module go-drive
 go 1.13
 
 require (
+	github.com/Jeffail/tunny v0.0.0-20190930221602-f13eb662a36a
 	github.com/gin-gonic/gin v1.6.2
 	github.com/google/uuid v1.1.1
 	github.com/jinzhu/gorm v1.9.15
