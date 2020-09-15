@@ -287,6 +287,7 @@ func copyAll(entry EntryNode, driveTo types.IDrive, to string,
 					return processed, false, err
 				}
 				processed += p
+				ctx.Progress(int64(processed))
 				if !r {
 					allProcessed = false
 				}

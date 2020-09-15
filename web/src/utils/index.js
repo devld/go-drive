@@ -152,12 +152,24 @@ export function wait (ms) {
   })
 }
 
-export async function taskDone (task, cb) {
+export async function taskDone (task, cb, interval = 1000) {
+  task = await task
+  cb && await cb(task)
   while (task.status === 'pending' || task.status === 'running') {
-    await cb(task)
+    cb && await cb(task)
     task = await getTask(task.id)
+    await wait(interval)
   }
-  return task
+  if (task.status === 'done') {
+    return task.result
+  } else if (task.status === 'error') {
+    throw task.error
+  } else if (task.status === 'canceled') {
+    // nothing
+  } else {
+    console.log('unknown task status', task)
+    throw new Error('unknown error')
+  }
 }
 
 const filters = {
