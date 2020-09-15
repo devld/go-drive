@@ -1,5 +1,5 @@
 import { moveEntry } from '@/api'
-import { dir, pathClean, pathJoin, taskDone, wait } from '..'
+import { dir, pathClean, pathJoin, taskDone } from '..'
 
 export default {
   name: 'rename',
@@ -21,14 +21,8 @@ export default {
         onOk: async text => {
           if (text === entry.name) return
           try {
-            let task = await moveEntry(entry.path, pathClean(pathJoin(dir(entry.path), text)))
-            task = await taskDone(task, () => wait(1000))
-            if (task.status === 'done') {
-              resolve({ update: true })
-            } else if (task.status === 'error') {
-              alert(task.error.message)
-              throw task.error
-            }
+            await taskDone(moveEntry(entry.path, pathClean(pathJoin(dir(entry.path), text))))
+            resolve({ update: true })
           } catch (e) {
             alert(e.message)
             throw e

@@ -192,7 +192,7 @@ func move(c *gin.Context) (*task.Task, error) {
 
 func checkCopyOrMove(from, to string) error {
 	if strings.HasPrefix(to, from) {
-		return common.NewNotAllowedMessageError("not allowed")
+		return common.NewNotAllowedMessageError("Copy to child path is not allowed")
 	}
 	return nil
 }

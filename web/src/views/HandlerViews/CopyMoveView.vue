@@ -23,7 +23,7 @@
 <script>
 import EntryListView from '@/views/EntryListView'
 import { copyEntry, deleteTask, getEntry, moveEntry } from '@/api'
-import { pathClean, pathJoin, taskDone, wait } from '@/utils'
+import { pathClean, pathJoin, taskDone } from '@/utils'
 
 export default {
   name: 'CopyMoveView',
@@ -53,32 +53,33 @@ export default {
   methods: {
     async doCopyOrMove () {
       let canceled = false
-      this.$loading(true)
       const entries = Array.isArray(this.entry) ? [...this.entry] : [this.entry]
       try {
         for (const i in entries) {
           if (canceled) break
           const entry = entries[i]
           const dest = pathClean(pathJoin(this.path, entry.name))
-          let task = await (this.move
+          this.$loading({
+            text: `${this.move ? 'Moving' : 'Copying'} ${entry.name}`,
+            onCancel: () => {
+              canceled = true
+              return deleteTask(task.id)
+            }
+          })
+          const task = await (this.move
             ? moveEntry(entry.path, dest, this.override)
             : copyEntry(entry.path, dest, this.override))
-          task = await taskDone(task, async task => {
+          await taskDone(task, task => {
             this.$loading({
-              text: `Moving ${entry.name} ${task.progress.loaded}/${task.progress.total}`,
+              text: `${this.move ? 'Moving' : 'Copying'}  ${entry.name} ${task.progress.loaded}/${task.progress.total}`,
               onCancel: () => {
                 canceled = true
                 return deleteTask(task.id)
               }
             })
-            await wait(1000)
           })
-          if (task.status === 'done') {
-            this.$emit('update')
-            this.$emit('close')
-          } else if (task.status === 'error') {
-            this.$alert(task.error.status)
-          }
+          this.$emit('update')
+          this.$emit('close')
         }
       } catch (e) {
         this.$alert(e.message)
