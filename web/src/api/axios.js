@@ -15,7 +15,7 @@ export class ApiError extends Error {
     if (!e.response) return e
     const status = e.response.status
     const res = e.response.data
-    return new ApiError(status, res.msg, res.data)
+    return new ApiError(status, res.message, res.data)
   }
 
   constructor (status, message, data) {

@@ -42,7 +42,7 @@ func apiResultHandler(c *gin.Context) {
 	e := c.Errors[0]
 	code := 500
 	result := map[string]interface{}{
-		"msg": e.Err.Error(),
+		"message": e.Err.Error(),
 	}
 	if re, ok := e.Err.(common.RequestError); ok {
 		code = re.Code()

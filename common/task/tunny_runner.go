@@ -166,7 +166,7 @@ func executor(arg interface{}) interface{} {
 		} else {
 			log.Printf("error when executing task: %s", e.Error())
 			w.task.Status = Error
-			w.task.Error = e.Error()
+			w.task.Error = map[string]interface{}{"message": e.Error()}
 		}
 	} else {
 		w.task.Status = Done

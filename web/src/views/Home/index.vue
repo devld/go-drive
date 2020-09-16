@@ -240,8 +240,9 @@ export default {
       if (this.entryHandlerView.entryName) {
         this.focusOnEntry(this.entryHandlerView.entryName)
       }
-      this.entryHandlerView = null
-      this.replaceHandlerRoute()
+      if (!this.replaceHandlerRoute()) {
+        this.entryHandlerView = null
+      }
     },
     async entryHandlerViewChange (path) {
       try { await this.confirmUnsavedState() } catch { return }
@@ -276,9 +277,11 @@ export default {
     replaceHandlerRoute () {
       if (getHistoryFlag()) {
         this.$router.go(-1)
+        return true
       } else {
         if (this.$route.fullPath !== this.$route.path) {
           this.$router.replace(this.$route.path)
+          return true
         }
       }
     },
