@@ -43,16 +43,19 @@ export default {
 </script>
 <style lang="scss">
 .entry-menu {
-  display: block;
+  display: flex;
+  flex-direction: column;
   background-color: #fff;
   padding: 20px 0;
   min-width: 280px;
   max-width: 400px;
+  max-height: 40vh;
+  overflow: hidden;
 }
 
 .entry-menu__entry {
   padding: 0 20px;
-  margin: 16px 0;
+  margin: 0 0 16px;
 
   font-size: 26px;
   font-weight: normal;
@@ -70,6 +73,9 @@ export default {
   margin: 0;
   padding: 0;
   user-select: none;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .entry-menu__menu-item {

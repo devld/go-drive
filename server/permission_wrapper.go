@@ -107,6 +107,9 @@ func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override boo
 	if e != nil {
 		return nil, e
 	}
+	if e := p.requireDescendantPermission(from.Path(), types.PermissionRead); e != nil {
+		return nil, e
+	}
 	entry, e := p.drive.Copy(from, to, override, ctx)
 	if e != nil {
 		return nil, e
@@ -123,7 +126,9 @@ func (p *PermissionWrapperDrive) Move(from types.IEntry, to string, override boo
 	if e != nil {
 		return nil, e
 	}
-
+	if e := p.requireDescendantPermission(from.Path(), types.PermissionRead); e != nil {
+		return nil, e
+	}
 	entry, e := p.drive.Move(from, to, override, ctx)
 	if e != nil {
 		return nil, e
@@ -216,6 +221,19 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 		return resolved, common.NewNotFoundError("not found")
 	}
 	return resolved, nil
+}
+
+func (p *PermissionWrapperDrive) requireDescendantPermission(path string, require types.Permission) error {
+	permission, e := p.permissionStorage.ResolvePathAndDescendantPermission(p.subjects, path)
+	if e != nil {
+		return e
+	}
+	for _, p := range permission {
+		if p&require != require {
+			return common.NewNotAllowedMessageError("You don't have the appropriate permission for the subfolders.")
+		}
+	}
+	return nil
 }
 
 type PermissionWrapperEntry struct {

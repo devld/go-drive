@@ -15,7 +15,7 @@ export default {
         title: 'Rename',
         text: entry.name,
         validator: {
-          pattern: /^[^/\\0:*"<>|]+$/,
+          pattern: /^[^/\0:*"<>|]+$/,
           message: 'Invalid filename'
         },
         onOk: async text => {

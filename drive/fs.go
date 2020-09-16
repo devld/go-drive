@@ -136,7 +136,7 @@ func (f *FsDrive) isSelf(entry types.IEntry) bool {
 func (f *FsDrive) Move(from types.IEntry, to string, _ bool, _ task.Context) (types.IEntry, error) {
 	from = common.GetIEntry(from, f.isSelf)
 	if from == nil {
-		return nil, common.NewUnsupportedError()
+		return nil, common.NewUnsupportedMessageError("Move files across drives is not supported.")
 	}
 	fromPath := f.getPath(from.(*fsFile).path)
 	toPath := f.getPath(to)

@@ -80,6 +80,18 @@ func (p *PathPermissionStorage) ResolvePathChildrenPermission(subjects []string,
 	if e != nil {
 		return nil, e
 	}
+	return makePermissionsMap(permissions), nil
+}
+
+func (p *PathPermissionStorage) ResolvePathAndDescendantPermission(subjects []string, parentPath string) (map[string]types.Permission, error) {
+	permissions, e := p.GetChildrenByPath(subjects, parentPath, -1)
+	if e != nil {
+		return nil, e
+	}
+	return makePermissionsMap(permissions), nil
+}
+
+func makePermissionsMap(permissions []types.PathPermission) map[string]types.Permission {
 	pMap := make(map[string][]types.PathPermission)
 	for _, p := range permissions {
 		ps, ok := pMap[*p.Path]
@@ -93,5 +105,5 @@ func (p *PathPermissionStorage) ResolvePathChildrenPermission(subjects []string,
 	for k, v := range pMap {
 		result[k] = common.ResolveAcceptedPermissions(v)
 	}
-	return result, nil
+	return result
 }
