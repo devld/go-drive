@@ -1,4 +1,5 @@
-import { deleteEntry } from '@/api'
+import { deleteEntry, deleteTask } from '@/api'
+import { taskDone } from '..'
 
 export default {
   name: 'delete',
@@ -10,25 +11,36 @@ export default {
   },
   supports: (entry) => Array.isArray(entry) ? !entry.some(e => !e.meta.can_write) : entry.meta.can_write,
   multiple: true,
-  handler: async (entry, { confirm, alert, loading }) => {
-    if (!Array.isArray(entry)) entry = [entry]
+  handler: async (entries, { confirm, alert, loading }) => {
+    if (!Array.isArray(entries)) entries = [entries]
     try {
       await confirm({
-        message: entry.length > 1 ? `Delete these ${entry.length} files?` : 'Delete this file?',
+        message: entries.length > 1 ? `Delete these ${entries.length} files?` : 'Delete this file?',
         confirmType: 'danger'
       })
     } catch { return }
     loading(true)
+    let task
+    let canceled = false
+    const onCancel = () => {
+      canceled = true
+      return task && deleteTask(task.id)
+    }
     try {
-      let canceled = false
-      for (const i in entry) {
+      for (const entry of entries) {
         if (canceled) break
-        const e = entry[i]
-        loading({
-          text: `deleting ${i + 1}/${entry.length}`,
-          onCancel: () => { canceled = true }
-        })
-        await deleteEntry(e.path)
+        loading({ text: `Deleting ${entry.name}` })
+        await taskDone(
+          deleteEntry(entry.path),
+          t => {
+            task = t
+            loading({
+              text: `Deleting ${entry.name} ` +
+                `${task.progress.loaded}/${task.progress.total}`,
+              onCancel
+            })
+          }
+        )
       }
       return { update: true }
     } catch (e) {

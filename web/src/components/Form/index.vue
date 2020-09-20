@@ -1,13 +1,14 @@
 <template>
-  <div class="simple-form">
+  <form class="simple-form" @submit="onSubmit">
     <form-item
       v-for="item in form"
       :key="item.field"
+      ref="fields"
       :item="item"
       v-model="data[item.field]"
       @input="emitInput"
     />
-  </div>
+  </form>
 </template>
 <script>
 import FormItem from './FormItem'
@@ -40,6 +41,17 @@ export default {
     }
   },
   methods: {
+    async validate () {
+      await Promise.all(this.$refs.fields.map(f => f.validate()))
+    },
+    clearError () {
+      this.$refs.fields.forEach(f => {
+        f.clearError()
+      })
+    },
+    onSubmit (e) {
+      e.preventDefault()
+    },
     emitInput () {
       this.$emit('input', this.data)
     }

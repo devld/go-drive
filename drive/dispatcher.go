@@ -12,7 +12,7 @@ import (
 
 var pathRegexp = regexp.MustCompile(`^/?([^/]+)(/(.*))?$`)
 
-// DispatcherDrive splits drive name and path from the raw path.
+// DispatcherDrive splits drive name and key from the raw key.
 // Then dispatch request to the specified drive.
 type DispatcherDrive struct {
 	drives map[string]types.IDrive
@@ -45,13 +45,13 @@ func (d *DispatcherDrive) Meta() types.DriveMeta {
 func (d *DispatcherDrive) Resolve(path string) (types.IDrive, string, string, error) {
 	paths := pathRegexp.FindStringSubmatch(path)
 	if paths == nil {
-		return nil, "", "", common.NewNotFoundError("not found")
+		return nil, "", "", common.NewNotFoundError()
 	}
 	driveName := paths[1]
-	entryPath := "/" + paths[3]
+	entryPath := paths[3]
 	drive, ok := d.drives[driveName]
 	if !ok {
-		return nil, "", "", common.NewNotFoundError("not found")
+		return nil, "", "", common.NewNotFoundError()
 	}
 	return drive, entryPath, driveName, nil
 }
@@ -109,7 +109,21 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 	if !common.IsUnsupportedError(e) {
 		return nil, e
 	}
-	e = common.CopyAll(from, d, to, override, ctx, nil)
+	e = common.CopyAll(from, d, to, override, ctx,
+		func(from types.IEntry, _ types.IDrive, to string, ctx task.Context) error {
+			driveTo, pathTo, _, e := d.Resolve(to)
+			if e != nil {
+				return e
+			}
+			_, e = driveTo.Copy(from, pathTo, true, ctx)
+			if e == nil {
+				return nil
+			}
+			if !common.IsUnsupportedError(e) {
+				return e
+			}
+			return common.CopyEntry(from, driveTo, pathTo, ctx)
+		}, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -151,7 +165,7 @@ func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 	return d.mapDriveEntries(name, list), nil
 }
 
-func (d *DispatcherDrive) Delete(path string) error {
+func (d *DispatcherDrive) Delete(path string, ctx task.Context) error {
 	drive, path, _, e := d.Resolve(path)
 	if e != nil {
 		return e
@@ -159,15 +173,15 @@ func (d *DispatcherDrive) Delete(path string) error {
 	if path == "/" {
 		return common.NewNotAllowedError()
 	}
-	return drive.Delete(path)
+	return drive.Delete(path, ctx)
 }
 
-func (d *DispatcherDrive) Upload(path string, size int64, override bool) (*types.DriveUploadConfig, error) {
+func (d *DispatcherDrive) Upload(path string, size int64, override bool, config map[string]string) (types.DriveUploadConfig, error) {
 	drive, path, _, e := d.Resolve(path)
 	if e != nil {
-		return nil, e
+		return types.DriveUploadConfig{}, e
 	}
-	return drive.Upload(path, size, override)
+	return drive.Upload(path, size, override, config)
 }
 
 func (d *DispatcherDrive) mapDriveEntry(driveName string, entry types.IEntry) types.IEntry {
@@ -212,12 +226,8 @@ func (d *entryWrapper) Meta() types.EntryMeta {
 	return d.entry.Meta()
 }
 
-func (d *entryWrapper) CreatedAt() int64 {
-	return d.entry.CreatedAt()
-}
-
-func (d *entryWrapper) UpdatedAt() int64 {
-	return d.entry.UpdatedAt()
+func (d *entryWrapper) ModTime() int64 {
+	return d.entry.ModTime()
 }
 
 func (d *entryWrapper) GetReader() (io.ReadCloser, error) {
@@ -270,11 +280,7 @@ func (d *driveEntry) Meta() types.EntryMeta {
 	return types.EntryMeta{CanRead: true, CanWrite: d.meta.CanWrite && !d.isDrive, Props: d.meta.Props}
 }
 
-func (d *driveEntry) CreatedAt() int64 {
-	return -1
-}
-
-func (d *driveEntry) UpdatedAt() int64 {
+func (d *driveEntry) ModTime() int64 {
 	return -1
 }
 

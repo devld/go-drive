@@ -53,6 +53,7 @@ func (p *PathPermissionStorage) SavePathPermissions(path string, permissions []t
 		}
 		for _, p := range permissions {
 			p.Path = &path
+			p.Depth = uint8(common.PathDepth(path))
 			if e := tx.Create(&p).Error; e != nil {
 				return e
 			}

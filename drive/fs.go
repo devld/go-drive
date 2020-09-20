@@ -10,7 +10,6 @@ import (
 	fsPath "path"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 type FsDrive struct {
@@ -25,20 +24,23 @@ type fsFile struct {
 	size  int64
 	isDir bool
 
-	createdAt int64
-	updatedAt int64
+	modTime int64
 }
 
 // NewFsDrive creates a file system drive
 // params:
-//   - path: root path of this drive
+//   - path: root key of this drive
 func NewFsDrive(config map[string]string) (types.IDrive, error) {
+	path := config["path"]
+	if common.CleanPath(path) == "" {
+		return nil, common.NewNotAllowedMessageError("invalid root path")
+	}
 	path, e := filepath.Abs(config["path"])
 	if e != nil {
 		return nil, e
 	}
 	if exists, _ := common.FileExists(path); !exists {
-		return nil, common.NewNotFoundError("path not exist")
+		return nil, common.NewNotFoundMessageError("root path not exists")
 	}
 	return &FsDrive{path}, nil
 }
@@ -46,25 +48,23 @@ func NewFsDrive(config map[string]string) (types.IDrive, error) {
 func (f *FsDrive) newFsFile(path string, file os.FileInfo) (types.IEntry, error) {
 	path, e := filepath.Abs(path)
 	if e != nil {
-		return nil, common.NewNotFoundError("invalid path")
+		return nil, common.NewNotFoundMessageError("invalid key")
 	}
 	if !strings.HasPrefix(path, f.path) {
-		panic("invalid file path")
+		panic("invalid file key")
 	}
 	path = strings.ReplaceAll(path, "\\", "/")
 	path = path[len(f.path):]
 	for strings.HasPrefix(path, "/") {
 		path = path[1:]
 	}
-	modTime := file.ModTime().UnixNano() / int64(time.Millisecond)
 	return &fsFile{
-		drive:     f,
-		path:      path,
-		name:      file.Name(),
-		size:      file.Size(),
-		isDir:     file.IsDir(),
-		createdAt: modTime,
-		updatedAt: modTime,
+		drive:   f,
+		path:    path,
+		name:    file.Name(),
+		size:    file.Size(),
+		isDir:   file.IsDir(),
+		modTime: common.Millisecond(file.ModTime()),
 	}, nil
 }
 
@@ -81,7 +81,7 @@ func (f *FsDrive) Get(path string) (types.IEntry, error) {
 	path = f.getPath(path)
 	stat, e := os.Stat(path)
 	if os.IsNotExist(e) {
-		return nil, common.NewNotFoundError("not found")
+		return nil, common.NewNotFoundError()
 	}
 	if e != nil {
 		return nil, e
@@ -167,7 +167,7 @@ func (f *FsDrive) List(path string) ([]types.IEntry, error) {
 	path = f.getPath(path)
 	isDir, e := common.IsDir(path)
 	if os.IsNotExist(e) {
-		return nil, common.NewNotFoundError("file does not exist")
+		return nil, common.NewNotFoundError()
 	}
 	if !isDir {
 		return nil, common.NewNotAllowedMessageError("cannot list on file")
@@ -187,7 +187,7 @@ func (f *FsDrive) List(path string) ([]types.IEntry, error) {
 	return entries, nil
 }
 
-func (f *FsDrive) Delete(path string) error {
+func (f *FsDrive) Delete(path string, _ task.Context) error {
 	path = f.getPath(path)
 	if f.isRootPath(path) {
 		return common.NewNotAllowedMessageError("root cannot be deleted")
@@ -198,16 +198,19 @@ func (f *FsDrive) Delete(path string) error {
 	return os.RemoveAll(path)
 }
 
-var fsDriveUploadConfig = types.DriveUploadConfig{Provider: "local"}
-
-func (f *FsDrive) Upload(path string, _ int64, override bool) (*types.DriveUploadConfig, error) {
+func (f *FsDrive) Upload(path string, size int64, override bool,
+	_ map[string]string) (types.DriveUploadConfig, error) {
 	path = f.getPath(path)
 	if !override {
 		if e := requireFile(path, false); e != nil {
-			return nil, e
+			return types.DriveUploadConfig{}, e
 		}
 	}
-	return &fsDriveUploadConfig, nil
+	provider := types.LocalProvider
+	if size > 5*1024*1024 {
+		provider = types.LocalChunkProvider
+	}
+	return types.DriveUploadConfig{Provider: provider}, nil
 }
 
 func requireFile(path string, requireExists bool) error {
@@ -216,7 +219,7 @@ func requireFile(path string, requireExists bool) error {
 		return e
 	}
 	if requireExists && !exists {
-		return common.NewNotFoundError("file does not exist")
+		return common.NewNotFoundMessageError("file does not exist")
 	}
 	if !requireExists && exists {
 		return common.NewNotAllowedMessageError("file exists")
@@ -254,12 +257,8 @@ func (f *fsFile) Meta() types.EntryMeta {
 	return types.EntryMeta{CanRead: true, CanWrite: true}
 }
 
-func (f *fsFile) CreatedAt() int64 {
-	return f.createdAt
-}
-
-func (f *fsFile) UpdatedAt() int64 {
-	return f.updatedAt
+func (f *fsFile) ModTime() int64 {
+	return f.modTime
 }
 
 func (f *fsFile) Drive() types.IDrive {
@@ -276,11 +275,11 @@ func (f *fsFile) GetReader() (io.ReadCloser, error) {
 		return nil, e
 	}
 	if !exists {
-		return nil, common.NewNotFoundError("file does not exist")
+		return nil, common.NewNotFoundMessageError("file does not exist")
 	}
 	return os.Open(path)
 }
 
 func (f *fsFile) GetURL() (string, bool, error) {
-	return "", false, common.NewNotAllowedError()
+	return "", false, common.NewUnsupportedError()
 }

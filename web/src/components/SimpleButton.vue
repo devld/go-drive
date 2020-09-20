@@ -1,7 +1,7 @@
 <template>
   <button
     class="simple-button"
-    :class="{ loading, [type]: true, small }"
+    :class="{ loading, [type]: !!type, small }"
     @click="$emit('click')"
     :disabled="!!loading || disabled"
     :type="nativeType"

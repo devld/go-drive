@@ -26,7 +26,6 @@ export default {
       return { all: this.all }
     },
     beforeCancel () {
-      console.log('before cancel')
       return { all: this.all }
     }
   }

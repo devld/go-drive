@@ -1,10 +1,12 @@
 /**
  * @typedef TaskDef
  * @property {string} path file path
- * @property {any} file file payload
+ * @property {Blob} file file payload
  * @property {number} [size] payload size (bytes)
  * @property {boolean} [override] override file if it exists
  */
+
+import { IS_DEBUG } from '@/utils'
 
 /**
  * @typedef TaskChangeEvent
@@ -155,6 +157,9 @@ export default class UploadTask {
    * @param {any} data
    */
   _onChange (status, data) {
+    if (IS_DEBUG) {
+      console.debug('update status change:', status, data)
+    }
     this._status = status
     if (status === STATUS_UPLOADING) {
       this._progress = Object.freeze({ loaded: data.loaded, total: data.total })

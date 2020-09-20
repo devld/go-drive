@@ -26,6 +26,7 @@ type ComponentsHolder struct {
 	GroupStorage      *storage.GroupStorage
 	PermissionStorage *storage.PathPermissionStorage
 	TaskRunner        task.Runner
+	ChunkUploader     *ChunkUploader
 }
 
 func GetComponentsHolder(c *gin.Context) *ComponentsHolder {
@@ -62,6 +63,10 @@ func GetPermissionStorage(c *gin.Context) *storage.PathPermissionStorage {
 
 func GetTaskRunner(c *gin.Context) task.Runner {
 	return GetComponentsHolder(c).TaskRunner
+}
+
+func GetChunkUploader(c *gin.Context) *ChunkUploader {
+	return GetComponentsHolder(c).ChunkUploader
 }
 
 func SetResult(c *gin.Context, result interface{}) {

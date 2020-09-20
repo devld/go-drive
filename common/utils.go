@@ -7,6 +7,7 @@ import (
 	fsPath "path"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func IsDebugOn() bool {
@@ -122,4 +123,12 @@ func GetRealIP(r *http.Request) string {
 	}
 	ips := RegSplit(forwarded, regexp.MustCompile(",\\s*"))
 	return ips[0]
+}
+
+func Millisecond(t time.Time) int64 {
+	return t.UnixNano() / int64(time.Millisecond)
+}
+
+func Time(millisecond int64) time.Time {
+	return time.Unix(0, millisecond*int64(time.Millisecond))
 }

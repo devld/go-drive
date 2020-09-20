@@ -2,12 +2,14 @@ import UploadTask, { STATUS_STARTING, STATUS_ERROR } from '../task'
 import { getUploadConfig } from '@/api'
 
 import LocalUploadTask from './local'
+import LocalChunkUploadTask from './local-chunk'
 
 /**
  * @type {Object.<string, typeof UploadTask>}
  */
 const TASK_PROVIDERS = {
-  local: LocalUploadTask
+  local: LocalUploadTask,
+  localChunk: LocalChunkUploadTask
 }
 
 class DispatcherUploadTask extends UploadTask {

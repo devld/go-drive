@@ -39,6 +39,7 @@ func InitDriveRoutes(router gin.IRouter) {
 		writeResponse(c, e, entry)
 	})
 
+	// copy file
 	r.POST("/copy", func(c *gin.Context) {
 		t, e := copyEntry(c)
 		writeResponse(c, e, t)
@@ -52,12 +53,11 @@ func InitDriveRoutes(router gin.IRouter) {
 
 	// deleteEntry entry
 	r.DELETE("/entry/*path", func(c *gin.Context) {
-		e := deleteEntry(c)
-		if e != nil {
-			_ = c.Error(e)
-		}
+		t, e := deleteEntry(c)
+		writeResponse(c, e, t)
 	})
 
+	// get upload config
 	r.POST("/upload/*path", func(c *gin.Context) {
 		config, e := upload(c)
 		writeResponse(c, e, config)
@@ -69,11 +69,39 @@ func InitDriveRoutes(router gin.IRouter) {
 		writeResponse(c, e, entry)
 	})
 
+	// chunk upload request
+	r.POST("/chunk", func(c *gin.Context) {
+		upload, e := chunkUploadRequest(c)
+		writeResponse(c, e, upload)
+	})
+
+	// chunk upload
+	r.PUT("/chunk/:id/:seq", func(c *gin.Context) {
+		e := chunkUpload(c)
+		if e != nil {
+			_ = c.Error(e)
+		}
+	})
+
+	// chunk upload complete
+	r.POST("/chunk-content/*path", func(c *gin.Context) {
+		entry, e := chunkUploadComplete(c)
+		writeResponse(c, e, entry)
+	})
+
+	r.DELETE("/chunk/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		e := GetChunkUploader(c).DeleteUpload(id)
+		if e != nil {
+			_ = c.Error(e)
+		}
+	})
+
 	// get task
 	r.GET("/task/:id", func(c *gin.Context) {
 		t, e := GetTaskRunner(c).GetTask(c.Param("id"))
 		if e != nil && e == task.ErrorNotFound {
-			e = common.NewNotFoundError(e.Error())
+			e = common.NewNotFoundMessageError(e.Error())
 		}
 		writeResponse(c, e, t)
 	})
@@ -81,7 +109,7 @@ func InitDriveRoutes(router gin.IRouter) {
 	r.DELETE("/task/:id", func(c *gin.Context) {
 		e := GetTaskRunner(c).RemoveTask(c.Param("id"))
 		if e != nil && e == task.ErrorNotFound {
-			e = common.NewNotFoundError(e.Error())
+			e = common.NewNotFoundMessageError(e.Error())
 		}
 		writeResponse(c, e, nil)
 	})
@@ -159,7 +187,6 @@ func copyEntry(c *gin.Context) (*task.Task, error) {
 	if e != nil {
 		return nil, nil
 	}
-	t, e = GetTaskRunner(c).GetTask(t.Id)
 	return &t, e
 }
 
@@ -186,7 +213,6 @@ func move(c *gin.Context) (*task.Task, error) {
 	if e != nil {
 		return nil, nil
 	}
-	t, e = GetTaskRunner(c).GetTask(t.Id)
 	return &t, e
 }
 
@@ -197,9 +223,15 @@ func checkCopyOrMove(from, to string) error {
 	return nil
 }
 
-func deleteEntry(c *gin.Context) error {
+func deleteEntry(c *gin.Context) (*task.Task, error) {
 	path := common.CleanPath(c.Param("path"))
-	return getDrive(c).Delete(path)
+	t, e := GetTaskRunner(c).ExecuteAndWait(func(ctx task.Context) (interface{}, error) {
+		return nil, getDrive(c).Delete(path, ctx)
+	}, 2*time.Second)
+	if e != nil {
+		return nil, nil
+	}
+	return &t, e
 }
 
 func upload(c *gin.Context) (*uploadConfig, error) {
@@ -209,11 +241,15 @@ func upload(c *gin.Context) (*uploadConfig, error) {
 	if e != nil || size < 0 {
 		return nil, common.NewBadRequestError("invalid file size")
 	}
-	config, err := getDrive(c).Upload(path, size, override != "")
+	request := make(map[string]string, 0)
+	if e := c.Bind(&request); e != nil {
+		return nil, e
+	}
+	config, err := getDrive(c).Upload(path, size, override != "", request)
 	if err != nil {
 		return nil, err
 	}
-	return newUploadConfig(config), nil
+	return newUploadConfigJson(&config), nil
 }
 
 func getContent(c *gin.Context) error {
@@ -241,14 +277,53 @@ func writeContent(c *gin.Context) (*entryJson, error) {
 	return newEntryJson(entry), nil
 }
 
+func chunkUploadRequest(c *gin.Context) (*ChunkUpload, error) {
+	size, e1 := strconv.ParseInt(c.Query("size"), 10, 64)
+	chunkSize, e2 := strconv.ParseInt(c.Query("chunk_size"), 10, 64)
+	if e1 != nil || e2 != nil {
+		return nil, common.NewBadRequestError("invalid size or chunk_size")
+	}
+	upload, e := GetChunkUploader(c).CreateUpload(size, chunkSize)
+	if e != nil {
+		return nil, e
+	}
+	return &upload, nil
+}
+
+func chunkUpload(c *gin.Context) error {
+	id := c.Param("id")
+	seq, e := strconv.Atoi(c.Param("seq"))
+	if e != nil {
+		return e
+	}
+	return GetChunkUploader(c).ChunkUpload(id, seq, c.Request.Body)
+}
+
+func chunkUploadComplete(c *gin.Context) (*entryJson, error) {
+	path := common.CleanPath(c.Param("path"))
+	id := c.Query("id")
+	uploader := GetChunkUploader(c)
+	file, e := uploader.CompleteUpload(id)
+	if e != nil {
+		return nil, e
+	}
+	entry, e := getDrive(c).Save(path, file, task.DummyContext())
+	if e != nil {
+		_ = file.Close()
+		return nil, e
+	}
+	_ = file.Close()
+	e = uploader.DeleteUpload(id)
+	return newEntryJson(entry), nil
+}
+
 type entryJson struct {
-	Path      string                 `json:"path"`
-	Name      string                 `json:"name"`
-	Type      types.EntryType        `json:"type"`
-	Size      int64                  `json:"size"`
-	Meta      map[string]interface{} `json:"meta"`
-	CreatedAt int64                  `json:"created_at"`
-	UpdatedAt int64                  `json:"updated_at"`
+	Path    string                 `json:"path"`
+	Name    string                 `json:"name"`
+	Type    types.EntryType        `json:"type"`
+	Size    int64                  `json:"size"`
+	Meta    map[string]interface{} `json:"meta"`
+	ModTime int64                  `json:"mod_time"`
 }
 
 func newEntryJson(e types.IEntry) *entryJson {
@@ -261,13 +336,12 @@ func newEntryJson(e types.IEntry) *entryJson {
 		}
 	}
 	return &entryJson{
-		Path:      e.Path(),
-		Name:      e.Name(),
-		Type:      e.Type(),
-		Size:      e.Size(),
-		Meta:      meta,
-		CreatedAt: e.CreatedAt(),
-		UpdatedAt: e.UpdatedAt(),
+		Path:    e.Path(),
+		Name:    e.Name(),
+		Type:    e.Type(),
+		Size:    e.Size(),
+		Meta:    meta,
+		ModTime: e.ModTime(),
 	}
 }
 
@@ -276,6 +350,6 @@ type uploadConfig struct {
 	Config   interface{} `json:"config"`
 }
 
-func newUploadConfig(c *types.DriveUploadConfig) *uploadConfig {
+func newUploadConfigJson(c *types.DriveUploadConfig) *uploadConfig {
 	return &uploadConfig{c.Provider, c.Config}
 }

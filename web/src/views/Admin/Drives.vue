@@ -39,26 +39,13 @@
     <div class="drive-edit" v-if="drive">
       <div class="small-title">{{ edit ? `Edit drive: ${drive.name}` : 'Add drive' }}</div>
       <div class="drive-form">
-        <div class="form-item">
-          <span class="label">Name</span>
-          <input type="text" class="value" :disabled="edit" v-model="drive.name" />
-        </div>
-        <div class="form-item">
-          <span class="label">Type</span>
-          <select v-model="drive.type" class="value">
-            <option
-              v-for="t in driveTypes"
-              :key="t.type"
-              :value="t.type"
-              :title="t.description"
-            >{{ t.type }}</option>
-          </select>
-        </div>
-        <div class="form-item" v-if="drive.type">
-          <div class="value">
-            <simple-form :form="driveConfigFormMap[drive.type]" v-model="drive.config" />
-          </div>
-        </div>
+        <simple-form ref="baseForm" :form="baseForm" v-model="drive" />
+        <simple-form
+          v-if="drive.type && driveForms[drive.type]"
+          ref="configForm"
+          :form="driveForms[drive.type]"
+          v-model="drive.config"
+        />
         <div class="form-item save-button">
           <simple-button small @click="saveDrive" :loading="saving">Save</simple-button>
           <simple-button small type="info" @click="drive = null">Cancel</simple-button>
@@ -72,7 +59,6 @@
 </template>
 <script>
 import { createDrive, deleteDrive, getDrives, reloadDrives, updateDrive } from '@/api/admin'
-import { mapOf } from '@/utils'
 
 export default {
   name: 'DrivesManager',
@@ -86,19 +72,34 @@ export default {
 
       reloading: false,
 
-      driveTypes: [
-        {
-          type: 'fs', description: 'Local file system drive',
-          configForm: [
-            { field: 'path', label: 'Root', type: 'text', description: 'The path of root', required: true }
-          ]
-        }
-      ]
+      driveForms: {
+        fs: [
+          { field: 'path', label: 'Root', type: 'text', description: 'The path of root', required: true }
+        ],
+        s3: [
+          { field: 'id', label: 'AccessKey', type: 'text', required: true },
+          { field: 'secret', label: 'SecretKey', type: 'password', required: true },
+          { field: 'bucket', label: 'Bucket', type: 'text', required: true },
+          { field: 'path_style', label: 'PathStyle', type: 'checkbox', description: 'Force use path style api' },
+          { field: 'region', label: 'Region', type: 'text' },
+          { field: 'endpoint', label: 'Endpoint', type: 'text', description: 'The S3 api endpoint' },
+          { field: 'proxy_download', label: 'Proxy', type: 'checkbox', description: 'Whether the upload or download will be proxied by the server' }
+        ]
+      }
     }
   },
   computed: {
-    driveConfigFormMap () {
-      return mapOf(this.driveTypes, d => d.type, d => d.configForm)
+    baseForm () {
+      return [
+        { field: 'name', label: 'Name', type: 'text', required: true, disabled: this.edit },
+        {
+          field: 'type', label: 'Type', type: 'select', required: true,
+          options: [
+            { name: 'File system', value: 'fs', title: 'Local file system drive' },
+            { name: 'S3', value: 's3', title: 'S3 compatible storage' }
+          ]
+        }
+      ]
     }
   },
   created () {
@@ -145,6 +146,13 @@ export default {
       })
     },
     async saveDrive () {
+      try {
+        await Promise.all([
+          this.$refs.baseForm.validate(),
+          this.$refs.configForm && this.$refs.configForm.validate()
+        ])
+      } catch { return }
+
       const drive = {
         name: this.drive.name,
         type: this.drive.type,
@@ -157,6 +165,7 @@ export default {
         } else {
           await createDrive(drive)
         }
+        this.drive = null
         this.loadDrives()
       } catch (e) {
         this.$alert(e.message)
@@ -165,7 +174,7 @@ export default {
       }
     },
     async reloadDrives () {
-      this.reloading = false
+      this.reloading = true
       try {
         await reloadDrives()
       } catch (e) {
@@ -218,6 +227,12 @@ export default {
 
   .save-button {
     margin-top: 32px;
+  }
+
+  .drive-form {
+    .simple-form:first-child {
+      margin-bottom: 10px;
+    }
   }
 
   @media screen and (max-width: 600px) {
