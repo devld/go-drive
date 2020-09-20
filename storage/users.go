@@ -20,7 +20,7 @@ func (u *UserStorage) GetUser(username string) (types.User, error) {
 	user := types.User{}
 	e := u.db.C().First(&user, "username = ?", username).Related(&user.Groups, "groups").Error
 	if gorm.IsRecordNotFoundError(e) {
-		return user, common.NewNotFoundError(fmt.Sprintf("user '%s' not found", username))
+		return user, common.NewNotFoundMessageError(fmt.Sprintf("user '%s' not found", username))
 	}
 	return user, e
 }
@@ -60,7 +60,7 @@ func (u *UserStorage) UpdateUser(username string, user types.User) error {
 				return s.Error
 			}
 			if s.RowsAffected != 1 {
-				return common.NewNotFoundError(fmt.Sprintf("user '%s' not found", username))
+				return common.NewNotFoundMessageError(fmt.Sprintf("user '%s' not found", username))
 			}
 		}
 		if user.Groups != nil {
@@ -84,7 +84,7 @@ func (u *UserStorage) DeleteUser(username string) error {
 			return s.Error
 		}
 		if s.RowsAffected != 1 {
-			return common.NewNotFoundError(fmt.Sprintf("user '%s' not found", username))
+			return common.NewNotFoundMessageError(fmt.Sprintf("user '%s' not found", username))
 
 		}
 		if e := tx.Where("username = ?", username).Delete(&types.UserGroup{}).Error; e != nil {

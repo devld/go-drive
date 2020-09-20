@@ -51,13 +51,15 @@
 import TaskManager from './TaskManager'
 import { makeDir } from '@/api'
 import { pathClean, pathJoin } from '@/utils'
-import uploadManager from '@/api/upload-manager'
+import { UploadManager } from '@/api/upload-manager'
 // eslint-disable-next-line no-unused-vars
 import { UploadTaskItem, STATUS_COMPLETED } from '@/api/upload-manager/task'
 import { createDialog } from '@/utils/ui-utils/base-dialog'
 import FileExistsDialogInner from './FileExistsConfirmDialog'
 
 const FileExistsDialog = createDialog('FileExistsDialog', FileExistsDialogInner)
+
+const uploadManager = new UploadManager({ concurrent: 3 })
 
 export default {
   name: 'NewEntryArea',
@@ -143,7 +145,6 @@ export default {
           path: pathClean(pathJoin(this.path, file.name)),
           file, override
         })
-        console.log('submit')
       }
       this.showTaskManager()
     },

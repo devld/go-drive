@@ -307,10 +307,14 @@ export default {
       }
     },
     async loadReadme (entry) {
+      let content
       try {
-        this.readmeContent = await getContent(entry.path, entry.meta.access_key)
+        content = await getContent(entry.path, entry.meta.access_key)
       } catch (e) {
-        this.readmeContent = README_FAILED_CONTENT
+        content = README_FAILED_CONTENT
+      }
+      if (this.path === dir(entry.path)) {
+        this.readmeContent = content
       }
     },
     reloadEntryList: debounce(function () {

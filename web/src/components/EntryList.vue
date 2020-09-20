@@ -82,8 +82,7 @@ export default {
         meta: {},
         size: -1,
         type: 'dir',
-        created_at: -1,
-        updated_at: -1
+        mod_time: -1
       }
     },
     sortedEntries () {

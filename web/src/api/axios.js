@@ -47,9 +47,11 @@ async function processConfig (config) {
   config._t++
   if (config._t > MAX_RETRY) throw new ApiError(-1, 'max retry reached')
 
-  let token = getToken()
-  if (!token) token = await doAuth()
-  config.headers[AUTH_HEADER] = token
+  if (!config._noAuth) {
+    let token = getToken()
+    if (!token) token = await doAuth()
+    config.headers[AUTH_HEADER] = token
+  }
   return config
 }
 

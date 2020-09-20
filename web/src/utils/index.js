@@ -157,7 +157,15 @@ export async function taskDone (task, cb, interval = 1000) {
   cb && await cb(task)
   while (task.status === 'pending' || task.status === 'running') {
     cb && await cb(task)
-    task = await getTask(task.id)
+    try {
+      task = await getTask(task.id)
+    } catch (e) {
+      if (e.status === 404) {
+        // task canceled
+        return
+      }
+      throw e
+    }
     await wait(interval)
   }
   if (task.status === 'done') {
@@ -167,7 +175,7 @@ export async function taskDone (task, cb, interval = 1000) {
   } else if (task.status === 'canceled') {
     // nothing
   } else {
-    console.log('unknown task status', task)
+    console.warn('unknown task status', task)
     throw new Error('unknown error')
   }
 }

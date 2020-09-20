@@ -13,7 +13,6 @@ import (
 	"path"
 	"sort"
 	"strconv"
-	"time"
 )
 
 func GetIEntry(entry types.IEntry, test func(iEntry types.IEntry) bool) types.IEntry {
@@ -103,35 +102,12 @@ func CopyWithProgress(dst io.Writer, src io.Reader, ctx task.Context) (written i
 	return
 }
 
-func CopyIContent(content types.IContent, w io.Writer, ctx task.Context) (int64, error) {
-	// copy file from url
-	url, _, e := content.GetURL()
-	if e == nil {
-		resp, e := http.Get(url)
-		if e != nil {
-			return -1, e
-		}
-		if resp.StatusCode != 200 {
-			return -1, NewRemoteApiError(resp.StatusCode, "failed to copy file")
-		}
-		defer func() { _ = resp.Body.Close() }()
-		return CopyWithProgress(w, resp.Body, ctx)
-	}
-	// copy file from reader
-	reader, e := content.GetReader()
-	if e != nil {
-		return -1, e
-	}
-	defer func() { _ = reader.Close() }()
-	return CopyWithProgress(w, reader, ctx)
-}
-
-func CopyIContentToTempFile(content types.IContent, ctx task.Context) (*os.File, error) {
+func CopyReaderToTempFile(reader io.Reader, ctx task.Context) (*os.File, error) {
 	file, e := ioutil.TempFile("", "drive-copy")
 	if e != nil {
 		return nil, e
 	}
-	_, e = CopyIContent(content, file, ctx)
+	_, e = CopyWithProgress(file, reader, ctx)
 	if e != nil {
 		_ = file.Close()
 		_ = os.Remove(file.Name())
@@ -146,6 +122,29 @@ func CopyIContentToTempFile(content types.IContent, ctx task.Context) (*os.File,
 	return file, nil
 }
 
+func GetIContentReader(content types.IContent) (io.ReadCloser, error) {
+	url, _, e := content.GetURL()
+	if e == nil {
+		resp, e := http.Get(url)
+		if e != nil {
+			return nil, e
+		}
+		if resp.StatusCode != 200 {
+			return nil, NewRemoteApiError(resp.StatusCode, "failed to copy file")
+		}
+		return resp.Body, nil
+	}
+	return content.GetReader()
+}
+
+func CopyIContentToTempFile(content types.IContent, ctx task.Context) (*os.File, error) {
+	reader, e := GetIContentReader(content)
+	if e != nil {
+		return nil, e
+	}
+	return CopyReaderToTempFile(reader, ctx)
+}
+
 func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.Request) error {
 	url, proxy, e := content.GetURL()
 	if e == nil {
@@ -156,9 +155,16 @@ func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.R
 			}
 			proxy := httputil.ReverseProxy{Director: func(r *http.Request) {
 				r.URL = dest
-				r.Header.Set("Host", dest.Host)
+				r.Host = dest.Host
 				r.Header.Del("Referer")
+				r.Header.Del("Authorization")
 			}}
+
+			defer func() {
+				if i := recover(); i != http.ErrAbortHandler {
+					panic(i)
+				}
+			}()
 
 			proxy.ServeHTTP(w, req)
 			return nil
@@ -177,7 +183,7 @@ func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.R
 	if ok {
 		http.ServeContent(
 			w, req, content.Name(),
-			time.Unix(0, content.UpdatedAt()*int64(time.Millisecond)),
+			Time(content.ModTime()),
 			readSeeker)
 		return nil
 	}
@@ -208,6 +214,7 @@ type EntryNode struct {
 	children []EntryNode
 }
 
+type DoCopy = func(from types.IEntry, driveTo types.IDrive, to string, ctx task.Context) error
 type CopyCallback = func(entry types.IEntry, allProcessed bool, ctx task.Context) error
 
 func buildEntriesTree(entry types.IEntry, total int, ctx task.Context) (EntryNode, error) {
@@ -244,8 +251,23 @@ func BuildEntriesTree(root types.IEntry, ctx task.Context) (EntryNode, error) {
 	return buildEntriesTree(root, 1, ctx)
 }
 
-func copyAll(entry EntryNode, driveTo types.IDrive, to string,
-	override bool, ctx task.Context, newParent bool, after CopyCallback) (int, bool, error) {
+func flattenEntriesTree(root EntryNode, result []EntryNode) []EntryNode {
+	result = append(result, root)
+	if root.children != nil {
+		for _, e := range root.children {
+			result = flattenEntriesTree(e, result)
+		}
+	}
+	return result
+}
+
+func FlattenEntriesTree(root EntryNode) []EntryNode {
+	result := make([]EntryNode, 0)
+	return flattenEntriesTree(root, result)
+}
+
+func copyAll(entry EntryNode, driveTo types.IDrive, to string, override bool,
+	ctx task.Context, newParent bool, doCopy DoCopy, after CopyCallback) (int, bool, error) {
 	processed := 0
 	if ctx.Canceled() {
 		return processed, false, task.ErrorCanceled
@@ -282,7 +304,7 @@ func copyAll(entry EntryNode, driveTo types.IDrive, to string,
 		}
 		if entry.children != nil {
 			for _, e := range entry.children {
-				p, r, err := copyAll(e, driveTo, CleanPath(path.Join(to, e.Name())), override, ctx, dirCreate, after)
+				p, r, err := copyAll(e, driveTo, CleanPath(path.Join(to, e.Name())), override, ctx, dirCreate, doCopy, after)
 				if err != nil {
 					return processed, false, err
 				}
@@ -306,17 +328,8 @@ func copyAll(entry EntryNode, driveTo types.IDrive, to string,
 				return processed + 1, false, nil
 			}
 		}
-		content, ok := entry.IEntry.(types.IContent)
-		if !ok {
-			return processed, false, NewNotAllowedMessageError(fmt.Sprintf("file '%s' is not readable", entry.Path()))
-		}
-		file, e := CopyIContentToTempFile(content, ctxWrapper{ctx})
-		if e != nil {
-			return processed, false, e
-		}
-		defer func() { _ = os.Remove(file.Name()) }()
-		_, e = driveTo.Save(to, file, ctxWrapper{ctx})
-		if e != nil {
+
+		if e := doCopy(entry.IEntry, driveTo, to, ctxWrapper{ctx}); e != nil {
 			return processed, false, e
 		}
 	}
@@ -328,7 +341,8 @@ func copyAll(entry EntryNode, driveTo types.IDrive, to string,
 	return processed, allProcessed, nil
 }
 
-func CopyAll(entry types.IEntry, driveTo types.IDrive, to string, override bool, ctx task.Context, after CopyCallback) error {
+func CopyAll(entry types.IEntry, driveTo types.IDrive, to string, override bool,
+	ctx task.Context, doCopy DoCopy, after CopyCallback) error {
 	tree, err := BuildEntriesTree(entry, ctx)
 	if err != nil {
 		return err
@@ -336,8 +350,22 @@ func CopyAll(entry types.IEntry, driveTo types.IDrive, to string, override bool,
 	if after == nil {
 		after = func(entry types.IEntry, fullProcessed bool, ctx task.Context) error { return nil }
 	}
-	_, _, err = copyAll(tree, driveTo, to, override, ctx, false, after)
+	_, _, err = copyAll(tree, driveTo, to, override, ctx, false, doCopy, after)
 	return err
+}
+
+func CopyEntry(from types.IEntry, driveTo types.IDrive, to string, ctx task.Context) error {
+	content, ok := from.(types.IContent)
+	if !ok {
+		return NewNotAllowedMessageError(fmt.Sprintf("file '%s' is not readable", from.Path()))
+	}
+	file, e := CopyIContentToTempFile(content, ctx)
+	if e != nil {
+		return e
+	}
+	defer func() { _ = os.Remove(file.Name()) }()
+	_, e = driveTo.Save(to, file, ctx)
+	return e
 }
 
 // endregion

@@ -99,15 +99,14 @@ func (p *PermissionWrapperDrive) MakeDir(path string) (types.IEntry, error) {
 }
 
 func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
-	_, e := p.requirePermission(from.Path(), types.PermissionRead)
-	if e != nil {
-		return nil, e
-	}
 	toPermission, e := p.requirePermission(to, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
 	}
 	if e := p.requireDescendantPermission(from.Path(), types.PermissionRead); e != nil {
+		return nil, e
+	}
+	if e := p.requireDescendantPermission(to, types.PermissionReadWrite); e != nil {
 		return nil, e
 	}
 	entry, e := p.drive.Copy(from, to, override, ctx)
@@ -118,15 +117,14 @@ func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override boo
 }
 
 func (p *PermissionWrapperDrive) Move(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
-	_, e := p.requirePermission(from.Path(), types.PermissionReadWrite)
-	if e != nil {
-		return nil, e
-	}
 	toPermission, e := p.requirePermission(to, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
 	}
 	if e := p.requireDescendantPermission(from.Path(), types.PermissionRead); e != nil {
+		return nil, e
+	}
+	if e := p.requireDescendantPermission(to, types.PermissionReadWrite); e != nil {
 		return nil, e
 	}
 	entry, e := p.drive.Move(from, to, override, ctx)
@@ -143,7 +141,7 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 	}
 	if !common.IsRootPath(path) {
 		if !permission.CanRead() {
-			return nil, common.NewNotFoundError("not found")
+			return nil, common.NewNotFoundError()
 		}
 	}
 	entries, e := p.drive.List(path)
@@ -183,20 +181,21 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 	return result, nil
 }
 
-func (p *PermissionWrapperDrive) Delete(path string) error {
+func (p *PermissionWrapperDrive) Delete(path string, ctx task.Context) error {
 	_, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
 		return e
 	}
-	return p.drive.Delete(path)
+	return p.drive.Delete(path, ctx)
 }
 
-func (p *PermissionWrapperDrive) Upload(path string, size int64, override bool) (*types.DriveUploadConfig, error) {
+func (p *PermissionWrapperDrive) Upload(path string, size int64, override bool,
+	config map[string]string) (types.DriveUploadConfig, error) {
 	_, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
-		return nil, e
+		return types.DriveUploadConfig{}, e
 	}
-	return p.drive.Upload(path, size, override)
+	return p.drive.Upload(path, size, override, config)
 }
 
 func (p *PermissionWrapperDrive) requireContentPermission(path string) bool {
@@ -218,7 +217,7 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 		return types.PermissionEmpty, e
 	}
 	if resolved&require != require {
-		return resolved, common.NewNotFoundError("not found")
+		return resolved, common.NewNotFoundError()
 	}
 	return resolved, nil
 }
@@ -275,12 +274,8 @@ func (p *PermissionWrapperEntry) Meta() types.EntryMeta {
 	}
 }
 
-func (p *PermissionWrapperEntry) CreatedAt() int64 {
-	return p.entry.CreatedAt()
-}
-
-func (p *PermissionWrapperEntry) UpdatedAt() int64 {
-	return p.entry.UpdatedAt()
+func (p *PermissionWrapperEntry) ModTime() int64 {
+	return p.entry.ModTime()
 }
 
 func (p *PermissionWrapperEntry) Drive() types.IDrive {

@@ -31,7 +31,7 @@ func (g *GroupStorage) GetGroup(name string) (GroupWithUsers, error) {
 	group := types.Group{}
 	e := g.db.C().First(&group, "name = ?", name).Error
 	if gorm.IsRecordNotFoundError(e) {
-		return gus, common.NewNotFoundError(fmt.Sprintf("group '%s' not found", name))
+		return gus, common.NewNotFoundMessageError(fmt.Sprintf("group '%s' not found", name))
 	}
 	if e != nil {
 		return gus, e
@@ -92,7 +92,7 @@ func (g *GroupStorage) UpdateGroup(name string, gus GroupWithUsers) error {
 		group := types.Group{}
 		e := tx.First(&group, "name = ?", name).Error
 		if gorm.IsRecordNotFoundError(e) {
-			return common.NewNotFoundError(fmt.Sprintf("group '%s' not found", name))
+			return common.NewNotFoundMessageError(fmt.Sprintf("group '%s' not found", name))
 		}
 		if e != nil {
 			return e
@@ -111,7 +111,7 @@ func (g *GroupStorage) DeleteGroup(name string) error {
 			return s.Error
 		}
 		if s.RowsAffected != 1 {
-			return common.NewNotFoundError(fmt.Sprintf("group '%s' not found", name))
+			return common.NewNotFoundMessageError(fmt.Sprintf("group '%s' not found", name))
 		}
 		if e := tx.Where("group_name = ?", name).Delete(&types.UserGroup{}).Error; e != nil {
 			return e

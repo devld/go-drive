@@ -34,6 +34,11 @@ func main() {
 	rootDrive, e := drive.NewRootDrive(driveStorage)
 	common.PanicIfError(e)
 
+	chunksTempDir, e := config.GetDir("upload_temp", true)
+	common.PanicIfError(e)
+	chunkUploader, e := server.NewChunkUploader(chunksTempDir)
+	common.PanicIfError(e)
+
 	engine, e := server.InitServer(
 		&server.ComponentsHolder{
 			TokenStore:        tokenStore,
@@ -44,6 +49,7 @@ func main() {
 			PermissionStorage: permissionStorage,
 			RequestSigner:     requestSigner,
 			TaskRunner:        task.NewTunnyRunner(100),
+			ChunkUploader:     chunkUploader,
 		},
 	)
 	common.PanicIfError(e)

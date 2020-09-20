@@ -16,7 +16,8 @@ export function getContent (path, accessKey, noCache) {
   }
   return axios.get(_fileUrl(path, accessKey), {
     transformResponse: [],
-    params
+    params,
+    _noAuth: true
   })
 }
 

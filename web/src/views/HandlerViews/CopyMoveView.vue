@@ -54,30 +54,29 @@ export default {
     async doCopyOrMove () {
       let canceled = false
       const entries = Array.isArray(this.entry) ? [...this.entry] : [this.entry]
+      let task
+      const onCancel = () => {
+        canceled = true
+        return task && deleteTask(task.id)
+      }
       try {
         for (const i in entries) {
           if (canceled) break
           const entry = entries[i]
           const dest = pathClean(pathJoin(this.path, entry.name))
-          this.$loading({
-            text: `${this.move ? 'Moving' : 'Copying'} ${entry.name}`,
-            onCancel: () => {
-              canceled = true
-              return deleteTask(task.id)
+          this.$loading({ text: `${this.move ? 'Moving' : 'Copying'} ${entry.name}`, onCancel })
+          const copyOrMove = this.move ? moveEntry : copyEntry
+          await taskDone(
+            copyOrMove(entry.path, dest, this.override),
+            t => {
+              task = t
+              this.$loading({
+                text: `${this.move ? 'Moving' : 'Copying'} ${entry.name} ` +
+                  `${task.progress.loaded}/${task.progress.total}`,
+                onCancel
+              })
             }
-          })
-          const task = await (this.move
-            ? moveEntry(entry.path, dest, this.override)
-            : copyEntry(entry.path, dest, this.override))
-          await taskDone(task, task => {
-            this.$loading({
-              text: `${this.move ? 'Moving' : 'Copying'}  ${entry.name} ${task.progress.loaded}/${task.progress.total}`,
-              onCancel: () => {
-                canceled = true
-                return deleteTask(task.id)
-              }
-            })
-          })
+          )
           this.$emit('update')
           this.$emit('close')
         }

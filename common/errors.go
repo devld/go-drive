@@ -127,7 +127,11 @@ func NewUnauthorizedError(msg string) UnauthorizedError {
 	return UnauthorizedError{msg}
 }
 
-func NewNotFoundError(msg string) NotFoundError {
+func NewNotFoundError() NotFoundError {
+	return NotFoundError{"not found"}
+}
+
+func NewNotFoundMessageError(msg string) NotFoundError {
 	return NotFoundError{msg}
 }
 
