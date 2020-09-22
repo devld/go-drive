@@ -23,7 +23,7 @@
 <script>
 import EntryListView from '@/views/EntryListView'
 import { copyEntry, deleteTask, getEntry, moveEntry } from '@/api'
-import { pathClean, pathJoin, taskDone } from '@/utils'
+import { pathClean, pathJoin, taskDone, TASK_CANCELLED } from '@/utils'
 
 export default {
   name: 'CopyMoveView',
@@ -69,6 +69,7 @@ export default {
           await taskDone(
             copyOrMove(entry.path, dest, this.override),
             t => {
+              if (canceled) return false
               task = t
               this.$loading({
                 text: `${this.move ? 'Moving' : 'Copying'} ${entry.name} ` +
@@ -81,6 +82,7 @@ export default {
           this.$emit('close')
         }
       } catch (e) {
+        if (e === TASK_CANCELLED) return
         this.$alert(e.message)
       } finally {
         this.$loading()

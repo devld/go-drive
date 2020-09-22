@@ -152,17 +152,17 @@ export function wait (ms) {
   })
 }
 
+export const TASK_CANCELLED = { message: 'task canceled' }
+
 export async function taskDone (task, cb, interval = 1000) {
   task = await task
-  cb && await cb(task)
   while (task.status === 'pending' || task.status === 'running') {
-    cb && await cb(task)
+    if (cb && (await cb(task) === false)) throw TASK_CANCELLED
     try {
       task = await getTask(task.id)
     } catch (e) {
       if (e.status === 404) {
-        // task canceled
-        return
+        throw TASK_CANCELLED
       }
       throw e
     }
@@ -173,7 +173,7 @@ export async function taskDone (task, cb, interval = 1000) {
   } else if (task.status === 'error') {
     throw task.error
   } else if (task.status === 'canceled') {
-    // nothing
+    throw TASK_CANCELLED
   } else {
     console.warn('unknown task status', task)
     throw new Error('unknown error')

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"go-drive/common"
+	"go-drive/common/task"
 	"io"
 	"io/ioutil"
 	"math"
@@ -99,7 +100,7 @@ func (c *ChunkUploader) ChunkUpload(id string, seq int, reader io.Reader) error 
 	return nil
 }
 
-func (c *ChunkUploader) CompleteUpload(id string) (*os.File, error) {
+func (c *ChunkUploader) CompleteUpload(id string, ctx task.Context) (*os.File, error) {
 	upload, e := c.getUpload(id)
 	if e != nil {
 		return nil, e
@@ -127,22 +128,32 @@ func (c *ChunkUploader) CompleteUpload(id string) (*os.File, error) {
 			_ = c.DeleteUpload(upload.Id)
 		}
 	}()
+	ctx.Total(upload.Size)
+	var loaded int64 = 0
 	for seq := 0; seq < upload.Chunks; seq++ {
+		if ctx.Canceled() {
+			return nil, task.ErrorCanceled
+		}
 		chunk, e := os.Open(c.getChunk(upload, seq))
 		if e != nil {
 			return nil, e
 		}
-		_, e = io.Copy(file, chunk)
+		w, e := io.Copy(file, chunk)
 		_ = chunk.Close()
 		if c.isMarkedDelete(upload) {
-			break
+			return nil, task.ErrorCanceled
 		}
 		if e != nil {
 			return nil, e
 		}
+		loaded += w
+		ctx.Progress(loaded)
 	}
 	allSuccess = true
 	_ = file.Close()
+	if !allSuccess {
+		return nil, task.ErrorCanceled
+	}
 	return os.Open(c.getFile(upload))
 }
 
