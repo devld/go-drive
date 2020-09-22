@@ -96,7 +96,7 @@ func (f *FsDrive) Save(path string, reader io.Reader, ctx task.Context) (types.I
 		return nil, e
 	}
 	defer func() { _ = file.Close() }()
-	_, e = common.CopyWithProgress(file, reader, ctx)
+	_, e = common.Copy(file, reader, ctx)
 	if e != nil {
 		return nil, e
 	}

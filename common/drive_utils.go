@@ -83,7 +83,7 @@ func ResolveAcceptedPermissions(items []types.PathPermission) types.Permission {
 	return acceptedPermission
 }
 
-func CopyWithProgress(dst io.Writer, src io.Reader, ctx task.Context) (written int64, err error) {
+func Copy(dst io.Writer, src io.Reader, ctx task.Context) (written int64, err error) {
 	buf := make([]byte, 32*1024)
 	for {
 		if ctx.Canceled() {
@@ -107,7 +107,7 @@ func CopyReaderToTempFile(reader io.Reader, ctx task.Context) (*os.File, error) 
 	if e != nil {
 		return nil, e
 	}
-	_, e = CopyWithProgress(file, reader, ctx)
+	_, e = Copy(file, reader, ctx)
 	if e != nil {
 		_ = file.Close()
 		_ = os.Remove(file.Name())

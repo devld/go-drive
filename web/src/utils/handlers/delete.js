@@ -1,5 +1,5 @@
 import { deleteEntry, deleteTask } from '@/api'
-import { taskDone } from '..'
+import { taskDone, TASK_CANCELLED } from '..'
 
 export default {
   name: 'delete',
@@ -33,6 +33,7 @@ export default {
         await taskDone(
           deleteEntry(entry.path),
           t => {
+            if (canceled) return false
             task = t
             loading({
               text: `Deleting ${entry.name} ` +
@@ -44,6 +45,7 @@ export default {
       }
       return { update: true }
     } catch (e) {
+      if (e === TASK_CANCELLED) return
       alert(e.message)
     } finally {
       loading()

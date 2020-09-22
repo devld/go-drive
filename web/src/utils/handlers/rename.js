@@ -1,5 +1,5 @@
 import { moveEntry } from '@/api'
-import { dir, pathClean, pathJoin, taskDone } from '..'
+import { dir, pathClean, pathJoin, taskDone, TASK_CANCELLED } from '..'
 
 export default {
   name: 'rename',
@@ -24,6 +24,7 @@ export default {
             await taskDone(moveEntry(entry.path, pathClean(pathJoin(dir(entry.path), text))))
             resolve({ update: true })
           } catch (e) {
+            if (e === TASK_CANCELLED) return
             alert(e.message)
             throw e
           }

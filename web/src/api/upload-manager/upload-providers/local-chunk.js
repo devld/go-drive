@@ -1,5 +1,7 @@
 
+import { deleteTask } from '@/api'
 import axios from '@/api/axios'
+import { taskDone } from '@/utils'
 import ChunkUploadTask from '../chunk-task'
 import { STATUS_COMPLETED } from '../task'
 
@@ -13,6 +15,11 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
    * @type {number}
    */
   _chunkSize
+
+  /**
+   * complete chunk upload task
+   */
+  _mergeTask
 
   /**
    * prepare upload
@@ -52,9 +59,31 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
    * @returns {Promise.<any>} upload result
    */
   async _completeUpload () {
-    return axios.post(`/chunk-content/${this._task.path}`, null, {
-      params: { id: this._uploadId }
-    })
+    // complete upload is not cancelable
+    if (this._mergeLock) return
+    this._mergeLock = true
+    try {
+      return await taskDone(axios.post(`/chunk-content/${this._task.path}`, null, {
+        params: { id: this._uploadId }
+      }), task => {
+        this._mergeTask = task
+      })
+    } finally {
+      this._mergeTask = undefined
+      this._mergeLock = undefined
+    }
+  }
+
+  _pause () {
+    if (this._mergeLock) return
+    super._pause()
+  }
+
+  stop () {
+    if (this._mergeTask) {
+      deleteTask(this._mergeTask.id).catch(() => { })
+    }
+    super.stop()
   }
 
   /**
