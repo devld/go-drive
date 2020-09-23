@@ -49,12 +49,6 @@ export function deleteTask (id) {
   return axios.delete(`/task/${id}`)
 }
 
-export function getUploadConfig (path, size, override) {
-  return axios.post(`/upload/${path}`, null, {
-    params: { override, size }
-  })
-}
-
 function _fileUrl (path, accessKey) {
   return `/content/${path}${accessKey ? `?k=${encodeURIComponent(accessKey)}` : ''}`
 }

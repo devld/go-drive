@@ -5,6 +5,7 @@ import (
 	"go-drive/common"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -124,7 +125,9 @@ func writeResponse(c *gin.Context, e error, result interface{}) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, result)
+	if result != nil && !reflect.ValueOf(result).IsNil() {
+		SetResult(c, result)
+	}
 }
 
 func getDrive(c *gin.Context) types.IDrive {
@@ -233,7 +236,7 @@ func deleteEntry(c *gin.Context) (*task.Task, error) {
 		return nil, getDrive(c).Delete(path, ctx)
 	}, 2*time.Second)
 	if e != nil {
-		return nil, nil
+		return nil, e
 	}
 	return &t, e
 }
@@ -241,9 +244,14 @@ func deleteEntry(c *gin.Context) (*task.Task, error) {
 func upload(c *gin.Context) (*uploadConfig, error) {
 	path := c.Param("path")
 	override := c.Query("override")
-	size, e := strconv.ParseInt(c.Query("size"), 10, 64)
-	if e != nil || size < 0 {
-		return nil, common.NewBadRequestError("invalid file size")
+	sizeStr := c.Query("size")
+	var size int64 = -1
+	var e error
+	if sizeStr != "" {
+		size, e = strconv.ParseInt(c.Query("size"), 10, 64)
+		if e != nil || size < 0 {
+			return nil, common.NewBadRequestError("invalid file size")
+		}
 	}
 	request := make(map[string]string, 0)
 	if e := c.Bind(&request); e != nil {
@@ -253,7 +261,7 @@ func upload(c *gin.Context) (*uploadConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newUploadConfigJson(&config), nil
+	return newUploadConfigJson(config), nil
 }
 
 func getContent(c *gin.Context) error {
@@ -361,5 +369,8 @@ type uploadConfig struct {
 }
 
 func newUploadConfigJson(c *types.DriveUploadConfig) *uploadConfig {
+	if c == nil {
+		return nil
+	}
 	return &uploadConfig{c.Provider, c.Config}
 }

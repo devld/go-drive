@@ -199,18 +199,18 @@ func (f *FsDrive) Delete(path string, _ task.Context) error {
 }
 
 func (f *FsDrive) Upload(path string, size int64, override bool,
-	_ map[string]string) (types.DriveUploadConfig, error) {
+	_ map[string]string) (*types.DriveUploadConfig, error) {
 	path = f.getPath(path)
 	if !override {
 		if e := requireFile(path, false); e != nil {
-			return types.DriveUploadConfig{}, e
+			return nil, e
 		}
 	}
 	provider := types.LocalProvider
 	if size > 5*1024*1024 {
 		provider = types.LocalChunkProvider
 	}
-	return types.DriveUploadConfig{Provider: provider}, nil
+	return &types.DriveUploadConfig{Provider: provider}, nil
 }
 
 func requireFile(path string, requireExists bool) error {

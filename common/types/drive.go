@@ -70,12 +70,13 @@ type IDrive interface {
 	Delete(path string, ctx task.Context) error
 
 	// Upload returns the upload config of the path
-	Upload(path string, size int64, override bool, config map[string]string) (DriveUploadConfig, error)
+	Upload(path string, size int64, override bool, config map[string]string) (*DriveUploadConfig, error)
 }
 
 const (
 	LocalProvider      = "local"
 	LocalChunkProvider = "localChunk"
+	S3Provider         = "s3"
 )
 
 type DriveUploadConfig struct {
