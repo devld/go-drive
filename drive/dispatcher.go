@@ -176,10 +176,11 @@ func (d *DispatcherDrive) Delete(path string, ctx task.Context) error {
 	return drive.Delete(path, ctx)
 }
 
-func (d *DispatcherDrive) Upload(path string, size int64, override bool, config map[string]string) (types.DriveUploadConfig, error) {
+func (d *DispatcherDrive) Upload(path string, size int64,
+	override bool, config map[string]string) (*types.DriveUploadConfig, error) {
 	drive, path, _, e := d.Resolve(path)
 	if e != nil {
-		return types.DriveUploadConfig{}, e
+		return nil, e
 	}
 	return drive.Upload(path, size, override, config)
 }

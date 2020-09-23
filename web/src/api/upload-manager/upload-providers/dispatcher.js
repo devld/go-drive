@@ -1,15 +1,16 @@
-import UploadTask, { STATUS_STARTING, STATUS_ERROR } from '../task'
-import { getUploadConfig } from '@/api'
-
+import axios from '@/api/axios'
+import UploadTask, { STATUS_ERROR, STATUS_STARTING } from '../task'
 import LocalUploadTask from './local'
 import LocalChunkUploadTask from './local-chunk'
+import S3UploadTask from './s3'
 
 /**
  * @type {Object.<string, typeof UploadTask>}
  */
 const TASK_PROVIDERS = {
   local: LocalUploadTask,
-  localChunk: LocalChunkUploadTask
+  localChunk: LocalChunkUploadTask,
+  s3: S3UploadTask
 }
 
 class DispatcherUploadTask extends UploadTask {
@@ -40,7 +41,9 @@ class DispatcherUploadTask extends UploadTask {
     this._onChange(STATUS_STARTING)
     let uploadConfig
     try {
-      uploadConfig = await getUploadConfig(this._task.path, this._task.size, this._task.override)
+      uploadConfig = await axios.post(`/upload/${this._task.path}`, null, {
+        params: { override: this._task.override, size: this._task.size }
+      })
     } catch (e) {
       this._started = false
       this._onChange(STATUS_ERROR, e)

@@ -15,6 +15,7 @@ import (
 	"math"
 	"net/url"
 	fsPath "path"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -270,13 +271,90 @@ func (s *S3Drive) Delete(path string, ctx task.Context) error {
 	return nil
 }
 
-func (s *S3Drive) Upload(path string, size int64, override bool,
-	config map[string]string) (types.DriveUploadConfig, error) {
-	provider := types.LocalProvider
-	if size > 5*1024*1024 {
-		provider = types.LocalChunkProvider
+func (s *S3Drive) Upload(path string, size int64, _ bool,
+	config map[string]string) (*types.DriveUploadConfig, error) {
+	action := config["action"]
+	uploadId := config["uploadId"]
+	seqStr := config["seq"]
+	partsEtag := config["parts"]
+
+	seq := -1
+	var e error
+	if seqStr != "" {
+		seq, e = strconv.Atoi(seqStr)
+		if e != nil {
+			return nil, common.NewBadRequestError("invalid seq")
+		}
 	}
-	return types.DriveUploadConfig{Provider: provider}, nil
+
+	r := types.DriveUploadConfig{
+		Provider: types.S3Provider,
+		Config:   map[string]string{},
+	}
+	preSigned := ""
+
+	switch action {
+	case "UploadPart":
+		req, _ := s.c.UploadPartRequest(&s3.UploadPartInput{
+			Bucket:     s.bucket,
+			Key:        aws.String(path),
+			PartNumber: aws.Int64(int64(seq) + 1),
+			UploadId:   aws.String(uploadId),
+		})
+		preSigned, e = req.Presign(2 * time.Hour)
+		break
+	case "CompleteMultipartUpload":
+		_, e := s.c.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+			Bucket:   s.bucket,
+			Key:      aws.String(path),
+			UploadId: aws.String(uploadId),
+			MultipartUpload: &s3.CompletedMultipartUpload{
+				Parts: buildCompleteUploadBody(partsEtag),
+			},
+		})
+		return nil, e
+	case "AbortMultipartUpload":
+		_, e := s.c.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+			Bucket:   s.bucket,
+			Key:      aws.String(path),
+			UploadId: aws.String(uploadId),
+		})
+		return nil, e
+	default:
+		if size <= 5*1024*1024 {
+			req, _ := s.c.PutObjectRequest(&s3.PutObjectInput{
+				Bucket: s.bucket,
+				Key:    aws.String(path),
+			})
+			preSigned, e = req.Presign(2 * time.Hour)
+		} else {
+			req, _ := s.c.CreateMultipartUploadRequest(&s3.CreateMultipartUploadInput{
+				Bucket: s.bucket,
+				Key:    aws.String(path),
+			})
+			preSigned, e = req.Presign(2 * time.Hour)
+			r.Config["multipart"] = "1"
+		}
+	}
+	if e != nil {
+		return nil, e
+	}
+	if preSigned != "" {
+		r.Config["url"] = preSigned
+	}
+	return &r, e
+}
+
+func buildCompleteUploadBody(etag string) []*s3.CompletedPart {
+	temp := strings.Split(etag, ";")
+	r := make([]*s3.CompletedPart, len(temp))
+	for i, e := range temp {
+		r[i] = &s3.CompletedPart{
+			PartNumber: aws.Int64(int64(i + 1)),
+			ETag:       aws.String(e),
+		}
+	}
+	return r
 }
 
 func (s *S3Drive) Dispose() error {

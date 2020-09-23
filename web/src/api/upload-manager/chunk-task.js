@@ -36,11 +36,11 @@ export default class ChunkUploadTask extends UploadTask {
   _uploadingChunkProgress = {}
 
   /**
- * @param {number} id task id
- * @param {TaskChangeListener} changeListener task changed listener
- * @param {TaskDef} task task definition
- * @param {any} [config] task specified config
- */
+   * @param {number} id task id
+   * @param {TaskChangeListener} changeListener task changed listener
+   * @param {TaskDef} task task definition
+   * @param {any} [config] task specified config
+   */
   constructor (id, changeListener, task, config) {
     super(id, changeListener, task, config)
     if (new.target === ChunkUploadTask) {

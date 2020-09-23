@@ -190,10 +190,10 @@ func (p *PermissionWrapperDrive) Delete(path string, ctx task.Context) error {
 }
 
 func (p *PermissionWrapperDrive) Upload(path string, size int64, override bool,
-	config map[string]string) (types.DriveUploadConfig, error) {
+	config map[string]string) (*types.DriveUploadConfig, error) {
 	_, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
-		return types.DriveUploadConfig{}, e
+		return nil, e
 	}
 	return p.drive.Upload(path, size, override, config)
 }
