@@ -9,7 +9,9 @@ export default new Vuex.Store({
   state: {
     user: null,
 
-    showLogin: false
+    showLogin: false,
+
+    progressBar: false
   },
   getters: {
     isAdmin (state) {
@@ -22,6 +24,13 @@ export default new Vuex.Store({
     },
     showLogin (state, show) {
       state.showLogin = show
+    },
+    progressBar (state, val) {
+      if (typeof (val) === 'boolean' || typeof (val) === 'number') {
+        state.progressBar = val
+      } else {
+        state.progressBar = false
+      }
     }
   },
   actions: {

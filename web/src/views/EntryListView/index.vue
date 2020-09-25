@@ -17,18 +17,20 @@
 </template>
 <script>
 import { listEntries as listEntries_ } from '@/api'
+import { RequestTask } from '@/api/axios'
 
 const entriesCache = {}
-async function listEntries (path, force) {
+function listEntries (path, force) {
   let entries
   if (!force && entriesCache[path]) {
     entries = entriesCache[path]
     delete entriesCache[path]
-    return entries
+    return RequestTask.from(entries)
   }
-  entries = await listEntries_(path)
-  entriesCache[path] = entries
-  return entries
+  return listEntries_(path).then(entries => {
+    entriesCache[path] = entries
+    return entries
+  })
 }
 
 export default {
@@ -96,11 +98,13 @@ export default {
       this.$refs.entryList.focusOnEntry(name)
     },
     async loadEntries (force) {
+      if (this._task) this._task.cancel()
       this.error = null
       this.$emit('loading', true)
       try {
         const path = this.currentPath
-        this.entries = await listEntries(path, force)
+        this._task = listEntries(path, force)
+        this.entries = await this._task
         this.loadedPath = path
         this.$emit('entries-load', { entries: this.entries, path: this.loadedPath })
 
@@ -110,6 +114,7 @@ export default {
           this._lastEntry = null
         }
       } catch (e) {
+        if (e.isCancel) return
         this.error = e
         this.$emit('error', e)
       } finally {
