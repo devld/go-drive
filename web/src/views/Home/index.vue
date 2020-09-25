@@ -9,6 +9,7 @@
         @entry-click="entryClicked"
         @entry-menu="showEntryMenu"
         :selection.sync="selectedEntries"
+        @loading="progressBar($event)"
       />
     </main>
     <!-- file list main area -->
@@ -16,7 +17,7 @@
     <!-- README -->
     <footer class="page-footer" v-if="readmeContent">
       <div class="markdown-body" v-markdown="readmeContent">
-        <p style="text-align: center;">Loading README...</p>
+        <p style="text-align: center">Loading README...</p>
       </div>
     </footer>
     <!-- README -->
@@ -37,7 +38,12 @@
     <!-- entry handler view dialog -->
 
     <!-- entry menu -->
-    <dialog-view v-model="entryMenuShowing" overlay-close esc-close transition="flip-fade">
+    <dialog-view
+      v-model="entryMenuShowing"
+      overlay-close
+      esc-close
+      transition="flip-fade"
+    >
       <entry-menu
         v-if="entryMenu"
         :menus="entryMenu.menus"
@@ -68,7 +74,7 @@ import { filename, dir, debounce } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
 import { makeEntryHandlerLink, getBaseLink } from '@/utils/routes'
-import { mapState } from 'vuex'
+import { mapMutations, mapState } from 'vuex'
 
 const README_FILENAME = 'readme.md'
 const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
@@ -137,6 +143,8 @@ export default {
     })
   },
   created () {
+    window.a = this.progressBar
+    this.reloadEntryList = debounce(this.reloadEntryList, 500)
     window.addEventListener('beforeunload', this.onWindowUnload)
     this.resolveRouteAndHandleEntry()
   },
@@ -214,7 +222,8 @@ export default {
       }
 
       // load current path
-      getEntry(path).then(entry => { this.currentDirEntry = entry }, () => { })
+      if (this._getEntryTask) this._getEntryTask.cancel()
+      this._getEntryTask = getEntry(path).then(entry => { this.currentDirEntry = entry }, () => { })
     },
     resolveRouteAndHandleEntry () {
       const matched = this.resolveHandlerByRoute(this.$route)
@@ -307,19 +316,23 @@ export default {
       }
     },
     async loadReadme (entry) {
+      if (this._readmeTask) this._readmeTask.cancel()
       let content
+      this._readmeTask = getContent(entry.path, entry.meta.access_key)
       try {
-        content = await getContent(entry.path, entry.meta.access_key)
+        content = await this._readmeTask
       } catch (e) {
+        if (e.isCancel) return
         content = README_FAILED_CONTENT
       }
       if (this.path === dir(entry.path)) {
         this.readmeContent = content
       }
     },
-    reloadEntryList: debounce(function () {
+    reloadEntryList () {
       this.$refs.entryList.reload(true)
-    }, 500)
+    },
+    ...mapMutations(['progressBar'])
   }
 }
 </script>

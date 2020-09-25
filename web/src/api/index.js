@@ -1,12 +1,12 @@
 
-import axios, { API_PATH } from './axios'
-
+import axios, { API_PATH, axiosWrapper } from './axios'
+window.aa = axiosWrapper
 export function listEntries (path) {
-  return axios.get(`/entries/${path}`)
+  return axiosWrapper.get(`/entries/${path}`)
 }
 
 export function getEntry (path) {
-  return axios.get(`/entry/${path}`)
+  return axiosWrapper.get(`/entry/${path}`)
 }
 
 export function getContent (path, accessKey, noCache) {
@@ -14,7 +14,7 @@ export function getContent (path, accessKey, noCache) {
   if (noCache) {
     params.r = Math.random()
   }
-  return axios.get(_fileUrl(path, accessKey), {
+  return axiosWrapper.get(_fileUrl(path, accessKey), {
     transformResponse: [],
     params,
     _noAuth: true
@@ -42,7 +42,7 @@ export function moveEntry (from, to, override) {
 }
 
 export function getTask (id) {
-  return axios.get(`/task/${id}`)
+  return axiosWrapper.get(`/task/${id}`)
 }
 
 export function deleteTask (id) {
@@ -70,5 +70,5 @@ export function logout () {
 }
 
 export function getUser () {
-  return axios.get('/auth/user')
+  return axiosWrapper.get('/auth/user')
 }

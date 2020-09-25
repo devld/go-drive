@@ -2,14 +2,27 @@
   <div class="app-wrapper">
     <header class="app-header">
       <div class="user-area">
-        <button class="plain-button small login-button" v-if="!isLoggedIn" @click="login">Login</button>
+        <button
+          class="plain-button small login-button"
+          v-if="!isLoggedIn"
+          @click="login"
+        >
+          Login
+        </button>
         <span class="user-info" v-else>
           <span
             class="username"
-            :title="`Username: ${user.username}\nGroups: ${user.groups.map(g => g.name).join(', ')}`"
-          >{{ user.username }}</span>
-          <router-link v-if="isAdmin" class="plain-button small" to="/admin">Admin</router-link>
-          <button class="plain-button small logout-button" @click="logout">Logout</button>
+            :title="`Username: ${user.username}\nGroups: ${user.groups
+              .map((g) => g.name)
+              .join(', ')}`"
+            >{{ user.username }}</span
+          >
+          <router-link v-if="isAdmin" class="plain-button small" to="/admin"
+            >Admin</router-link
+          >
+          <button class="plain-button small logout-button" @click="logout">
+            Logout
+          </button>
         </span>
       </div>
     </header>
@@ -27,6 +40,8 @@
       <login-view @success="afterLogin" />
     </dialog-view>
     <!-- login dialog -->
+
+    <progress-bar :value="progressBar" />
   </div>
 </template>
 <script>
@@ -47,7 +62,7 @@ export default {
       get () { return this.$store.state.showLogin },
       set (v) { this.$store.commit('showLogin', v) }
     },
-    ...mapState(['user']),
+    ...mapState(['user', 'progressBar']),
     ...mapGetters(['isAdmin']),
     isLoggedIn () {
       return !!this.user
@@ -93,6 +108,15 @@ export default {
         margin-right: 16px;
       }
     }
+  }
+}
+
+.app-wrapper {
+  & > .progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
   }
 }
 </style>
