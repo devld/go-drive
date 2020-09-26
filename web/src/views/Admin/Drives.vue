@@ -1,14 +1,20 @@
 <template>
-  <div class="drives-manager" :class="{ 'editing': !!drive }">
+  <div class="drives-manager" :class="{ editing: !!drive }">
     <div class="drives-list">
       <div class="actions">
-        <simple-button class="add-button" icon="#icon-add" title="Add drive" @click="addDrive" />
+        <simple-button
+          class="add-button"
+          icon="#icon-add"
+          title="Add drive"
+          @click="addDrive"
+        />
         <simple-button
           icon="#icon-refresh2"
           title="Reload drives to take effect"
           :loading="reloading"
           @click="reloadDrives"
-        >Reload drives</simple-button>
+          >Reload drives</simple-button
+        >
       </div>
       <table class="simple-table">
         <thead>
@@ -23,7 +29,12 @@
             <td class="center">{{ d.name }}</td>
             <td class="center">{{ d.type }}</td>
             <td class="center">
-              <simple-button title="Edit" small icon="#icon-edit" @click="editDrive(d)" />
+              <simple-button
+                title="Edit"
+                small
+                icon="#icon-edit"
+                @click="editDrive(d)"
+              />
               <simple-button
                 title="Delete"
                 type="danger"
@@ -37,7 +48,9 @@
       </table>
     </div>
     <div class="drive-edit" v-if="drive">
-      <div class="small-title">{{ edit ? `Edit drive: ${drive.name}` : 'Add drive' }}</div>
+      <div class="small-title">
+        {{ edit ? `Edit drive: ${drive.name}` : "Add drive" }}
+      </div>
       <div class="drive-form">
         <simple-form ref="baseForm" :form="baseForm" v-model="drive" />
         <simple-form
@@ -47,13 +60,19 @@
           v-model="drive.config"
         />
         <div class="form-item save-button">
-          <simple-button small @click="saveDrive" :loading="saving">Save</simple-button>
-          <simple-button small type="info" @click="drive = null">Cancel</simple-button>
+          <simple-button small @click="saveDrive" :loading="saving"
+            >Save</simple-button
+          >
+          <simple-button small type="info" @click="drive = null"
+            >Cancel</simple-button
+          >
         </div>
       </div>
     </div>
     <div class="edit-tips" v-else>
-      <simple-button icon="#icon-add" title="Add drive" @click="addDrive" small>Add</simple-button>&nbsp;or edit drive
+      <simple-button icon="#icon-add" title="Add drive" @click="addDrive" small
+        >Add</simple-button
+      >&nbsp;or edit drive
     </div>
   </div>
 </template>
@@ -83,7 +102,9 @@ export default {
           { field: 'path_style', label: 'PathStyle', type: 'checkbox', description: 'Force use path style api' },
           { field: 'region', label: 'Region', type: 'text' },
           { field: 'endpoint', label: 'Endpoint', type: 'text', description: 'The S3 api endpoint' },
-          { field: 'proxy_download', label: 'Proxy', type: 'checkbox', description: 'Whether the upload or download will be proxied by the server' }
+          { field: 'proxy_download', label: 'Proxy', type: 'checkbox', description: 'Whether the upload or download will be proxied by the server' },
+          { field: 'cache_ttl', label: 'CacheTTL', type: 'text', description: 'Cache time to live. Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".' },
+          { field: 'max_cache', label: 'MaxCache', type: 'text', description: 'Maximum number of caches, if less than or equal to 0, no cache' }
         ]
       }
     }

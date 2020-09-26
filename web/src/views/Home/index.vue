@@ -142,8 +142,11 @@ export default {
       next(false)
     })
   },
+  beforeRouteLeave (to, from, next) {
+    this.progressBar(false)
+    next()
+  },
   created () {
-    window.a = this.progressBar
     this.reloadEntryList = debounce(this.reloadEntryList, 500)
     window.addEventListener('beforeunload', this.onWindowUnload)
     this.resolveRouteAndHandleEntry()

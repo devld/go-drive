@@ -6,6 +6,7 @@ import (
 	"os"
 	fsPath "path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -131,4 +132,20 @@ func Millisecond(t time.Time) int64 {
 
 func Time(millisecond int64) time.Time {
 	return time.Unix(0, millisecond*int64(time.Millisecond))
+}
+
+func ToInt64(s string, def int64) int64 {
+	v, e := strconv.ParseInt(s, 10, 64)
+	if e != nil {
+		return def
+	}
+	return v
+}
+
+func ToInt(s string, def int) int {
+	v, e := strconv.Atoi(s)
+	if e != nil {
+		return def
+	}
+	return v
 }

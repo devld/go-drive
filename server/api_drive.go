@@ -244,15 +244,7 @@ func deleteEntry(c *gin.Context) (*task.Task, error) {
 func upload(c *gin.Context) (*uploadConfig, error) {
 	path := c.Param("path")
 	override := c.Query("override")
-	sizeStr := c.Query("size")
-	var size int64 = -1
-	var e error
-	if sizeStr != "" {
-		size, e = strconv.ParseInt(c.Query("size"), 10, 64)
-		if e != nil || size < 0 {
-			return nil, common.NewBadRequestError("invalid file size")
-		}
-	}
+	size := common.ToInt64(c.Query("size"), -1)
 	request := make(map[string]string, 0)
 	if e := c.Bind(&request); e != nil {
 		return nil, e
@@ -290,9 +282,9 @@ func writeContent(c *gin.Context) (*entryJson, error) {
 }
 
 func chunkUploadRequest(c *gin.Context) (*ChunkUpload, error) {
-	size, e1 := strconv.ParseInt(c.Query("size"), 10, 64)
-	chunkSize, e2 := strconv.ParseInt(c.Query("chunk_size"), 10, 64)
-	if e1 != nil || e2 != nil {
+	size := common.ToInt64(c.Query("size"), -1)
+	chunkSize := common.ToInt64(c.Query("chunk_size"), -1)
+	if size <= 0 || chunkSize <= 0 {
 		return nil, common.NewBadRequestError("invalid size or chunk_size")
 	}
 	upload, e := GetChunkUploader(c).CreateUpload(size, chunkSize)

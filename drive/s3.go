@@ -11,11 +11,11 @@ import (
 	"go-drive/common"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/drive/cache"
 	"io"
 	"math"
 	"net/url"
 	fsPath "path"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -24,6 +24,7 @@ type S3Drive struct {
 	c             *s3.S3
 	bucket        *string
 	downloadProxy bool
+	cache         cache.DriveCache
 }
 
 // NewS3Drive creates a S3 compatible storage
@@ -35,6 +36,8 @@ type S3Drive struct {
 //   - region: service region
 //   - endpoint: the api endpoint
 //   - proxy_download: whether it needs to be downloaded from server proxy
+//   - cache_ttl: cache time to live
+//   - max_cache: maximum number of caches, if less than or equal to 0, no cache
 func NewS3Drive(config map[string]string) (types.IDrive, error) {
 	id := config["id"]
 	secret := config["secret"]
@@ -43,6 +46,12 @@ func NewS3Drive(config map[string]string) (types.IDrive, error) {
 	region := config["region"]
 	endpoint := config["endpoint"]
 	proxyDownload := config["proxy_download"]
+	cacheTtl, e := time.ParseDuration(config["cache_ttl"])
+	maxCache := common.ToInt(config["max_cache"], -1)
+	if e != nil {
+		cacheTtl = -1
+	}
+
 	sess, e := session.NewSession(&aws.Config{
 		Credentials:      credentials.NewStaticCredentials(id, secret, ""),
 		S3ForcePathStyle: aws.Bool(pathStyle != ""),
@@ -53,7 +62,16 @@ func NewS3Drive(config map[string]string) (types.IDrive, error) {
 		return nil, e
 	}
 	client := s3.New(sess)
-	d := &S3Drive{c: client, bucket: aws.String(bucket), downloadProxy: proxyDownload != ""}
+	d := &S3Drive{
+		c:             client,
+		bucket:        aws.String(bucket),
+		downloadProxy: proxyDownload != "",
+	}
+	if maxCache <= 0 {
+		d.cache = cache.DummyCache()
+	} else {
+		d.cache = cache.NewMemCache(maxCache, cacheTtl, d.deserializeEntry)
+	}
 	return d, d.check()
 }
 
@@ -72,6 +90,23 @@ func (s *S3Drive) check() error {
 	return e
 }
 
+func (s *S3Drive) deserializeEntry(dat string) (types.IEntry, error) {
+	temp := strings.SplitN(dat, ",", 4)
+	if len(temp) != 4 {
+		return nil, errors.New("")
+	}
+	isDir := temp[0] == "1"
+	modTime := common.ToInt64(temp[1], -1)
+	size := common.ToInt64(temp[2], -1)
+	return &s3Entry{
+		key:     temp[3],
+		c:       s,
+		size:    size,
+		modTime: modTime,
+		isDir:   isDir,
+	}, nil
+}
+
 func (s *S3Drive) Meta() types.DriveMeta {
 	return types.DriveMeta{CanWrite: true}
 }
@@ -79,6 +114,10 @@ func (s *S3Drive) Meta() types.DriveMeta {
 func (s *S3Drive) Get(path string) (types.IEntry, error) {
 	if common.IsRootPath(path) {
 		return s.newS3DirEntry(path), nil
+	}
+	cached, _ := s.cache.GetEntry(path)
+	if cached != nil {
+		return cached, nil
 	}
 	obj, e := s.c.HeadObject(&s3.HeadObjectInput{
 		Bucket: s.bucket,
@@ -97,7 +136,9 @@ func (s *S3Drive) Get(path string) (types.IEntry, error) {
 		}
 		return nil, e
 	}
-	return s.newS3ObjectEntry(path, obj.ContentLength, obj.LastModified), nil
+	entry := s.newS3ObjectEntry(path, obj.ContentLength, obj.LastModified)
+	_ = s.cache.PutEntry(entry)
+	return entry, nil
 }
 
 func (s *S3Drive) Save(path string, reader io.Reader, ctx task.Context) (types.IEntry, error) {
@@ -200,6 +241,10 @@ func (s *S3Drive) List(path string) ([]types.IEntry, error) {
 	if !common.IsRootPath(path) {
 		path = path + "/"
 	}
+	cached, _ := s.cache.GetChildren(path)
+	if cached != nil {
+		return cached, nil
+	}
 	objs, e := s.c.ListObjects(&s3.ListObjectsInput{
 		Bucket:    s.bucket,
 		Prefix:    aws.String(path),
@@ -225,6 +270,11 @@ func (s *S3Drive) List(path string) ([]types.IEntry, error) {
 		}
 		entries = append(entries, s.newS3DirEntry(*p.Prefix))
 	}
+	cacheable := make([]cache.CacheableEntry, len(entries))
+	for i, e := range entries {
+		cacheable[i] = e.(cache.CacheableEntry)
+	}
+	_ = s.cache.PutChildren(path, cacheable)
 	return entries, nil
 }
 
@@ -268,6 +318,7 @@ func (s *S3Drive) Delete(path string, ctx task.Context) error {
 		deleted += len(batches)
 		ctx.Progress(int64(deleted))
 	}
+	_ = s.cache.Evict(common.PathParent(path))
 	return nil
 }
 
@@ -275,17 +326,9 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 	config map[string]string) (*types.DriveUploadConfig, error) {
 	action := config["action"]
 	uploadId := config["uploadId"]
-	seqStr := config["seq"]
 	partsEtag := config["parts"]
 
-	seq := -1
-	var e error
-	if seqStr != "" {
-		seq, e = strconv.Atoi(seqStr)
-		if e != nil {
-			return nil, common.NewBadRequestError("invalid seq")
-		}
-	}
+	seq := common.ToInt64(config["seq"], -1)
 
 	r := types.DriveUploadConfig{
 		Provider: types.S3Provider,
@@ -293,6 +336,7 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 	}
 	preSigned := ""
 
+	var e error
 	switch action {
 	case "UploadPart":
 		req, _ := s.c.UploadPartRequest(&s3.UploadPartInput{
@@ -320,6 +364,9 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 			UploadId: aws.String(uploadId),
 		})
 		return nil, e
+	case "CompletePutObject":
+		_ = s.cache.Evict(common.PathParent(path))
+		return nil, nil
 	default:
 		if size <= 5*1024*1024 {
 			req, _ := s.c.PutObjectRequest(&s3.PutObjectInput{
@@ -450,6 +497,16 @@ func (s *s3Entry) GetURL() (string, bool, error) {
 		return "", false, e
 	}
 	return downloadUrl, s.c.downloadProxy, nil
+}
+
+func (s *s3Entry) Serialize() string {
+	r := ""
+	if s.isDir {
+		r = "1"
+	} else {
+		r = "0"
+	}
+	return r + "," + fmt.Sprintf("%d,%d,%s", s.modTime, s.size, s.key)
 }
 
 func errCodeMatches(e error, code string) bool {

@@ -1,6 +1,6 @@
 
 import axios, { API_PATH, axiosWrapper } from './axios'
-window.aa = axiosWrapper
+
 export function listEntries (path) {
   return axiosWrapper.get(`/entries/${path}`)
 }
