@@ -39,7 +39,7 @@ func (u *UserStorage) AddUser(user types.User) (types.User, error) {
 		return types.User{}, e
 	}
 	user.Password = string(encoded)
-	e = u.db.C().Create(user).Error
+	e = u.db.C().Create(&user).Error
 	return user, e
 }
 

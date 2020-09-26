@@ -1,5 +1,5 @@
 <template>
-  <div class="groups-manager" :class="{ 'editing': !!group }">
+  <div class="groups-manager" :class="{ editing: !!group }">
     <div class="groups-list">
       <div class="actions">
         <simple-button icon="#icon-add" title="Add group" @click="addGroup" />
@@ -15,7 +15,12 @@
           <tr v-for="g in groups" :key="g.name">
             <td class="center">{{ g.name }}</td>
             <td class="center">
-              <simple-button title="Edit" small icon="#icon-edit" @click="editGroup(g)" />
+              <simple-button
+                title="Edit"
+                small
+                icon="#icon-edit"
+                @click="editGroup(g)"
+              />
               <simple-button
                 title="Delete"
                 type="danger"
@@ -29,29 +34,38 @@
       </table>
     </div>
     <div class="group-edit" v-if="group">
-      <div class="small-title">{{ edit ? `Edit group: ${group.name}` : 'Add group' }}</div>
+      <div class="small-title">
+        {{ edit ? `Edit group: ${group.name}` : "Add group" }}
+      </div>
       <div class="group-form">
-        <div class="form-item">
-          <span class="label">Name</span>
-          <input type="text" class="value" :disabled="edit" v-model="group.name" />
-        </div>
+        <simple-form ref="form" :form="groupForm" v-model="group" />
         <div class="form-item">
           <span class="label">Users</span>
           <div class="value">
             <span class="user-item" v-for="u in users" :key="u.username">
-              <input type="checkbox" :value="u.username" v-model="group.users" />
+              <input
+                type="checkbox"
+                :value="u.username"
+                v-model="group.users"
+              />
               <span class="user-name">{{ u.username }}</span>
             </span>
           </div>
         </div>
         <div class="form-item save-button">
-          <simple-button small @click="saveGroup" :loading="saving">Save</simple-button>
-          <simple-button small type="info" @click="group = null">Cancel</simple-button>
+          <simple-button small @click="saveGroup" :loading="saving"
+            >Save</simple-button
+          >
+          <simple-button small type="info" @click="group = null"
+            >Cancel</simple-button
+          >
         </div>
       </div>
     </div>
     <div class="edit-tips" v-else>
-      <simple-button icon="#icon-add" title="Add group" @click="addGroup" small>Add</simple-button>&nbsp;or edit group
+      <simple-button icon="#icon-add" title="Add group" @click="addGroup" small
+        >Add</simple-button
+      >&nbsp;or edit group
     </div>
   </div>
 </template>
@@ -68,6 +82,13 @@ export default {
       group: null,
       edit: false,
       saving: false
+    }
+  },
+  computed: {
+    groupForm () {
+      return [
+        { field: 'name', label: 'Name', type: 'text', required: true, disabled: this.edit }
+      ]
     }
   },
   created () {
@@ -123,6 +144,7 @@ export default {
       })
     },
     async saveGroup () {
+      try { await this.$refs.form.validate() } catch { return }
       const group = {
         name: this.group.name,
         users: this.group.users.map(username => ({ username }))
@@ -178,6 +200,10 @@ export default {
     &:not(:last-child) {
       margin-right: 10px;
     }
+  }
+
+  .simple-form {
+    margin-bottom: 10px;
   }
 
   .save-button {

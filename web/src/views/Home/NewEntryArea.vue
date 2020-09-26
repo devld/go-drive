@@ -7,11 +7,11 @@
       title="New Item"
       :buttons="[
         { slot: 'file', title: 'Upload file' },
-        { slot: 'folder', title: 'Create folder' }
+        { slot: 'folder', title: 'Create folder' },
       ]"
       @click="newButtonClicked"
     >
-      <span class="icon-new-item" :class="{ 'active': floatMenuShowing }">
+      <span class="icon-new-item" :class="{ active: floatMenuShowing }">
         <i-icon svg="#icon-add1" />
       </span>
       <i-icon slot="file" svg="#icon-file" />
@@ -41,10 +41,24 @@
       class="button-task-manager"
       v-if="taskManagerButtonShowing"
       @click="showTaskManager"
-    >Tasks{{ (uploadStatus && uploadStatus.total > 0) ? `: ${uploadStatus.completed}/${uploadStatus.total}` : '' }}</button>
-    <input class="hidden-input-file" ref="file" type="file" @change="onFilesChosen" multiple />
+    >
+      Tasks{{
+        uploadStatus && uploadStatus.total > 0
+          ? `: ${uploadStatus.completed}/${uploadStatus.total}`
+          : ""
+      }}
+    </button>
+    <input
+      class="hidden-input-file"
+      ref="file"
+      type="file"
+      @change="onFilesChosen"
+      multiple
+    />
 
-    <div v-if="dropZoneActive" class="drop-zone-indicator">Drop files here to upload</div>
+    <div v-if="dropZoneActive" class="drop-zone-indicator">
+      Drop files here to upload
+    </div>
   </div>
 </template>
 <script>
@@ -60,6 +74,19 @@ import FileExistsDialogInner from './FileExistsConfirmDialog'
 const FileExistsDialog = createDialog('FileExistsDialog', FileExistsDialogInner)
 
 const uploadManager = new UploadManager({ concurrent: 3 })
+
+function getFiles (dataTransfer) {
+  if (!dataTransfer || !dataTransfer.items) return
+  const files = []
+  for (const f of dataTransfer.items) {
+    if (typeof (f.webkitGetAsEntry) === 'function') {
+      const entry = f.webkitGetAsEntry()
+      if (!entry || !entry.isFile) continue
+    }
+    files.push(f.getAsFile())
+  }
+  return files.length === 0 ? undefined : files
+}
 
 export default {
   name: 'NewEntryArea',
@@ -117,12 +144,10 @@ export default {
     onItemsDropped (e) {
       this.toggleDropZoneActive(false)
       e.preventDefault()
-      const files = []
-      for (const f of e.dataTransfer.items) {
-        if (typeof (f.webkitGetAsEntry) === 'function' && !f.webkitGetAsEntry().isFile) continue
-        files.push(f.getAsFile())
+      const files = getFiles(e.dataTransfer)
+      if (files) {
+        this.submitUploadTasks(files)
       }
-      this.submitUploadTasks(files)
     },
     onFilesChosen () {
       const files = [...this.$refs.file.files]
@@ -237,6 +262,7 @@ export default {
     onDragEnter (e) {
       if (this.readonly) return
       e.preventDefault()
+      clearTimeout(this._dragLeaveTimeout)
       this.toggleDropZoneActive(true)
     },
     onDragLeave (e) {

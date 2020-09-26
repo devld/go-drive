@@ -344,6 +344,10 @@ body.scroll-lock {
   overflow: hidden;
 }
 
+.home {
+  margin-bottom: 40px;
+}
+
 .files-list {
   max-width: 880px;
   margin: 16px auto 0;
