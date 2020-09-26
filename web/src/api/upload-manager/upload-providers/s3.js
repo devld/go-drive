@@ -104,7 +104,13 @@ export default class S3UploadTask extends ChunkUploadTask {
    * @returns {Promise.<any>} upload result
    */
   async _completeUpload () {
-    if (!this._uploadId) return
+    if (!this._uploadId) {
+      return await this._request({
+        method: 'POST',
+        url: `/upload/${this._task.path}`,
+        data: { action: 'CompletePutObject' }
+      }, axios)
+    }
 
     // request for presigned CompleteMultipartUpload
     return await this._request({

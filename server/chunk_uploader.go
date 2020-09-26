@@ -188,11 +188,9 @@ func (c *ChunkUploader) getUpload(id string) (*ChunkUpload, error) {
 	if !exists {
 		return nil, common.NewNotFoundError()
 	}
-	var size, chunkSize int64
-	var e1, e2 error
-	size, e1 = strconv.ParseInt(temp[1], 10, 64)
-	chunkSize, e2 = strconv.ParseInt(temp[2], 10, 64)
-	if e1 != nil || e2 != nil {
+	size := common.ToInt64(temp[1], -1)
+	chunkSize := common.ToInt64(temp[2], -1)
+	if size <= 0 || chunkSize <= 0 {
 		return nil, common.NewBadRequestError("invalid upload id")
 	}
 	return newChunkUpload(id, size, chunkSize), nil
