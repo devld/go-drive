@@ -23,6 +23,7 @@ import (
 type S3Drive struct {
 	c             *s3.S3
 	bucket        *string
+	uploadProxy   bool
 	downloadProxy bool
 	cache         cache.DriveCache
 }
@@ -35,6 +36,7 @@ type S3Drive struct {
 //   - path_style: force path style api
 //   - region: service region
 //   - endpoint: the api endpoint
+//   - proxy_upload: whether it needs to be uploaded to server proxy
 //   - proxy_download: whether it needs to be downloaded from server proxy
 //   - cache_ttl: cache time to live
 //   - max_cache: maximum number of caches, if less than or equal to 0, no cache
@@ -45,6 +47,7 @@ func NewS3Drive(config map[string]string) (types.IDrive, error) {
 	pathStyle := config["path_style"]
 	region := config["region"]
 	endpoint := config["endpoint"]
+	proxyUpload := config["proxy_upload"]
 	proxyDownload := config["proxy_download"]
 	cacheTtl, e := time.ParseDuration(config["cache_ttl"])
 	maxCache := common.ToInt(config["max_cache"], -1)
@@ -65,6 +68,7 @@ func NewS3Drive(config map[string]string) (types.IDrive, error) {
 	d := &S3Drive{
 		c:             client,
 		bucket:        aws.String(bucket),
+		uploadProxy:   proxyUpload != "",
 		downloadProxy: proxyDownload != "",
 	}
 	if maxCache <= 0 {
@@ -160,6 +164,7 @@ func (s *S3Drive) Save(path string, reader io.Reader, ctx task.Context) (types.I
 	if e != nil {
 		return nil, e
 	}
+	_ = s.cache.Evict(common.PathParent(path))
 	return s.Get(path)
 }
 
@@ -218,6 +223,7 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool) (*s3Entry, bool,
 	if e != nil {
 		return nil, false, e
 	}
+	_ = s.cache.Evict(common.PathParent(to))
 	return s.newS3ObjectEntry(to, &from.size, obj.CopyObjectResult.LastModified), false, nil
 }
 
@@ -327,7 +333,6 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 	action := config["action"]
 	uploadId := config["uploadId"]
 	partsEtag := config["parts"]
-
 	seq := common.ToInt64(config["seq"], -1)
 
 	r := types.DriveUploadConfig{
@@ -342,7 +347,7 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 		req, _ := s.c.UploadPartRequest(&s3.UploadPartInput{
 			Bucket:     s.bucket,
 			Key:        aws.String(path),
-			PartNumber: aws.Int64(int64(seq) + 1),
+			PartNumber: aws.Int64(seq + 1),
 			UploadId:   aws.String(uploadId),
 		})
 		preSigned, e = req.Presign(2 * time.Hour)
@@ -369,12 +374,18 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 		return nil, nil
 	default:
 		if size <= 5*1024*1024 {
+			if s.uploadProxy {
+				return &types.DriveUploadConfig{Provider: types.LocalProvider}, nil
+			}
 			req, _ := s.c.PutObjectRequest(&s3.PutObjectInput{
 				Bucket: s.bucket,
 				Key:    aws.String(path),
 			})
 			preSigned, e = req.Presign(2 * time.Hour)
 		} else {
+			if s.uploadProxy {
+				return &types.DriveUploadConfig{Provider: types.LocalChunkProvider}, nil
+			}
 			req, _ := s.c.CreateMultipartUploadRequest(&s3.CreateMultipartUploadInput{
 				Bucket: s.bucket,
 				Key:    aws.String(path),

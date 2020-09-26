@@ -102,7 +102,8 @@ export default {
           { field: 'path_style', label: 'PathStyle', type: 'checkbox', description: 'Force use path style api' },
           { field: 'region', label: 'Region', type: 'text' },
           { field: 'endpoint', label: 'Endpoint', type: 'text', description: 'The S3 api endpoint' },
-          { field: 'proxy_download', label: 'Proxy', type: 'checkbox', description: 'Whether the upload or download will be proxied by the server' },
+          { field: 'proxy_upload', label: 'ProxyIn', type: 'checkbox', description: 'Upload files to server proxy' },
+          { field: 'proxy_download', label: 'ProxyOut', type: 'checkbox', description: 'Download files from server proxy' },
           { field: 'cache_ttl', label: 'CacheTTL', type: 'text', description: 'Cache time to live. Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".' },
           { field: 'max_cache', label: 'MaxCache', type: 'text', description: 'Maximum number of caches, if less than or equal to 0, no cache' }
         ]
