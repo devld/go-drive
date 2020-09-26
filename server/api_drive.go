@@ -5,7 +5,6 @@ import (
 	"go-drive/common"
 	"go-drive/common/task"
 	"go-drive/common/types"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -125,7 +124,7 @@ func writeResponse(c *gin.Context, e error, result interface{}) {
 		_ = c.Error(e)
 		return
 	}
-	if result != nil && !reflect.ValueOf(result).IsNil() {
+	if result != nil {
 		SetResult(c, result)
 	}
 }
