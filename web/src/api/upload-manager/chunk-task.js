@@ -51,7 +51,8 @@ export default class ChunkUploadTask extends UploadTask {
 
   start () {
     if (super.start() === false) return false
-    if (this.isStatus(STATUS_CREATED) || this.isStatus(STATUS_STOPPED)) {
+    if (this.isStatus(STATUS_CREATED) || this.isStatus(STATUS_STOPPED) || this._prepareFailed) {
+      this._prepareFailed = false
       this._start()
     } else {
       this._onChange(STATUS_UPLOADING, this._sumProgress())
@@ -76,6 +77,7 @@ export default class ChunkUploadTask extends UploadTask {
     try {
       this._chunks = await this._prepare()
     } catch (e) {
+      this._prepareFailed = true
       this._abort(e)
       return
     }

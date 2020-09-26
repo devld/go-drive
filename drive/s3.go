@@ -184,6 +184,7 @@ func (s *S3Drive) MakeDir(path string) (types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
+	_ = s.cache.Evict(common.PathParent(path))
 	return s.newS3DirEntry(path), nil
 }
 
@@ -244,16 +245,17 @@ func (s *S3Drive) Move(from types.IEntry, to string, override bool, _ task.Conte
 }
 
 func (s *S3Drive) List(path string) ([]types.IEntry, error) {
-	if !common.IsRootPath(path) {
-		path = path + "/"
-	}
 	cached, _ := s.cache.GetChildren(path)
 	if cached != nil {
 		return cached, nil
 	}
+	s3Path := path
+	if !common.IsRootPath(s3Path) {
+		s3Path = s3Path + "/"
+	}
 	objs, e := s.c.ListObjects(&s3.ListObjectsInput{
 		Bucket:    s.bucket,
-		Prefix:    aws.String(path),
+		Prefix:    aws.String(s3Path),
 		Delimiter: aws.String("/"),
 	})
 	if e != nil {
@@ -262,7 +264,7 @@ func (s *S3Drive) List(path string) ([]types.IEntry, error) {
 	entries := make([]types.IEntry, 0)
 	pathSet := make(map[string]bool, 0)
 	for _, o := range objs.Contents {
-		if *o.Key == path {
+		if *o.Key == s3Path {
 			// fake dir
 			continue
 		}
@@ -361,6 +363,7 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 				Parts: buildCompleteUploadBody(partsEtag),
 			},
 		})
+		_ = s.cache.Evict(common.PathParent(path))
 		return nil, e
 	case "AbortMultipartUpload":
 		_, e := s.c.AbortMultipartUpload(&s3.AbortMultipartUploadInput{

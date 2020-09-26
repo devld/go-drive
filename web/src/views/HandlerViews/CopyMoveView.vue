@@ -13,10 +13,9 @@
         <input type="checkbox" v-model="override" />Override?
       </span>
       <simple-button type="info" @click="$emit('close')">Cancel</simple-button>
-      <simple-button
-        :disabled="!currentDirCanWrite"
-        @click="doCopyOrMove"
-      >{{ move ? 'Move to here' : 'Copy to here' }}</simple-button>
+      <simple-button :disabled="!currentDirCanWrite" @click="doCopyOrMove">{{
+        move ? "Move to here" : "Copy to here"
+      }}</simple-button>
     </div>
   </div>
 </template>
@@ -78,13 +77,13 @@ export default {
               })
             }
           )
-          this.$emit('update')
-          this.$emit('close')
         }
       } catch (e) {
         if (e === TASK_CANCELLED) return
         this.$alert(e.message)
       } finally {
+        this.$emit('update')
+        this.$emit('close')
         this.$loading()
       }
     },

@@ -31,7 +31,7 @@ export default {
       deep: true,
       handler (val) {
         if (val === this.data) return
-        this.data = val ? { ...val } : {}
+        this.data = val || {}
       }
     }
   },

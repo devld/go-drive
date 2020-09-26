@@ -1,5 +1,5 @@
 <template>
-  <div class="users-manager" :class="{ 'editing': !!user }">
+  <div class="users-manager" :class="{ editing: !!user }">
     <div class="users-list">
       <div class="actions">
         <simple-button icon="#icon-add" title="Add user" @click="addUser" />
@@ -15,7 +15,12 @@
           <tr v-for="u in users" :key="u.username">
             <td class="center">{{ u.username }}</td>
             <td class="center">
-              <simple-button title="Edit" small icon="#icon-edit" @click="editUser(u)" />
+              <simple-button
+                title="Edit"
+                small
+                icon="#icon-edit"
+                @click="editUser(u)"
+              />
               <simple-button
                 title="Delete"
                 type="danger"
@@ -29,16 +34,11 @@
       </table>
     </div>
     <div class="user-edit" v-if="user">
-      <div class="small-title">{{ edit ? `Edit user: ${user.username}` : 'Add user' }}</div>
+      <div class="small-title">
+        {{ edit ? `Edit user: ${user.username}` : "Add user" }}
+      </div>
       <div class="user-form">
-        <div class="form-item">
-          <span class="label">Username</span>
-          <input type="text" class="value" :disabled="edit" v-model="user.username" />
-        </div>
-        <div class="form-item">
-          <span class="label">Password</span>
-          <input type="text" class="value" v-model="user.password" />
-        </div>
+        <simple-form ref="form" :form="userForm" v-model="user" />
         <div class="form-item">
           <span class="label">Groups</span>
           <div class="value">
@@ -49,13 +49,19 @@
           </div>
         </div>
         <div class="form-item save-button">
-          <simple-button small @click="saveUser" :loading="saving">Save</simple-button>
-          <simple-button small type="info" @click="user = null">Cancel</simple-button>
+          <simple-button small @click="saveUser" :loading="saving"
+            >Save</simple-button
+          >
+          <simple-button small type="info" @click="user = null"
+            >Cancel</simple-button
+          >
         </div>
       </div>
     </div>
     <div class="edit-tips" v-else>
-      <simple-button icon="#icon-add" title="Add user" @click="addUser" small>Add</simple-button>&nbsp;or edit user
+      <simple-button icon="#icon-add" title="Add user" @click="addUser" small
+        >Add</simple-button
+      >&nbsp;or edit user
     </div>
   </div>
 </template>
@@ -72,6 +78,14 @@ export default {
       user: null,
       edit: false,
       saving: false
+    }
+  },
+  computed: {
+    userForm () {
+      return [
+        { field: 'username', label: 'Username', type: 'text', required: true, disabled: this.edit },
+        { field: 'password', label: 'Password', type: 'text', required: !this.edit }
+      ]
     }
   },
   created () {
@@ -128,6 +142,7 @@ export default {
       })
     },
     async saveUser () {
+      try { await this.$refs.form.validate() } catch { return }
       const user = {
         username: this.user.username,
         password: this.user.password,
@@ -184,6 +199,10 @@ export default {
     &:not(:last-child) {
       margin-right: 10px;
     }
+  }
+
+  .simple-form {
+    margin-bottom: 10px;
   }
 
   .save-button {

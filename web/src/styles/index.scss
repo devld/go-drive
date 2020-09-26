@@ -112,6 +112,17 @@
   }
 }
 
+@media screen and (max-width: 386px) {
+  .form-item {
+    display: block;
+
+    .label {
+      display: block;
+      margin-bottom: 6px;
+    }
+  }
+}
+
 // animations
 @keyframes fade-in {
   from {

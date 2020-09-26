@@ -3,23 +3,23 @@ package types
 import "strings"
 
 type User struct {
-	Username string  `gorm:"COLUMN:username;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32" json:"username"`
+	Username string  `gorm:"COLUMN:username;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32" json:"username" binding:"required"`
 	Password string  `gorm:"COLUMN:password;NOT NULL;TYPE:VARCHAR;SIZE:64" json:"password"`
 	Groups   []Group `gorm:"MANY2MANY:user_groups;ASSOCIATION_JOINTABLE_FOREIGNKEY:group_name;JOINTABLE_FOREIGNKEY:username" json:"groups"`
 }
 
 type Group struct {
-	Name string `gorm:"COLUMN:name;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32" json:"name"`
+	Name string `gorm:"COLUMN:name;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32" json:"name" binding:"required"`
 }
 
 type UserGroup struct {
-	Username  string `gorm:"COLUMN:username;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32"`
-	GroupName string `gorm:"COLUMN:group_name;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32"`
+	Username  string `gorm:"COLUMN:username;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32" binding:"required"`
+	GroupName string `gorm:"COLUMN:group_name;PRIMARY_KEY;TYPE:VARCHAR;SIZE:32" binding:"required"`
 }
 
 type Drive struct {
-	Name   string `gorm:"COLUMN:name;PRIMARY_KEY;TYPE:VARCHAR;SIZE:255" json:"name"`
-	Type   string `gorm:"COLUMN:type;NOT NULL;TYPE:VARCHAR;SIZE:32" json:"type"`
+	Name   string `gorm:"COLUMN:name;PRIMARY_KEY;TYPE:VARCHAR;SIZE:255" json:"name" binding:"required"`
+	Type   string `gorm:"COLUMN:type;NOT NULL;TYPE:VARCHAR;SIZE:32" json:"type" binding:"required"`
 	Config string `gorm:"COLUMN:config;NOT NULL;TYPE:VARCHAR;SIZE:4096" json:"config"`
 }
 
