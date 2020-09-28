@@ -14,12 +14,14 @@ const (
 type Config struct {
 	dataDir string
 	listen  string
+	resDir  string
 }
 
 func InitConfig() Config {
 	c := Config{}
 	flag.StringVar(&c.listen, "l", ":8089", "port listen on")
 	flag.StringVar(&c.dataDir, "d", "./", "path to the db files dir")
+	flag.StringVar(&c.resDir, "s", "", "path to the static files")
 
 	flag.Parse()
 
@@ -51,4 +53,8 @@ func (c Config) GetDir(name string, create bool) (string, error) {
 		}
 	}
 	return name, nil
+}
+
+func (c Config) GetResDir() string {
+	return c.resDir
 }
