@@ -51,6 +51,7 @@ func main() {
 			TaskRunner:        task.NewTunnyRunner(100),
 			ChunkUploader:     chunkUploader,
 		},
+		config.GetResDir(),
 	)
 	common.PanicIfError(e)
 
