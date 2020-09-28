@@ -19,8 +19,11 @@ if (process.env.NODE_ENV === 'production') {
     updatefound () {
       console.log('New content is downloading.')
     },
-    updated () {
+    updated (registration) {
       console.log('New content is available; please refresh.')
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+      }
     },
     offline () {
       console.log('No internet connection found. App is running in offline mode.')
