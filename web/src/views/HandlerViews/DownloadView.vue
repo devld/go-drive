@@ -64,6 +64,7 @@ export default {
     font-weight: normal;
     font-size: 18px;
     margin: 10px 0;
+    word-break: break-all;
   }
 
   .download-button {
