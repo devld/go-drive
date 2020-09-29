@@ -20,6 +20,10 @@ $(build_dir): check-env
 
 .PHONY: clean check-env
 
+clean:
+	-rm -r $(work_dir)
+	-rm -r web/dist
+
 check-env:
 ifndef GOOS
 	$(error GOOS is undefined)
@@ -27,7 +31,3 @@ endif
 ifndef GOARCH
 	$(error GOARCH is undefined)
 endif
-
-clean:
-	-rm -r $(work_dir)
-	-rm -r web/dist
