@@ -9,7 +9,8 @@
         :type="cancelType"
         :loading="cancelLoading"
         @click="cancel"
-      >{{ cancelText }}</simple-button>
+        >{{ cancelText }}</simple-button
+      >
     </div>
   </dialog-view>
 </template>
@@ -71,8 +72,10 @@ export default {
 }
 
 .loading-dialog__text {
+  max-width: 50vw;
   user-select: none;
   margin-top: 1em;
+  word-break: break-all;
 }
 
 .loading-dialog__cancel {
