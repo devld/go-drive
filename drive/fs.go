@@ -235,10 +235,6 @@ func (f *fsFile) Path() string {
 	return f.path
 }
 
-func (f *fsFile) Name() string {
-	return f.name
-}
-
 func (f *fsFile) Type() types.EntryType {
 	if f.isDir {
 		return types.TypeDir
@@ -263,6 +259,10 @@ func (f *fsFile) ModTime() int64 {
 
 func (f *fsFile) Drive() types.IDrive {
 	return f.drive
+}
+
+func (f *fsFile) Name() string {
+	return f.name
 }
 
 func (f *fsFile) GetReader() (io.ReadCloser, error) {

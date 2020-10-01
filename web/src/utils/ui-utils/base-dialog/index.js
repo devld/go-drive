@@ -20,6 +20,7 @@ export function createDialog (name, component) {
         title: '',
         confirmText: '',
         confirmType: '',
+        confirmDisabled: false,
         cancelText: '',
         cancelType: '',
         showing: false,
@@ -39,6 +40,7 @@ export function createDialog (name, component) {
           title: this.title,
           confirmText: this.confirmText,
           confirmType: this.confirmType,
+          confirmDisabled: this.confirmDisabled,
           cancelText: this.cancelText,
           cancelType: this.cancelType,
           transition: this.transition,
@@ -60,7 +62,9 @@ export function createDialog (name, component) {
           },
           on: {
             loading: v => { this.toggleLoading(v) },
-            confirm: (isCancel) => { this.onConfirmOrCancel(!isCancel) }
+            confirm: () => { this.onConfirmOrCancel(true) },
+            cancel: () => { this.onConfirmOrCancel(false) },
+            'confirm-disabled': (disabled) => { this.confirmDisabled = !!disabled }
           }
         })
       ])

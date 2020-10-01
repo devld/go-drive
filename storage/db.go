@@ -4,7 +4,6 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 	"go-drive/common"
-	"go-drive/common/types"
 )
 
 type DB struct {
@@ -20,14 +19,6 @@ func InitDB(dialect string, args ...interface{}) (*DB, error) {
 	if common.IsDebugOn() {
 		db.LogMode(true)
 	}
-
-	db.AutoMigrate(
-		&types.User{},
-		&types.Group{},
-		&types.UserGroup{},
-		&types.Drive{},
-		&types.PathPermission{},
-	)
 
 	return &DB{db: db}, nil
 }

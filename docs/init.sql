@@ -8,6 +8,14 @@ CREATE TABLE drives
     config VARCHAR NOT NULL
 );
 
+CREATE TABLE path_mount
+(
+    path     VARCHAR,
+    name     VARCHAR,
+    mount_at VARCHAR NOT NULL,
+    PRIMARY KEY (path, name)
+);
+
 CREATE TABLE groups
 (
     name VARCHAR

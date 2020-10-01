@@ -223,8 +223,11 @@ func move(c *gin.Context) (*task.Task, error) {
 }
 
 func checkCopyOrMove(from, to string) error {
-	if strings.HasPrefix(to, from) {
-		return common.NewNotAllowedMessageError("Copy to child path is not allowed")
+	if from == to {
+		return common.NewNotAllowedMessageError("Copy or move to same path is not allowed")
+	}
+	if strings.HasPrefix(to, from) && common.PathDepth(from) != common.PathDepth(to) {
+		return common.NewNotAllowedMessageError("Copy or move to child path is not allowed")
 	}
 	return nil
 }
@@ -337,16 +340,11 @@ type entryJson struct {
 
 func newEntryJson(e types.IEntry) *entryJson {
 	entryMeta := e.Meta()
-	meta := make(map[string]interface{})
+	meta := common.CopyMap(entryMeta.Props)
 	meta["can_write"] = entryMeta.CanWrite
-	if entryMeta.Props != nil {
-		for k, v := range entryMeta.Props {
-			meta[k] = v
-		}
-	}
 	return &entryJson{
 		Path:    e.Path(),
-		Name:    e.Name(),
+		Name:    common.PathBase(e.Path()),
 		Type:    e.Type(),
 		Size:    e.Size(),
 		Meta:    meta,

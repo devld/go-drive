@@ -50,6 +50,14 @@ func CleanPath(path string) string {
 	return path
 }
 
+func PathBase(path string) string {
+	base := fsPath.Base(path)
+	if base == "/" || base == "." {
+		base = ""
+	}
+	return base
+}
+
 func PathParent(path string) string {
 	path = CleanPath(path)
 	parent := fsPath.Dir(path)
@@ -60,15 +68,13 @@ func PathParent(path string) string {
 }
 
 func PathParentTree(path string) []string {
-	if path == "" {
-		return nil
-	}
 	path = CleanPath(path)
 	r := make([]string, 0, PathDepth(path))
 	for path != "" {
 		r = append(r, path)
 		path = PathParent(path)
 	}
+	r = append(r, "")
 	return r
 }
 
@@ -148,4 +154,14 @@ func ToInt(s string, def int) int {
 		return def
 	}
 	return v
+}
+
+func CopyMap(m map[string]interface{}) map[string]interface{} {
+	newMap := make(map[string]interface{})
+	if m != nil {
+		for k, v := range m {
+			newMap[k] = v
+		}
+	}
+	return newMap
 }

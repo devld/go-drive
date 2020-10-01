@@ -41,7 +41,6 @@ type IContent interface {
 
 type IEntry interface {
 	Path() string
-	Name() string
 	Type() EntryType
 	Size() int64
 	Meta() EntryMeta

@@ -14,17 +14,25 @@ var drivesFactory = map[string]types.DriveCreator{
 }
 
 type RootDrive struct {
-	root    *DispatcherDrive
-	storage *storage.DriveStorage
+	root         *DispatcherDrive
+	driveStorage *storage.DriveStorage
+	mountStorage *storage.PathMountStorage
 }
 
-func NewRootDrive(storage *storage.DriveStorage) (*RootDrive, error) {
+func NewRootDrive(driveStorage *storage.DriveStorage, mountStorage *storage.PathMountStorage) (*RootDrive, error) {
+	root := NewDispatcherDrive(mountStorage)
 	r := &RootDrive{
-		root:    NewDispatcherDrive(),
-		storage: storage,
+		root:         root,
+		driveStorage: driveStorage,
+		mountStorage: mountStorage,
 	}
-	e := r.ReloadDrive()
-	return r, e
+	if e := r.ReloadMounts(); e != nil {
+		return nil, e
+	}
+	if e := r.ReloadDrive(); e != nil {
+		return nil, e
+	}
+	return r, nil
 }
 
 func (d *RootDrive) Get() types.IDrive {
@@ -32,7 +40,7 @@ func (d *RootDrive) Get() types.IDrive {
 }
 
 func (d *RootDrive) ReloadDrive() error {
-	drivesConfig, e := d.storage.GetDrives()
+	drivesConfig, e := d.driveStorage.GetDrives()
 	if e != nil {
 		return e
 	}
@@ -63,7 +71,11 @@ func (d *RootDrive) ReloadDrive() error {
 		}
 		drives[d.Name] = iDrive
 	}
-	d.root.SetDrives(drives)
+	d.root.setDrives(drives)
 	ok = true
 	return nil
+}
+
+func (d *RootDrive) ReloadMounts() error {
+	return d.root.reloadMounts()
 }
