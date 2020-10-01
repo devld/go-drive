@@ -26,15 +26,17 @@
           :type="cancelType"
           @click="$emit('cancel')"
           :disabled="!!loading"
-        >{{ cancelText }}</simple-button>
+          >{{ cancelText }}</simple-button
+        >
         <simple-button
           ref="confirmButton"
           class="base-dialog__button-ok"
           :loading="loading === 'confirm'"
           :type="confirmType"
           @click="$emit('confirm')"
-          :disabled="!!loading"
-        >{{ confirmText }}</simple-button>
+          :disabled="!!loading || confirmDisabled"
+          >{{ confirmText }}</simple-button
+        >
       </div>
     </template>
   </dialog-view>
@@ -62,6 +64,9 @@ export default {
     },
     confirmType: {
       type: String
+    },
+    confirmDisabled: {
+      type: Boolean
     },
     cancelText: {
       type: String

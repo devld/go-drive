@@ -1,9 +1,17 @@
 <template>
   <div class="entry-list">
-    <path-bar v-if="!isRootPath" :path="path" @path-change="$emit('path-change', $event)" />
+    <path-bar
+      v-if="!isRootPath"
+      :path="path"
+      @path-change="$emit('path-change', $event)"
+    />
     <ul class="entry-list__entries">
       <li class="entry-list__item" v-if="!isRootPath">
-        <entry-link ref="parentEntry" :entry="parentDirEntry" @click="entryClicked">
+        <entry-link
+          ref="parentEntry"
+          :entry="parentDirEntry"
+          @click="entryClicked"
+        >
           <entry-item
             :entry="parentDirEntry"
             :icon="selected.length > 0 ? '#icon-duigou' : undefined"
@@ -15,14 +23,24 @@
         class="entry-list__item"
         v-for="entry in sortedEntries"
         :key="entry.path"
-        :class="{ 'selected': selectionMap[entry.path] }"
+        :class="{ selected: selectionMap[entry.path] }"
       >
-        <entry-link ref="entries" :entry="entry" @click="entryClicked" @menu="entryContextMenu">
-          <entry-item :entry="entry" @icon-click="toggleSelect(entry, $event)" />
+        <entry-link
+          ref="entries"
+          :entry="entry"
+          @click="entryClicked"
+          @menu="entryContextMenu"
+        >
+          <entry-item
+            :entry="entry"
+            @icon-click="toggleSelect(entry, $event)"
+          />
         </entry-link>
       </li>
     </ul>
-    <div class="entry-list__empty" v-if="sortedEntries.length === 0">Nothing here</div>
+    <div class="entry-list__empty" v-if="sortedEntries.length === 0">
+      Nothing here
+    </div>
   </div>
 </template>
 <script>
@@ -54,7 +72,7 @@ export default {
       default: 'default'
     },
     selectable: {
-      type: Boolean
+      type: [Boolean, Function]
     },
     selection: {
       type: Array
@@ -110,6 +128,9 @@ export default {
       if (this.selectionMap[entry.path]) {
         this.selected.splice(this.selected.findIndex(e => e.path === entry.path), 1)
       } else {
+        if (typeof (this.selectable) === 'function') {
+          if (!this.selectable(entry)) return
+        }
         this.selected.push(entry)
       }
       this.$emit('update:selection', this.selected)
@@ -121,7 +142,11 @@ export default {
       if (this.selected.length === this.entries.length) {
         this.selected.splice(0)
       } else {
-        this.selected = [...this.entries]
+        let entries = this.entries
+        if (typeof (this.selectable) === 'function') {
+          entries = entries.filter(this.selectable)
+        }
+        this.selected = [...entries]
       }
       this.$emit('update:selection', this.selected)
     },

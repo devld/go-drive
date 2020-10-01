@@ -3,11 +3,16 @@
     class="entry-item"
     :class="[
       `entry-item--${entry.type}`,
-      entry.type === 'file' ? `entry-item--ext-${ext}` : ''
+      entry.type === 'file' ? `entry-item--ext-${ext}` : '',
     ]"
     @click="$emit('click', $event)"
   >
-    <i-icon class="entry-item__icon" v-if="icon" :svg="icon" @click="$emit('icon-click', $event)" />
+    <i-icon
+      class="entry-item__icon"
+      v-if="icon"
+      :svg="icon"
+      @click="$emit('icon-click', $event)"
+    />
     <entry-icon
       v-else
       class="entry-item__icon"
@@ -16,11 +21,18 @@
     />
     <span class="entry-item__info">
       <span class="entry-item__name">{{ entry.name }}</span>
-      <span
-        class="entry-item__modified-time"
-      >{{ entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : '' }}</span>
-      <span class="entry-item__size">{{ entry.size >= 0 ? $.formatBytes(entry.size) : '' }}</span>
+      <span class="entry-item__modified-time">{{
+        entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : ""
+      }}</span>
+      <span class="entry-item__size">{{
+        entry.size >= 0 ? $.formatBytes(entry.size) : ""
+      }}</span>
     </span>
+    <i-icon
+      v-if="entry.meta.is_mount"
+      class="entry-item__mount-icon"
+      svg="#icon-path"
+    />
   </div>
 </template>
 <script>
@@ -46,6 +58,7 @@ export default {
 </script>
 <style lang="scss">
 .entry-item {
+  position: relative;
   display: flex;
   cursor: pointer;
   padding: 4px 16px;
@@ -81,5 +94,12 @@ export default {
   font-size: 14px;
   text-align: right;
   white-space: nowrap;
+}
+
+.entry-item__mount-icon {
+  position: absolute;
+  bottom: 10px;
+  left: 40px;
+  color: #70a1ff;
 }
 </style>

@@ -6,10 +6,11 @@ import permission from './permission'
 import textEdit from './text-edit'
 import { copy, move } from './copy-move'
 import rename from './rename'
+import mount from './mount'
 
 export const HANDLERS = Object.freeze([
   textEdit, image, download, deleteEntry,
-  rename, copy, move, permission
+  rename, copy, move, permission, mount
 ])
 
 export const HANDLER_COMPONENTS = mapOf(HANDLERS.filter(h => h.view), h => h.view.name, h => h.view.component)

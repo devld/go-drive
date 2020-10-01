@@ -246,10 +246,6 @@ func (p *PermissionWrapperEntry) Path() string {
 	return p.entry.Path()
 }
 
-func (p *PermissionWrapperEntry) Name() string {
-	return p.entry.Name()
-}
-
 func (p *PermissionWrapperEntry) Type() types.EntryType {
 	return p.entry.Type()
 }
@@ -260,18 +256,13 @@ func (p *PermissionWrapperEntry) Size() int64 {
 
 func (p *PermissionWrapperEntry) Meta() types.EntryMeta {
 	meta := p.entry.Meta()
-	props := make(map[string]interface{})
-	if meta.Props != nil {
-		for k, v := range meta.Props {
-			props[k] = v
-		}
+	meta.CanRead = meta.CanRead && p.permission.CanRead()
+	meta.CanWrite = meta.CanWrite && p.permission.CanWrite()
+	if p.accessKey != "" {
+		meta.Props = common.CopyMap(meta.Props)
+		meta.Props["access_key"] = p.accessKey
 	}
-	props["access_key"] = p.accessKey
-	return types.EntryMeta{
-		CanRead:  meta.CanRead && p.permission.CanRead(),
-		CanWrite: meta.CanWrite && p.permission.CanWrite(),
-		Props:    props,
-	}
+	return meta
 }
 
 func (p *PermissionWrapperEntry) ModTime() int64 {
@@ -280,6 +271,10 @@ func (p *PermissionWrapperEntry) ModTime() int64 {
 
 func (p *PermissionWrapperEntry) Drive() types.IDrive {
 	return p.p
+}
+
+func (p *PermissionWrapperEntry) Name() string {
+	return common.PathBase(p.entry.Path())
 }
 
 func (p *PermissionWrapperEntry) GetReader() (io.ReadCloser, error) {

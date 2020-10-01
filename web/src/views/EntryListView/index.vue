@@ -16,22 +16,7 @@
   </div>
 </template>
 <script>
-import { listEntries as listEntries_ } from '@/api'
-import { RequestTask } from '@/api/axios'
-
-const entriesCache = {}
-function listEntries (path, force) {
-  let entries
-  if (!force && entriesCache[path]) {
-    entries = entriesCache[path]
-    delete entriesCache[path]
-    return RequestTask.from(entries)
-  }
-  return listEntries_(path).then(entries => {
-    entriesCache[path] = entries
-    return entries
-  })
-}
+import { listEntries } from '@/api'
 
 export default {
   name: 'EntryListView',
@@ -50,7 +35,7 @@ export default {
       type: Array
     },
     selectable: {
-      type: Boolean,
+      type: [Boolean, Function],
       default: true
     }
   },
@@ -97,13 +82,13 @@ export default {
     focusOnEntry (name) {
       this.$refs.entryList.focusOnEntry(name)
     },
-    async loadEntries (force) {
+    async loadEntries () {
       if (this._task) this._task.cancel()
       this.error = null
       this.$emit('loading', true)
       try {
         const path = this.currentPath
-        this._task = listEntries(path, force)
+        this._task = listEntries(path)
         this.entries = await this._task
         this.loadedPath = path
         this.$emit('entries-load', { entries: this.entries, path: this.loadedPath })
@@ -121,8 +106,8 @@ export default {
         this.$emit('loading', false)
       }
     },
-    reload (force) {
-      this.loadEntries(force)
+    reload () {
+      this.loadEntries()
     }
   }
 }

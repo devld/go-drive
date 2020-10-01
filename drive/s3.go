@@ -115,14 +115,7 @@ func (s *S3Drive) Meta() types.DriveMeta {
 	return types.DriveMeta{CanWrite: true}
 }
 
-func (s *S3Drive) Get(path string) (types.IEntry, error) {
-	if common.IsRootPath(path) {
-		return s.newS3DirEntry(path), nil
-	}
-	cached, _ := s.cache.GetEntry(path)
-	if cached != nil {
-		return cached, nil
-	}
+func (s *S3Drive) get(path string) (*s3Entry, error) {
 	obj, e := s.c.HeadObject(&s3.HeadObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
@@ -132,15 +125,28 @@ func (s *S3Drive) Get(path string) (types.IEntry, error) {
 			if strings.HasSuffix(path, "/") {
 				return nil, common.NewNotFoundError()
 			}
-			_, e := s.Get(path + "/")
-			if e != nil {
-				return nil, e
-			}
-			return s.newS3DirEntry(path), nil
+			return s.get(path + "/")
 		}
 		return nil, e
 	}
-	entry := s.newS3ObjectEntry(path, obj.ContentLength, obj.LastModified)
+	if strings.HasSuffix(path, "/") {
+		return s.newS3DirEntry(path, obj.LastModified), nil
+	}
+	return s.newS3ObjectEntry(path, obj.ContentLength, obj.LastModified), nil
+}
+
+func (s *S3Drive) Get(path string) (types.IEntry, error) {
+	if common.IsRootPath(path) {
+		return s.newS3DirEntry(path, nil), nil
+	}
+	cached, _ := s.cache.GetEntry(path)
+	if cached != nil {
+		return cached, nil
+	}
+	entry, e := s.get(path)
+	if e != nil {
+		return nil, e
+	}
 	_ = s.cache.PutEntry(entry)
 	return entry, nil
 }
@@ -185,7 +191,7 @@ func (s *S3Drive) MakeDir(path string) (types.IEntry, error) {
 		return nil, e
 	}
 	_ = s.cache.Evict(common.PathParent(path))
-	return s.newS3DirEntry(path), nil
+	return s.newS3DirEntry(path, nil), nil
 }
 
 func (s *S3Drive) isSelf(e types.IEntry) bool {
@@ -276,7 +282,7 @@ func (s *S3Drive) List(path string) ([]types.IEntry, error) {
 			// skip dir with same name
 			continue
 		}
-		entries = append(entries, s.newS3DirEntry(*p.Prefix))
+		entries = append(entries, s.newS3DirEntry(*p.Prefix, nil))
 	}
 	cacheable := make([]cache.CacheableEntry, len(entries))
 	for i, e := range entries {
@@ -422,12 +428,17 @@ func (s *S3Drive) Dispose() error {
 	return nil
 }
 
-func (s *S3Drive) newS3DirEntry(path string) *s3Entry {
+func (s *S3Drive) newS3DirEntry(path string, lastModified *time.Time) *s3Entry {
+	var mtime int64 = -1
+	if lastModified != nil {
+		mtime = common.Millisecond(*lastModified)
+	}
 	path = common.CleanPath(path)
 	return &s3Entry{
-		isDir: true,
-		key:   path,
-		c:     s,
+		isDir:   true,
+		key:     path,
+		modTime: mtime,
+		c:       s,
 	}
 }
 
@@ -452,10 +463,6 @@ type s3Entry struct {
 
 func (s *s3Entry) Path() string {
 	return s.key
-}
-
-func (s *s3Entry) Name() string {
-	return fsPath.Base(s.key)
 }
 
 func (s *s3Entry) Type() types.EntryType {
@@ -488,6 +495,10 @@ func (s *s3Entry) ModTime() int64 {
 
 func (s *s3Entry) Drive() types.IDrive {
 	return s.c
+}
+
+func (s *s3Entry) Name() string {
+	return fsPath.Base(s.key)
 }
 
 func (s *s3Entry) GetReader() (io.ReadCloser, error) {

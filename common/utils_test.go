@@ -42,7 +42,7 @@ func TestPathParentTree(t *testing.T) {
 	path := "a/b/c"
 
 	r := PathParentTree(path)
-	if r[2] != "a" || r[1] != "a/b" || r[0] != "a/b/c" {
+	if r[3] != "" || r[2] != "a" || r[1] != "a/b" || r[0] != "a/b/c" {
 		t.Errorf("'%s': expect '%v', but is '%v'", path, []string{"a/b/c", "a/b", "a"}, r)
 	}
 }

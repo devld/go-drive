@@ -1,54 +1,71 @@
+import { copyEntry, deleteTask, moveEntry } from '@/api'
+import { pathClean, pathJoin, taskDone, TASK_CANCELLED } from '..'
 
-import CopyMoveView from '@/views/HandlerViews/CopyMoveView.vue'
-
-function createView (move) {
+const createHandler = (isMove) => {
   return {
-    name: 'CopyView',
-    props: {
-      entry: { type: [Object, Array], required: true },
-      entries: { type: Array }
+    name: isMove ? 'move' : 'copy',
+    display: {
+      name: (isMove ? 'Move' : 'Copy') + ' to',
+      description: (isMove ? 'Move' : 'Copy') + ' files',
+      icon: isMove ? '#icon-move' : '#icon-copy'
     },
-    render (h) {
-      return h(CopyMoveView, {
-        props: { entry: this.entry, move },
-        on: {
-          update: () => { this.$emit('update') },
-          close: () => { this.$emit('close') }
-        }
+    multiple: true,
+    supports: isMove
+      ? (entry) => Array.isArray(entry) ? !entry.some(e => !e.meta.can_write) : entry.meta.can_write
+      : () => true,
+    handler: (entries, { confirm, alert, loading, open }) => {
+      if (!Array.isArray(entries)) entries = [entries]
+      return new Promise((resolve) => {
+        open({
+          title: 'Select ' + (isMove ? 'move' : 'copy') + ' to', type: 'dir', filter: 'write',
+          async onOk (path) {
+            let override = true
+            try {
+              await confirm({
+                message: 'Override or skip for duplicates?',
+                confirmType: 'danger', confirmText: 'Override', cancelText: 'Skip'
+              })
+            } catch { override = false }
+            let canceled = false
+            let task
+            const onCancel = () => {
+              canceled = true
+              return task && deleteTask(task.id)
+            }
+            try {
+              for (const i in entries) {
+                if (canceled) break
+                const entry = entries[i]
+                const dest = pathClean(pathJoin(path, entry.name))
+                loading({ text: `${isMove ? 'Moving' : 'Copying'} ${entry.name}`, onCancel })
+                const copyOrMove = isMove ? moveEntry : copyEntry
+                await taskDone(
+                  copyOrMove(entry.path, dest, override),
+                  t => {
+                    if (canceled) return false
+                    task = t
+                    loading({
+                      text: `${isMove ? 'Moving' : 'Copying'} ${entry.name} ` +
+                        `${task.progress.loaded}/${task.progress.total}`,
+                      onCancel
+                    })
+                  }
+                )
+              }
+              resolve({ update: true })
+            } catch (e) {
+              if (e === TASK_CANCELLED) return
+              alert(e.message)
+              throw e
+            } finally {
+              loading()
+            }
+          }
+        })
       })
     }
   }
 }
 
-const CopyView = createView(false)
-const MoveView = createView(true)
-
-export const copy = {
-  name: 'copy',
-  display: {
-    name: 'Copy to',
-    description: 'Copy files',
-    icon: '#icon-copy'
-  },
-  view: {
-    name: 'CopyView',
-    component: CopyView
-  },
-  multiple: true,
-  supports: () => true
-}
-
-export const move = {
-  name: 'move',
-  display: {
-    name: 'Move to',
-    description: 'Move files',
-    icon: '#icon-move'
-  },
-  view: {
-    name: 'MoveView',
-    component: MoveView
-  },
-  multiple: true,
-  supports: (entry) => Array.isArray(entry) ? !entry.some(e => !e.meta.can_write) : entry.meta.can_write
-}
+export const copy = createHandler(false)
+export const move = createHandler(true)

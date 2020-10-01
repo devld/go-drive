@@ -14,6 +14,15 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	config := common.InitConfig()
+	componentsHolder := initComponentsHolder(config)
+
+	engine, e := server.InitServer(componentsHolder, config.GetResDir())
+	common.PanicIfError(e)
+
+	panic(engine.Run(config.GetListen()))
+}
+
+func initComponentsHolder(config common.Config) *server.ComponentsHolder {
 	dbDialect, dbArg := config.GetDB()
 
 	db, e := storage.InitDB(dbDialect, dbArg)
@@ -31,7 +40,9 @@ func main() {
 	common.PanicIfError(e)
 	permissionStorage, e := storage.NewPathPermissionStorage(db)
 	common.PanicIfError(e)
-	rootDrive, e := drive.NewRootDrive(driveStorage)
+	pathMountStorage, e := storage.NewPathMountStorage(db)
+	common.PanicIfError(e)
+	rootDrive, e := drive.NewRootDrive(driveStorage, pathMountStorage)
 	common.PanicIfError(e)
 
 	chunksTempDir, e := config.GetDir("upload_temp", true)
@@ -39,21 +50,16 @@ func main() {
 	chunkUploader, e := server.NewChunkUploader(chunksTempDir)
 	common.PanicIfError(e)
 
-	engine, e := server.InitServer(
-		&server.ComponentsHolder{
-			TokenStore:        tokenStore,
-			RootDrive:         rootDrive,
-			DriveStorage:      driveStorage,
-			UserStorage:       userStorage,
-			GroupStorage:      groupStorage,
-			PermissionStorage: permissionStorage,
-			RequestSigner:     requestSigner,
-			TaskRunner:        task.NewTunnyRunner(100),
-			ChunkUploader:     chunkUploader,
-		},
-		config.GetResDir(),
-	)
-	common.PanicIfError(e)
-
-	panic(engine.Run(config.GetListen()))
+	return &server.ComponentsHolder{
+		TokenStore:        tokenStore,
+		RootDrive:         rootDrive,
+		DriveStorage:      driveStorage,
+		UserStorage:       userStorage,
+		GroupStorage:      groupStorage,
+		PermissionStorage: permissionStorage,
+		PathMountStorage:  pathMountStorage,
+		RequestSigner:     requestSigner,
+		TaskRunner:        task.NewTunnyRunner(100),
+		ChunkUploader:     chunkUploader,
+	}
 }

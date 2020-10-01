@@ -63,12 +63,7 @@ func (p *PathPermissionStorage) SavePathPermissions(path string, permissions []t
 }
 
 func (p *PathPermissionStorage) ResolvePathPermission(subjects []string, path string) (types.Permission, error) {
-	paths := make([]string, 0, 1)
-	if !common.IsRootPath(path) {
-		paths = common.PathParentTree(path)
-	}
-	paths = append(paths, "") // for Root
-
+	paths := common.PathParentTree(path)
 	items, e := p.GetByPaths(subjects, paths)
 	if e != nil {
 		return types.PermissionEmpty, e

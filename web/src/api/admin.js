@@ -67,3 +67,7 @@ export function getPermissions (path) {
 export function savePermissions (path, permissions) {
   return axios.put(`/admin/path-permissions/${path}`, permissions)
 }
+
+export function mountPaths (pathTo, mounts) {
+  return axios.post(`/admin/mount/${pathTo}`, mounts)
+}

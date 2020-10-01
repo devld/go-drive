@@ -16,9 +16,7 @@
 
     <!-- README -->
     <footer class="page-footer" v-if="readmeContent">
-      <div class="markdown-body" v-markdown="readmeContent">
-        <p style="text-align: center">Loading README...</p>
-      </div>
+      <div class="markdown-body" v-markdown="readmeContent"></div>
     </footer>
     <!-- README -->
 
@@ -77,6 +75,7 @@ import { makeEntryHandlerLink, getBaseLink } from '@/utils/routes'
 import { mapMutations, mapState } from 'vuex'
 
 const README_FILENAME = 'readme.md'
+const README_LOADING = '<p style="text-align: center">Loading README...</p>'
 const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
 
 const HISTORY_FLAG = '_h'
@@ -321,6 +320,7 @@ export default {
     async loadReadme (entry) {
       if (this._readmeTask) this._readmeTask.cancel()
       let content
+      this.readmeContent = README_LOADING
       this._readmeTask = getContent(entry.path, entry.meta.access_key)
       try {
         content = await this._readmeTask
@@ -333,7 +333,8 @@ export default {
       }
     },
     reloadEntryList () {
-      this.$refs.entryList.reload(true)
+      this.selectedEntries.splice(0)
+      this.$refs.entryList.reload()
     },
     ...mapMutations(['progressBar'])
   }

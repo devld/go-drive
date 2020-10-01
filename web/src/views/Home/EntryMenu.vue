@@ -36,7 +36,7 @@ export default {
   },
   computed: {
     multiple () {
-      return Array.isArray(this.entry) && this.entry.length > 1
+      return Array.isArray(this.entry)
     }
   }
 }

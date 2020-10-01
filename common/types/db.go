@@ -23,6 +23,16 @@ type Drive struct {
 	Config string `gorm:"COLUMN:config;NOT NULL;TYPE:VARCHAR;SIZE:4096" json:"config"`
 }
 
+type PathMount struct {
+	Path    *string `gorm:"COLUMN:path;PRIMARY_KEY;TYPE:VARCHAR;SIZE:4096" json:"path"`
+	Name    string  `gorm:"COLUMN:name;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:255" json:"name"`
+	MountAt string  `gorm:"COLUMN:mount_at;NOT NULL;TYPE:VARCHAR;SIZE:4096" json:"mount_at"`
+}
+
+func (PathMount) TableName() string {
+	return "path_mount"
+}
+
 type Permission uint8
 
 func (p Permission) CanRead() bool {

@@ -304,7 +304,7 @@ func copyAll(entry EntryNode, driveTo types.IDrive, to string, override bool,
 		}
 		if entry.children != nil {
 			for _, e := range entry.children {
-				p, r, err := copyAll(e, driveTo, CleanPath(path.Join(to, e.Name())), override, ctx, dirCreate, doCopy, after)
+				p, r, err := copyAll(e, driveTo, CleanPath(path.Join(to, PathBase(e.Path()))), override, ctx, dirCreate, doCopy, after)
 				if err != nil {
 					return processed, false, err
 				}

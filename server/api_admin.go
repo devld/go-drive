@@ -242,12 +242,43 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// endregion
 
+	// region mount
+
+	// save mounts
+	r.POST("/mount/*to", func(c *gin.Context) {
+		to := common.CleanPath(c.Param("to"))
+		src := make([]mountSource, 0)
+		if e := c.Bind(&src); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		if len(src) == 0 {
+			return
+		}
+		mounts := make([]types.PathMount, len(src))
+		for i, p := range src {
+			mounts[i] = types.PathMount{Path: &to, Name: p.Name, MountAt: p.Path}
+		}
+		if e := GetPathMountStorage(c).SaveMounts(mounts, true); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		_ = GetRootDrive(c).ReloadMounts()
+	})
+
+	// endregion
+
+}
+
+type mountSource struct {
+	Path string `json:"path" binding:"required"`
+	Name string `json:"name" binding:"required"`
 }
 
 var driveNamePattern = regexp.MustCompile("^[^/\\\\0:*\"<>|]+$")
 
 func checkDriveName(name string) error {
-	if name == "" || name == "." || name == "..." || !driveNamePattern.MatchString(name) {
+	if name == "" || name == "." || name == ".." || !driveNamePattern.MatchString(name) {
 		return common.NewBadRequestError("invalid drive name '" + name + "'")
 	}
 	return nil

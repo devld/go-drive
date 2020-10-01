@@ -23,9 +23,6 @@ func (d *DriveStorage) GetDrives() ([]types.Drive, error) {
 }
 
 func (d *DriveStorage) AddDrive(drive types.Drive) (types.Drive, error) {
-	if drive.Name == "" {
-		return types.Drive{}, common.NewBadRequestError("invalid drive name")
-	}
 	e := d.db.C().Where("name = ?", drive.Name).Find(&types.Drive{}).Error
 	if e == nil {
 		return types.Drive{},
