@@ -12,5 +12,6 @@ export default {
     name: 'DownloadView',
     component: DownloadView
   },
-  supports: (entry) => entry.type === 'file'
+  multiple: true,
+  supports: (entry) => Array.isArray(entry) ? !entry.some(e => e.type !== 'file') : entry.type === 'file'
 }

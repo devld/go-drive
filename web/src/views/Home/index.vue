@@ -1,7 +1,7 @@
 <template>
   <div class="home" @keydown.esc="closeEntryHandlerView">
     <!-- file list main area -->
-    <main class="files-list">
+    <div class="files-list">
       <entry-list-view
         ref="entryList"
         :path="path"
@@ -11,13 +11,13 @@
         :selection.sync="selectedEntries"
         @loading="progressBar($event)"
       />
-    </main>
+    </div>
     <!-- file list main area -->
 
     <!-- README -->
-    <footer class="page-footer" v-if="readmeContent">
+    <div class="page-footer" v-if="readmeContent">
       <div class="markdown-body" v-markdown="readmeContent"></div>
-    </footer>
+    </div>
     <!-- README -->
 
     <!-- entry handler view dialog -->
@@ -86,6 +86,12 @@ const getHistoryFlag = () => {
   const val = sessionStorage.getItem(HISTORY_FLAG)
   sessionStorage.removeItem(HISTORY_FLAG)
   return !!val
+}
+
+function setTitle (title) {
+  if (title) title += ' - ' + process.env.VUE_APP_SITE_TITLE
+  else title = process.env.VUE_APP_SITE_TITLE
+  document.title = title
 }
 
 export default {
@@ -211,6 +217,8 @@ export default {
       this.entryMenuShowing = true
     },
     entriesLoaded ({ entries, path }) {
+      setTitle(path)
+
       if (path !== this.path) {
         this.$router.push(getBaseLink(path))
       }
@@ -244,9 +252,13 @@ export default {
           entryName, entry,
           savedState: true
         }
+
+        setTitle(`${entryName}`)
       }
     },
     async closeEntryHandlerView () {
+      setTitle(this.path)
+
       if (!this.entryHandlerView) return
       if (this.entryHandlerView.entryName) {
         this.focusOnEntry(this.entryHandlerView.entryName)

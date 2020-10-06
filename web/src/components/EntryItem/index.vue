@@ -101,5 +101,6 @@ export default {
   bottom: 10px;
   left: 40px;
   color: #70a1ff;
+  pointer-events: none;
 }
 </style>

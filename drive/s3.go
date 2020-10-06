@@ -15,6 +15,7 @@ import (
 	"io"
 	"math"
 	"net/url"
+	"os"
 	fsPath "path"
 	"strings"
 	"time"
@@ -160,6 +161,10 @@ func (s *S3Drive) Save(path string, reader io.Reader, ctx task.Context) (types.I
 		if e != nil {
 			return nil, e
 		}
+		defer func() {
+			_ = file.Close()
+			_ = os.Remove(file.Name())
+		}()
 		readSeeker = file
 	}
 	_, e := s.c.PutObject(&s3.PutObjectInput{
@@ -171,7 +176,12 @@ func (s *S3Drive) Save(path string, reader io.Reader, ctx task.Context) (types.I
 		return nil, e
 	}
 	_ = s.cache.Evict(common.PathParent(path))
-	return s.Get(path)
+	get, e := s.Get(path)
+	if e != nil {
+		return nil, e
+	}
+	ctx.Progress(get.Size(), false)
+	return get, nil
 }
 
 func (s *S3Drive) MakeDir(path string) (types.IEntry, error) {
@@ -201,16 +211,16 @@ func (s *S3Drive) isSelf(e types.IEntry) bool {
 	return false
 }
 
-func (s *S3Drive) Copy(from types.IEntry, to string, override bool, _ task.Context) (types.IEntry, error) {
+func (s *S3Drive) Copy(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
 	from = common.GetIEntry(from, s.isSelf)
 	if from == nil || from.Type().IsDir() {
 		return nil, common.NewUnsupportedError()
 	}
-	entry, _, e := s.copy(from.(*s3Entry), to, override)
+	entry, _, e := s.copy(from.(*s3Entry), to, override, ctx)
 	return entry, e
 }
 
-func (s *S3Drive) copy(from *s3Entry, to string, override bool) (*s3Entry, bool, error) {
+func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx task.Context) (*s3Entry, bool, error) {
 	if !override {
 		_, e := s.Get(to)
 		if e == nil {
@@ -231,16 +241,17 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool) (*s3Entry, bool,
 		return nil, false, e
 	}
 	_ = s.cache.Evict(common.PathParent(to))
+	ctx.Progress(from.Size(), false)
 	return s.newS3ObjectEntry(to, &from.size, obj.CopyObjectResult.LastModified), false, nil
 }
 
-func (s *S3Drive) Move(from types.IEntry, to string, override bool, _ task.Context) (types.IEntry, error) {
+func (s *S3Drive) Move(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
 	from = common.GetIEntry(from, s.isSelf)
 	if from == nil || from.Type().IsDir() {
 		return nil, common.NewUnsupportedMessageError("Move files/dirs across drives is not supported.")
 	}
 	fromEntry := from.(*s3Entry)
-	entry, skip, e := s.copy(fromEntry, to, override)
+	entry, skip, e := s.copy(fromEntry, to, override, ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -297,13 +308,12 @@ func (s *S3Drive) Delete(path string, ctx task.Context) error {
 	if e != nil {
 		return e
 	}
-	tree, e := common.BuildEntriesTree(entry, ctx)
+	tree, e := common.BuildEntriesTree(entry, ctx, false)
 	if e != nil {
 		return e
 	}
 	entries := common.FlattenEntriesTree(tree)
 	n := int(math.Ceil(float64(len(entries)) / 1000))
-	deleted := 0
 	for i := 0; i < n; i += 1 {
 		batches := entries[i*1000 : int(math.Min(float64((i+1)*1000), float64(len(entries))))]
 		deletes := make([]*s3.ObjectIdentifier, len(batches))
@@ -329,8 +339,7 @@ func (s *S3Drive) Delete(path string, ctx task.Context) error {
 		if r.Errors != nil && len(r.Errors) > 0 {
 			return errors.New(fmt.Sprintf("%s: %s", *r.Errors[0].Key, *r.Errors[0].Code))
 		}
-		deleted += len(batches)
-		ctx.Progress(int64(deleted))
+		ctx.Progress(int64(len(batches)), false)
 	}
 	_ = s.cache.Evict(common.PathParent(path))
 	return nil

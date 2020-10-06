@@ -1,6 +1,7 @@
 package common
 
 import (
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -98,15 +99,9 @@ func RandString(n int) string {
 	return string(b)
 }
 
-func PanicIfError(e error) {
+func IfFatalError(e error) {
 	if e != nil {
-		panic(e)
-	}
-}
-
-func RequireNotNil(v interface{}, msg string) {
-	if v == nil {
-		panic(msg)
+		log.Fatalln(e)
 	}
 }
 

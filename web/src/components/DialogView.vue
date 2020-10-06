@@ -67,11 +67,13 @@ export default {
           this.$nextTick(() => {
             this.contentShowing = true
           })
+          this.setupEvents()
         } else {
           this.contentShowing = false
           if (!this.transition) {
             this.overlayShowing = false
           }
+          this.removeEvents()
         }
       }
     }
@@ -82,11 +84,8 @@ export default {
       contentShowing: false
     }
   },
-  created () {
-    window.addEventListener('keydown', this.onKeyDown)
-  },
   beforeDestroy () {
-    window.removeEventListener('keydown', this.onKeyDown)
+    this.removeEvents()
   },
   methods: {
     overlayClicked (e) {
@@ -111,6 +110,12 @@ export default {
     onDialogClosed () {
       this.overlayShowing = false
       this.$emit('closed')
+    },
+    setupEvents () {
+      window.addEventListener('keydown', this.onKeyDown)
+    },
+    removeEvents () {
+      window.removeEventListener('keydown', this.onKeyDown)
     }
   }
 }

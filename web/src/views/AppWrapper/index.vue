@@ -9,16 +9,22 @@
         >
           Login
         </button>
-        <span class="user-info" v-else>
+
+        <router-link
+          v-for="m in navMenus"
+          :key="m.to"
+          class="plain-button small nav-button"
+          :to="m.to"
+          >{{ m.name }}</router-link
+        >
+
+        <span class="user-info" v-if="isLoggedIn">
           <span
             class="username"
             :title="`Username: ${user.username}\nGroups: ${user.groups
               .map((g) => g.name)
               .join(', ')}`"
             >{{ user.username }}</span
-          >
-          <router-link v-if="isAdmin" class="plain-button small" to="/admin"
-            >Admin</router-link
           >
           <button class="plain-button small logout-button" @click="logout">
             Logout
@@ -64,8 +70,13 @@ export default {
     },
     ...mapState(['user', 'progressBar']),
     ...mapGetters(['isAdmin']),
-    isLoggedIn () {
-      return !!this.user
+    isLoggedIn () { return !!this.user },
+    navMenus () {
+      const menus = [{ name: 'Home', to: '/' }]
+      if (this.isAdmin) {
+        menus.push({ name: 'Admin', to: '/admin' })
+      }
+      return menus
     }
   },
   methods: {
@@ -107,6 +118,15 @@ export default {
       & > *:not(:last-child) {
         margin-right: 16px;
       }
+
+      &::before {
+        content: "|";
+        margin: 0 1em;
+      }
+    }
+
+    .nav-button:not(:first-child) {
+      margin-left: 16px;
     }
   }
 }

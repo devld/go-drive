@@ -58,6 +58,7 @@ export default {
 <style lang="scss">
 .dialog-view.loading-dialog {
   background-color: rgba(255, 255, 255, 0.6);
+  z-index: 9999;
 
   .dialog-view__content {
     box-shadow: none;

@@ -55,4 +55,15 @@ const router = new VueRouter({
   routes
 })
 
+// see https://github.com/vuejs/vue-router/issues/1849#issuecomment-340767577
+// detect it's IE11
+if ('-ms-scroll-limit' in document.documentElement.style && '-ms-ime-align' in document.documentElement.style) {
+  window.addEventListener('hashchange', function (event) {
+    var currentPath = window.location.hash.slice(1)
+    if (router.currentRoute !== currentPath) {
+      router.push(currentPath)
+    }
+  }, false)
+}
+
 export default router
