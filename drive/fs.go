@@ -6,6 +6,7 @@ import (
 	"go-drive/common/types"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	fsPath "path"
 	"path/filepath"
@@ -35,7 +36,13 @@ func NewFsDrive(config map[string]string) (types.IDrive, error) {
 	if common.CleanPath(path) == "" {
 		return nil, common.NewNotAllowedMessageError("invalid root path")
 	}
-	path, e := filepath.Abs(config["path"])
+
+	localRoot, e := common.GetConfig().GetLocalFsDir()
+	if e != nil {
+		return nil, e
+	}
+
+	path, e = filepath.Abs(filepath.Join(localRoot, path))
 	if e != nil {
 		return nil, e
 	}
@@ -51,7 +58,7 @@ func (f *FsDrive) newFsFile(path string, file os.FileInfo) (types.IEntry, error)
 		return nil, common.NewNotFoundMessageError("invalid key")
 	}
 	if !strings.HasPrefix(path, f.path) {
-		panic("invalid file key")
+		log.Fatalln("invalid file key")
 	}
 	path = strings.ReplaceAll(path, "\\", "/")
 	path = path[len(f.path):]

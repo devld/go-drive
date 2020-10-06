@@ -4,7 +4,12 @@ import Axios from 'axios'
 const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
 const MAX_RETRY = 1
-export const API_PATH = window.__api_path__ || process.env.VUE_APP_API
+
+let apiPath = window.__api_path__ || process.env.VUE_APP_API
+if (!/^https?:\/\//.test(apiPath)) {
+  apiPath = location.origin + apiPath
+}
+export const API_PATH = apiPath
 
 const BASE_CONFIG = {
   baseURL: API_PATH

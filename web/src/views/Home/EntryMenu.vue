@@ -43,13 +43,9 @@ export default {
 </script>
 <style lang="scss">
 .entry-menu {
-  display: flex;
-  flex-direction: column;
   background-color: #fff;
   padding: 20px 0;
-  min-width: 280px;
-  max-width: 400px;
-  max-height: 40vh;
+  width: 280px;
   overflow: hidden;
 }
 
@@ -70,10 +66,10 @@ export default {
 }
 
 .entry-menu__menus {
+  max-height: 40vh;
   margin: 0;
   padding: 0;
   user-select: none;
-  flex: 1;
   overflow-x: hidden;
   overflow-y: auto;
 }

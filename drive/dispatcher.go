@@ -6,6 +6,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/storage"
 	"io"
+	"log"
 	fsPath "path"
 	"regexp"
 	"strings"
@@ -69,7 +70,8 @@ func (d *DispatcherDrive) reloadMounts() error {
 }
 
 func (d *DispatcherDrive) Meta() types.DriveMeta {
-	panic("not supported")
+	log.Fatalln("not supported")
+	return types.DriveMeta{}
 }
 
 func (d *DispatcherDrive) resolve(path string) (types.IDrive, string, error) {
@@ -195,7 +197,7 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 			if e != nil {
 				return e
 			}
-			_, e = driveTo.Copy(from, pathTo, true, ctx)
+			_, e = driveTo.Copy(from, pathTo, true, task.NewCtxWrapper(ctx, true, false))
 			if e == nil {
 				return nil
 			}

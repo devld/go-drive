@@ -8,6 +8,7 @@ import (
 	"go-drive/common/task"
 	"io"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	fsPath "path"
@@ -54,7 +55,7 @@ func (c *ChunkUploader) CreateUpload(size, chunkSize int64) (ChunkUpload, error)
 	}
 	upload, e := c.getUpload(id)
 	if e != nil {
-		panic(e)
+		log.Fatalln(e)
 	}
 	return *upload, nil
 }
@@ -128,8 +129,7 @@ func (c *ChunkUploader) CompleteUpload(id string, ctx task.Context) (*os.File, e
 			_ = c.DeleteUpload(upload.Id)
 		}
 	}()
-	ctx.Total(upload.Size)
-	var loaded int64 = 0
+	ctx.Total(upload.Size, true)
 	for seq := 0; seq < upload.Chunks; seq++ {
 		if ctx.Canceled() {
 			return nil, task.ErrorCanceled
@@ -146,8 +146,7 @@ func (c *ChunkUploader) CompleteUpload(id string, ctx task.Context) (*os.File, e
 		if e != nil {
 			return nil, e
 		}
-		loaded += w
-		ctx.Progress(loaded)
+		ctx.Progress(w, false)
 	}
 	allSuccess = true
 	_ = file.Close()

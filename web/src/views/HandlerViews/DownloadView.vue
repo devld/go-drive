@@ -7,16 +7,28 @@
       </button>
     </h1>
     <div class="page-content">
-      <entry-icon :entry="entry" />
-      <h2 class="filename">{{ entry.name }}</h2>
-      <a
-        class="download-button"
-        target="_blank"
-        :href="$.fileUrl(entry.path, entry.meta.access_key)"
-      >
-        Download
-        <span class="file-size">{{ $.formatBytes(entry.size) }}</span>
-      </a>
+      <template v-if="singleEntry">
+        <entry-icon :entry="singleEntry" />
+        <h2 class="filename">{{ singleEntry.name }}</h2>
+        <a
+          class="download-button"
+          target="_blank"
+          :href="$.fileUrl(singleEntry.path, singleEntry.meta.access_key)"
+        >
+          Download
+          <span class="file-size">{{ $.formatBytes(singleEntry.size) }}</span>
+        </a>
+      </template>
+      <template v-else>
+        <textarea
+          ref="links"
+          class="download-links"
+          readonly
+          :value="downloadLinks"
+          v-focus
+          @focus="downloadLinksFocus"
+        ></textarea>
+      </template>
     </div>
   </div>
 </template>
@@ -25,10 +37,31 @@ export default {
   name: 'DownloadView',
   props: {
     entry: {
-      type: Object,
+      type: [Array, Object],
       required: true
     },
     entries: { type: Array }
+  },
+  computed: {
+    singleEntry () {
+      if (Array.isArray(this.entry)) {
+        if (this.entry.length === 1) return this.entry[0]
+        return null
+      } else {
+        return this.entry
+      }
+    },
+    downloadLinks () {
+      if (this.singleEntry) return ''
+      return this.entry.map(e => this.$.fileUrl(e.path, e.meta.access_key)).join('\n')
+    }
+  },
+  methods: {
+    downloadLinksFocus () {
+      this.$refs.links.select()
+      this.$refs.links.scrollTop = 0
+      this.$refs.links.scrollLeft = 0
+    }
   }
 }
 </script>
@@ -80,6 +113,17 @@ export default {
     &:hover {
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
+  }
+
+  .download-links {
+    width: 100%;
+    min-height: 200px;
+    max-height: 40vh;
+    outline: none;
+    border: none;
+    resize: none;
+    white-space: pre;
+    overflow: auto;
   }
 }
 </style>

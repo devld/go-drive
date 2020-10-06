@@ -40,8 +40,8 @@ func (t Task) Finished() bool {
 }
 
 type Context interface {
-	Progress(loaded int64)
-	Total(total int64)
+	Progress(loaded int64, abs bool)
+	Total(total int64, abs bool)
 	Canceled() bool
 }
 
@@ -65,12 +65,42 @@ var dummyCtx = &dummyContext{}
 type dummyContext struct {
 }
 
-func (d *dummyContext) Progress(int64) {
+func (d *dummyContext) Progress(int64, bool) {
 }
 
-func (d *dummyContext) Total(int64) {
+func (d *dummyContext) Total(int64, bool) {
 }
 
 func (d *dummyContext) Canceled() bool {
 	return false
+}
+
+func NewCtxWrapper(ctx Context, mutableLoaded, mutableTotal bool) Context {
+	return &ctxWrapper{
+		mutableLoaded: mutableLoaded,
+		mutableTotal:  mutableTotal,
+		ctx:           ctx,
+	}
+}
+
+type ctxWrapper struct {
+	mutableLoaded bool
+	mutableTotal  bool
+	ctx           Context
+}
+
+func (c *ctxWrapper) Progress(loaded int64, abs bool) {
+	if c.mutableLoaded {
+		c.ctx.Progress(loaded, abs)
+	}
+}
+
+func (c *ctxWrapper) Total(total int64, abs bool) {
+	if c.mutableTotal {
+		c.ctx.Total(total, abs)
+	}
+}
+
+func (c *ctxWrapper) Canceled() bool {
+	return c.ctx.Canceled()
 }

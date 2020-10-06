@@ -2,6 +2,7 @@ import { mapOf } from '@/utils'
 import deleteEntry from './delete'
 import download from './download'
 import image from './image'
+import media from './media'
 import permission from './permission'
 import textEdit from './text-edit'
 import { copy, move } from './copy-move'
@@ -9,7 +10,7 @@ import rename from './rename'
 import mount from './mount'
 
 export const HANDLERS = Object.freeze([
-  textEdit, image, download, deleteEntry,
+  textEdit, image, media, download, deleteEntry,
   rename, copy, move, permission, mount
 ])
 

@@ -30,7 +30,7 @@ type MemTokenStore struct {
 // - cleanupDuration: cleanup invalid token each `cleanupDuration`
 func NewMemTokenStore(validity time.Duration, autoRefresh bool, cleanupDuration time.Duration) *MemTokenStore {
 	if cleanupDuration <= 0 {
-		panic("invalid cleanupDuration")
+		log.Fatalln("invalid cleanupDuration")
 	}
 	ticker := time.NewTicker(cleanupDuration)
 	dispose := make(chan bool)

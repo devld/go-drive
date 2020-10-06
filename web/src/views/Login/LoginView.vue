@@ -2,13 +2,29 @@
   <div class="login-view">
     <form action @submit="onSubmit">
       <span class="form-item username">
-        <input ref="username" type="text" required placeholder="Username" v-model="username" />
+        <input
+          ref="username"
+          class="value"
+          type="text"
+          required
+          placeholder="Username"
+          v-model="username"
+        />
       </span>
       <span class="form-item password">
-        <input ref="password" type="password" required placeholder="Password" v-model="password" />
+        <input
+          ref="password"
+          class="value"
+          type="password"
+          required
+          placeholder="Password"
+          v-model="password"
+        />
       </span>
       <span class="form-item submit">
-        <simple-button native-type="submit" class="submit" :loading="loading">Login</simple-button>
+        <simple-button native-type="submit" class="submit" :loading="loading"
+          >Login</simple-button
+        >
       </span>
     </form>
   </div>

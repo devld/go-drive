@@ -168,6 +168,10 @@ export default {
 .entry-list {
   .path-bar {
     margin-bottom: 16px;
+
+    .entry-link {
+      color: #000;
+    }
   }
 }
 
@@ -188,7 +192,7 @@ export default {
   & > a {
     display: block;
     text-decoration: none;
-    color: unset;
+    color: #000;
 
     &:focus {
       background-color: rgba(0, 0, 0, 0.08);

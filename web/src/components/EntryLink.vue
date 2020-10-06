@@ -1,5 +1,6 @@
 <template>
   <a
+    class="entry-link"
     :href="link"
     @click="entryClicked"
     v-long-press
@@ -11,6 +12,10 @@
 </template>
 <script>
 import { makeEntryLink, getDirEntryLink } from '@/utils/routes'
+import router from '@/router'
+
+const ROUTER_MODE = router.mode
+const routePathPrefix = ROUTER_MODE === 'hash' ? '#' : ''
 
 export default {
   name: 'EntryLink',
@@ -24,8 +29,8 @@ export default {
   },
   computed: {
     link () {
-      if (this.entry) return '#' + makeEntryLink(this.entry)
-      if (typeof (this.path) === 'string') return '#' + getDirEntryLink(this.path)
+      if (this.entry) return routePathPrefix + makeEntryLink(this.entry)
+      if (typeof (this.path) === 'string') return routePathPrefix + getDirEntryLink(this.path)
       return 'javascript:;'
     }
   },

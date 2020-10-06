@@ -99,6 +99,12 @@
     }
   }
 
+  input[type='text'].value,
+  input[type='password'].value {
+    box-sizing: border-box;
+    width: 216px;
+  }
+
   input.value,
   select.value {
     border: solid 1px rgba(0, 0, 0, 0.1);

@@ -1,5 +1,5 @@
 import { copyEntry, deleteTask, moveEntry } from '@/api'
-import { pathClean, pathJoin, taskDone, TASK_CANCELLED } from '..'
+import { formatBytes, pathClean, pathJoin, taskDone, TASK_CANCELLED } from '..'
 
 const createHandler = (isMove) => {
   return {
@@ -46,7 +46,7 @@ const createHandler = (isMove) => {
                     task = t
                     loading({
                       text: `${isMove ? 'Moving' : 'Copying'} ${entry.name} ` +
-                        `${task.progress.loaded}/${task.progress.total}`,
+                        `${formatBytes(task.progress.loaded)}/${formatBytes(task.progress.total)}`,
                       onCancel
                     })
                   }

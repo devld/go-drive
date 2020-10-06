@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	cmap "github.com/orcaman/concurrent-map"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -48,6 +49,7 @@ func (t *TunnyRunner) createTask(runnable Runnable) *wrapper {
 	w := &wrapper{
 		runnable: runnable,
 		task:     task,
+		mux:      &sync.Mutex{},
 	}
 
 	t.store.Set(task.Id, w)
@@ -136,15 +138,28 @@ type wrapper struct {
 	runnable Runnable
 	task     *Task
 	canceled bool
+	mux      *sync.Mutex
 }
 
-func (w *wrapper) Progress(loaded int64) {
-	w.task.Progress.Loaded = loaded
+func (w *wrapper) Progress(loaded int64, abs bool) {
+	w.mux.Lock()
+	defer w.mux.Unlock()
+	if abs {
+		w.task.Progress.Loaded = loaded
+	} else {
+		w.task.Progress.Loaded += loaded
+	}
 	w.task.UpdatedAt = time.Now()
 }
 
-func (w *wrapper) Total(total int64) {
-	w.task.Progress.Total = total
+func (w *wrapper) Total(total int64, abs bool) {
+	w.mux.Lock()
+	defer w.mux.Unlock()
+	if abs {
+		w.task.Progress.Total = total
+	} else {
+		w.task.Progress.Total += total
+	}
 	w.task.UpdatedAt = time.Now()
 }
 
