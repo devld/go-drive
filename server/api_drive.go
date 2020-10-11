@@ -244,7 +244,7 @@ func deleteEntry(c *gin.Context) (*task.Task, error) {
 }
 
 func upload(c *gin.Context) (*uploadConfig, error) {
-	path := c.Param("path")
+	path := common.CleanPath(c.Param("path"))
 	override := c.Query("override")
 	size := common.ToInt64(c.Query("size"), -1)
 	request := make(map[string]string, 0)
