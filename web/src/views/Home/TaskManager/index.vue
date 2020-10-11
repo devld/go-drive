@@ -39,7 +39,7 @@ export default {
     height: 60px;
     line-height: 60px;
     text-align: center;
-    color: #aaa;
+    @include var(color, secondary-text-color);
     user-select: none;
   }
 }

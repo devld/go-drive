@@ -182,8 +182,8 @@ export default {
       margin-bottom: 0;
       position: sticky;
       top: 0;
-      background-color: #fff;
-      box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+      @include var(background-color, secondary-bg-color);
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
       z-index: 1;
     }
   }

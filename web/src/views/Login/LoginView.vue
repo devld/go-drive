@@ -72,19 +72,12 @@ export default {
     display: block;
   }
 
-  input {
-    border: solid 1px rgba(0, 0, 0, 0.1);
-    font-size: 16px;
-    outline: none;
-    padding: 6px;
-  }
-
   .username {
     margin-bottom: 0 !important;
   }
 
   .username input {
-    border-bottom: none;
+    border-bottom: none !important;
   }
 
   .password {

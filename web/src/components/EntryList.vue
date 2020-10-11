@@ -168,10 +168,10 @@ export default {
 .entry-list {
   .path-bar {
     margin-bottom: 16px;
+  }
 
-    .entry-link {
-      color: #000;
-    }
+  .entry-link {
+    @include var(color, primary-text-color);
   }
 }
 
@@ -189,22 +189,21 @@ export default {
 .entry-list__item {
   animation: fade-in 0.3s;
 
-  & > a {
+  & > .entry-link {
     display: block;
     text-decoration: none;
-    color: #000;
 
     &:focus {
-      background-color: rgba(0, 0, 0, 0.08);
+      @include var(background-color, focus-bg-color);
     }
 
     &:hover {
-      background-color: #f6f6f6;
+      @include var(background-color, hover-bg-color);
     }
   }
 
-  &.selected > a {
-    background-color: #c1ecff;
+  &.selected > .entry-link {
+    @include var(background-color, select-bg-color);
   }
 }
 
@@ -212,6 +211,6 @@ export default {
   user-select: none;
   text-align: center;
   padding: 32px 0;
-  color: gray;
+  @include var(color, secondary-text-color);
 }
 </style>

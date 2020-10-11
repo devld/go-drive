@@ -1,0 +1,48 @@
+$theme-default: (body-bg-color: #f2f5fa,
+  primary-bg-color: #fff,
+  secondary-bg-color: #fff,
+
+  border-color: rgba(0, 0, 0, 0.1),
+
+  primary-text-color: #000,
+  secondary-text-color: gray,
+  link-color: #5d9cff,
+
+  dialog-overlay-bg-color: rgba(0, 0, 0, 0.4),
+  dialog-content-shadow: 0 6px 10px rgba(0, 0, 0, 0.1),
+
+  form-value-bg-color: #fff,
+  form-value-bg-color-disabled: rgba(239, 239, 239, 0.3),
+  form-value-border: solid 1px rgba(0, 0, 0, 0.1),
+
+  hover-bg-color: #f6f6f6,
+  focus-bg-color: rgba(0, 0, 0, 0.08),
+  select-bg-color: #c1ecff,
+
+  thead-bg-color: #ebebeb,
+
+  btn-bg-color-default: #409eff,
+  btn-bg-color-disabled-default: #a0cfff,
+  btn-color-default: #fff,
+  btn-color-disabled-default: #fff,
+
+  btn-bg-color-info: #909399,
+  btn-bg-color-disabled-info: #c8c9cc,
+  btn-color-info: #fff,
+  btn-color-disabled-info: #fff,
+
+  btn-bg-color-success: #67c23a,
+  btn-bg-color-disabled-success: #b3e19d,
+  btn-color-success: #fff,
+  btn-color-disabled-success: #fff,
+
+  btn-bg-color-warning: #e6a23c,
+  btn-bg-color-disabled-warning: #f3d19e,
+  btn-color-warning: #fff,
+  btn-color-disabled-warning: #fff,
+
+  btn-bg-color-danger: #f56c6c,
+  btn-bg-color-disabled-danger: #fab6b6,
+  btn-color-danger: #fff,
+  btn-color-disabled-danger: #fff,
+);

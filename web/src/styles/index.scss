@@ -1,5 +1,29 @@
-@import url('~github-markdown-css/github-markdown.css');
-@import url('~highlight.js/scss/github-gist.scss');
+@import '~github-markdown-css/github-markdown.css';
+@import '~highlight.js/scss/github-gist.scss';
+
+
+// theme
+:root {
+
+  @each $prop,
+  $val in $theme-default {
+    --#{$prop}: #{$val};
+  }
+}
+
+// theme dark
+@media (prefers-color-scheme: dark) {
+  :root {
+
+    @each $prop,
+    $val in $theme-dark {
+      --#{$prop}: #{$val};
+    }
+  }
+
+  @import './markdown-dark.scss';
+  @import '~highlight.js/scss/agate.scss';
+}
 
 .iconfont {
   font-size: inherit;
@@ -18,7 +42,7 @@
   outline: none;
   border: none;
   background-color: transparent;
-  color: #000;
+  @include var(color, primary-text-color);
   user-select: none;
   cursor: pointer;
   text-decoration: none;
@@ -31,8 +55,6 @@
 .simple-table {
   border: none;
   border-spacing: 0;
-
-  $border: solid 1px #ebebeb;
 
   th,
   td {
@@ -47,30 +69,33 @@
   }
 
   thead {
-    background-color: #ebebeb;
+    @include var(background-color, thead-bg-color);
   }
 
   tbody {
     tr {
       &:not(:last-child) td {
-        border-bottom: $border;
+        border-bottom: solid 1px;
+        @include var(border-color, border-color);
       }
 
       &:hover {
-        background-color: #ebebeb;
-
+        @include var(background-color, hover-bg-color);
       }
 
       td:first-child {
-        border-left: $border;
+        border-left: solid 1px;
+        @include var(border-color, border-color);
       }
 
       td:last-child {
-        border-right: $border;
+        border-right: solid 1px;
+        @include var(border-color, border-color);
       }
 
       td {
-        border-bottom: $border;
+        border-bottom: solid 1px;
+        @include var(border-color, border-color);
       }
     }
   }
@@ -107,13 +132,15 @@
 
   input.value,
   select.value {
-    border: solid 1px rgba(0, 0, 0, 0.1);
+    @include var(background-color, form-value-bg-color);
+    @include var(border, form-value-border);
+    @include var(color, primary-text-color);
     font-size: 16px;
     outline: none;
     padding: 6px 8px;
 
     &:disabled {
-      background-color: rgba(239, 239, 239, 0.3);
+      @include var(background-color, form-value-bg-color-disabled);
     }
   }
 }

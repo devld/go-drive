@@ -5,6 +5,14 @@ module.exports = {
   publicPath: './',
   productionSourceMap: false,
 
+  css: {
+    loaderOptions: {
+      sass: {
+        prependData: '@import "~@/styles/themes/include.scss";'
+      }
+    }
+  },
+
   pages: {
     index: {
       entry: 'src/main.js',

@@ -18,7 +18,8 @@ export default {
 body {
   margin: 0;
   padding: 0;
-  background-color: #f2f5fa;
+  @include var(background-color, body-bg-color);
+  @include var(color, primary-text-color);
 }
 
 .app {

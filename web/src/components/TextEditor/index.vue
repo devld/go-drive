@@ -4,8 +4,11 @@
 <script>
 import CodeMirror from './codemirror'
 import { filenameExt } from '@/utils'
+import { addPreferColorListener, isDarkMode, removePreferColorListener } from '@/utils/theme'
 
-const THEME_NAME = 'github-light'
+function getThemeName () {
+  return isDarkMode() ? 'material-darker' : 'github-light'
+}
 
 export default {
   name: 'TextEditor',
@@ -42,13 +45,19 @@ export default {
       this.setEditorOption('readOnly', val ? 'nocursor' : false)
     }
   },
+  created () {
+    addPreferColorListener(this.prefersColorChanged)
+  },
+  beforeDestroy () {
+    removePreferColorListener(this.prefersColorChanged)
+  },
   mounted () {
     this.initEditor()
   },
   methods: {
     initEditor () {
       this.editor = CodeMirror(this.$refs.editor, {
-        theme: THEME_NAME, value: this.content || '',
+        theme: getThemeName(), value: this.content || '',
         lineNumbers: this.lineNumbers,
         readOnly: this.disabled ? 'nocursor' : false
       })
@@ -79,13 +88,18 @@ export default {
       if (this.editor) {
         this.editor.setOption(name, value)
       }
+    },
+    prefersColorChanged () {
+      this.setEditorOption('theme', getThemeName())
     }
   }
 }
 </script>
 <style lang="scss">
 @import url("~codemirror/lib/codemirror.css");
+
 @import url("~codemirror-github-light/lib/codemirror-github-light-theme.css");
+@import "~codemirror/theme/material-darker.css";
 
 .text-editor {
   .CodeMirror {

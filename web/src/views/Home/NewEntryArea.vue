@@ -291,10 +291,10 @@ export default {
   .icon-new-item {
     display: inline-block;
     box-sizing: border-box;
-    background-color: #fff;
     border-radius: 50%;
     margin: 5px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    @include var(background-color, secondary-bg-color);
 
     .icon {
       display: block;
@@ -316,7 +316,9 @@ export default {
 
     outline: none;
     padding: 10px 26px;
-    background-color: #fff;
+    @include var(background-color, secondary-bg-color);
+    @include var(color, primary-text-color);
+
     border: none;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
     cursor: pointer;

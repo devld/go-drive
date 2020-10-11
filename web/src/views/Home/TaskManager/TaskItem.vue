@@ -3,7 +3,7 @@
     <div
       v-if="progress && progress !== 1"
       class="upload-task-item__progress-bar"
-      :style="{ 'width': `${progress * 100}%` }"
+      :style="{ width: `${progress * 100}%` }"
     ></div>
     <span class="upload-task-item__filename" :title="filename">
       <entry-icon class="upload-task-item__icon" :entry="entry" />
@@ -12,9 +12,12 @@
     <span
       class="upload-task-item__size"
       :title="$.formatBytes(task.task.size, 1)"
-    >{{ task.task.size | formatBytes(1) }}</span>
+      >{{ task.task.size | formatBytes(1) }}</span
+    >
     <span class="upload-task-item__location">
-      <entry-link :path="dir" @click="$emit('navigate', $event)">{{ $.filename(dir) }}</entry-link>
+      <entry-link :path="dir" @click="$emit('navigate', $event)">{{
+        $.filename(dir)
+      }}</entry-link>
     </span>
     <span class="upload-task-item__status">{{ statusText }}</span>
     <span class="upload-task-item__ops">
@@ -181,7 +184,7 @@ export default {
 
   a {
     text-decoration: none;
-    color: #5d9cff;
+    @include var(color, link-color);
   }
 }
 
