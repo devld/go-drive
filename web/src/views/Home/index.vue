@@ -127,15 +127,6 @@ export default {
     },
     ...mapState(['user'])
   },
-  watch: {
-    entryHandlerViewShowing (show) {
-      if (show) {
-        document.body.classList.add('scroll-lock')
-      } else {
-        document.body.classList.remove('scroll-lock')
-      }
-    }
-  },
   beforeRouteUpdate (to, from, next) {
     if (!this.resolveHandlerByRoute(from) && this.resolveHandlerByRoute(to)) {
       setHistoryFlag()
@@ -353,10 +344,6 @@ export default {
 }
 </script>
 <style lang="scss">
-body.scroll-lock {
-  overflow: hidden;
-}
-
 .home {
   margin-bottom: 40px;
 }
@@ -364,7 +351,7 @@ body.scroll-lock {
 .files-list {
   max-width: 880px;
   margin: 16px auto 0;
-  background-color: #fff;
+  @include var(background-color, primary-bg-color);
   padding: 16px 0;
   border-radius: 16px;
 }
@@ -373,7 +360,7 @@ body.scroll-lock {
   box-sizing: border-box;
   max-width: 880px;
   margin: 42px auto;
-  background-color: #fff;
+  @include var(background-color, primary-bg-color);
   padding: 16px;
   border-radius: 16px;
 }

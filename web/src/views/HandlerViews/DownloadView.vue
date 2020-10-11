@@ -69,7 +69,7 @@ export default {
 .download-view-page {
   position: relative;
   width: 300px;
-  background: #fff;
+  @include var(background-color, secondary-bg-color);
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
   padding: 16px 16px 20px;
 

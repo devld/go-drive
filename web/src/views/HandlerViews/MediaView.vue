@@ -33,7 +33,7 @@ export default {
   justify-content: center;
   align-items: center;
   padding-top: 48px;
-  background: #fff;
+  @include var(background-color, secondary-bg-color);
 
   .filename {
     position: absolute;
@@ -42,7 +42,8 @@ export default {
     right: 0;
     margin: 0;
     text-align: center;
-    border-bottom: 1px solid #eaecef;
+    border-bottom: 1px solid;
+    @include var(border-color, border-color);
     padding: 10px 2.5em;
     font-size: 20px;
     font-weight: normal;

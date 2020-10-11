@@ -15,7 +15,9 @@
       :disabled="!!loading"
       v-focus
     />
-    <div v-if="validationError" class="input-dialog__validation">{{ validationError }}</div>
+    <div v-if="validationError" class="input-dialog__validation">
+      {{ validationError }}
+    </div>
   </div>
 </template>
 <script>
@@ -131,7 +133,9 @@ export default {
 }
 
 .input-dialog__input {
-  border: solid 1px rgba(0, 0, 0, 0.1);
+  @include var(background-color, form-value-bg-color);
+  @include var(border, form-value-border);
+  @include var(color, primary-text-color);
   font-size: 16px;
   outline: none;
   padding: 6px;

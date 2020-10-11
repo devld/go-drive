@@ -6,9 +6,14 @@
         v-if="!readonly"
         @click="saveFile"
         :loading="saving"
-      >Save</simple-button>
+        >Save</simple-button
+      >
       <span :title="filename">{{ filename }}</span>
-      <button class="header-button close-button plain-button" title="Close" @click="$emit('close')">
+      <button
+        class="header-button close-button plain-button"
+        title="Close"
+        @click="$emit('close')"
+      >
         <i-icon svg="#icon-close" />
       </button>
     </h1>
@@ -130,15 +135,12 @@ export default {
 }
 </script>
 <style lang="scss">
-@import url("~codemirror/lib/codemirror.css");
-@import url("~codemirror-github-light/lib/codemirror-github-light-theme.css");
-
 .text-edit-view {
   position: relative;
   width: 800px;
   height: calc(100vh - 64px);
   padding-top: 60px;
-  background-color: #fff;
+  @include var(background-color, secondary-bg-color);
   overflow: hidden;
   box-sizing: border-box;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -151,6 +153,7 @@ export default {
     margin: 0;
     text-align: center;
     border-bottom: 1px solid #eaecef;
+    @include var(border-color, border-color);
     padding: 10px 4em;
     font-size: 28px;
     font-weight: normal;

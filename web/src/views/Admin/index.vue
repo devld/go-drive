@@ -3,7 +3,7 @@
     <ul class="menu-list">
       <li
         class="menu-item"
-        :class="{ 'active': currentMenu === m.path }"
+        :class="{ active: currentMenu === m.path }"
         v-for="m in menus"
         :key="m.path"
       >
@@ -39,7 +39,7 @@ export default {
 .admin-page {
   max-width: 880px;
   margin: 16px auto 0;
-  background-color: #fff;
+  @include var(background-color, primary-bg-color);
   border-radius: 16px;
   display: flex;
   overflow: hidden;
@@ -55,11 +55,11 @@ export default {
     list-style-type: none;
 
     &:hover {
-      background-color: #ebebeb;
+      @include var(background-color, hover-bg-color);
     }
 
     &.active {
-      background-color: #ebebeb;
+      @include var(background-color, select-bg-color);
     }
   }
 
@@ -69,19 +69,21 @@ export default {
     width: 100%;
     padding: 8px 16px;
     text-decoration: none;
-    color: #000;
+    @include var(color, primary-text-color);
   }
 
   // pc
   .menu-list {
     width: 120px;
     padding: 16px 0 42px;
-    border-right: solid 1px #ebebeb;
+    border-right: solid 1px;
+    @include var(border-color, border-color);
   }
 
   .menu-item {
     &:not(:last-child) {
-      border-bottom: solid 1px #ebebeb;
+      border-bottom: solid 1px;
+      @include var(border-color, border-color);
     }
   }
 

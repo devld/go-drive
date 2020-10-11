@@ -43,7 +43,7 @@ export default {
 </script>
 <style lang="scss">
 .entry-menu {
-  background-color: #fff;
+  @include var(background-color, secondary-bg-color);
   padding: 20px 0;
   width: 280px;
   overflow: hidden;
@@ -80,10 +80,10 @@ export default {
   list-style-type: none;
   padding: 0 20px;
   cursor: pointer;
-  transition: 0.4s;
+  transition: 0.1s;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.08);
+    @include var(background-color, hover-bg-color);
   }
 }
 

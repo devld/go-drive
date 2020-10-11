@@ -1,7 +1,10 @@
 <template>
   <div
     class="float-button"
-    :class="[`float-button__posi-${position}`, value ? 'float-button--active' : '']"
+    :class="[
+      `float-button__posi-${position}`,
+      value ? 'float-button--active' : '',
+    ]"
   >
     <div class="float-button__buttons">
       <transition v-for="(b, i) in buttons" :key="i" name="scale-fade">
@@ -18,7 +21,11 @@
         </button>
       </transition>
     </div>
-    <button class="float-button__trigger" :title="title" @click.capture.stop="triggerClicked">
+    <button
+      class="float-button__trigger"
+      :title="title"
+      @click.capture.stop="triggerClicked"
+    >
       <slot />
     </button>
   </div>

@@ -128,7 +128,7 @@ export default {
   right: 0;
   bottom: 0;
   overflow: hidden;
-  background-color: rgba(0, 0, 0, 0.1);
+  @include var(background-color, dialog-overlay-bg-color);
   z-index: 1000;
 
   display: flex;
@@ -137,8 +137,8 @@ export default {
 }
 
 .dialog-view__content {
-  background-color: #fff;
-  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+  @include var(background-color, secondary-bg-color);
+  @include var(box-shadow, dialog-content-shadow);
 }
 
 .dialog-view__header {
