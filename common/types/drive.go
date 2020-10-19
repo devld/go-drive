@@ -1,16 +1,11 @@
 package types
 
-import (
-	"go-drive/common/task"
-	"io"
-)
+import "io"
 
 const (
 	TypeFile = "file"
 	TypeDir  = "dir"
 )
-
-type DriveCreator = func(map[string]string) (IDrive, error)
 
 type EntryType string
 
@@ -25,7 +20,7 @@ func (t EntryType) IsDir() bool {
 type EntryMeta struct {
 	CanRead  bool
 	CanWrite bool
-	Props    map[string]interface{}
+	Props    M
 }
 
 type IContent interface {
@@ -55,30 +50,42 @@ type IEntryWrapper interface {
 
 type DriveMeta struct {
 	CanWrite bool
-	Props    map[string]interface{}
+	Props    M
 }
 
 type IDrive interface {
 	Meta() DriveMeta
 	Get(path string) (IEntry, error)
-	Save(path string, reader io.Reader, ctx task.Context) (IEntry, error)
+	Save(path string, size int64, override bool, reader io.Reader, ctx TaskCtx) (IEntry, error)
 	MakeDir(path string) (IEntry, error)
-	Copy(from IEntry, to string, override bool, ctx task.Context) (IEntry, error)
-	Move(from IEntry, to string, override bool, ctx task.Context) (IEntry, error)
+	Copy(from IEntry, to string, override bool, ctx TaskCtx) (IEntry, error)
+	Move(from IEntry, to string, override bool, ctx TaskCtx) (IEntry, error)
 	List(path string) ([]IEntry, error)
-	Delete(path string, ctx task.Context) error
+	Delete(path string, ctx TaskCtx) error
 
 	// Upload returns the upload config of the path
-	Upload(path string, size int64, override bool, config map[string]string) (*DriveUploadConfig, error)
+	Upload(path string, size int64, override bool, config SM) (*DriveUploadConfig, error)
 }
 
 const (
 	LocalProvider      = "local"
 	LocalChunkProvider = "localChunk"
 	S3Provider         = "s3"
+	OneDriveProvider   = "onedrive"
 )
+
+const (
+	LocalProviderChunkSize = 5 * 1024 * 1024
+)
+
+func UseLocalProvider(size int64) *DriveUploadConfig {
+	if size <= LocalProviderChunkSize {
+		return &DriveUploadConfig{Provider: LocalProvider}
+	}
+	return &DriveUploadConfig{Provider: LocalChunkProvider}
+}
 
 type DriveUploadConfig struct {
 	Provider string
-	Config   map[string]string
+	Config   SM
 }

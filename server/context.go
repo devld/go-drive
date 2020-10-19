@@ -18,60 +18,74 @@ const (
 )
 
 type ComponentsHolder struct {
-	TokenStore        TokenStore
-	RequestSigner     *common.Signer
-	RootDrive         *drive.RootDrive
-	DriveStorage      *storage.DriveStorage
-	UserStorage       *storage.UserStorage
-	GroupStorage      *storage.GroupStorage
+	TokenStore    TokenStore
+	RequestSigner *common.Signer
+
+	RootDrive *drive.RootDrive
+
+	DriveStorage *storage.DriveStorage
+	UserStorage  *storage.UserStorage
+	GroupStorage *storage.GroupStorage
+
 	PermissionStorage *storage.PathPermissionStorage
 	PathMountStorage  *storage.PathMountStorage
-	TaskRunner        task.Runner
-	ChunkUploader     *ChunkUploader
+	DriveCacheStorage *storage.DriveCacheStorage
+	DriveDataStorage  *storage.DriveDataStorage
+
+	TaskRunner    task.Runner
+	ChunkUploader *ChunkUploader
 }
 
-func GetComponentsHolder(c *gin.Context) *ComponentsHolder {
+func getComponentsHolder(c *gin.Context) *ComponentsHolder {
 	return c.MustGet(keyComponentsHolder).(*ComponentsHolder)
 }
 
 func GetTokenStore(c *gin.Context) TokenStore {
-	return GetComponentsHolder(c).TokenStore
+	return getComponentsHolder(c).TokenStore
 }
 
 func GetRequestSigner(c *gin.Context) *common.Signer {
-	return GetComponentsHolder(c).RequestSigner
+	return getComponentsHolder(c).RequestSigner
 }
 
 func GetRootDrive(c *gin.Context) *drive.RootDrive {
-	return GetComponentsHolder(c).RootDrive
+	return getComponentsHolder(c).RootDrive
 }
 
 func GetDriveStorage(c *gin.Context) *storage.DriveStorage {
-	return GetComponentsHolder(c).DriveStorage
+	return getComponentsHolder(c).DriveStorage
 }
 
 func GetUserStorage(c *gin.Context) *storage.UserStorage {
-	return GetComponentsHolder(c).UserStorage
+	return getComponentsHolder(c).UserStorage
 }
 
 func GetGroupStorage(c *gin.Context) *storage.GroupStorage {
-	return GetComponentsHolder(c).GroupStorage
+	return getComponentsHolder(c).GroupStorage
 }
 
 func GetPermissionStorage(c *gin.Context) *storage.PathPermissionStorage {
-	return GetComponentsHolder(c).PermissionStorage
+	return getComponentsHolder(c).PermissionStorage
 }
 
 func GetPathMountStorage(c *gin.Context) *storage.PathMountStorage {
-	return GetComponentsHolder(c).PathMountStorage
+	return getComponentsHolder(c).PathMountStorage
+}
+
+func GetDriveCacheStorage(c *gin.Context) *storage.DriveCacheStorage {
+	return getComponentsHolder(c).DriveCacheStorage
+}
+
+func GetDriveDataStorage(c *gin.Context) *storage.DriveDataStorage {
+	return getComponentsHolder(c).DriveDataStorage
 }
 
 func GetTaskRunner(c *gin.Context) task.Runner {
-	return GetComponentsHolder(c).TaskRunner
+	return getComponentsHolder(c).TaskRunner
 }
 
 func GetChunkUploader(c *gin.Context) *ChunkUploader {
-	return GetComponentsHolder(c).ChunkUploader
+	return getComponentsHolder(c).ChunkUploader
 }
 
 func SetResult(c *gin.Context, result interface{}) {

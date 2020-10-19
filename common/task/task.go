@@ -2,6 +2,7 @@ package task
 
 import (
 	"errors"
+	"go-drive/common/types"
 	"time"
 )
 
@@ -39,13 +40,7 @@ func (t Task) Finished() bool {
 	return t.Status == Done || t.Status == Error || t.Status == Canceled
 }
 
-type Context interface {
-	Progress(loaded int64, abs bool)
-	Total(total int64, abs bool)
-	Canceled() bool
-}
-
-type Runnable = func(ctx Context) (interface{}, error)
+type Runnable = func(ctx types.TaskCtx) (interface{}, error)
 
 type Runner interface {
 	Execute(runnable Runnable) (Task, error)
@@ -56,7 +51,7 @@ type Runner interface {
 	Dispose() error
 }
 
-func DummyContext() Context {
+func DummyContext() types.TaskCtx {
 	return dummyCtx
 }
 
@@ -75,10 +70,20 @@ func (d *dummyContext) Canceled() bool {
 	return false
 }
 
-func NewCtxWrapper(ctx Context, mutableLoaded, mutableTotal bool) Context {
+func NewCtxWrapper(ctx types.TaskCtx, mutableLoaded, mutableTotal bool) types.TaskCtx {
 	return &ctxWrapper{
 		mutableLoaded: mutableLoaded,
 		mutableTotal:  mutableTotal,
+		cancelable:    true,
+		ctx:           ctx,
+	}
+}
+
+func NewProgressCtxWrapper(ctx types.TaskCtx) types.TaskCtx {
+	return &ctxWrapper{
+		mutableLoaded: true,
+		mutableTotal:  true,
+		cancelable:    false,
 		ctx:           ctx,
 	}
 }
@@ -86,7 +91,8 @@ func NewCtxWrapper(ctx Context, mutableLoaded, mutableTotal bool) Context {
 type ctxWrapper struct {
 	mutableLoaded bool
 	mutableTotal  bool
-	ctx           Context
+	cancelable    bool
+	ctx           types.TaskCtx
 }
 
 func (c *ctxWrapper) Progress(loaded int64, abs bool) {
@@ -102,5 +108,8 @@ func (c *ctxWrapper) Total(total int64, abs bool) {
 }
 
 func (c *ctxWrapper) Canceled() bool {
+	if !c.cancelable {
+		return false
+	}
 	return c.ctx.Canceled()
 }

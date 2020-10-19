@@ -3,7 +3,7 @@ package server
 type Token struct {
 	Token     string      `json:"token"`
 	Value     interface{} `json:"-"`
-	ExpiredAt int64       `json:"expiredAt"`
+	ExpiredAt int64       `json:"expires_at"`
 }
 
 type TokenStore interface {

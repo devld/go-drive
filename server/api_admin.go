@@ -196,7 +196,34 @@ func InitAdminRoutes(r gin.IRouter) {
 	r.DELETE("/drive/:name", func(c *gin.Context) {
 		name := c.Param("name")
 		e := GetDriveStorage(c).DeleteDrive(name)
+		_ = GetDriveCacheStorage(c).Remove(name)
+		_ = GetDriveDataStorage(c).Remove(name)
 		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+	})
+
+	// get drive initialization information
+	r.GET("/drive/:name/init", func(c *gin.Context) {
+		name := c.Param("name")
+		data, e := GetRootDrive(c).DriveInitConfig(name)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, data)
+	})
+
+	// init drive
+	r.POST("/drive/:name/init", func(c *gin.Context) {
+		name := c.Param("name")
+		data := make(types.SM, 0)
+		if e := c.Bind(&data); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		if e := GetRootDrive(c).DriveInit(name, data); e != nil {
 			_ = c.Error(e)
 			return
 		}
@@ -204,7 +231,7 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// reload drives
 	r.POST("/drives/reload", func(c *gin.Context) {
-		if e := GetRootDrive(c).ReloadDrive(); e != nil {
+		if e := GetRootDrive(c).ReloadDrive(false); e != nil {
 			_ = c.Error(e)
 		}
 	})

@@ -102,7 +102,8 @@ export default {
       width: 100%;
       overflow-x: auto;
       overflow-y: hidden;
-      border-bottom: solid 1px #ebebeb;
+      border-bottom: solid 1px;
+      @include var(border-color, border-color);
       border-right: none;
       padding: 0;
     }

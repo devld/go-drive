@@ -56,6 +56,14 @@ export function deleteDrive (name) {
   return axios.delete(`/admin/drive/${name}`)
 }
 
+export function getDriveInitConfig (name) {
+  return axios.get(`/admin/drive/${name}/init`)
+}
+
+export function initDrive (name, data) {
+  return axios.post(`/admin/drive/${name}/init`, data)
+}
+
 export function reloadDrives () {
   return axios.post('/admin/drives/reload')
 }
