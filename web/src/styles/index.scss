@@ -106,22 +106,19 @@
 }
 
 .form-item {
-  display: flex;
-  align-items: center;
-
-  &:not(:last-child) {
-    margin-bottom: 10px;
-  }
+  margin-bottom: 16px;
 
   .label {
     user-select: none;
-    display: inline-block;
-    width: 110px;
+    display: block;
+    margin-bottom: 6px;
+  }
 
-    &:after {
-      content: ":";
-      margin-right: 0.5em;
-    }
+  .description {
+    display: block;
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 6px;
   }
 
   input[type='text'].value,
@@ -141,17 +138,6 @@
 
     &:disabled {
       @include var(background-color, form-value-bg-color-disabled);
-    }
-  }
-}
-
-@media screen and (max-width: 386px) {
-  .form-item {
-    display: block;
-
-    .label {
-      display: block;
-      margin-bottom: 6px;
     }
   }
 }

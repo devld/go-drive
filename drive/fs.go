@@ -2,6 +2,7 @@ package drive
 
 import (
 	"go-drive/common"
+	"go-drive/common/drive_util"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"io"
@@ -31,7 +32,7 @@ type fsFile struct {
 // NewFsDrive creates a file system drive
 // params:
 //   - path: root key of this drive
-func NewFsDrive(config map[string]string) (types.IDrive, error) {
+func NewFsDrive(config drive_util.DriveConfig, _ drive_util.DriveUtils) (types.IDrive, error) {
 	path := config["path"]
 	if common.CleanPath(path) == "" {
 		return nil, common.NewNotAllowedMessageError("invalid root path")
@@ -96,14 +97,20 @@ func (f *FsDrive) Get(path string) (types.IEntry, error) {
 	return f.newFsFile(path, stat)
 }
 
-func (f *FsDrive) Save(path string, reader io.Reader, ctx task.Context) (types.IEntry, error) {
+func (f *FsDrive) Save(path string, _ int64, override bool,
+	reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
 	path = f.getPath(path)
+	if !override {
+		if e := requireFile(path, false); e != nil {
+			return nil, e
+		}
+	}
 	file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if e != nil {
 		return nil, e
 	}
 	defer func() { _ = file.Close() }()
-	_, e = common.Copy(file, reader, ctx)
+	_, e = drive_util.Copy(file, reader, task.NewProgressCtxWrapper(ctx))
 	if e != nil {
 		return nil, e
 	}
@@ -129,7 +136,7 @@ func (f *FsDrive) MakeDir(path string) (types.IEntry, error) {
 	return f.newFsFile(path, stat)
 }
 
-func (f *FsDrive) Copy(types.IEntry, string, bool, task.Context) (types.IEntry, error) {
+func (f *FsDrive) Copy(types.IEntry, string, bool, types.TaskCtx) (types.IEntry, error) {
 	return nil, common.NewUnsupportedError()
 }
 
@@ -140,10 +147,10 @@ func (f *FsDrive) isSelf(entry types.IEntry) bool {
 	return false
 }
 
-func (f *FsDrive) Move(from types.IEntry, to string, _ bool, _ task.Context) (types.IEntry, error) {
-	from = common.GetIEntry(from, f.isSelf)
+func (f *FsDrive) Move(from types.IEntry, to string, _ bool, _ types.TaskCtx) (types.IEntry, error) {
+	from = drive_util.GetIEntry(from, f.isSelf)
 	if from == nil {
-		return nil, common.NewUnsupportedMessageError("Move files across drives is not supported.")
+		return nil, common.NewUnsupportedError()
 	}
 	fromPath := f.getPath(from.(*fsFile).path)
 	toPath := f.getPath(to)
@@ -194,7 +201,7 @@ func (f *FsDrive) List(path string) ([]types.IEntry, error) {
 	return entries, nil
 }
 
-func (f *FsDrive) Delete(path string, _ task.Context) error {
+func (f *FsDrive) Delete(path string, _ types.TaskCtx) error {
 	path = f.getPath(path)
 	if f.isRootPath(path) {
 		return common.NewNotAllowedMessageError("root cannot be deleted")
@@ -206,18 +213,14 @@ func (f *FsDrive) Delete(path string, _ task.Context) error {
 }
 
 func (f *FsDrive) Upload(path string, size int64, override bool,
-	_ map[string]string) (*types.DriveUploadConfig, error) {
+	_ types.SM) (*types.DriveUploadConfig, error) {
 	path = f.getPath(path)
 	if !override {
 		if e := requireFile(path, false); e != nil {
 			return nil, e
 		}
 	}
-	provider := types.LocalProvider
-	if size > 5*1024*1024 {
-		provider = types.LocalChunkProvider
-	}
-	return &types.DriveUploadConfig{Provider: provider}, nil
+	return types.UseLocalProvider(size), nil
 }
 
 func requireFile(path string, requireExists bool) error {

@@ -44,7 +44,7 @@ func (u *UserStorage) AddUser(user types.User) (types.User, error) {
 }
 
 func (u *UserStorage) UpdateUser(username string, user types.User) error {
-	data := map[string]interface{}{}
+	data := types.M{}
 	if user.Password != "" {
 		encoded, e := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 		if e != nil {

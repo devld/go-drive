@@ -58,3 +58,14 @@ export default {
   }
 }
 </script>
+<style lang="scss">
+.simple-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+
+  .form-item {
+    width: 232px;
+  }
+}
+</style>

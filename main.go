@@ -45,7 +45,14 @@ func initComponentsHolder(config common.Config) *server.ComponentsHolder {
 	common.IfFatalError(e)
 	pathMountStorage, e := storage.NewPathMountStorage(db)
 	common.IfFatalError(e)
-	rootDrive, e := drive.NewRootDrive(driveStorage, pathMountStorage)
+	driveDataStorage, e := storage.NewDriveDataStorage(db)
+	common.IfFatalError(e)
+	driveCacheStorage, e := storage.NewDriveCacheStorage(db)
+	common.IfFatalError(e)
+	rootDrive, e := drive.NewRootDrive(
+		driveStorage, pathMountStorage,
+		driveDataStorage, driveCacheStorage,
+	)
 	common.IfFatalError(e)
 
 	chunksTempDir, e := config.GetDir("upload_temp", true)
@@ -54,15 +61,21 @@ func initComponentsHolder(config common.Config) *server.ComponentsHolder {
 	common.IfFatalError(e)
 
 	return &server.ComponentsHolder{
-		TokenStore:        tokenStore,
-		RootDrive:         rootDrive,
-		DriveStorage:      driveStorage,
-		UserStorage:       userStorage,
-		GroupStorage:      groupStorage,
+		TokenStore:    tokenStore,
+		RequestSigner: requestSigner,
+
+		RootDrive: rootDrive,
+
+		DriveStorage: driveStorage,
+		UserStorage:  userStorage,
+		GroupStorage: groupStorage,
+
 		PermissionStorage: permissionStorage,
 		PathMountStorage:  pathMountStorage,
-		RequestSigner:     requestSigner,
-		TaskRunner:        task.NewTunnyRunner(100),
-		ChunkUploader:     chunkUploader,
+		DriveCacheStorage: driveCacheStorage,
+		DriveDataStorage:  driveDataStorage,
+
+		TaskRunner:    task.NewTunnyRunner(100),
+		ChunkUploader: chunkUploader,
 	}
 }

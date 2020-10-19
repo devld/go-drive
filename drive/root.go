@@ -4,32 +4,44 @@ import (
 	"encoding/json"
 	"fmt"
 	"go-drive/common"
+	"go-drive/common/drive_util"
 	"go-drive/common/types"
+	"go-drive/drive/onedrive"
 	"go-drive/storage"
+	"log"
 )
 
-var drivesFactory = map[string]types.DriveCreator{
-	"fs": NewFsDrive,
-	"s3": NewS3Drive,
+var driveFactories = map[string]drive_util.DriveFactory{
+	"fs":       {Create: NewFsDrive},
+	"s3":       {Create: NewS3Drive},
+	"onedrive": {Create: onedrive.NewOneDrive, InitConfig: onedrive.InitConfig, Init: onedrive.Init},
 }
 
 type RootDrive struct {
-	root         *DispatcherDrive
-	driveStorage *storage.DriveStorage
-	mountStorage *storage.PathMountStorage
+	root              *DispatcherDrive
+	driveStorage      *storage.DriveStorage
+	mountStorage      *storage.PathMountStorage
+	driveDataStorage  *storage.DriveDataStorage
+	driveCacheStorage *storage.DriveCacheStorage
 }
 
-func NewRootDrive(driveStorage *storage.DriveStorage, mountStorage *storage.PathMountStorage) (*RootDrive, error) {
+func NewRootDrive(
+	driveStorage *storage.DriveStorage,
+	mountStorage *storage.PathMountStorage,
+	dataStorage *storage.DriveDataStorage,
+	driveCacheStorage *storage.DriveCacheStorage) (*RootDrive, error) {
 	root := NewDispatcherDrive(mountStorage)
 	r := &RootDrive{
-		root:         root,
-		driveStorage: driveStorage,
-		mountStorage: mountStorage,
+		root:              root,
+		driveStorage:      driveStorage,
+		mountStorage:      mountStorage,
+		driveDataStorage:  dataStorage,
+		driveCacheStorage: driveCacheStorage,
 	}
 	if e := r.ReloadMounts(); e != nil {
 		return nil, e
 	}
-	if e := r.ReloadDrive(); e != nil {
+	if e := r.ReloadDrive(true); e != nil {
 		return nil, e
 	}
 	return r, nil
@@ -39,7 +51,20 @@ func (d *RootDrive) Get() types.IDrive {
 	return d.root
 }
 
-func (d *RootDrive) ReloadDrive() error {
+func checkAndParseConfig(dc types.Drive) (*drive_util.DriveFactory, types.SM, error) {
+	factory, ok := driveFactories[dc.Type]
+	if !ok {
+		return nil, nil, common.NewBadRequestError(fmt.Sprintf("invalid drive type '%s'", dc.Type))
+	}
+	config := make(types.SM)
+	e := json.Unmarshal([]byte(dc.Config), &config)
+	if e != nil {
+		return nil, nil, common.NewBadRequestError(fmt.Sprintf("invalid drive config of '%s'", dc.Name))
+	}
+	return &factory, config, nil
+}
+
+func (d *RootDrive) ReloadDrive(ignoreFailure bool) error {
 	drivesConfig, e := d.driveStorage.GetDrives()
 	if e != nil {
 		return e
@@ -55,21 +80,27 @@ func (d *RootDrive) ReloadDrive() error {
 			}
 		}
 	}()
-	for _, d := range drivesConfig {
-		create, ok := drivesFactory[d.Type]
-		if !ok {
-			return common.NewBadRequestError(fmt.Sprintf("invalid drive type '%s'", d.Type))
+	for _, dc := range drivesConfig {
+		if !dc.Enabled {
+			continue
 		}
-		config := make(map[string]string)
-		e := json.Unmarshal([]byte(d.Config), &config)
+		factory, config, e := checkAndParseConfig(dc)
 		if e != nil {
-			return common.NewBadRequestError(fmt.Sprintf("invalid drive config of '%s'", d.Name))
+			if ignoreFailure {
+				log.Printf("[%s]: %v", dc.Name, e)
+				continue
+			}
+			return e
 		}
-		iDrive, e := create(config)
+		iDrive, e := factory.Create(config, d.createDriveUtils(dc.Name))
 		if e != nil {
-			return common.NewBadRequestError(fmt.Sprintf("error when creating drive '%s': %s", d.Name, e.Error()))
+			if ignoreFailure {
+				log.Printf("[%s]: %v", dc.Name, e)
+				continue
+			}
+			return common.NewBadRequestError(fmt.Sprintf("error when creating drive '%s': %s", dc.Name, e.Error()))
 		}
-		drives[d.Name] = iDrive
+		drives[dc.Name] = iDrive
 	}
 	d.root.setDrives(drives)
 	ok = true
@@ -78,4 +109,47 @@ func (d *RootDrive) ReloadDrive() error {
 
 func (d *RootDrive) ReloadMounts() error {
 	return d.root.reloadMounts()
+}
+
+func (d *RootDrive) DriveInitConfig(name string) (*drive_util.DriveInitConfig, error) {
+	dc, e := d.driveStorage.GetDrive(name)
+	if e != nil {
+		return nil, e
+	}
+	factory, config, e := checkAndParseConfig(dc)
+	if e != nil {
+		return nil, e
+	}
+	if factory.InitConfig == nil {
+		return nil, nil
+	}
+	initConfig, e := factory.InitConfig(config, d.createDriveUtils(name))
+	return &initConfig, e
+}
+
+func (d *RootDrive) DriveInit(name string, data types.SM) error {
+	dc, e := d.driveStorage.GetDrive(name)
+	if e != nil {
+		return e
+	}
+	factory, config, e := checkAndParseConfig(dc)
+	if e != nil {
+		return e
+	}
+	if factory.Init == nil {
+		return nil
+	}
+	return factory.Init(data, config, d.createDriveUtils(name))
+}
+
+func (d *RootDrive) createDriveUtils(name string) drive_util.DriveUtils {
+	return drive_util.DriveUtils{
+		Data: d.driveDataStorage.GetDataStore(name),
+		CreateCache: func(de drive_util.EntryDeserialize, s drive_util.EntrySerialize) drive_util.DriveCache {
+			if s == nil {
+				s = drive_util.SerializeEntry
+			}
+			return d.driveCacheStorage.GetCacheStore(name, s, de)
+		},
+	}
 }

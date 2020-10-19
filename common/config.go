@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	DbType     = "sqlite3"
-	DbFilename = "data.db"
-	LocalFsDir = "local"
+	DbType              = "sqlite3"
+	DbFilename          = "data.db"
+	LocalFsDir          = "local"
+	DefaultMaxProxySize = 1 * 1024 * 1024
 )
 
 var config *Config
@@ -31,6 +32,7 @@ func InitConfig() {
 	flag.StringVar(&c.dataDir, "d", "./", "path to the db files dir")
 	flag.StringVar(&c.resDir, "s", "", "path to the static files")
 	flag.BoolVar(&c.freeFs, "f", false, "enable unlimited local fs drive(absolute path)")
+	flag.Int64Var(&c.maxProxySize, "max-proxy-size", DefaultMaxProxySize, "maximum file size that can be proxied, default is 1M")
 
 	flag.Parse()
 
@@ -44,8 +46,16 @@ func InitConfig() {
 type Config struct {
 	dataDir string
 	listen  string
-	resDir  string
-	freeFs  bool
+	// static files(web) dir
+	resDir string
+	// unlimited fs drive path,
+	// fs drive path will be limited in dataDir/local if freeFs is false
+	freeFs bool
+	// maxProxySize is the maximum file size
+	// can be proxied when the API call explicitly specifies
+	// that it needs to be proxied.
+	// The size is unlimited when maxProxySize is less than or equal to 0
+	maxProxySize int64
 }
 
 func (c Config) GetListen() string {
@@ -81,4 +91,8 @@ func (c Config) GetLocalFsDir() (string, error) {
 		return "", nil
 	}
 	return c.GetDir(LocalFsDir, true)
+}
+
+func (c Config) GetMaxProxySize() int64 {
+	return c.maxProxySize
 }
