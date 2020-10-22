@@ -64,7 +64,7 @@
 <script>
 import TaskManager from './TaskManager'
 import { makeDir } from '@/api'
-import { pathClean, pathJoin } from '@/utils'
+import { dir, pathClean, pathJoin } from '@/utils'
 import { UploadManager } from '@/api/upload-manager'
 // eslint-disable-next-line no-unused-vars
 import { UploadTaskItem, STATUS_COMPLETED } from '@/api/upload-manager/task'
@@ -198,7 +198,9 @@ export default {
       this.tasks = tasks
       this.updateTasksSummary()
       if (task && task.status === STATUS_COMPLETED) {
-        this.$emit('update')
+        if (this.path === dir(task.task.path)) {
+          this.$emit('update')
+        }
       }
     },
     startTask (task) {
@@ -322,6 +324,7 @@ export default {
     border: none;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
     cursor: pointer;
+    user-select: none;
   }
 
   .task-manager {

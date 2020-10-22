@@ -1,5 +1,5 @@
 <template>
-  <div class="home" @keydown.esc="closeEntryHandlerView">
+  <div class="home">
     <!-- file list main area -->
     <div class="files-list">
       <entry-list-view
@@ -145,9 +145,11 @@ export default {
   created () {
     this.reloadEntryList = debounce(this.reloadEntryList, 500)
     window.addEventListener('beforeunload', this.onWindowUnload)
+    window.addEventListener('keydown', this.onKeyDown)
     this.resolveRouteAndHandleEntry()
   },
   beforeDestroy () {
+    window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('beforeunload', this.onWindowUnload)
   },
   methods: {
@@ -338,6 +340,13 @@ export default {
     reloadEntryList () {
       this.selectedEntries.splice(0)
       this.$refs.entryList.reload()
+    },
+    onKeyDown (e) {
+      if (e.key === 'Escape') {
+        this.closeEntryHandlerView()
+        e.stopPropagation()
+        e.preventDefault()
+      }
     },
     ...mapMutations(['progressBar'])
   }

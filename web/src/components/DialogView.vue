@@ -45,7 +45,7 @@ export default {
     },
     transition: {
       type: String,
-      default: 'bottom-fade'
+      default: 'fade'
     },
     overlayClose: {
       type: Boolean

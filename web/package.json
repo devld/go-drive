@@ -16,6 +16,7 @@
     "dayjs": "^1.8.26",
     "dompurify": "^2.0.11",
     "github-markdown-css": "^4.0.0",
+    "hammerjs": "^2.0.8",
     "highlight.js": "^10.0.2",
     "marked": "^1.0.0",
     "photoswipe": "^4.1.3",

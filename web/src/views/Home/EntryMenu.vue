@@ -47,6 +47,7 @@ export default {
   padding: 20px 0;
   width: 280px;
   overflow: hidden;
+  user-select: none;
 }
 
 .entry-menu__entry {
