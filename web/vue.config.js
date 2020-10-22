@@ -45,7 +45,7 @@ module.exports = {
   },
   pwa: {
     name: process.env.VUE_APP_SITE_TITLE,
-    themeColor: '#03a9f4',
+    themeColor: '#f2f5fa',
     msTileColor: '#2b5797',
     iconPaths: {
       favicon32: 'static/icon/favicon-32x32.png',

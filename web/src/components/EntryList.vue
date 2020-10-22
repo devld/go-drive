@@ -158,8 +158,9 @@ export default {
         if (index >= 0) dom = this.$refs.entries[index]
       }
       dom = (dom && dom.$el) || dom
-      dom && dom.scrollIntoView()
-      dom && dom.focus()
+      this.$nextTick(() => {
+        dom && dom.focus()
+      })
     }
   }
 }

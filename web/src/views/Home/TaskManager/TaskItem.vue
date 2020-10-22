@@ -145,6 +145,7 @@ export default {
   right: 0;
   transition: 0.4s;
   background-color: #bcdffb;
+  @include var(background-color, progress-bar-color);
 }
 
 .task-status-1 {

@@ -101,9 +101,10 @@ export class RequestTask {
  * @param {RequestTask} task
  * @param {import('axios').AxiosRequestConfig} [config]
  */
-function wrapConfig (task, config) {
+function wrapConfig (task, config, axios) {
   if (!config) config = {}
   config.cancelToken = task.token
+  config._axios = axios
   return config
 }
 
@@ -115,7 +116,7 @@ function wrapAxios (axios) {
    * @param {import('axios').AxiosRequestConfig} config
    */
   const axiosWrapper = function (config) {
-    return axios(config)
+    return RequestTask.wrap(t => axios(wrapConfig(t, config, axiosWrapper)))
   }
 
   /**
@@ -126,21 +127,21 @@ function wrapAxios (axios) {
    * @param {import('axios').AxiosRequestConfig} config
    */
   axiosWrapper.request = function (config) {
-    return RequestTask.wrap(t => axios.request(wrapConfig(t, config)))
+    return RequestTask.wrap(t => axios.request(wrapConfig(t, config, axiosWrapper)))
   }
   /**
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
   axiosWrapper.head = function (url, config) {
-    return RequestTask.wrap(t => axios.head(url, wrapConfig(t, config)))
+    return RequestTask.wrap(t => axios.head(url, wrapConfig(t, config, axiosWrapper)))
   }
   /**
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
   axiosWrapper.get = function (url, config) {
-    return RequestTask.wrap(t => axios.get(url, wrapConfig(t, config)))
+    return RequestTask.wrap(t => axios.get(url, wrapConfig(t, config, axiosWrapper)))
   }
   /**
    * @param {string} url
@@ -148,21 +149,21 @@ function wrapAxios (axios) {
    * @param {import('axios').AxiosRequestConfig} [config]
    */
   axiosWrapper.post = function (url, data, config) {
-    return RequestTask.wrap(t => axios.post(url, data, wrapConfig(t, config)))
+    return RequestTask.wrap(t => axios.post(url, data, wrapConfig(t, config, axiosWrapper)))
   }
   /**
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
   axiosWrapper.delete = function (url, config) {
-    return RequestTask.wrap(t => axios.delete(url, wrapConfig(t, config)))
+    return RequestTask.wrap(t => axios.delete(url, wrapConfig(t, config, axiosWrapper)))
   }
   /**
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
   axiosWrapper.options = function (url, config) {
-    return RequestTask.wrap(t => axios.options(url, wrapConfig(t, config)))
+    return RequestTask.wrap(t => axios.options(url, wrapConfig(t, config, axiosWrapper)))
   }
   /**
    * @param {string} url
@@ -170,7 +171,7 @@ function wrapAxios (axios) {
    * @param {import('axios').AxiosRequestConfig} [config]
    */
   axiosWrapper.put = function (url, data, config) {
-    return RequestTask.wrap(t => axios.put(url, data, wrapConfig(t, config)))
+    return RequestTask.wrap(t => axios.put(url, data, wrapConfig(t, config, axiosWrapper)))
   }
   /**
    * @param {string} url
@@ -178,7 +179,7 @@ function wrapAxios (axios) {
    * @param {import('axios').AxiosRequestConfig} [config]
    */
   axiosWrapper.patch = function (url, data, config) {
-    return RequestTask.wrap(t => axios.patch(url, data, wrapConfig(t, config)))
+    return RequestTask.wrap(t => axios.patch(url, data, wrapConfig(t, config, axiosWrapper)))
   }
   return axiosWrapper
 }
@@ -229,6 +230,7 @@ async function processConfig (config) {
     let token = getToken()
     if (!token) token = await doAuth()
     config.headers[AUTH_HEADER] = token
+    config._tokenUsing = token
   }
   return config
 }
@@ -241,9 +243,13 @@ async function handlerError (e) {
   if (!e.response) throw e
   const status = e.response.status
 
+  const config = e.config
   if (status === 401) {
-    await doAuth()
-    return axios(e.config)
+    if (getToken() === config._tokenUsing) {
+      // if expired token was not replaced with a new one
+      await doAuth()
+    }
+    return (config._axios || axios)(config)
   }
 
   throw ApiError.from(e)
