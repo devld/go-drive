@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Oauth callback</title>
+</head>
+<body>
+<script>
+(function () {
+  function getQueries() {
+    var qs = {}
+    var t = location.search.substr(1).split('&')
+    for (var i = 0; i < t.length; i++) {
+      var idx = t[i].indexOf('=')
+      var key = decodeURIComponent(t[i].substr(0, idx))
+      qs[key] = decodeURIComponent(t[i].substr(idx + 1))
+    }
+    return qs
+  }
+
+  function callback(error, data) {
+    if (!window.opener) return
+    window.opener.postMessage({
+      oauth: true,
+      error: error,
+      data: data
+    }, '*')
+  }
+
+  var qs = getQueries()
+  callback(qs.error, qs)
+})();
+</script>
+</body>
+</html>
