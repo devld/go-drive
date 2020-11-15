@@ -105,23 +105,13 @@ export default class S3UploadTask extends ChunkUploadTask {
    */
   async _completeUpload () {
     if (!this._uploadId) {
-      return await this._request({
-        method: 'POST',
-        url: `/upload/${this._task.path}`,
-        data: { action: 'CompletePutObject' }
-      }, axios)
+      return axios.post(`/upload/${this._task.path}`, { action: 'CompletePutObject' })
     }
-
-    // request for presigned CompleteMultipartUpload
-    return await this._request({
-      method: 'POST',
-      url: `/upload/${this._task.path}`,
-      data: {
-        action: 'CompleteMultipartUpload',
-        uploadId: this._uploadId,
-        parts: this._uploadedParts.join(';')
-      }
-    }, axios)
+    return axios.post(`/upload/${this._task.path}`, {
+      action: 'CompleteMultipartUpload',
+      uploadId: this._uploadId,
+      parts: this._uploadedParts.join(';')
+    })
   }
 
   /**

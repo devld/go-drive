@@ -4,6 +4,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"go-drive/common"
 	"go-drive/common/types"
+	"sort"
 )
 
 type PathPermissionStorage struct {
@@ -68,7 +69,7 @@ func (p *PathPermissionStorage) ResolvePathPermission(subjects []string, path st
 	if e != nil {
 		return types.PermissionEmpty, e
 	}
-	return common.ResolveAcceptedPermissions(items), nil
+	return ResolveAcceptedPermissions(items), nil
 }
 
 func (p *PathPermissionStorage) ResolvePathChildrenPermission(subjects []string, parentPath string) (map[string]types.Permission, error) {
@@ -99,7 +100,55 @@ func makePermissionsMap(permissions []types.PathPermission) map[string]types.Per
 	}
 	result := make(map[string]types.Permission, len(pMap))
 	for k, v := range pMap {
-		result[k] = common.ResolveAcceptedPermissions(v)
+		result[k] = ResolveAcceptedPermissions(v)
 	}
 	return result
+}
+
+func pathPermissionLess(a, b types.PathPermission) bool {
+	if a.Depth != b.Depth {
+		return a.Depth > b.Depth
+	}
+	if a.IsForAnonymous() {
+		if b.IsForAnonymous() {
+			return a.Policy < b.Policy
+		} else {
+			return false
+		}
+	} else {
+		if b.IsForAnonymous() {
+			return true
+		} else {
+			if a.IsForUser() {
+				if b.IsForUser() {
+					return a.Policy < b.Policy
+				} else {
+					return true
+				}
+			} else {
+				if b.IsForUser() {
+					return false
+				} else {
+					return a.Policy < b.Policy
+				}
+			}
+		}
+	}
+}
+
+func ResolveAcceptedPermissions(items []types.PathPermission) types.Permission {
+	sort.Slice(items, func(i, j int) bool { return pathPermissionLess(items[i], items[j]) })
+	acceptedPermission := types.PermissionEmpty
+	rejectedPermission := types.PermissionEmpty
+	for _, item := range items {
+		if item.IsAccept() {
+			acceptedPermission |= item.Permission & ^rejectedPermission
+		}
+		if item.IsReject() {
+			// acceptedPermission - ( item.Permission(reject) - acceptedPermission )
+			acceptedPermission &= ^(item.Permission & (^acceptedPermission))
+			rejectedPermission |= item.Permission
+		}
+	}
+	return acceptedPermission
 }

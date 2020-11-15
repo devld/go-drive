@@ -2,6 +2,7 @@ package drive
 
 import (
 	"go-drive/common"
+	"go-drive/common/drive_util"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/storage"
@@ -150,12 +151,12 @@ func (d *DispatcherDrive) Get(path string) (types.IEntry, error) {
 	return d.mapDriveEntry(path, entry), nil
 }
 
-func (d *DispatcherDrive) Save(path string, reader io.Reader, ctx task.Context) (types.IEntry, error) {
+func (d *DispatcherDrive) Save(path string, size int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
 	drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	save, e := drive.Save(realPath, reader, ctx)
+	save, e := drive.Save(realPath, size, override, reader, ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -174,7 +175,7 @@ func (d *DispatcherDrive) MakeDir(path string) (types.IEntry, error) {
 	return d.mapDriveEntry(path, dir), nil
 }
 
-func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
+func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
 	driveTo, pathTo, e := d.resolve(to)
 	if e != nil {
 		return nil, e
@@ -191,20 +192,21 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 		}
 	}
 	// if `from` has mounted children, we need to copy them
-	e = common.CopyAll(from, d, to, override, ctx,
-		func(from types.IEntry, _ types.IDrive, to string, ctx task.Context) error {
+	e = drive_util.CopyAll(from, d, to, override, ctx,
+		func(from types.IEntry, _ types.IDrive, to string, ctx types.TaskCtx) error {
 			driveTo, pathTo, e := d.resolve(to)
+			ctxWrapper := task.NewCtxWrapper(ctx, true, false)
 			if e != nil {
 				return e
 			}
-			_, e = driveTo.Copy(from, pathTo, true, task.NewCtxWrapper(ctx, true, false))
+			_, e = driveTo.Copy(from, pathTo, true, ctxWrapper)
 			if e == nil {
 				return nil
 			}
 			if !common.IsUnsupportedError(e) {
 				return e
 			}
-			return common.CopyEntry(from, driveTo, pathTo, ctx)
+			return drive_util.CopyEntry(from, driveTo, pathTo, true, ctxWrapper)
 		}, nil)
 	if e != nil {
 		return nil, e
@@ -216,7 +218,7 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 	return d.mapDriveEntry(to, copied), nil
 }
 
-func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
+func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
 	driveTo, pathTo, e := d.resolve(to)
 	// if path depth is 1, move mounts
 	if e != nil && common.PathDepth(to) != 1 {
@@ -311,7 +313,7 @@ func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 	return entries, nil
 }
 
-func (d *DispatcherDrive) Delete(path string, ctx task.Context) error {
+func (d *DispatcherDrive) Delete(path string, ctx types.TaskCtx) error {
 	children, isSelf := d.resolveMountedChildren(path)
 	if len(children) > 0 {
 		e := d.mountStorage.DeleteMounts(children)
@@ -334,7 +336,7 @@ func (d *DispatcherDrive) Delete(path string, ctx task.Context) error {
 }
 
 func (d *DispatcherDrive) Upload(path string, size int64,
-	override bool, config map[string]string) (*types.DriveUploadConfig, error) {
+	override bool, config types.SM) (*types.DriveUploadConfig, error) {
 	drive, path, e := d.resolve(path)
 	if e != nil {
 		return nil, e

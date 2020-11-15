@@ -2,7 +2,6 @@ package server
 
 import (
 	"go-drive/common"
-	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/storage"
 	"io"
@@ -74,12 +73,12 @@ func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
 	}, nil
 }
 
-func (p *PermissionWrapperDrive) Save(path string, reader io.Reader, ctx task.Context) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) Save(path string, size int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
 	permission, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
 	}
-	entry, e := p.drive.Save(path, reader, ctx)
+	entry, e := p.drive.Save(path, size, override, reader, ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -98,7 +97,7 @@ func (p *PermissionWrapperDrive) MakeDir(path string) (types.IEntry, error) {
 	return &PermissionWrapperEntry{p: p, entry: entry, permission: permission}, nil
 }
 
-func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
 	toPermission, e := p.requirePermission(to, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
@@ -116,7 +115,7 @@ func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override boo
 	return &PermissionWrapperEntry{p: p, entry: entry, permission: toPermission}, nil
 }
 
-func (p *PermissionWrapperDrive) Move(from types.IEntry, to string, override bool, ctx task.Context) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) Move(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
 	toPermission, e := p.requirePermission(to, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
@@ -181,7 +180,7 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 	return result, nil
 }
 
-func (p *PermissionWrapperDrive) Delete(path string, ctx task.Context) error {
+func (p *PermissionWrapperDrive) Delete(path string, ctx types.TaskCtx) error {
 	_, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
 		return e
@@ -190,7 +189,7 @@ func (p *PermissionWrapperDrive) Delete(path string, ctx task.Context) error {
 }
 
 func (p *PermissionWrapperDrive) Upload(path string, size int64, override bool,
-	config map[string]string) (*types.DriveUploadConfig, error) {
+	config types.SM) (*types.DriveUploadConfig, error) {
 	_, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e

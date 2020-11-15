@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
+	"go-drive/common/types"
 	"net/http"
 )
 
@@ -46,7 +47,7 @@ func apiResultHandler(c *gin.Context) {
 	}
 	e := c.Errors[0]
 	code := 500
-	result := map[string]interface{}{
+	result := types.M{
 		"message": e.Err.Error(),
 	}
 	if re, ok := e.Err.(common.RequestError); ok {

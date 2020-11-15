@@ -17,8 +17,7 @@ type MemTokenStore struct {
 
 	mux *sync.Mutex
 
-	ticker  *time.Ticker
-	dispose chan bool
+	tickerStop func()
 }
 
 // NewMemTokenStore creates a MemTokenStore
@@ -32,26 +31,13 @@ func NewMemTokenStore(validity time.Duration, autoRefresh bool, cleanupDuration 
 	if cleanupDuration <= 0 {
 		log.Fatalln("invalid cleanupDuration")
 	}
-	ticker := time.NewTicker(cleanupDuration)
-	dispose := make(chan bool)
 	tokenStore := &MemTokenStore{
 		store:       cmap.New(),
 		validity:    validity,
 		autoRefresh: autoRefresh,
 		mux:         &sync.Mutex{},
-		ticker:      ticker,
-		dispose:     dispose,
 	}
-	go func() {
-		for {
-			select {
-			case <-dispose:
-				return
-			case <-ticker.C:
-				tokenStore.clean()
-			}
-		}
-	}()
+	tokenStore.tickerStop = common.TimeTick(tokenStore.clean, cleanupDuration)
 	return tokenStore
 }
 
@@ -129,7 +115,6 @@ func (m *MemTokenStore) clean() {
 }
 
 func (m *MemTokenStore) Dispose() error {
-	m.dispose <- true
-	m.ticker.Stop()
+	m.tickerStop()
 	return nil
 }

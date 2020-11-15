@@ -1,6 +1,9 @@
 package common
 
-import "strconv"
+import (
+	"go-drive/common/types"
+	"strconv"
+)
 
 type RequestError interface {
 	Code() int
@@ -9,7 +12,7 @@ type RequestError interface {
 
 type RequestErrorWithData interface {
 	RequestError
-	Data() map[string]interface{}
+	Data() types.M
 }
 
 // BadRequestError 400

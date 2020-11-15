@@ -1,16 +1,11 @@
 <template>
-  <div class="form-item" :class="{ 'error': !!error, 'required': item.required }">
+  <div class="form-item" :class="{ error: !!error, required: item.required }">
     <span v-if="item.label" class="label">
       <span>{{ item.label }}</span>
       <span class="form-item-required" v-if="item.required">*</span>
-      <span
-        class="form-item-description"
-        v-if="item.description"
-        :title="item.description"
-        @click="showDescription"
-      >
-        <i-icon svg="#icon-help" />
-      </span>
+    </span>
+    <span v-if="item.description" class="description">
+      {{ item.description }}
     </span>
     <input
       v-if="item.type === 'text'"
@@ -53,7 +48,9 @@
         :value="o.value"
         :title="o.title"
         :disabled="o.disabled"
-      >{{ o.name }}</option>
+      >
+        {{ o.name }}
+      </option>
     </select>
     <span v-if="error" class="form-item-error">{{ error }}</span>
   </div>
@@ -97,9 +94,6 @@ export default {
     selectInput (e) {
       this.$emit('input', e.target.value)
       this.clearError()
-    },
-    showDescription () {
-      this.$alert(this.item.description)
     }
   }
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"go-drive/common"
 	"go-drive/common/task"
+	"go-drive/common/types"
 	"io"
 	"io/ioutil"
 	"log"
@@ -101,7 +102,7 @@ func (c *ChunkUploader) ChunkUpload(id string, seq int, reader io.Reader) error 
 	return nil
 }
 
-func (c *ChunkUploader) CompleteUpload(id string, ctx task.Context) (*os.File, error) {
+func (c *ChunkUploader) CompleteUpload(id string, ctx types.TaskCtx) (*os.File, error) {
 	upload, e := c.getUpload(id)
 	if e != nil {
 		return nil, e

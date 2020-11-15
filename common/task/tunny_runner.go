@@ -4,6 +4,8 @@ import (
 	"github.com/Jeffail/tunny"
 	"github.com/google/uuid"
 	cmap "github.com/orcaman/concurrent-map"
+	"go-drive/common"
+	"go-drive/common/types"
 	"log"
 	"sync"
 	"time"
@@ -12,29 +14,17 @@ import (
 type TunnyRunner struct {
 	pool       *tunny.Pool
 	store      cmap.ConcurrentMap
-	cleanTimer *time.Ticker
-	dispose    chan bool
+	tickerStop func()
 }
 
 var cleanThreshold = 1 * time.Minute
 
 func NewTunnyRunner(workers int) *TunnyRunner {
 	tr := &TunnyRunner{
-		pool:       tunny.NewFunc(workers, executor),
-		store:      cmap.New(),
-		cleanTimer: time.NewTicker(30 * time.Second),
-		dispose:    make(chan bool),
+		pool:  tunny.NewFunc(workers, executor),
+		store: cmap.New(),
 	}
-	go func() {
-		for {
-			select {
-			case <-tr.dispose:
-				return
-			case <-tr.cleanTimer.C:
-				tr.clean()
-			}
-		}
-	}()
+	tr.tickerStop = common.TimeTick(tr.clean, 30*time.Second)
 	return tr
 }
 
@@ -115,6 +105,7 @@ func (t *TunnyRunner) Dispose() error {
 		v.(*wrapper).canceled = true
 	})
 	t.pool.Close()
+	t.tickerStop()
 	return nil
 }
 
@@ -181,7 +172,7 @@ func executor(arg interface{}) interface{} {
 		} else {
 			log.Printf("error when executing task: %s", e.Error())
 			w.task.Status = Error
-			w.task.Error = map[string]interface{}{"message": e.Error()}
+			w.task.Error = types.M{"message": e.Error()}
 		}
 	} else {
 		w.task.Status = Done

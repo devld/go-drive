@@ -1,9 +1,16 @@
-import { arrayRemove } from '@/utils'
 /// large file task
-
+import { arrayRemove } from '@/utils'
 import Axios from 'axios'
 import { ApiError } from '../axios'
 import UploadTask, { STATUS_COMPLETED, STATUS_CREATED, STATUS_ERROR, STATUS_PAUSED, STATUS_STOPPED, STATUS_UPLOADING } from './task'
+
+function insertSeq (arr, seq) {
+  let i = 0
+  for (; i < arr.length; i++) {
+    if ((i === 0 || arr[i - 1] < seq) && arr[i] > seq) break
+  }
+  arr.splice(i, 0, seq)
+}
 
 /**
  * large file task
@@ -126,7 +133,7 @@ export default class ChunkUploadTask extends UploadTask {
         .then(
           () => { this._chunkUploadLoop() },
           e => {
-            this._queue.push(seq)
+            insertSeq(this._queue, seq)
             this._abort(e)
           }
         )
