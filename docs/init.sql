@@ -46,6 +46,25 @@ CREATE TABLE users
     password VARCHAR NOT NULL
 );
 
+CREATE TABLE drive_data
+(
+    drive      VARCHAR,
+    data_key   VARCHAR,
+    data_value VARCHAR,
+    PRIMARY KEY (drive, data_key)
+);
+
+CREATE TABLE drive_cache
+(
+    drive       VARCHAR NOT NULL,
+    path        VARCHAR NOT NULL,
+    depth       INTEGER NOT NULL,
+    type        INTEGER NOT NULL,
+    cache_value TEXT    NOT NULL,
+    expires_at  INTEGER NOT NULL,
+    PRIMARY KEY (drive, path, depth, type)
+);
+
 -- Init data
 
 INSERT INTO users(username, password)

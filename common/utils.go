@@ -1,9 +1,14 @@
 package common
 
 import (
+	"fmt"
+	"go-drive/common/types"
+	"io"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	fsPath "path"
 	"regexp"
@@ -151,12 +156,85 @@ func ToInt(s string, def int) int {
 	return v
 }
 
-func CopyMap(m map[string]interface{}) map[string]interface{} {
-	newMap := make(map[string]interface{})
+func CopyMap(m types.M) types.M {
+	newMap := make(types.M)
 	if m != nil {
 		for k, v := range m {
 			newMap[k] = v
 		}
 	}
 	return newMap
+}
+
+func TimeTick(fn func(), d time.Duration) func() {
+	ticker := time.NewTicker(d)
+	stopped := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-stopped:
+				break
+			case <-ticker.C:
+				fn()
+			}
+		}
+	}()
+	return func() {
+		ticker.Stop()
+		stopped <- true
+	}
+}
+
+var bytesSizes = []string{"B", "K", "M", "G", "T"}
+
+func FormatBytes(bytes int64, decimals int) string {
+	if bytes < 0 {
+		return "-"
+	}
+	if bytes == 0 {
+		return "0 B"
+	}
+	if decimals < 0 {
+		decimals = 0
+	}
+	i := math.Floor(math.Log(float64(bytes)) / math.Log(1024))
+	if int(i) >= len(bytesSizes) {
+		i = float64(len(bytesSizes) - 1)
+	}
+	return fmt.Sprintf("%.2f %s", float64(bytes)/math.Pow(1024, i), bytesSizes[int(i)])
+}
+
+func BuildURL(pattern string, variables ...string) string {
+	if len(variables) == 0 {
+		return pattern
+	}
+	seg := strings.SplitN(pattern, "{}", len(variables)+1)
+	i := 0
+	j := 0
+	pattern = ""
+	for j < len(seg) {
+		val := "{}"
+		if i < len(variables) {
+			val = strings.ReplaceAll(url.PathEscape(variables[i]), "%2F", "/")
+		}
+		pattern += seg[j]
+		if j < len(seg)-1 {
+			pattern += val
+		}
+		i++
+		j++
+	}
+	return pattern
+}
+
+func GetURL(u string) (io.ReadCloser, error) {
+	resp, e := http.Get(u)
+	if e != nil {
+		return nil, e
+	}
+	if resp.StatusCode != 200 {
+		_ = resp.Body.Close()
+		return nil, NewRemoteApiError(resp.StatusCode, fmt.Sprintf("[%d] request failed", resp.StatusCode))
+	}
+	return resp.Body, nil
 }

@@ -3,6 +3,7 @@ import UploadTask, { STATUS_ERROR, STATUS_STARTING } from '../task'
 import LocalUploadTask from './local'
 import LocalChunkUploadTask from './local-chunk'
 import S3UploadTask from './s3'
+import OneDriveUploadTask from './onedrive'
 
 /**
  * @type {Object.<string, typeof UploadTask>}
@@ -10,7 +11,8 @@ import S3UploadTask from './s3'
 const TASK_PROVIDERS = {
   local: LocalUploadTask,
   localChunk: LocalChunkUploadTask,
-  s3: S3UploadTask
+  s3: S3UploadTask,
+  onedrive: OneDriveUploadTask
 }
 
 class DispatcherUploadTask extends UploadTask {

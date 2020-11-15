@@ -23,7 +23,8 @@ export function formatBytes (bytes, decimals = 2) {
   const dm = decimals < 0 ? 0 : decimals
   const sizes = ['B', 'K', 'M', 'G', 'T']
 
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  let i = Math.floor(Math.log(bytes) / Math.log(k))
+  if (i >= sizes.length) i = sizes.length - 1
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }

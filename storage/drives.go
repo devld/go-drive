@@ -22,6 +22,15 @@ func (d *DriveStorage) GetDrives() ([]types.Drive, error) {
 	return drivesConfig, e
 }
 
+func (d *DriveStorage) GetDrive(name string) (types.Drive, error) {
+	var config types.Drive
+	e := d.db.C().Where("name = ?", name).Find(&config).Error
+	if gorm.IsRecordNotFoundError(e) {
+		return config, common.NewNotFoundError()
+	}
+	return config, e
+}
+
 func (d *DriveStorage) AddDrive(drive types.Drive) (types.Drive, error) {
 	e := d.db.C().Where("name = ?", drive.Name).Find(&types.Drive{}).Error
 	if e == nil {

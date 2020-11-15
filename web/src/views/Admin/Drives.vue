@@ -13,8 +13,9 @@
           title="Reload drives to take effect"
           :loading="reloading"
           @click="reloadDrives"
-          >Reload drives</simple-button
         >
+          Reload drives
+        </simple-button>
       </div>
       <table class="simple-table">
         <thead>
@@ -25,7 +26,11 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="d in drives" :key="d.name">
+          <tr
+            v-for="d in drives"
+            :key="d.name"
+            :class="{ 'not-enabled-drive': !d.enabled }"
+          >
             <td class="center">{{ d.name }}</td>
             <td class="center">{{ d.type }}</td>
             <td class="center">
@@ -56,16 +61,42 @@
         <simple-form
           v-if="drive.type && driveForms[drive.type]"
           ref="configForm"
-          :form="driveForms[drive.type]"
+          :form="driveForms[drive.type].configForm"
           v-model="drive.config"
         />
         <div class="form-item save-button">
           <simple-button small @click="saveDrive" :loading="saving"
             >Save</simple-button
           >
-          <simple-button small type="info" @click="drive = null"
+          <simple-button small type="info" @click="cancelEdit"
             >Cancel</simple-button
           >
+        </div>
+      </div>
+      <div v-if="drive && driveInit" class="drive-init">
+        <div class="small-title">
+          Configure
+          <span
+            class="drive-init-state"
+            :class="{ 'drive-configured': driveInit.configured }"
+            >{{ driveInit.configured ? "Configured" : "Not configured" }}</span
+          >
+        </div>
+        <o-auth-configure
+          :key="drive.name"
+          v-if="driveInit.oauth"
+          :configured="driveInit.configured"
+          :data="driveInit.oauth"
+          :drive="drive"
+          @refresh="getDriveInitConfigInfo"
+        />
+        <div class="drive-init-form" v-if="driveInit.form">
+          <simple-form
+            ref="initForm"
+            :form="driveInit.form"
+            v-model="driveInitForm"
+          />
+          <simple-button small @click="saveDriveConfig">Save</simple-button>
         </div>
       </div>
     </div>
@@ -77,10 +108,14 @@
   </div>
 </template>
 <script>
-import { createDrive, deleteDrive, getDrives, reloadDrives, updateDrive } from '@/api/admin'
+import { createDrive, deleteDrive, getDrives, reloadDrives, updateDrive, getDriveInitConfig, initDrive } from '@/api/admin'
+import Drives from './drives-config'
+
+import OAuthConfigure from './drive-configure/OAuth'
 
 export default {
   name: 'DrivesManager',
+  components: { OAuthConfigure },
   data () {
     return {
       drives: [],
@@ -89,37 +124,26 @@ export default {
       edit: false,
       saving: false,
 
+      driveInit: null,
+      driveInitForm: {},
+
       reloading: false,
 
-      driveForms: {
-        fs: [
-          { field: 'path', label: 'Root', type: 'text', description: 'The path of root', required: true }
-        ],
-        s3: [
-          { field: 'id', label: 'AccessKey', type: 'text', required: true },
-          { field: 'secret', label: 'SecretKey', type: 'password', required: true },
-          { field: 'bucket', label: 'Bucket', type: 'text', required: true },
-          { field: 'path_style', label: 'PathStyle', type: 'checkbox', description: 'Force use path style api' },
-          { field: 'region', label: 'Region', type: 'text' },
-          { field: 'endpoint', label: 'Endpoint', type: 'text', description: 'The S3 api endpoint' },
-          { field: 'proxy_upload', label: 'ProxyIn', type: 'checkbox', description: 'Upload files to server proxy' },
-          { field: 'proxy_download', label: 'ProxyOut', type: 'checkbox', description: 'Download files from server proxy' },
-          { field: 'cache_ttl', label: 'CacheTTL', type: 'text', description: 'Cache time to live. Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".' },
-          { field: 'max_cache', label: 'MaxCache', type: 'text', description: 'Maximum number of caches, if less than or equal to 0, no cache' }
-        ]
-      }
+      driveForms: Drives
     }
   },
   computed: {
     baseForm () {
       return [
         { field: 'name', label: 'Name', type: 'text', required: true, disabled: this.edit },
+        { field: 'enabled', label: 'Enabled', type: 'checkbox' },
         {
           field: 'type', label: 'Type', type: 'select', required: true,
-          options: [
-            { name: 'File system', value: 'fs', title: 'Local file system drive' },
-            { name: 'S3', value: 's3', title: 'S3 compatible storage' }
-          ]
+          options: Object.keys(Drives).map(type => ({
+            name: Drives[type].name,
+            value: type,
+            title: Drives[type].description
+          }))
         }
       ]
     }
@@ -138,6 +162,7 @@ export default {
     addDrive () {
       this.drive = {
         name: '',
+        enabled: '1',
         type: '',
         config: null
       }
@@ -146,10 +171,12 @@ export default {
     editDrive (drive) {
       this.drive = {
         name: drive.name,
+        enabled: drive.enabled ? '1' : '',
         type: drive.type,
         config: JSON.parse(drive.config)
       }
       this.edit = true
+      this.getDriveInitConfigInfo()
     },
     async deleteDrive (drive) {
       this.$confirm({
@@ -159,6 +186,9 @@ export default {
         onOk: () => {
           return deleteDrive(drive.name)
             .then(() => {
+              if (this.drive && drive.name === this.drive.name) {
+                this.drive = null
+              }
               this.loadDrives()
             }, e => {
               this.$alert(e.message)
@@ -177,6 +207,7 @@ export default {
 
       const drive = {
         name: this.drive.name,
+        enabled: !!this.drive.enabled,
         type: this.drive.type,
         config: JSON.stringify(this.drive.config)
       }
@@ -187,13 +218,44 @@ export default {
         } else {
           await createDrive(drive)
         }
-        this.drive = null
-        this.loadDrives()
+        this.edit = true
       } catch (e) {
         this.$alert(e.message)
+        return
       } finally {
         this.saving = false
       }
+      this.getDriveInitConfigInfo()
+      this.loadDrives()
+    },
+    cancelEdit () {
+      this.drive = null
+      this.driveInit = null
+      this.driveInitForm = {}
+    },
+    async getDriveInitConfigInfo () {
+      this.$loading(true)
+      try {
+        this.driveInit = await getDriveInitConfig(this.drive.name)
+        this.driveInitForm = this.driveInit.value || {}
+      } catch (e) {
+        this.$alert(e.message)
+      } finally {
+        this.$loading()
+      }
+    },
+    async saveDriveConfig () {
+      try { await this.$refs.initForm.validate() } catch { return }
+      this.$loading(true)
+      try {
+        await initDrive(this.drive.name, this.driveInitForm)
+      } catch (e) {
+        this.$alert(e.message)
+        return
+      } finally {
+        this.$loading()
+      }
+      this.getDriveInitConfigInfo()
     },
     async reloadDrives () {
       this.reloading = true
@@ -218,6 +280,28 @@ export default {
 
   .drives-list {
     padding: 16px;
+  }
+
+  .not-enabled-drive {
+    color: #999;
+  }
+
+  .drive-init {
+    margin-top: 32px;
+  }
+
+  .drive-init-state {
+    margin-left: 1em;
+    font-size: 14px;
+    color: #ffa000;
+  }
+
+  .drive-configured {
+    color: #00e676;
+  }
+
+  .drive-init-form {
+    margin-top: 1em;
   }
 
   .small-title {

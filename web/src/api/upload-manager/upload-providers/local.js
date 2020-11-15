@@ -1,8 +1,9 @@
 /// local storage provider
 
 import axios, { ApiError } from '@/api/axios'
+import { taskDone } from '@/utils'
 import Axios from 'axios'
-import UploadTask, { STATUS_STOPPED, STATUS_UPLOADING, STATUS_COMPLETED, STATUS_ERROR } from '../task'
+import UploadTask, { STATUS_COMPLETED, STATUS_ERROR, STATUS_STOPPED, STATUS_UPLOADING } from '../task'
 
 /**
  * local upload task provider
@@ -18,14 +19,17 @@ export default class LocalUploadTask extends UploadTask {
 
     this._axiosSource = Axios.CancelToken.source()
 
-    const formData = new FormData()
-    formData.append('file', this._task.file)
-    axios.put(`/content/${this._task.path}`, formData, {
-      cancelToken: this._axiosSource.token,
-      onUploadProgress: ({ loaded, total }) => {
-        this._onChange(STATUS_UPLOADING, { loaded, total })
-      }
-    }).then(() => {
+    return taskDone(
+      axios.put(`/content/${this._task.path}`, this._task.file, {
+        params: { override: this._task.override ? '1' : '' },
+        cancelToken: this._axiosSource.token,
+        transformRequest: null,
+        onUploadProgress: ({ loaded, total }) => {
+          this._onChange(STATUS_UPLOADING, { loaded, total })
+        }
+      }),
+      task => { }
+    ).then(() => {
       this._onChange(STATUS_COMPLETED)
     }, e => {
       if (this._status === STATUS_STOPPED) return
