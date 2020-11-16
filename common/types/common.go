@@ -1,9 +1,12 @@
 package types
 
+import "context"
+
 type M map[string]interface{}
 type SM map[string]string
 
 type TaskCtx interface {
+	context.Context
 	Progress(loaded int64, abs bool)
 	Total(total int64, abs bool)
 	Canceled() bool

@@ -70,6 +70,22 @@ func (d *dummyContext) Canceled() bool {
 	return false
 }
 
+func (d *dummyContext) Deadline() (deadline time.Time, ok bool) {
+	return
+}
+
+func (d *dummyContext) Done() <-chan struct{} {
+	return nil
+}
+
+func (d *dummyContext) Err() error {
+	return nil
+}
+
+func (d *dummyContext) Value(interface{}) interface{} {
+	return nil
+}
+
 func NewCtxWrapper(ctx types.TaskCtx, mutableLoaded, mutableTotal bool) types.TaskCtx {
 	return &ctxWrapper{
 		mutableLoaded: mutableLoaded,
@@ -112,4 +128,20 @@ func (c *ctxWrapper) Canceled() bool {
 		return false
 	}
 	return c.ctx.Canceled()
+}
+
+func (c *ctxWrapper) Deadline() (deadline time.Time, ok bool) {
+	return c.ctx.Deadline()
+}
+
+func (c *ctxWrapper) Done() <-chan struct{} {
+	return c.ctx.Done()
+}
+
+func (c *ctxWrapper) Err() error {
+	return c.ctx.Err()
+}
+
+func (c *ctxWrapper) Value(key interface{}) interface{} {
+	return c.ctx.Value(key)
 }

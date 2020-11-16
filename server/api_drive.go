@@ -116,7 +116,7 @@ func InitDriveRoutes(router gin.IRouter) {
 
 	// cancel and delete task
 	r.DELETE("/task/:id", func(c *gin.Context) {
-		e := GetTaskRunner(c).RemoveTask(c.Param("id"))
+		_, e := GetTaskRunner(c).StopTask(c.Param("id"))
 		if e != nil && e == task.ErrorNotFound {
 			e = common.NewNotFoundMessageError(e.Error())
 		}
