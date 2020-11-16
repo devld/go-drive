@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"go-drive/common/types"
 	"io"
@@ -75,7 +76,8 @@ func (h *HttpClient) buildURL(requestUrl string) (string, error) {
 	return u.String(), nil
 }
 
-func (h *HttpClient) newRequest(method string, requestUrl string, headers types.SM, body HttpRequestBody) (*http.Request, error) {
+func (h *HttpClient) newRequest(method string, requestUrl string, headers types.SM,
+	body HttpRequestBody, ctx context.Context) (*http.Request, error) {
 	requestUrl, e := h.buildURL(requestUrl)
 	if e != nil {
 		return nil, e
@@ -84,7 +86,12 @@ func (h *HttpClient) newRequest(method string, requestUrl string, headers types.
 	if body != nil {
 		bodyReader = body.Reader()
 	}
-	req, e := http.NewRequest(method, requestUrl, bodyReader)
+	var req *http.Request
+	if ctx != nil {
+		req, e = http.NewRequestWithContext(ctx, method, requestUrl, bodyReader)
+	} else {
+		req, e = http.NewRequest(method, requestUrl, bodyReader)
+	}
 	if e != nil {
 		return nil, e
 	}
@@ -112,15 +119,20 @@ func (h *HttpClient) client() *http.Client {
 	return defaultClient
 }
 
-func (h *HttpClient) Request(method, requestUrl string, headers types.SM, body HttpRequestBody) (HttpResponse, error) {
-	req, e := h.newRequest(method, requestUrl, headers, body)
-	if e != nil {
-		return nil, e
-	}
+func (h *HttpClient) request(req *http.Request) (HttpResponse, error) {
 	if IsDebugOn() {
-		log.Printf("[HttpClient] %s %s %v", req.Method, req.URL.String(), req.Header)
+		log.Printf("[HttpClient  req] %s %s %v", req.Method, req.URL.String(), req.Header)
 	}
 	r, e := h.client().Do(req)
+	if IsDebugOn() {
+		var v interface{} = nil
+		if e == nil {
+			v = r.StatusCode
+		} else {
+			v = e
+		}
+		log.Printf("[HttpClient resp] %s %s %v", req.Method, req.URL.String(), v)
+	}
 	if e != nil {
 		return nil, e
 	}
@@ -133,6 +145,23 @@ func (h *HttpClient) Request(method, requestUrl string, headers types.SM, body H
 		}
 	}
 	return resp, nil
+}
+
+func (h *HttpClient) Request(method, requestUrl string, headers types.SM, body HttpRequestBody) (HttpResponse, error) {
+	req, e := h.newRequest(method, requestUrl, headers, body, nil)
+	if e != nil {
+		return nil, e
+	}
+	return h.request(req)
+}
+
+func (h *HttpClient) RequestWithContext(method, requestUrl string, headers types.SM,
+	body HttpRequestBody, ctx context.Context) (HttpResponse, error) {
+	req, e := h.newRequest(method, requestUrl, headers, body, ctx)
+	if e != nil {
+		return nil, e
+	}
+	return h.request(req)
 }
 
 func (h *HttpClient) Get(requestUrl string, headers types.SM) (HttpResponse, error) {

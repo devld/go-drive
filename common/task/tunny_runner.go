@@ -1,6 +1,8 @@
 package task
 
 import (
+	"context"
+	"errors"
 	"github.com/Jeffail/tunny"
 	"github.com/google/uuid"
 	cmap "github.com/orcaman/concurrent-map"
@@ -37,6 +39,7 @@ func (t *TunnyRunner) createTask(runnable Runnable) *wrapper {
 	}
 
 	w := &wrapper{
+		done:     make(chan struct{}),
 		runnable: runnable,
 		task:     task,
 		mux:      &sync.Mutex{},
@@ -85,7 +88,7 @@ func (t *TunnyRunner) StopTask(id string) (Task, error) {
 		return Task{}, ErrorNotFound
 	}
 	w := temp.(*wrapper)
-	w.canceled = true
+	w.cancel()
 	return *w.task, nil
 }
 
@@ -95,14 +98,14 @@ func (t *TunnyRunner) RemoveTask(id string) error {
 		return ErrorNotFound
 	}
 	w := temp.(*wrapper)
-	w.canceled = true
+	w.cancel()
 	t.store.Remove(w.task.Id)
 	return nil
 }
 
 func (t *TunnyRunner) Dispose() error {
 	t.store.IterCb(func(key string, v interface{}) {
-		v.(*wrapper).canceled = true
+		v.(*wrapper).cancel()
 	})
 	t.pool.Close()
 	t.tickerStop()
@@ -130,9 +133,13 @@ type wrapper struct {
 	task     *Task
 	canceled bool
 	mux      *sync.Mutex
+	done     chan struct{}
 }
 
 func (w *wrapper) Progress(loaded int64, abs bool) {
+	if w.canceled {
+		return
+	}
 	w.mux.Lock()
 	defer w.mux.Unlock()
 	if abs {
@@ -144,6 +151,9 @@ func (w *wrapper) Progress(loaded int64, abs bool) {
 }
 
 func (w *wrapper) Total(total int64, abs bool) {
+	if w.canceled {
+		return
+	}
 	w.mux.Lock()
 	defer w.mux.Unlock()
 	if abs {
@@ -158,6 +168,36 @@ func (w *wrapper) Canceled() bool {
 	return w.canceled
 }
 
+func (w *wrapper) Deadline() (deadline time.Time, ok bool) {
+	return
+}
+
+func (w *wrapper) Done() <-chan struct{} {
+	return w.done
+}
+
+func (w *wrapper) Err() error {
+	if w.canceled {
+		return context.Canceled
+	}
+	return nil
+}
+
+func (w *wrapper) Value(interface{}) interface{} {
+	return nil
+}
+
+func (w *wrapper) cancel() {
+	w.mux.Lock()
+	defer w.mux.Unlock()
+	if w.canceled {
+		return
+	}
+	close(w.done)
+	w.canceled = true
+	w.task.Status = Canceled
+}
+
 func executor(arg interface{}) interface{} {
 	w := arg.(*wrapper)
 	if w.Canceled() {
@@ -167,7 +207,7 @@ func executor(arg interface{}) interface{} {
 	w.task.UpdatedAt = time.Now()
 	r, e := w.runnable(w)
 	if e != nil {
-		if e == ErrorCanceled {
+		if e == ErrorCanceled || errors.Is(e, context.Canceled) {
 			w.task.Status = Canceled
 		} else {
 			log.Printf("error when executing task: %s", e.Error())

@@ -283,13 +283,14 @@ func (o *OneDrive) uploadLargeFile(parentId, filename string, size int64, overri
 			end = size
 		}
 		contentRange := fmt.Sprintf("bytes %d-%d/%d", s, end-1, size)
-		resp, e := httpApi.Request(
+		resp, e := httpApi.RequestWithContext(
 			"PUT", sessionUrl,
 			types.SM{
 				"Content-Range": contentRange,
 				"Content-Type":  "application/octet-stream",
 			},
 			common.NewReadBody(io.LimitReader(reader, chunkSize), end-s),
+			ctx,
 		)
 		if e != nil {
 			_ = deleteUploadSession(sessionUrl)
