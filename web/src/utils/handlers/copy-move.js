@@ -11,7 +11,10 @@ const createHandler = (isMove) => {
     },
     multiple: true,
     supports: isMove
-      ? (entry) => Array.isArray(entry) ? !entry.some(e => !e.meta.can_write) : entry.meta.can_write
+      ? (entry, parentEntry) => (Array.isArray(entry)
+        ? !entry.some(e => !e.meta.can_write)
+        : entry.meta.can_write) &&
+        parentEntry && parentEntry.meta.can_write
       : () => true,
     handler: (entries, { confirm, alert, loading, open }) => {
       if (!Array.isArray(entries)) entries = [entries]

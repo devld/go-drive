@@ -8,7 +8,7 @@ export default {
     description: 'Mount entries to another location',
     icon: '#icon-path'
   },
-  supports: (entry, user) => isAdmin(user) &&
+  supports: (entry, parentEntry, user) => isAdmin(user) &&
     (Array.isArray(entry) ? !entry.some(e => e.meta.is_mount) : !entry.meta.is_mount),
   multiple: true,
   async handler (entries, { open, loading }) {
