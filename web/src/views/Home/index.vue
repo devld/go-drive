@@ -193,7 +193,7 @@ export default {
       if (this.selectedEntries.length > 0) {
         entry = [...this.selectedEntries] // selected entries
       }
-      const handlers = resolveEntryHandler(entry, this.user)
+      const handlers = resolveEntryHandler(entry, this.currentDirEntry, this.user)
       if (handlers.length === 0) return
 
       event && event.preventDefault()

@@ -9,7 +9,11 @@ export default {
     type: 'danger',
     icon: '#icon-delete'
   },
-  supports: (entry) => Array.isArray(entry) ? !entry.some(e => !e.meta.can_write) : entry.meta.can_write,
+  supports: (entry, parentEntry) =>
+    (Array.isArray(entry)
+      ? !entry.some(e => !e.meta.can_write)
+      : entry.meta.can_write) &&
+    parentEntry && parentEntry.meta.can_write,
   multiple: true,
   handler: async (entries, { confirm, alert, loading }) => {
     if (!Array.isArray(entries)) entries = [entries]
