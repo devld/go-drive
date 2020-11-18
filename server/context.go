@@ -18,7 +18,7 @@ const (
 )
 
 type ComponentsHolder struct {
-	TokenStore    TokenStore
+	TokenStore    types.TokenStore
 	RequestSigner *common.Signer
 
 	RootDrive *drive.RootDrive
@@ -40,7 +40,7 @@ func getComponentsHolder(c *gin.Context) *ComponentsHolder {
 	return c.MustGet(keyComponentsHolder).(*ComponentsHolder)
 }
 
-func GetTokenStore(c *gin.Context) TokenStore {
+func GetTokenStore(c *gin.Context) types.TokenStore {
 	return getComponentsHolder(c).TokenStore
 }
 

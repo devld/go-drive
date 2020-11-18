@@ -71,14 +71,13 @@ func getUser(c *gin.Context) {
 func Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenKey := c.GetHeader(headerAuth)
-		tokenRaw, e := GetTokenStore(c).Validate(tokenKey)
+		token, e := GetTokenStore(c).Validate(tokenKey)
 		if e != nil {
 			_ = c.Error(e)
 			c.Abort()
 			return
 		}
-		token := tokenRaw.(Token)
-		session := token.Value.(types.Session)
+		session := token.Value
 
 		SetToken(c, token.Token)
 		SetSession(c, session)
