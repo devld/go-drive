@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	fsPath "path"
+	path2 "path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -43,7 +43,7 @@ func IsRootPath(path string) bool {
 }
 
 func CleanPath(path string) string {
-	path = fsPath.Clean(path)
+	path = path2.Clean(path)
 	if strings.HasPrefix(path, "/") {
 		path = path[1:]
 	}
@@ -57,7 +57,7 @@ func CleanPath(path string) string {
 }
 
 func PathBase(path string) string {
-	base := fsPath.Base(path)
+	base := path2.Base(path)
 	if base == "/" || base == "." {
 		base = ""
 	}
@@ -66,7 +66,7 @@ func PathBase(path string) string {
 
 func PathParent(path string) string {
 	path = CleanPath(path)
-	parent := fsPath.Dir(path)
+	parent := path2.Dir(path)
 	if parent == "/" || parent == "." {
 		parent = ""
 	}

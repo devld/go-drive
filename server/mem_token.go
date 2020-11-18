@@ -4,6 +4,7 @@ import (
 	"github.com/google/uuid"
 	cmap "github.com/orcaman/concurrent-map"
 	"go-drive/common"
+	"go-drive/common/types"
 	"log"
 	"sync"
 	"time"
@@ -41,25 +42,25 @@ func NewMemTokenStore(validity time.Duration, autoRefresh bool, cleanupDuration 
 	return tokenStore
 }
 
-func (m *MemTokenStore) Create(value interface{}) (Token, error) {
+func (m *MemTokenStore) Create(value types.Session) (types.Token, error) {
 	key := uuid.New().String()
 	var expiredAt int64 = -1
 	if m.validity > 0 {
 		expiredAt = time.Now().Add(m.validity).Unix()
 	}
-	token := Token{key, value, expiredAt}
+	token := types.Token{Token: key, Value: value, ExpiredAt: expiredAt}
 	m.store.Set(key, token)
 	return token, nil
 }
 
-func (m *MemTokenStore) Update(token string, value interface{}) (Token, error) {
+func (m *MemTokenStore) Update(token string, value types.Session) (types.Token, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	t, ok := m.store.Get(token)
 	if !ok {
-		return Token{}, common.NewUnauthorizedError("invalid token '" + token + "'")
+		return types.Token{}, common.NewUnauthorizedError("invalid token '" + token + "'")
 	}
-	tt := t.(Token)
+	tt := t.(types.Token)
 	tt.Value = value
 	if m.refreshEnabled() {
 		tt.ExpiredAt = time.Now().Add(m.validity).Unix()
@@ -68,18 +69,18 @@ func (m *MemTokenStore) Update(token string, value interface{}) (Token, error) {
 	return tt, nil
 }
 
-func (m *MemTokenStore) Validate(token string) (interface{}, error) {
+func (m *MemTokenStore) Validate(token string) (types.Token, error) {
 	if m.refreshEnabled() {
 		m.mux.Lock()
 		defer m.mux.Unlock()
 	}
 	t, ok := m.store.Get(token)
 	if !ok {
-		return nil, common.NewUnauthorizedError("invalid token '" + token + "'")
+		return types.Token{}, common.NewUnauthorizedError("invalid token '" + token + "'")
 	}
-	tt := t.(Token)
+	tt := t.(types.Token)
 	if !m.isValid(tt) {
-		return nil, common.NewUnauthorizedError("token expired '" + token + "'")
+		return types.Token{}, common.NewUnauthorizedError("token expired '" + token + "'")
 	}
 	if m.refreshEnabled() {
 		tt.ExpiredAt = time.Now().Add(m.validity).Unix()
@@ -93,7 +94,7 @@ func (m *MemTokenStore) Revoke(token string) error {
 	return nil
 }
 
-func (m *MemTokenStore) isValid(token Token) bool {
+func (m *MemTokenStore) isValid(token types.Token) bool {
 	return token.ExpiredAt <= 0 || token.ExpiredAt > time.Now().Unix()
 }
 
@@ -104,7 +105,7 @@ func (m *MemTokenStore) refreshEnabled() bool {
 func (m *MemTokenStore) clean() {
 	keys := make([]string, 0)
 	m.store.IterCb(func(key string, v interface{}) {
-		if !m.isValid(v.(Token)) {
+		if !m.isValid(v.(types.Token)) {
 			keys = append(keys, key)
 		}
 	})

@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	fsPath "path"
 	"path/filepath"
 	"strings"
 )
@@ -77,12 +76,12 @@ func (f *FsDrive) newFsFile(path string, file os.FileInfo) (types.IEntry, error)
 }
 
 func (f *FsDrive) getPath(path string) string {
-	path = fsPath.Clean(path)
+	path = filepath.Clean(path)
 	return filepath.Join(f.path, path)
 }
 
 func (f *FsDrive) isRootPath(path string) bool {
-	return fsPath.Clean(path) == f.path
+	return filepath.Clean(path) == f.path
 }
 
 func (f *FsDrive) Get(path string) (types.IEntry, error) {
@@ -192,7 +191,7 @@ func (f *FsDrive) List(path string) ([]types.IEntry, error) {
 	}
 	entries := make([]types.IEntry, len(files))
 	for i, file := range files {
-		entry, e := f.newFsFile(fsPath.Join(path, file.Name()), file)
+		entry, e := f.newFsFile(filepath.Join(path, file.Name()), file)
 		if e != nil {
 			return nil, e
 		}

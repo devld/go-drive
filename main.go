@@ -31,7 +31,10 @@ func initComponentsHolder(config common.Config) *server.ComponentsHolder {
 	db, e := storage.InitDB(dbDialect, dbArg)
 	common.IfFatalError(e)
 
-	tokenStore := server.NewMemTokenStore(12*time.Hour, true, 1*time.Hour)
+	sessionRoot, e := config.GetDir("sessions", true)
+	common.IfFatalError(e)
+	tokenStore, e := server.NewFileTokenStore(sessionRoot, 2*time.Hour, true, 12*time.Second)
+	common.IfFatalError(e)
 
 	requestSigner := common.NewSigner(common.RandString(32))
 
