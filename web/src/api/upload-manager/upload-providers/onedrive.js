@@ -18,6 +18,11 @@ export default class OneDriveUploadTask extends ChunkUploadTask {
 
   _finishedResponse
 
+  _pause () {
+    this._paused = true
+    super._pause()
+  }
+
   /**
    * prepare upload
    * @returns {Promise.<number} chunks count
@@ -36,8 +41,25 @@ export default class OneDriveUploadTask extends ChunkUploadTask {
    * @param {Function} onProgress progress
    */
   async _chunkUpload (seq, blob, onProgress) {
-    const startByte = seq * this._chunkSize
+    let startByte = seq * this._chunkSize
     const endByte = Math.min((seq + 1) * this._chunkSize, this._task.size) - 1
+
+    if (this._paused) {
+      // we need to recalculate nextExpectedRanges
+      // because OneDrive's api does not allow us to upload chunks already received
+      const resp = await this._request({ method: 'GET', url: this._url })
+      if (resp.data && resp.data.nextExpectedRanges && resp.data.nextExpectedRanges.length) {
+        const nextExpectedRanges = +resp.data.nextExpectedRanges[0].split('-')[0]
+        if (!(nextExpectedRanges >= startByte && nextExpectedRanges <= (endByte + 1))) {
+          throw new Error(`unexpected nextExpectedRanges: ${nextExpectedRanges}`)
+        }
+        startByte = nextExpectedRanges
+        blob = this._task.file.slice(startByte, endByte + 1)
+      }
+      this._paused = undefined
+      if (blob.size === 0) return
+    }
+
     const resp = await this._request({
       method: 'PUT',
       url: this._url,

@@ -33,7 +33,7 @@ func initComponentsHolder(config common.Config) *server.ComponentsHolder {
 
 	sessionRoot, e := config.GetDir("sessions", true)
 	common.IfFatalError(e)
-	tokenStore, e := server.NewFileTokenStore(sessionRoot, 2*time.Hour, true, 12*time.Second)
+	tokenStore, e := server.NewFileTokenStore(sessionRoot, 2*time.Hour, true, 6*time.Hour)
 	common.IfFatalError(e)
 
 	requestSigner := common.NewSigner(common.RandString(32))
