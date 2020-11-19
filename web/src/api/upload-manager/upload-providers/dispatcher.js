@@ -36,6 +36,8 @@ class DispatcherUploadTask extends UploadTask {
   stop () {
     if (!this._targetTask) return false
     this._targetTask.stop()
+    this._targetTask = null
+    this._started = false
   }
 
   async _initTask () {

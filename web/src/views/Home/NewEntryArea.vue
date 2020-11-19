@@ -220,6 +220,7 @@ export default {
           confirmType: 'danger'
         })
       } catch { return }
+      uploadManager.stopTask(task.id)
       uploadManager.removeTask(task.id)
     },
     updateTasksSummary () {

@@ -237,7 +237,7 @@ export default {
       this.$loading(true)
       try {
         this.driveInit = await getDriveInitConfig(this.drive.name)
-        this.driveInitForm = this.driveInit.value || {}
+        this.driveInitForm = (this.driveInit && this.driveInit.value) || {}
       } catch (e) {
         this.$alert(e.message)
       } finally {

@@ -8,7 +8,8 @@ export default {
     description: 'Rename this file',
     icon: '#icon-rename'
   },
-  supports: (entry) => entry.meta.can_write,
+  supports: (entry, parentEntry) => entry.meta.can_write &&
+    parentEntry && parentEntry.meta.can_write,
   handler: (entry, { input, alert }) => {
     return new Promise((resolve) => {
       input({
