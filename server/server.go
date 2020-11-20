@@ -22,8 +22,8 @@ func InitServer(components *ComponentsHolder, resDir string) (*gin.Engine, error
 	})
 
 	engine.Use(gin.Recovery())
+	engine.Use(Logger())
 	engine.Use(apiResultHandler)
-	engine.Use(gin.Logger())
 
 	InitAuthRoutes(engine)
 	InitAdminRoutes(engine)
@@ -63,5 +63,17 @@ func Static(prefix, root string) gin.HandlerFunc {
 	s := http.StripPrefix(prefix, http.FileServer(http.Dir(root)))
 	return func(c *gin.Context) {
 		s.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
+func Logger() gin.HandlerFunc {
+	logger := gin.Logger()
+	return func(c *gin.Context) {
+		if c.FullPath() == "" {
+			// NoRoute static files
+			c.Next()
+			return
+		}
+		logger(c)
 	}
 }
