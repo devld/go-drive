@@ -242,8 +242,7 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// get by path
 	r.GET("/path-permissions/*path", func(c *gin.Context) {
-		path := c.Param("path")
-		path = common.CleanPath(path)
+		path := common.CleanPath(c.Param("path"))
 		permissions, e := GetPermissionStorage(c).GetByPath(path)
 		if e != nil {
 			_ = c.Error(e)
@@ -254,8 +253,7 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// save path permissions
 	r.PUT("/path-permissions/*path", func(c *gin.Context) {
-		path := c.Param("path")
-		path = common.CleanPath(path)
+		path := common.CleanPath(c.Param("path"))
 		permissions := make([]types.PathPermission, 0)
 		if e := c.Bind(&permissions); e != nil {
 			_ = c.Error(e)
@@ -291,6 +289,59 @@ func InitAdminRoutes(r gin.IRouter) {
 			return
 		}
 		_ = GetRootDrive(c).ReloadMounts()
+	})
+
+	// endregion
+
+	// region misc
+
+	// clean all PathPermission and PathMount that is point to invalid path
+	r.POST("/clean-permissions-mounts", func(c *gin.Context) {
+		root := GetRootDrive(c).Get()
+		pps, e := GetPermissionStorage(c).GetAll()
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		ms, e := GetPathMountStorage(c).GetMounts()
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		paths := make(map[string]bool)
+		for _, p := range pps {
+			paths[*p.Path] = true
+		}
+		for _, m := range ms {
+			paths[m.MountAt] = true
+		}
+		for p := range paths {
+			_, e := root.Get(p)
+			if e != nil {
+				if common.IsNotFoundError(e) {
+					paths[p] = false
+					continue
+				}
+				_ = c.Error(e)
+				return
+			}
+		}
+		n := 0
+		for p, ok := range paths {
+			if ok {
+				continue
+			}
+			if e := GetPermissionStorage(c).DeleteByPath(p); e != nil {
+				_ = c.Error(e)
+				return
+			}
+			if e := GetPathMountStorage(c).DeleteByMountAt(p); e != nil {
+				_ = c.Error(e)
+				return
+			}
+			n++
+		}
+		SetResult(c, n)
 	})
 
 	// endregion

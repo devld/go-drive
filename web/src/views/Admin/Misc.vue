@@ -7,13 +7,26 @@
           @click="savePermissions"
           :loading="saving"
           :disabled="!permissionsCanSave"
-        >Save</simple-button>
+        >
+          Save
+        </simple-button>
       </h1>
-      <permissions-editor ref="permissionsEditor" :path="rootPath" v-model="permissions" />
+      <permissions-editor
+        ref="permissionsEditor"
+        :path="rootPath"
+        v-model="permissions"
+      />
+    </div>
+    <div class="section">
+      <h1 class="section-title">Clean invalid permissions and mounts</h1>
+      <simple-button :loading="cleaning" @click="cleanPermissionsAndMounts">
+        Clean
+      </simple-button>
     </div>
   </div>
 </template>
 <script>
+import { cleanPermissionsAndMounts } from '@/api/admin'
 import PermissionsEditor from './PermissionsEditor'
 
 export default {
@@ -24,7 +37,9 @@ export default {
       permissions: [],
       rootPath: '',
       saving: false,
-      permissionsCanSave: true
+      permissionsCanSave: true,
+
+      cleaning: false
     }
   },
   watch: {
@@ -45,6 +60,17 @@ export default {
       } finally {
         this.saving = false
       }
+    },
+    async cleanPermissionsAndMounts () {
+      this.cleaning = true
+      try {
+        const n = await cleanPermissionsAndMounts()
+        this.$alert(`${n} invalid paths cleaned`)
+      } catch (e) {
+        this.$alert(e.message)
+      } finally {
+        this.cleaning = false
+      }
     }
   }
 }
@@ -52,6 +78,10 @@ export default {
 <style lang="scss">
 .misc-settings {
   padding: 16px;
+
+  .section {
+    margin-bottom: 20px;
+  }
 
   .section-title {
     margin: 0 0 16px;

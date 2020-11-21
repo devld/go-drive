@@ -79,3 +79,7 @@ export function savePermissions (path, permissions) {
 export function mountPaths (pathTo, mounts) {
   return axios.post(`/admin/mount/${pathTo}`, mounts)
 }
+
+export function cleanPermissionsAndMounts () {
+  return axios.post('/admin/clean-permissions-mounts')
+}

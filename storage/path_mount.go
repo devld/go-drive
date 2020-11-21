@@ -67,6 +67,10 @@ func (p *PathMountStorage) DeleteMounts(mounts []types.PathMount) error {
 	})
 }
 
+func (p *PathMountStorage) DeleteByMountAt(path string) error {
+	return p.db.C().Delete(&types.PathMount{}, "mount_at = ?", path).Error
+}
+
 func (p *PathMountStorage) DeleteAndSaveMounts(deletes []types.PathMount, newMounts []types.PathMount, override bool) error {
 	return p.db.C().Transaction(func(tx *gorm.DB) error {
 		if e := deleteMounts(tx, deletes); e != nil {
