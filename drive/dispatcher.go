@@ -254,6 +254,9 @@ func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx 
 	if driveTo != nil {
 		move, e := driveTo.Move(from, pathTo, override, ctx)
 		if e != nil {
+			if common.IsUnsupportedError(e) {
+				return nil, common.NewNotAllowedMessageError("move across drives is not supported")
+			}
 			return nil, e
 		}
 		return d.mapDriveEntry(to, move), nil

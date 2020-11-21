@@ -15,6 +15,14 @@ func NewPathPermissionStorage(db *DB) (*PathPermissionStorage, error) {
 	return &PathPermissionStorage{db}, nil
 }
 
+func (p *PathPermissionStorage) GetAll() ([]types.PathPermission, error) {
+	pps := make([]types.PathPermission, 0)
+	if e := p.db.C().Find(&pps).Error; e != nil {
+		return nil, e
+	}
+	return pps, nil
+}
+
 // GetByPaths query types.PathPermission by subjects and paths
 func (p *PathPermissionStorage) GetByPaths(subjects, paths []string) ([]types.PathPermission, error) {
 	r := make([]types.PathPermission, 0)
@@ -61,6 +69,10 @@ func (p *PathPermissionStorage) SavePathPermissions(path string, permissions []t
 		}
 		return nil
 	})
+}
+
+func (p *PathPermissionStorage) DeleteByPath(path string) error {
+	return p.db.C().Delete(&types.PathPermission{}, "path = ?", path).Error
 }
 
 func (p *PathPermissionStorage) ResolvePathPermission(subjects []string, path string) (types.Permission, error) {
