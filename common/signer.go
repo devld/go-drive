@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+func init() {
+	R().Register("signer", func(c *ComponentRegistry) interface{} {
+		return NewSigner(RandString(32))
+	}, 0)
+}
+
 type Signer struct {
 	secret []byte
 }

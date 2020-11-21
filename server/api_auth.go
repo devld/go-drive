@@ -26,7 +26,7 @@ func InitAuthRoutes(r gin.IRouter) {
 }
 
 func initAuth(c *gin.Context) {
-	token, e := GetTokenStore(c).Create(types.Session{})
+	token, e := TokenStore().Create(types.Session{})
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -40,7 +40,7 @@ func login(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	getUser, e := GetUserStorage(c).GetUser(user.Username)
+	getUser, e := UserDAO().GetUser(user.Username)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -71,7 +71,7 @@ func getUser(c *gin.Context) {
 func Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenKey := c.GetHeader(headerAuth)
-		token, e := GetTokenStore(c).Validate(tokenKey)
+		token, e := TokenStore().Validate(tokenKey)
 		if e != nil {
 			_ = c.Error(e)
 			c.Abort()

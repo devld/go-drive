@@ -1,14 +1,29 @@
 package server
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/types"
 	"net/http"
+	"runtime"
+	"time"
 )
 
-func InitServer(components *ComponentsHolder, resDir string) (*gin.Engine, error) {
+func init() {
+	common.R().Register("httpServer", func(c *common.ComponentRegistry) interface{} {
+		resDir := c.Get("config").(common.Config).GetResDir()
+		engine, e := InitServer(resDir)
+		common.PanicIfError(e)
+		return engine
+	}, 4096)
 
+	common.R().Register("runtimeStat", func(c *common.ComponentRegistry) interface{} {
+		return runtimeStat{}
+	}, 0)
+}
+
+func InitServer(resDir string) (*gin.Engine, error) {
 	if common.IsDebugOn() {
 		gin.SetMode(gin.DebugMode)
 	} else {
@@ -16,10 +31,6 @@ func InitServer(components *ComponentsHolder, resDir string) (*gin.Engine, error
 	}
 
 	engine := gin.New()
-
-	engine.Use(func(c *gin.Context) {
-		c.Set(keyComponentsHolder, components)
-	})
 
 	engine.Use(gin.Recovery())
 	engine.Use(Logger())
@@ -76,4 +87,24 @@ func Logger() gin.HandlerFunc {
 		}
 		logger(c)
 	}
+}
+
+type runtimeStat struct {
+}
+
+func (r runtimeStat) Status() (string, types.SM, error) {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return "Runtime", types.SM{
+		"GoRoutines":   fmt.Sprintf("%d", runtime.NumGoroutine()),
+		"TotalAlloc":   fmt.Sprintf("%d", m.TotalAlloc),
+		"Alloc":        fmt.Sprintf("%d", m.Alloc),
+		"HeapObjects":  fmt.Sprintf("%d", m.HeapObjects),
+		"Sys":          common.FormatBytes(m.Sys, 2),
+		"HeapSys":      common.FormatBytes(m.HeapSys, 2),
+		"HeapInUse":    common.FormatBytes(m.HeapInuse, 2),
+		"LastGC":       time.Unix(0, int64(m.LastGC)).Format(time.RubyDate),
+		"StopTheWorld": fmt.Sprintf("%d ms", m.PauseTotalNs/uint64(time.Millisecond)),
+		"NumGC":        fmt.Sprintf("%d", m.NumGC),
+	}, nil
 }

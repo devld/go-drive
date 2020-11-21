@@ -11,6 +11,21 @@ import (
 	"log"
 )
 
+const RootOrder = -1024
+
+func init() {
+	common.R().Register("rootDrive", func(c *common.ComponentRegistry) interface{} {
+		rd, e := NewRootDrive(
+			c.Get("driveDAO").(*storage.DriveDAO),
+			c.Get("pathMountDAO").(*storage.PathMountDAO),
+			c.Get("driveDataDAO").(*storage.DriveDataDAO),
+			c.Get("driveCacheDAO").(*storage.DriveCacheDAO),
+		)
+		common.PanicIfError(e)
+		return rd
+	}, RootOrder)
+}
+
 var driveFactories = map[string]drive_util.DriveFactory{
 	"fs":       {Create: NewFsDrive},
 	"s3":       {Create: NewS3Drive},
@@ -19,17 +34,17 @@ var driveFactories = map[string]drive_util.DriveFactory{
 
 type RootDrive struct {
 	root              *DispatcherDrive
-	driveStorage      *storage.DriveStorage
-	mountStorage      *storage.PathMountStorage
-	driveDataStorage  *storage.DriveDataStorage
-	driveCacheStorage *storage.DriveCacheStorage
+	driveStorage      *storage.DriveDAO
+	mountStorage      *storage.PathMountDAO
+	driveDataStorage  *storage.DriveDataDAO
+	driveCacheStorage *storage.DriveCacheDAO
 }
 
 func NewRootDrive(
-	driveStorage *storage.DriveStorage,
-	mountStorage *storage.PathMountStorage,
-	dataStorage *storage.DriveDataStorage,
-	driveCacheStorage *storage.DriveCacheStorage) (*RootDrive, error) {
+	driveStorage *storage.DriveDAO,
+	mountStorage *storage.PathMountDAO,
+	dataStorage *storage.DriveDataDAO,
+	driveCacheStorage *storage.DriveCacheDAO) (*RootDrive, error) {
 	root := NewDispatcherDrive(mountStorage)
 	r := &RootDrive{
 		root:              root,

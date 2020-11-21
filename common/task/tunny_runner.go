@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/Jeffail/tunny"
 	"github.com/google/uuid"
 	cmap "github.com/orcaman/concurrent-map"
@@ -12,6 +13,12 @@ import (
 	"sync"
 	"time"
 )
+
+func init() {
+	common.R().Register("taskRunner", func(c *common.ComponentRegistry) interface{} {
+		return NewTunnyRunner(100)
+	}, 0)
+}
 
 type TunnyRunner struct {
 	pool       *tunny.Pool
@@ -126,6 +133,39 @@ func (t *TunnyRunner) clean() {
 	if len(ids) > 0 {
 		log.Printf("%d tasks cleaned", len(ids))
 	}
+}
+
+func (t *TunnyRunner) Status() (string, types.SM, error) {
+	total := 0
+	pending := 0
+	running := 0
+	done := 0
+	err := 0
+	canceled := 0
+
+	t.store.IterCb(func(key string, v interface{}) {
+		switch v.(*wrapper).task.Status {
+		case Pending:
+			pending++
+		case Running:
+			running++
+		case Done:
+			done++
+		case Error:
+			err++
+		case Canceled:
+			canceled++
+		}
+		total++
+	})
+	return "Task", types.SM{
+		"Total":    fmt.Sprintf("%d", total),
+		"Pending":  fmt.Sprintf("%d", pending),
+		"Running":  fmt.Sprintf("%d", running),
+		"Done":     fmt.Sprintf("%d", done),
+		"Error":    fmt.Sprintf("%d", err),
+		"Canceled": fmt.Sprintf("%d", canceled),
+	}, nil
 }
 
 type wrapper struct {

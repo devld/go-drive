@@ -16,6 +16,10 @@ type IDisposable interface {
 	Dispose() error
 }
 
+type IStatistics interface {
+	// Status returns the name, status of this component
+	Status() (string, SM, error)
+}
 type FormItemOption struct {
 	Name     string `json:"name"`
 	Title    string `json:"title"`

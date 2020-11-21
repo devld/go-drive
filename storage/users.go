@@ -8,15 +8,23 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserStorage struct {
+func init() {
+	common.R().Register("userDAO", func(c *common.ComponentRegistry) interface{} {
+		ds, e := NewUserDAO(c.Get("db").(*DB))
+		common.PanicIfError(e)
+		return ds
+	}, DbOrder+1)
+}
+
+type UserDAO struct {
 	db *DB
 }
 
-func NewUserStorage(db *DB) (*UserStorage, error) {
-	return &UserStorage{db}, nil
+func NewUserDAO(db *DB) (*UserDAO, error) {
+	return &UserDAO{db}, nil
 }
 
-func (u *UserStorage) GetUser(username string) (types.User, error) {
+func (u *UserDAO) GetUser(username string) (types.User, error) {
 	user := types.User{}
 	e := u.db.C().First(&user, "username = ?", username).Related(&user.Groups, "groups").Error
 	if gorm.IsRecordNotFoundError(e) {
@@ -25,7 +33,7 @@ func (u *UserStorage) GetUser(username string) (types.User, error) {
 	return user, e
 }
 
-func (u *UserStorage) AddUser(user types.User) (types.User, error) {
+func (u *UserDAO) AddUser(user types.User) (types.User, error) {
 	e := u.db.C().Where("username = ?", user.Username).Find(&types.User{}).Error
 	if e == nil {
 		return types.User{},
@@ -43,7 +51,7 @@ func (u *UserStorage) AddUser(user types.User) (types.User, error) {
 	return user, e
 }
 
-func (u *UserStorage) UpdateUser(username string, user types.User) error {
+func (u *UserDAO) UpdateUser(username string, user types.User) error {
 	data := types.M{}
 	if user.Password != "" {
 		encoded, e := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -77,7 +85,7 @@ func (u *UserStorage) UpdateUser(username string, user types.User) error {
 	})
 }
 
-func (u *UserStorage) DeleteUser(username string) error {
+func (u *UserDAO) DeleteUser(username string) error {
 	return u.db.C().Transaction(func(tx *gorm.DB) error {
 		s := tx.Delete(types.User{}, "username = ?", username)
 		if s.Error != nil {
@@ -94,7 +102,7 @@ func (u *UserStorage) DeleteUser(username string) error {
 	})
 }
 
-func (u *UserStorage) ListUser() ([]types.User, error) {
+func (u *UserDAO) ListUser() ([]types.User, error) {
 	users := make([]types.User, 0)
 	e := u.db.C().Find(&users).Error
 	return users, e

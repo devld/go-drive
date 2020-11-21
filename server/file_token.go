@@ -23,6 +23,16 @@ type FileToken struct {
 	stopCleaner func()
 }
 
+func init() {
+	common.R().Register("tokenStore", func(c *common.ComponentRegistry) interface{} {
+		dir, e := c.Get("config").(common.Config).GetDir("sessions", true)
+		common.PanicIfError(e)
+		ts, e := NewFileTokenStore(dir, 2*time.Hour, true, 6*time.Hour)
+		common.PanicIfError(e)
+		return ts
+	}, 0)
+}
+
 // NewFileTokenStore creates a FileToken
 func NewFileTokenStore(root string, validity time.Duration, autoRefresh bool,
 	cleanupDuration time.Duration) (*FileToken, error) {
@@ -30,7 +40,7 @@ func NewFileTokenStore(root string, validity time.Duration, autoRefresh bool,
 		return nil, errors.New("root not exists or is not a directory")
 	}
 	if cleanupDuration <= 0 {
-		log.Fatalln("invalid cleanupDuration")
+		panic("invalid cleanupDuration")
 	}
 	ft := &FileToken{
 		root:        root,
@@ -125,19 +135,25 @@ func (f *FileToken) Dispose() error {
 	return nil
 }
 
-func (f *FileToken) clean() {
-	n := 0
-	e := filepath.Walk(f.root, func(path string, info os.FileInfo, e error) error {
+func (f *FileToken) forEachSession(fn func(string, os.FileInfo)) error {
+	return filepath.Walk(f.root, func(path string, info os.FileInfo, e error) error {
 		if e != nil || info.IsDir() || !strings.HasPrefix(filepath.Base(path), sessionPrefix) {
 			return nil
 		}
+		fn(path, info)
+		return nil
+	})
+}
+
+func (f *FileToken) clean() {
+	n := 0
+	e := f.forEachSession(func(path string, info os.FileInfo) {
 		if f.isExpired(info.ModTime()) {
 			if e := os.Remove(path); e != nil {
 				log.Println("failed to delete file", e)
 			}
 			n++
 		}
-		return nil
 	})
 	if n > 0 {
 		log.Println(fmt.Sprintf("%d expired sessions cleaned", n))
@@ -145,4 +161,22 @@ func (f *FileToken) clean() {
 	if e != nil {
 		log.Println("error when cleaning expired sessions", e)
 	}
+}
+
+func (f *FileToken) Status() (string, types.SM, error) {
+	total := 0
+	active := 0
+	if e := f.forEachSession(func(path string, info os.FileInfo) {
+		total++
+		if !f.isExpired(info.ModTime()) {
+			active++
+		}
+	}); e != nil {
+		return "", nil, e
+	}
+
+	return "Session", types.SM{
+		"Total":  fmt.Sprintf("%d", total),
+		"Active": fmt.Sprintf("%d", active),
+	}, nil
 }

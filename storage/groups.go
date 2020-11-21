@@ -7,7 +7,15 @@ import (
 	"go-drive/common/types"
 )
 
-type GroupStorage struct {
+func init() {
+	common.R().Register("groupDAO", func(c *common.ComponentRegistry) interface{} {
+		ds, e := NewGroupDAO(c.Get("db").(*DB))
+		common.PanicIfError(e)
+		return ds
+	}, DbOrder+1)
+}
+
+type GroupDAO struct {
 	db *DB
 }
 
@@ -16,17 +24,17 @@ type GroupWithUsers struct {
 	Users []types.User `json:"users"`
 }
 
-func NewGroupStorage(db *DB) (*GroupStorage, error) {
-	return &GroupStorage{db}, nil
+func NewGroupDAO(db *DB) (*GroupDAO, error) {
+	return &GroupDAO{db}, nil
 }
 
-func (g *GroupStorage) ListGroup() ([]types.Group, error) {
+func (g *GroupDAO) ListGroup() ([]types.Group, error) {
 	groups := make([]types.Group, 0)
 	e := g.db.C().Find(&groups).Error
 	return groups, e
 }
 
-func (g *GroupStorage) GetGroup(name string) (GroupWithUsers, error) {
+func (g *GroupDAO) GetGroup(name string) (GroupWithUsers, error) {
 	gus := GroupWithUsers{}
 	group := types.Group{}
 	e := g.db.C().First(&group, "name = ?", name).Error
@@ -66,7 +74,7 @@ func saveUserGroup(users []types.User, name string, db *gorm.DB) error {
 	return nil
 }
 
-func (g *GroupStorage) AddGroup(group GroupWithUsers) (GroupWithUsers, error) {
+func (g *GroupDAO) AddGroup(group GroupWithUsers) (GroupWithUsers, error) {
 	e := g.db.C().Where("name = ?", group.Name).Find(&types.Group{}).Error
 	if e == nil {
 		return GroupWithUsers{},
@@ -84,7 +92,7 @@ func (g *GroupStorage) AddGroup(group GroupWithUsers) (GroupWithUsers, error) {
 	return group, e
 }
 
-func (g *GroupStorage) UpdateGroup(name string, gus GroupWithUsers) error {
+func (g *GroupDAO) UpdateGroup(name string, gus GroupWithUsers) error {
 	if gus.Users == nil {
 		return nil
 	}
@@ -104,7 +112,7 @@ func (g *GroupStorage) UpdateGroup(name string, gus GroupWithUsers) error {
 	})
 }
 
-func (g *GroupStorage) DeleteGroup(name string) error {
+func (g *GroupDAO) DeleteGroup(name string) error {
 	return g.db.C().Transaction(func(tx *gorm.DB) error {
 		s := tx.Delete(types.Group{}, "name = ?", name)
 		if s.Error != nil {

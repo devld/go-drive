@@ -99,7 +99,7 @@ func InitDriveRoutes(router gin.IRouter) {
 	// delete chunk upload
 	r.DELETE("/chunk/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		e := GetChunkUploader(c).DeleteUpload(id)
+		e := GetChunkUploader().DeleteUpload(id)
 		if e != nil {
 			_ = c.Error(e)
 		}
@@ -107,7 +107,7 @@ func InitDriveRoutes(router gin.IRouter) {
 
 	// get task
 	r.GET("/task/:id", func(c *gin.Context) {
-		t, e := GetTaskRunner(c).GetTask(c.Param("id"))
+		t, e := TaskRunner().GetTask(c.Param("id"))
 		if e != nil && e == task.ErrorNotFound {
 			e = common.NewNotFoundMessageError(e.Error())
 		}
@@ -116,7 +116,7 @@ func InitDriveRoutes(router gin.IRouter) {
 
 	// cancel and delete task
 	r.DELETE("/task/:id", func(c *gin.Context) {
-		_, e := GetTaskRunner(c).StopTask(c.Param("id"))
+		_, e := TaskRunner().StopTask(c.Param("id"))
 		if e != nil && e == task.ErrorNotFound {
 			e = common.NewNotFoundMessageError(e.Error())
 		}
@@ -140,9 +140,9 @@ func getDrive(c *gin.Context) types.IDrive {
 	session := GetSession(c)
 	return NewPermissionWrapperDrive(
 		c.Request, session,
-		GetRootDrive(c).Get(),
-		GetPermissionStorage(c),
-		GetRequestSigner(c),
+		RootDrive().Get(),
+		PermissionDAO(),
+		Signer(),
 	)
 }
 
@@ -189,7 +189,7 @@ func copyEntry(c *gin.Context) (*task.Task, error) {
 		return nil, e
 	}
 	override := c.Query("override")
-	t, e := GetTaskRunner(c).ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	t, e := TaskRunner().ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
 		r, e := drive_.Copy(fromEntry, to, override != "", ctx)
 		if e != nil {
 			return nil, e
@@ -215,7 +215,7 @@ func move(c *gin.Context) (*task.Task, error) {
 		return nil, e
 	}
 	override := c.Query("override")
-	t, e := GetTaskRunner(c).ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	t, e := TaskRunner().ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
 		r, e := drive_.Move(fromEntry, to, override != "", ctx)
 		if e != nil {
 			return nil, e
@@ -241,7 +241,7 @@ func checkCopyOrMove(from, to string) error {
 
 func deleteEntry(c *gin.Context) (*task.Task, error) {
 	path := common.CleanPath(c.Param("path"))
-	t, e := GetTaskRunner(c).ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	t, e := TaskRunner().ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
 		return nil, getDrive(c).Delete(path, ctx)
 	}, 2*time.Second)
 	if e != nil {
@@ -274,7 +274,7 @@ func getContent(c *gin.Context) error {
 	if content, ok := file.(types.IContent); ok {
 
 		useProxy := c.Query("proxy")
-		maxProxySize := common.GetConfig().GetMaxProxySize()
+		maxProxySize := common.R().Get("config").(common.Config).GetMaxProxySize()
 		if maxProxySize > 0 && file.Size() > maxProxySize {
 			useProxy = ""
 		}
@@ -304,7 +304,7 @@ func writeContent(c *gin.Context) (*task.Task, error) {
 		_ = os.Remove(file.Name())
 		return nil, common.NewBadRequestError("invalid file size")
 	}
-	t, e := GetTaskRunner(c).ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	t, e := TaskRunner().ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
 		defer func() {
 			_ = file.Close()
 			_ = os.Remove(file.Name())
@@ -323,7 +323,7 @@ func chunkUploadRequest(c *gin.Context) (*ChunkUpload, error) {
 	if size <= 0 || chunkSize <= 0 {
 		return nil, common.NewBadRequestError("invalid size or chunk_size")
 	}
-	upload, e := GetChunkUploader(c).CreateUpload(size, chunkSize)
+	upload, e := GetChunkUploader().CreateUpload(size, chunkSize)
 	if e != nil {
 		return nil, e
 	}
@@ -336,14 +336,14 @@ func chunkUpload(c *gin.Context) error {
 	if e != nil {
 		return e
 	}
-	return GetChunkUploader(c).ChunkUpload(id, seq, c.Request.Body)
+	return GetChunkUploader().ChunkUpload(id, seq, c.Request.Body)
 }
 
 func chunkUploadComplete(c *gin.Context) (*task.Task, error) {
 	path := common.CleanPath(c.Param("path"))
 	id := c.Query("id")
-	uploader := GetChunkUploader(c)
-	t, e := GetTaskRunner(c).ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	uploader := GetChunkUploader()
+	t, e := TaskRunner().ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
 		file, e := uploader.CompleteUpload(id, ctx)
 		if e != nil {
 			return nil, e

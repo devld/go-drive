@@ -10,18 +10,26 @@ import (
 	"time"
 )
 
-type DriveCacheStorage struct {
+func init() {
+	common.R().Register("driveCacheDAO", func(c *common.ComponentRegistry) interface{} {
+		ds, e := NewDriveCacheDAO(c.Get("db").(*DB))
+		common.PanicIfError(e)
+		return ds
+	}, DbOrder+1)
+}
+
+type DriveCacheDAO struct {
 	db        *DB
 	timerStop func()
 }
 
-func NewDriveCacheStorage(db *DB) (*DriveCacheStorage, error) {
-	c := &DriveCacheStorage{db: db}
+func NewDriveCacheDAO(db *DB) (*DriveCacheDAO, error) {
+	c := &DriveCacheDAO{db: db}
 	c.timerStop = common.TimeTick(c.cleanExpired, 60*time.Second)
 	return c, nil
 }
 
-func (d *DriveCacheStorage) cleanExpired() {
+func (d *DriveCacheDAO) cleanExpired() {
 	now := time.Now().Unix()
 	rows := d.db.C().Delete(&types.DriveCache{}, "expires_at > 0 AND expires_at < ?", now).RowsAffected
 	if common.IsDebugOn() && rows > 0 {
@@ -29,16 +37,16 @@ func (d *DriveCacheStorage) cleanExpired() {
 	}
 }
 
-func (d *DriveCacheStorage) Dispose() error {
+func (d *DriveCacheDAO) Dispose() error {
 	d.timerStop()
 	return nil
 }
 
-func (d *DriveCacheStorage) GetCacheStore(ns string, serialize drive_util.EntrySerialize, deserialize drive_util.EntryDeserialize) drive_util.DriveCache {
+func (d *DriveCacheDAO) GetCacheStore(ns string, serialize drive_util.EntrySerialize, deserialize drive_util.EntryDeserialize) drive_util.DriveCache {
 	return &dbDriveNamespacedCacheStore{db: d.db, ns: ns, s: serialize, d: deserialize}
 }
 
-func (d *DriveCacheStorage) Remove(ns string) error {
+func (d *DriveCacheDAO) Remove(ns string) error {
 	return d.db.C().Delete(&types.DriveCache{}, "drive = ?", ns).Error
 }
 

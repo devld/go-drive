@@ -7,31 +7,37 @@ import (
 	"go-drive/common/types"
 )
 
-type DB struct {
-	db *gorm.DB
+const DbOrder = -4096
+
+func init() {
+	common.R().Register("db", func(c *common.ComponentRegistry) interface{} {
+		dialect, args := c.Get("config").(common.Config).GetDB()
+
+		db, e := gorm.Open(dialect, args)
+		if e != nil {
+			panic(e)
+		}
+
+		if common.IsDebugOn() {
+			db.LogMode(true)
+		}
+
+		db.AutoMigrate(
+			&types.User{},
+			&types.Group{},
+			&types.UserGroup{},
+			&types.Drive{},
+			&types.PathMount{},
+			&types.DriveData{},
+			&types.DriveCache{},
+		)
+
+		return &DB{db: db}
+	}, DbOrder)
 }
 
-func InitDB(dialect string, args ...interface{}) (*DB, error) {
-	db, e := gorm.Open(dialect, args...)
-	if e != nil {
-		return nil, e
-	}
-
-	if common.IsDebugOn() {
-		db.LogMode(true)
-	}
-
-	db.AutoMigrate(
-		&types.User{},
-		&types.Group{},
-		&types.UserGroup{},
-		&types.Drive{},
-		&types.PathMount{},
-		&types.DriveData{},
-		&types.DriveCache{},
-	)
-
-	return &DB{db: db}, nil
+type DB struct {
+	db *gorm.DB
 }
 
 func (d *DB) C() *gorm.DB {
