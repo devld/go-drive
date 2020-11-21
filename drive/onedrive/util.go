@@ -93,8 +93,8 @@ func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (dri
 					Name: fmt.Sprintf("%s %d", d.DriveType, i+1),
 					Title: fmt.Sprintf(
 						"%s / %s | %s used",
-						common.FormatBytes(d.Quota.Used, 1),
-						common.FormatBytes(d.Quota.Total, 1),
+						common.FormatBytes(uint64(d.Quota.Used), 1),
+						common.FormatBytes(uint64(d.Quota.Total), 1),
 						used,
 					),
 					Value: d.Id,

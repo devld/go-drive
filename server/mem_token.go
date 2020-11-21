@@ -30,7 +30,7 @@ type MemTokenStore struct {
 // - cleanupDuration: cleanup invalid token each `cleanupDuration`
 func NewMemTokenStore(validity time.Duration, autoRefresh bool, cleanupDuration time.Duration) *MemTokenStore {
 	if cleanupDuration <= 0 {
-		log.Fatalln("invalid cleanupDuration")
+		panic("invalid cleanupDuration")
 	}
 	tokenStore := &MemTokenStore{
 		store:       cmap.New(),

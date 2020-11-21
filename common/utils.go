@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go-drive/common/types"
 	"io"
-	"log"
 	"math"
 	"math/rand"
 	"net/http"
@@ -104,9 +103,9 @@ func RandString(n int) string {
 	return string(b)
 }
 
-func IfFatalError(e error) {
+func PanicIfError(e error) {
 	if e != nil {
-		log.Fatalln(e)
+		panic(e)
 	}
 }
 
@@ -187,10 +186,7 @@ func TimeTick(fn func(), d time.Duration) func() {
 
 var bytesSizes = []string{"B", "K", "M", "G", "T"}
 
-func FormatBytes(bytes int64, decimals int) string {
-	if bytes < 0 {
-		return "-"
-	}
+func FormatBytes(bytes uint64, decimals int) string {
 	if bytes == 0 {
 		return "0 B"
 	}

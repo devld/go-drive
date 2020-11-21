@@ -7,7 +7,6 @@ import (
 	"go-drive/common/types"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	url2 "net/url"
@@ -108,7 +107,7 @@ func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.R
 
 			defer func() {
 				if i := recover(); i != nil && i != http.ErrAbortHandler {
-					log.Fatalln(i)
+					panic(i)
 				}
 			}()
 

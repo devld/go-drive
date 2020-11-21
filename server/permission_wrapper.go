@@ -19,13 +19,13 @@ type PermissionWrapperDrive struct {
 	drive             types.IDrive
 	subjects          []string
 	request           *http.Request
-	permissionStorage *storage.PathPermissionStorage
+	permissionStorage *storage.PathPermissionDAO
 	requestSigner     *common.Signer
 }
 
 func NewPermissionWrapperDrive(
 	request *http.Request, session types.Session, drive types.IDrive,
-	permissionStorage *storage.PathPermissionStorage,
+	permissionStorage *storage.PathPermissionDAO,
 	requestSigner *common.Signer) *PermissionWrapperDrive {
 
 	subjects := make([]string, 0, 3)

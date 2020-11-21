@@ -2,19 +2,28 @@ package storage
 
 import (
 	"github.com/jinzhu/gorm"
+	"go-drive/common"
 	"go-drive/common/types"
 )
 
-type PathMountStorage struct {
+func init() {
+	common.R().Register("pathMountDAO", func(c *common.ComponentRegistry) interface{} {
+		ds, e := NewPathMountDAO(c.Get("db").(*DB))
+		common.PanicIfError(e)
+		return ds
+	}, DbOrder+1)
+}
+
+type PathMountDAO struct {
 	db *DB
 }
 
-func NewPathMountStorage(db *DB) (*PathMountStorage, error) {
-	pd := PathMountStorage{db}
+func NewPathMountDAO(db *DB) (*PathMountDAO, error) {
+	pd := PathMountDAO{db}
 	return &pd, nil
 }
 
-func (p *PathMountStorage) GetMounts() ([]types.PathMount, error) {
+func (p *PathMountDAO) GetMounts() ([]types.PathMount, error) {
 	ms := make([]types.PathMount, 0)
 	e := p.db.C().Find(&ms).Error
 	return ms, e
@@ -55,23 +64,23 @@ func deleteMounts(db *gorm.DB, mounts []types.PathMount) error {
 	return nil
 }
 
-func (p *PathMountStorage) SaveMounts(mounts []types.PathMount, override bool) error {
+func (p *PathMountDAO) SaveMounts(mounts []types.PathMount, override bool) error {
 	return p.db.C().Transaction(func(tx *gorm.DB) error {
 		return saveMounts(tx, mounts, override)
 	})
 }
 
-func (p *PathMountStorage) DeleteMounts(mounts []types.PathMount) error {
+func (p *PathMountDAO) DeleteMounts(mounts []types.PathMount) error {
 	return p.db.C().Transaction(func(tx *gorm.DB) error {
 		return deleteMounts(tx, mounts)
 	})
 }
 
-func (p *PathMountStorage) DeleteByMountAt(path string) error {
+func (p *PathMountDAO) DeleteByMountAt(path string) error {
 	return p.db.C().Delete(&types.PathMount{}, "mount_at = ?", path).Error
 }
 
-func (p *PathMountStorage) DeleteAndSaveMounts(deletes []types.PathMount, newMounts []types.PathMount, override bool) error {
+func (p *PathMountDAO) DeleteAndSaveMounts(deletes []types.PathMount, newMounts []types.PathMount, override bool) error {
 	return p.db.C().Transaction(func(tx *gorm.DB) error {
 		if e := deleteMounts(tx, deletes); e != nil {
 			return e

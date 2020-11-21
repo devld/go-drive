@@ -2,23 +2,32 @@ package storage
 
 import (
 	"github.com/jinzhu/gorm"
+	"go-drive/common"
 	"go-drive/common/drive_util"
 	"go-drive/common/types"
 )
 
-type DriveDataStorage struct {
+func init() {
+	common.R().Register("driveDataDAO", func(c *common.ComponentRegistry) interface{} {
+		ds, e := NewDriveDataDAO(c.Get("db").(*DB))
+		common.PanicIfError(e)
+		return ds
+	}, DbOrder+1)
+}
+
+type DriveDataDAO struct {
 	db *DB
 }
 
-func NewDriveDataStorage(db *DB) (*DriveDataStorage, error) {
-	return &DriveDataStorage{db}, nil
+func NewDriveDataDAO(db *DB) (*DriveDataDAO, error) {
+	return &DriveDataDAO{db}, nil
 }
 
-func (d *DriveDataStorage) GetDataStore(ns string) drive_util.DriveDataStore {
+func (d *DriveDataDAO) GetDataStore(ns string) drive_util.DriveDataStore {
 	return &dbDriveNamespacedDataStore{db: d.db, ns: ns}
 }
 
-func (d *DriveDataStorage) Remove(ns string) error {
+func (d *DriveDataDAO) Remove(ns string) error {
 	return d.db.C().Delete(&types.DriveData{}, "drive = ?", ns).Error
 }
 

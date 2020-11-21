@@ -2,7 +2,8 @@ package common
 
 import (
 	"flag"
-	"log"
+	"fmt"
+	"math"
 	"os"
 	"path"
 )
@@ -14,33 +15,21 @@ const (
 	DefaultMaxProxySize = 1 * 1024 * 1024
 )
 
-var config *Config
+func init() {
+	R().Register("config", func(c *ComponentRegistry) interface{} {
+		config := Config{}
+		flag.StringVar(&config.listen, "l", ":8089", "port listen on")
+		flag.StringVar(&config.dataDir, "d", "./", "path to the db files dir")
+		flag.StringVar(&config.resDir, "s", "", "path to the static files")
+		flag.BoolVar(&config.freeFs, "f", false, "enable unlimited local fs drive(absolute path)")
+		flag.Int64Var(&config.maxProxySize, "max-proxy-size", DefaultMaxProxySize, "maximum file size that can be proxied, default is 1M")
+		flag.Parse()
 
-func GetConfig() Config {
-	if config == nil {
-		log.Fatalln("Configuration is not initialized")
-	}
-	return *config
-}
-
-func InitConfig() {
-	if config != nil {
-		log.Fatalln("Configuration has been initialized")
-	}
-	c := Config{}
-	flag.StringVar(&c.listen, "l", ":8089", "port listen on")
-	flag.StringVar(&c.dataDir, "d", "./", "path to the db files dir")
-	flag.StringVar(&c.resDir, "s", "", "path to the static files")
-	flag.BoolVar(&c.freeFs, "f", false, "enable unlimited local fs drive(absolute path)")
-	flag.Int64Var(&c.maxProxySize, "max-proxy-size", DefaultMaxProxySize, "maximum file size that can be proxied, default is 1M")
-
-	flag.Parse()
-
-	if exists, _ := FileExists(c.dataDir); !exists {
-		log.Fatalf("dataDir '%s' does not exist", c.dataDir)
-	}
-
-	config = &c
+		if exists, _ := FileExists(config.dataDir); !exists {
+			panic(fmt.Sprintf("dataDir '%s' does not exist", config.dataDir))
+		}
+		return config
+	}, math.MinInt32)
 }
 
 type Config struct {

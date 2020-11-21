@@ -83,3 +83,7 @@ export function mountPaths (pathTo, mounts) {
 export function cleanPermissionsAndMounts () {
   return axios.post('/admin/clean-permissions-mounts')
 }
+
+export function loadStats () {
+  return axios.get('/admin/stats')
+}

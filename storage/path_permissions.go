@@ -7,15 +7,23 @@ import (
 	"sort"
 )
 
-type PathPermissionStorage struct {
+func init() {
+	common.R().Register("pathPermissionDAO", func(c *common.ComponentRegistry) interface{} {
+		ds, e := NewPathPermissionDAO(c.Get("db").(*DB))
+		common.PanicIfError(e)
+		return ds
+	}, DbOrder+1)
+}
+
+type PathPermissionDAO struct {
 	db *DB
 }
 
-func NewPathPermissionStorage(db *DB) (*PathPermissionStorage, error) {
-	return &PathPermissionStorage{db}, nil
+func NewPathPermissionDAO(db *DB) (*PathPermissionDAO, error) {
+	return &PathPermissionDAO{db}, nil
 }
 
-func (p *PathPermissionStorage) GetAll() ([]types.PathPermission, error) {
+func (p *PathPermissionDAO) GetAll() ([]types.PathPermission, error) {
 	pps := make([]types.PathPermission, 0)
 	if e := p.db.C().Find(&pps).Error; e != nil {
 		return nil, e
@@ -24,7 +32,7 @@ func (p *PathPermissionStorage) GetAll() ([]types.PathPermission, error) {
 }
 
 // GetByPaths query types.PathPermission by subjects and paths
-func (p *PathPermissionStorage) GetByPaths(subjects, paths []string) ([]types.PathPermission, error) {
+func (p *PathPermissionDAO) GetByPaths(subjects, paths []string) ([]types.PathPermission, error) {
 	r := make([]types.PathPermission, 0)
 	if len(subjects) == 0 || len(paths) == 0 {
 		return r, nil
@@ -33,7 +41,7 @@ func (p *PathPermissionStorage) GetByPaths(subjects, paths []string) ([]types.Pa
 	return r, e
 }
 
-func (p *PathPermissionStorage) GetChildrenByPath(subjects []string, path string, depth int8) ([]types.PathPermission, error) {
+func (p *PathPermissionDAO) GetChildrenByPath(subjects []string, path string, depth int8) ([]types.PathPermission, error) {
 	r := make([]types.PathPermission, 0)
 	if len(subjects) == 0 {
 		return r, nil
@@ -47,7 +55,7 @@ func (p *PathPermissionStorage) GetChildrenByPath(subjects []string, path string
 	return r, e
 }
 
-func (p *PathPermissionStorage) GetByPath(path string) ([]types.PathPermission, error) {
+func (p *PathPermissionDAO) GetByPath(path string) ([]types.PathPermission, error) {
 	r := make([]types.PathPermission, 0)
 	if e := p.db.C().Find(&r, "path = ?", path).Error; e != nil {
 		return nil, e
@@ -55,7 +63,7 @@ func (p *PathPermissionStorage) GetByPath(path string) ([]types.PathPermission, 
 	return r, nil
 }
 
-func (p *PathPermissionStorage) SavePathPermissions(path string, permissions []types.PathPermission) error {
+func (p *PathPermissionDAO) SavePathPermissions(path string, permissions []types.PathPermission) error {
 	return p.db.C().Transaction(func(tx *gorm.DB) error {
 		if e := tx.Delete(&types.PathPermission{}, "path = ?", path).Error; e != nil {
 			return e
@@ -71,11 +79,11 @@ func (p *PathPermissionStorage) SavePathPermissions(path string, permissions []t
 	})
 }
 
-func (p *PathPermissionStorage) DeleteByPath(path string) error {
+func (p *PathPermissionDAO) DeleteByPath(path string) error {
 	return p.db.C().Delete(&types.PathPermission{}, "path = ?", path).Error
 }
 
-func (p *PathPermissionStorage) ResolvePathPermission(subjects []string, path string) (types.Permission, error) {
+func (p *PathPermissionDAO) ResolvePathPermission(subjects []string, path string) (types.Permission, error) {
 	paths := common.PathParentTree(path)
 	items, e := p.GetByPaths(subjects, paths)
 	if e != nil {
@@ -84,7 +92,7 @@ func (p *PathPermissionStorage) ResolvePathPermission(subjects []string, path st
 	return ResolveAcceptedPermissions(items), nil
 }
 
-func (p *PathPermissionStorage) ResolvePathChildrenPermission(subjects []string, parentPath string) (map[string]types.Permission, error) {
+func (p *PathPermissionDAO) ResolvePathChildrenPermission(subjects []string, parentPath string) (map[string]types.Permission, error) {
 	permissions, e := p.GetChildrenByPath(subjects, parentPath, int8(common.PathDepth(parentPath)+1))
 	if e != nil {
 		return nil, e
@@ -92,7 +100,7 @@ func (p *PathPermissionStorage) ResolvePathChildrenPermission(subjects []string,
 	return makePermissionsMap(permissions), nil
 }
 
-func (p *PathPermissionStorage) ResolvePathAndDescendantPermission(subjects []string, parentPath string) (map[string]types.Permission, error) {
+func (p *PathPermissionDAO) ResolvePathAndDescendantPermission(subjects []string, parentPath string) (map[string]types.Permission, error) {
 	permissions, e := p.GetChildrenByPath(subjects, parentPath, -1)
 	if e != nil {
 		return nil, e

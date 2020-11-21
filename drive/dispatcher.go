@@ -7,7 +7,6 @@ import (
 	"go-drive/common/types"
 	"go-drive/storage"
 	"io"
-	"log"
 	fsPath "path"
 	"regexp"
 	"strings"
@@ -22,11 +21,11 @@ type DispatcherDrive struct {
 	drives map[string]types.IDrive
 	mounts map[string]map[string]types.PathMount
 
-	mountStorage *storage.PathMountStorage
+	mountStorage *storage.PathMountDAO
 	mux          *sync.Mutex
 }
 
-func NewDispatcherDrive(mountStorage *storage.PathMountStorage) *DispatcherDrive {
+func NewDispatcherDrive(mountStorage *storage.PathMountDAO) *DispatcherDrive {
 	return &DispatcherDrive{
 		drives:       make(map[string]types.IDrive),
 		mountStorage: mountStorage,
@@ -71,8 +70,7 @@ func (d *DispatcherDrive) reloadMounts() error {
 }
 
 func (d *DispatcherDrive) Meta() types.DriveMeta {
-	log.Fatalln("not supported")
-	return types.DriveMeta{}
+	panic("not supported")
 }
 
 func (d *DispatcherDrive) resolve(path string) (types.IDrive, string, error) {

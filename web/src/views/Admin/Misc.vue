@@ -23,10 +23,31 @@
         Clean
       </simple-button>
     </div>
+    <div class="section">
+      <h1 class="section-title">
+        Statistics
+        <simple-button :loading="statLoading" @click="loadStats">
+          Refresh in {{ refreshCountDown }}s
+        </simple-button>
+      </h1>
+      <div class="statistics">
+        <table class="stat-item simple-table" v-for="(s, i) in stats" :key="i">
+          <thead>
+            <tr>
+              <th colspan="2">{{ s.name }}</th>
+            </tr>
+          </thead>
+          <tr v-for="(value, key) in s.data" :key="key">
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
   </div>
 </template>
 <script>
-import { cleanPermissionsAndMounts } from '@/api/admin'
+import { cleanPermissionsAndMounts, loadStats } from '@/api/admin'
 import PermissionsEditor from './PermissionsEditor'
 
 export default {
@@ -39,7 +60,11 @@ export default {
       saving: false,
       permissionsCanSave: true,
 
-      cleaning: false
+      cleaning: false,
+
+      stats: [],
+      refreshCountDown: 0,
+      statLoading: false
     }
   },
   watch: {
@@ -49,6 +74,12 @@ export default {
         this.permissionsCanSave = this.$refs.permissionsEditor.validate()
       }
     }
+  },
+  created () {
+    this.loadStats()
+  },
+  beforeDestroy () {
+    this.stopStatTimer()
   },
   methods: {
     async savePermissions () {
@@ -71,6 +102,31 @@ export default {
       } finally {
         this.cleaning = false
       }
+    },
+    async loadStats () {
+      this.statLoading = true
+      try {
+        this.stats = await loadStats()
+      } catch (e) {
+        await this.$alert(e.message)
+      } finally {
+        this.statLoading = false
+        this.startStatTimer()
+      }
+    },
+    startStatTimer () {
+      this.refreshCountDown = 10
+      this._timer = setInterval(this.statRefreshTimer, 1000)
+    },
+    stopStatTimer () {
+      clearInterval(this._timer)
+    },
+    statRefreshTimer () {
+      this.refreshCountDown--
+      if (this.refreshCountDown <= 0) {
+        this.loadStats()
+        this.stopStatTimer()
+      }
     }
   }
 }
@@ -80,13 +136,28 @@ export default {
   padding: 16px;
 
   .section {
-    margin-bottom: 20px;
+    padding-top: 1em;
+    margin-bottom: 2em;
+
+    &:not(:first-child) {
+      border-top: solid 1px;
+      @include var(border-color, border-color);
+    }
   }
 
   .section-title {
     margin: 0 0 16px;
     font-size: 20px;
     font-weight: normal;
+  }
+
+  .statistics {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    margin: 0 2em 2em 0;
   }
 }
 </style>

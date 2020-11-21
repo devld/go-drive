@@ -9,7 +9,6 @@ import (
 	"go-drive/common/types"
 	"io"
 	"io/ioutil"
-	"log"
 	"math"
 	"os"
 	fsPath "path"
@@ -18,6 +17,16 @@ import (
 )
 
 const minChunkSize = 5 * 1024 * 1024
+
+func init() {
+	common.R().Register("chunkUploader", func(c *common.ComponentRegistry) interface{} {
+		chunksTempDir, e := c.Get("config").(common.Config).GetDir("upload_temp", true)
+		common.PanicIfError(e)
+		cu, e := NewChunkUploader(chunksTempDir)
+		common.PanicIfError(e)
+		return cu
+	}, 0)
+}
 
 type ChunkUploader struct {
 	dir string
@@ -56,7 +65,7 @@ func (c *ChunkUploader) CreateUpload(size, chunkSize int64) (ChunkUpload, error)
 	}
 	upload, e := c.getUpload(id)
 	if e != nil {
-		log.Fatalln(e)
+		panic(e)
 	}
 	return *upload, nil
 }
