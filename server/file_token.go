@@ -127,7 +127,7 @@ func (f *FileToken) writeFile(token string, value *types.Session, flag int) (typ
 }
 
 func (f *FileToken) isExpired(modTime time.Time) bool {
-	return modTime.Add(f.validity).Before(time.Now())
+	return modTime.Before(time.Now().Add(-f.validity))
 }
 
 func (f *FileToken) Dispose() error {
@@ -147,8 +147,9 @@ func (f *FileToken) forEachSession(fn func(string, os.FileInfo)) error {
 
 func (f *FileToken) clean() {
 	n := 0
+	notBefore := time.Now().Add(-f.validity)
 	e := f.forEachSession(func(path string, info os.FileInfo) {
-		if f.isExpired(info.ModTime()) {
+		if info.ModTime().Before(notBefore) {
 			if e := os.Remove(path); e != nil {
 				log.Println("failed to delete file", e)
 			}

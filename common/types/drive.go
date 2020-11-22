@@ -18,9 +18,10 @@ func (t EntryType) IsDir() bool {
 }
 
 type EntryMeta struct {
-	CanRead  bool
-	CanWrite bool
-	Props    M
+	CanRead   bool
+	CanWrite  bool
+	Thumbnail string
+	Props     M
 }
 
 type IContent interface {

@@ -55,7 +55,11 @@ func Copy(dst io.Writer, src io.Reader, ctx types.TaskCtx) (written int64, err e
 }
 
 func CopyReaderToTempFile(reader io.Reader, ctx types.TaskCtx) (*os.File, error) {
-	file, e := ioutil.TempFile("", "drive-copy")
+	dir, e := common.Conf().GetDir("temp", true)
+	if e != nil {
+		return nil, e
+	}
+	file, e := ioutil.TempFile(dir, "drive-copy")
 	if e != nil {
 		return nil, e
 	}
@@ -114,7 +118,7 @@ func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.R
 			proxy.ServeHTTP(w, req)
 			return nil
 		} else {
-			w.WriteHeader(302)
+			w.WriteHeader(http.StatusFound)
 			w.Header().Set("Location", url)
 		}
 		return nil

@@ -7,6 +7,7 @@ import (
 	"go-drive/common/drive_util"
 	"go-drive/common/types"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -91,7 +92,7 @@ func (o *OneDrive) Get(path string) (types.IEntry, error) {
 	if cached, _ := o.cache.GetEntry(path); cached != nil {
 		return cached, nil
 	}
-	resp, e := o.c.Get(common.BuildURL("/root:/{}", path), nil)
+	resp, e := o.c.Get(common.BuildURL("/root:/{}?expand=thumbnails", path), nil)
 	if e != nil {
 		return nil, e
 	}
@@ -218,7 +219,7 @@ func (o *OneDrive) List(path string) ([]types.IEntry, error) {
 	if cached, _ := o.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
-	reqPath := pathURL(path) + "/children"
+	reqPath := pathURL(path) + "/children?$expand=thumbnails"
 	res := driveItems{}
 	resp, e := o.c.Get(reqPath, nil)
 	if e != nil {
@@ -287,6 +288,10 @@ func (o *OneDrive) Dispose() error {
 
 func (o *OneDrive) newEntry(item driveItem) *oneDriveEntry {
 	modTime, _ := time.Parse(time.RFC3339, item.ModTime)
+	thumbnailUrl := ""
+	if item.Thumbnails != nil && len(item.Thumbnails) > 0 && item.Thumbnails[0].Large != nil {
+		thumbnailUrl = item.Thumbnails[0].Large.URL
+	}
 	return &oneDriveEntry{
 		id:                   item.Id,
 		path:                 item.Path(),
@@ -294,6 +299,7 @@ func (o *OneDrive) newEntry(item driveItem) *oneDriveEntry {
 		size:                 item.Size,
 		modTime:              common.Millisecond(modTime),
 		d:                    o,
+		thumbnail:            thumbnailUrl,
 		downloadUrl:          item.DownloadURL,
 		downloadUrlExpiresAt: time.Now().Add(downloadUrlTTl).Unix(),
 	}
@@ -306,6 +312,8 @@ type oneDriveEntry struct {
 	size    int64
 	modTime int64
 	d       *OneDrive
+
+	thumbnail string
 
 	downloadUrl          string
 	downloadUrlExpiresAt int64
@@ -327,7 +335,10 @@ func (o *oneDriveEntry) Size() int64 {
 }
 
 func (o *oneDriveEntry) Meta() types.EntryMeta {
-	return types.EntryMeta{CanRead: true, CanWrite: true}
+	return types.EntryMeta{
+		CanRead: true, CanWrite: true,
+		Thumbnail: o.thumbnail,
+	}
 }
 
 func (o *oneDriveEntry) ModTime() int64 {
@@ -360,7 +371,7 @@ func (o *oneDriveEntry) GetURL() (string, bool, error) {
 		if e != nil {
 			return "", false, e
 		}
-		if resp.Status() != 302 {
+		if resp.Status() != http.StatusFound {
 			return "", false, errors.New(fmt.Sprintf("%d", resp.Status()))
 		}
 		u = resp.Response().Header.Get("Location")
@@ -376,5 +387,6 @@ func (o *oneDriveEntry) EntryData() types.SM {
 		"id": o.id,
 		"du": o.downloadUrl,
 		"de": strconv.FormatInt(o.downloadUrlExpiresAt, 10),
+		"th": o.thumbnail,
 	}
 }

@@ -87,6 +87,7 @@ export default {
   .entry-icon {
     width: 150px;
     height: 150px;
+    font-size: 150px;
   }
 
   .page-content {

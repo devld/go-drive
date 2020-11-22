@@ -20,9 +20,7 @@ func init() {
 func main() {
 	common.R().Init()
 
-	config := common.R().Get("config").(common.Config)
-
 	log.Fatalln(
-		common.R().Get("httpServer").(*gin.Engine).Run(config.GetListen()),
+		common.R().Get("httpServer").(*gin.Engine).Run(common.Conf().GetListen()),
 	)
 }

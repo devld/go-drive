@@ -7,12 +7,16 @@ import (
 	"go-drive/common/types"
 	"go-drive/drive"
 	"go-drive/storage"
+	"net/http"
+	"time"
 )
 
 const (
 	keyToken   = "token"
 	keySession = "session"
 	keyResult  = "apiResult"
+
+	signatureQueryKey = "_k"
 )
 
 func TokenStore() types.TokenStore {
@@ -60,7 +64,11 @@ func TaskRunner() task.Runner {
 }
 
 func GetChunkUploader() *ChunkUploader {
-	return common.R().Get("chunkUploaded").(*ChunkUploader)
+	return common.R().Get("chunkUploader").(*ChunkUploader)
+}
+
+func GetThumbnail() *Thumbnail {
+	return common.R().Get("thumbnail").(*Thumbnail)
 }
 
 func SetResult(c *gin.Context, result interface{}) {
@@ -95,4 +103,16 @@ func UpdateSessionUser(c *gin.Context, user types.User) error {
 	session.User = user
 	_, e := TokenStore().Update(GetToken(c), session)
 	return e
+}
+
+func getSignPayload(req *http.Request, path string) string {
+	return req.Host + "." + path + "." + common.GetRealIP(req)
+}
+
+func checkSignature(req *http.Request, path string) bool {
+	return Signer().Validate(getSignPayload(req, path), req.URL.Query().Get(signatureQueryKey))
+}
+
+func signPathRequest(req *http.Request, path string, notAfter time.Time) string {
+	return Signer().Sign(getSignPayload(req, path), notAfter)
 }

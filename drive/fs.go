@@ -36,7 +36,7 @@ func NewFsDrive(config drive_util.DriveConfig, _ drive_util.DriveUtils) (types.I
 		return nil, common.NewNotAllowedMessageError("invalid root path")
 	}
 
-	localRoot, e := common.R().Get("config").(common.Config).GetLocalFsDir()
+	localRoot, e := common.Conf().GetLocalFsDir()
 	if e != nil {
 		return nil, e
 	}

@@ -79,6 +79,18 @@ type videoInfo struct {
 	Height   int `json:"height"`
 }
 
+type thumbnailItem struct {
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
+	URL    string `json:"url"`
+}
+
+type thumbnailInfo struct {
+	Large  *thumbnailItem `json:"large"`
+	Medium *thumbnailItem `json:"medium"`
+	Small  *thumbnailItem `json:"small"`
+}
+
 // https://docs.microsoft.com/en-us/graph/api/resources/driveitem?view=graph-rest-1.0
 type driveItem struct {
 	Id      string      `json:"id"`
@@ -98,6 +110,8 @@ type driveItem struct {
 	ModTime string `json:"lastModifiedDateTime"`
 
 	DownloadURL string `json:"@microsoft.graph.downloadUrl"`
+
+	Thumbnails []thumbnailInfo `json:"thumbnails"`
 
 	Parent struct {
 		Id   string `json:"id"`

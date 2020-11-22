@@ -1,11 +1,13 @@
 package server
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -22,6 +24,11 @@ func InitDriveRoutes(router gin.IRouter) {
 	})
 	router.GET("/content/*path", func(c *gin.Context) {
 		if e := getContent(c); e != nil {
+			_ = c.Error(e)
+		}
+	})
+	router.GET("/thumbnail/*path", func(c *gin.Context) {
+		if e := getThumbnail(c); e != nil {
 			_ = c.Error(e)
 		}
 	})
@@ -142,7 +149,6 @@ func getDrive(c *gin.Context) types.IDrive {
 		c.Request, session,
 		RootDrive().Get(),
 		PermissionDAO(),
-		Signer(),
 	)
 }
 
@@ -274,7 +280,7 @@ func getContent(c *gin.Context) error {
 	if content, ok := file.(types.IContent); ok {
 
 		useProxy := c.Query("proxy")
-		maxProxySize := common.R().Get("config").(common.Config).GetMaxProxySize()
+		maxProxySize := common.Conf().GetMaxProxySize()
 		if maxProxySize > 0 && file.Size() > maxProxySize {
 			useProxy = ""
 		}
@@ -282,6 +288,36 @@ func getContent(c *gin.Context) error {
 		return drive_util.DownloadIContent(content, c.Writer, c.Request, useProxy != "")
 	}
 	return common.NewNotAllowedError()
+}
+
+func getThumbnail(c *gin.Context) error {
+	path := common.CleanPath(c.Param("path"))
+	if !checkSignature(c.Request, path) {
+		return common.NewNotFoundError()
+	}
+	entry, e := getDrive(c).Get(path)
+	if e != nil {
+		return e
+	}
+	if entry.Meta().Props != nil && entry.Meta().Thumbnail != "" {
+		c.Redirect(http.StatusFound, entry.Meta().Thumbnail)
+		return nil
+	}
+	if entry.Size() > common.Conf().GetMaxThumbnailSize() {
+		return common.NewNotFoundError()
+	}
+	file, e := GetThumbnail().Create(entry)
+	if e != nil {
+		return e
+	}
+	defer func() { _ = file.Close() }()
+	stat, e := file.Stat()
+	if e != nil {
+		return e
+	}
+	c.Header("Cache-Control", fmt.Sprintf("max-age=%d", int(common.Conf().ThumbnailCacheTTl.Seconds())))
+	http.ServeContent(c.Writer, c.Request, "thumbnail.jpg", stat.ModTime(), file)
+	return nil
 }
 
 func writeContent(c *gin.Context) (*task.Task, error) {
