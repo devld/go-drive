@@ -380,6 +380,7 @@ func (o *OneDrive) deserializeEntry(dat string) (types.IEntry, error) {
 		path: ec.Path, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir(),
 		downloadUrl:          ed["du"],
 		downloadUrlExpiresAt: common.ToInt64(ed["de"], -1),
+		thumbnail:            ed["th"],
 	}, nil
 }
 

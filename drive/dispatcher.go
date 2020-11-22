@@ -244,8 +244,8 @@ func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx 
 			return d.Get(to)
 		}
 	} else {
-		// no mounts matched and toPath is in root
-		if driveTo == nil {
+		// no mounts matched and toPath is in root or trying to move drive
+		if driveTo == nil || !isSelf {
 			return nil, common.NewNotAllowedError()
 		}
 	}
@@ -439,7 +439,7 @@ func (d *driveEntry) Size() int64 {
 }
 
 func (d *driveEntry) Meta() types.EntryMeta {
-	return types.EntryMeta{CanRead: true, CanWrite: false, Props: d.meta.Props}
+	return types.EntryMeta{CanRead: true, CanWrite: true, Props: d.meta.Props}
 }
 
 func (d *driveEntry) ModTime() int64 {

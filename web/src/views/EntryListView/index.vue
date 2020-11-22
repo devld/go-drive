@@ -11,6 +11,7 @@
       :selection="selection"
       @update:selection="$emit('update:selection', $event)"
       :selectable="selectable"
+      :view-mode="viewMode"
     />
     <error-view v-else :status="error.status" :message="error.message" />
   </div>
@@ -37,6 +38,9 @@ export default {
     selectable: {
       type: [Boolean, Function],
       default: true
+    },
+    viewMode: {
+      type: String
     }
   },
   data () {

@@ -1,6 +1,8 @@
 
 import axios, { API_PATH, axiosWrapper } from './axios'
 
+const ACCESS_KEY = '_k'
+
 export function listEntries (path) {
   return axiosWrapper.get(`/entries/${path}`)
 }
@@ -50,11 +52,15 @@ export function deleteTask (id) {
 }
 
 function _fileUrl (path, accessKey) {
-  return `/content/${path}${accessKey ? `?k=${encodeURIComponent(accessKey)}` : ''}`
+  return `/content/${path}${accessKey ? `?${ACCESS_KEY}=${encodeURIComponent(accessKey)}` : ''}`
 }
 
 export function fileUrl (path, accessKey) {
   return `${API_PATH}${_fileUrl(path, accessKey)}`
+}
+
+export function fileThumbnail (path, accessKey) {
+  return `${API_PATH}/thumbnail/${path}${accessKey ? `?${ACCESS_KEY}=${encodeURIComponent(accessKey)}` : ''}`
 }
 
 /// auth

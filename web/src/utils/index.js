@@ -1,9 +1,13 @@
 
 import { fileUrl, getTask } from '@/api'
 import dayjs from 'dayjs'
+
 import focus from './directives/focus'
 import longPress from './directives/long-press'
 import markdown from './directives/markdown'
+
+import LazyLoad from 'vue-lazyload'
+
 import UiUtils from './ui-utils'
 
 export const IS_DEBUG = process.env.NODE_ENV === 'development'
@@ -184,6 +188,11 @@ export function isAdmin (user) {
   return !!(user && user.groups && user.groups.findIndex(g => g.name === 'admin') !== -1)
 }
 
+const thumbnailExts = { png: true, jpg: true, jpeg: true, gif: true }
+export function supportThumbnail (entry) {
+  return entry.type === 'file' && !!thumbnailExts[filenameExt(entry.name)]
+}
+
 export function wait (ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
@@ -242,5 +251,6 @@ export default {
     })
 
     Vue.use(UiUtils)
+    Vue.use(LazyLoad)
   }
 }

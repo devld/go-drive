@@ -10,6 +10,7 @@
         @entry-menu="showEntryMenu"
         :selection.sync="selectedEntries"
         @loading="progressBar($event)"
+        :view-mode="viewMode"
       />
     </div>
     <!-- file list main area -->
@@ -68,7 +69,7 @@ import EntryMenu from './EntryMenu'
 import NewEntryArea from './NewEntryArea'
 
 import { getEntry, getContent } from '@/api'
-import { filename, dir, debounce } from '@/utils'
+import { filename, dir, debounce, supportThumbnail } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
 import { makeEntryHandlerLink, getBaseLink } from '@/utils/routes'
@@ -115,7 +116,9 @@ export default {
       entries: null,
       selectedEntries: [],
 
-      currentDirEntry: null
+      currentDirEntry: null,
+
+      viewMode: 'line'
     }
   },
   computed: {
@@ -210,6 +213,10 @@ export default {
       this.entryMenuShowing = true
     },
     entriesLoaded ({ entries, path }) {
+      this.viewMode = entries.reduce((n, e) =>
+        n + +supportThumbnail(e), 0) / entries.length > 0.5
+        ? 'block' : 'line'
+
       setTitle(path)
 
       if (path !== this.path) {
@@ -347,6 +354,10 @@ export default {
         e.stopPropagation()
         e.preventDefault()
       }
+    },
+    toggleViewMode () {
+      if (this.viewMode === 'line') this.viewMode = 'block'
+      else this.viewMode = 'line'
     },
     ...mapMutations(['progressBar'])
   }

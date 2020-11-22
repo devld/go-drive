@@ -1,5 +1,8 @@
 <template>
-  <div class="entry-list">
+  <div
+    class="entry-list"
+    :class="[viewMode ? `entry-list--view-${viewMode}` : '']"
+  >
     <path-bar
       v-if="!isRootPath"
       :path="path"
@@ -13,9 +16,10 @@
           @click="entryClicked"
         >
           <entry-item
+            :view-mode="viewMode"
             :entry="parentDirEntry"
             :icon="selected.length > 0 ? '#icon-duigou' : undefined"
-            @icon-click="toggleSelectAll($event)"
+            @icon-click="parentIconClicked($event)"
           />
         </entry-link>
       </li>
@@ -32,8 +36,9 @@
           @menu="entryContextMenu"
         >
           <entry-item
+            :view-mode="viewMode"
             :entry="entry"
-            @icon-click="toggleSelect(entry, $event)"
+            @icon-click="iconClicked(entry, $event)"
           />
         </entry-link>
       </li>
@@ -76,6 +81,10 @@ export default {
     },
     selection: {
       type: Array
+    },
+    viewMode: {
+      type: String,
+      default: 'block'
     }
   },
   watch: {
@@ -121,10 +130,21 @@ export default {
     entryContextMenu (e) {
       this.$emit('entry-menu', e)
     },
-    toggleSelect (entry, e) {
+    iconClicked (entry, e) {
+      if (this.viewMode !== 'line') return
       if (!this.selectable) return
       e.stopPropagation()
       e.preventDefault()
+      this.toggleSelect(entry)
+    },
+    parentIconClicked (e) {
+      if (this.viewMode !== 'line') return
+      if (!this.selectable) return
+      e.stopPropagation()
+      e.preventDefault()
+      this.toggleSelectAll()
+    },
+    toggleSelect (entry) {
       if (this.selectionMap[entry.path]) {
         this.selected.splice(this.selected.findIndex(e => e.path === entry.path), 1)
       } else {
@@ -135,10 +155,7 @@ export default {
       }
       this.$emit('update:selection', this.selected)
     },
-    toggleSelectAll (e) {
-      if (!this.selectable) return
-      e.stopPropagation()
-      e.preventDefault()
+    toggleSelectAll () {
       if (this.selected.length === this.entries.length) {
         this.selected.splice(0)
       } else {
@@ -173,6 +190,18 @@ export default {
 
   .entry-link {
     @include var(color, primary-text-color);
+  }
+}
+
+.entry-list--view-block {
+  .entry-list__entries {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+
+    & > li {
+      margin-bottom: 10px;
+    }
   }
 }
 

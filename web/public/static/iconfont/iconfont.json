@@ -6,18 +6,25 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "5633834",
+      "name": "bars",
+      "font_class": "bars",
+      "unicode": "ef34",
+      "unicode_decimal": 61236
+    },
+    {
+      "icon_id": "10330636",
+      "name": "grid-small",
+      "font_class": "grid-small",
+      "unicode": "e65a",
+      "unicode_decimal": 58970
+    },
+    {
       "icon_id": "5634295",
       "name": "play-circle",
       "font_class": "play-circle",
       "unicode": "f07f",
       "unicode_decimal": 61567
-    },
-    {
-      "icon_id": "7210658",
-      "name": "path",
-      "font_class": "path",
-      "unicode": "e6d8",
-      "unicode_decimal": 59096
     },
     {
       "icon_id": "5127476",

@@ -2,6 +2,7 @@ package common
 
 import (
 	"go-drive/common/types"
+	"net/http"
 	"strconv"
 )
 
@@ -25,7 +26,7 @@ func (b BadRequestError) Error() string {
 }
 
 func (b BadRequestError) Code() int {
-	return 400
+	return http.StatusBadRequest
 }
 
 // UnauthorizedError 401
@@ -38,7 +39,7 @@ func (i UnauthorizedError) Error() string {
 }
 
 func (i UnauthorizedError) Code() int {
-	return 401
+	return http.StatusUnauthorized
 }
 
 // NotFoundError 404
@@ -51,7 +52,7 @@ func (d NotFoundError) Error() string {
 }
 
 func (d NotFoundError) Code() int {
-	return 404
+	return http.StatusNotFound
 }
 
 // NotAllowedError 403
@@ -64,7 +65,7 @@ func (d NotAllowedError) Error() string {
 }
 
 func (d NotAllowedError) Code() int {
-	return 403
+	return http.StatusForbidden
 }
 
 // PermissionDeniedError 403
@@ -73,7 +74,7 @@ type PermissionDeniedError struct {
 }
 
 func (p PermissionDeniedError) Code() int {
-	return 403
+	return http.StatusForbidden
 }
 
 func (p PermissionDeniedError) Error() string {
@@ -90,7 +91,7 @@ func (n UnsupportedError) Error() string {
 }
 
 func (n UnsupportedError) Code() int {
-	return 405
+	return http.StatusMethodNotAllowed
 }
 
 // RemoteApiError
@@ -105,6 +106,19 @@ func (r RemoteApiError) Error() string {
 
 func (r RemoteApiError) Code() int {
 	return r.code
+}
+
+// RequestTimeoutError
+type TimeoutError struct {
+	msg string
+}
+
+func (t TimeoutError) Code() int {
+	return http.StatusRequestTimeout
+}
+
+func (t TimeoutError) Error() string {
+	return t.msg
 }
 
 func IsUnsupportedError(e error) bool {
@@ -160,4 +174,8 @@ func NewUnsupportedMessageError(msg string) UnsupportedError {
 
 func NewRemoteApiError(code int, msg string) RemoteApiError {
 	return RemoteApiError{code, msg}
+}
+
+func NewTimeoutError(msg string) TimeoutError {
+	return TimeoutError{msg}
 }

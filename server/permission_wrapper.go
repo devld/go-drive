@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+const (
+	accessKeyValidity = 12 * time.Hour
+)
+
 // PermissionWrapperDrive intercept the request
 // based on the permission information in the database.
 // The permissions of a child path inherit from the parent path,
@@ -20,13 +24,11 @@ type PermissionWrapperDrive struct {
 	subjects          []string
 	request           *http.Request
 	permissionStorage *storage.PathPermissionDAO
-	requestSigner     *common.Signer
 }
 
 func NewPermissionWrapperDrive(
 	request *http.Request, session types.Session, drive types.IDrive,
-	permissionStorage *storage.PathPermissionDAO,
-	requestSigner *common.Signer) *PermissionWrapperDrive {
+	permissionStorage *storage.PathPermissionDAO) *PermissionWrapperDrive {
 
 	subjects := make([]string, 0, 3)
 	subjects = append(subjects, types.AnySubject) // Anonymous
@@ -44,7 +46,6 @@ func NewPermissionWrapperDrive(
 		subjects:          subjects,
 		request:           request,
 		permissionStorage: permissionStorage,
-		requestSigner:     requestSigner,
 	}
 }
 
@@ -53,7 +54,7 @@ func (p *PermissionWrapperDrive) Meta() types.DriveMeta {
 }
 
 func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
-	canRead := p.requireContentPermission(path)
+	canRead := checkSignature(p.request, path)
 	var permission = types.PermissionRead
 	if !canRead {
 		var e error
@@ -70,6 +71,7 @@ func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
 		p:          p,
 		entry:      entry,
 		permission: permission,
+		accessKey:  signPathRequest(p.request, path, time.Now().Add(accessKeyValidity)),
 	}, nil
 }
 
@@ -164,7 +166,7 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 		if per.CanRead() {
 			accessKey := ""
 			if e.Type().IsFile() {
-				accessKey = p.signPathAccess(e.Path())
+				accessKey = signPathRequest(p.request, e.Path(), time.Now().Add(accessKeyValidity))
 			}
 			result = append(
 				result,
@@ -194,19 +196,6 @@ func (p *PermissionWrapperDrive) Upload(path string, size int64, override bool,
 		return nil, e
 	}
 	return p.drive.Upload(path, size, override, config)
-}
-
-func (p *PermissionWrapperDrive) requireContentPermission(path string) bool {
-	signature := p.request.URL.Query().Get("k")
-	return p.requestSigner.Validate(p.getSignPayload(path), signature)
-}
-
-func (p *PermissionWrapperDrive) signPathAccess(path string) string {
-	return p.requestSigner.Sign(p.getSignPayload(path), time.Now().Add(12*time.Hour))
-}
-
-func (p *PermissionWrapperDrive) getSignPayload(path string) string {
-	return p.request.Host + "." + path + "." + common.GetRealIP(p.request)
 }
 
 func (p *PermissionWrapperDrive) requireFolderWritePermission(path string) (types.Permission, error) {

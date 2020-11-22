@@ -8,6 +8,7 @@
       @entries-load="entriesLoaded"
       :selection.sync="selection"
       :selectable="dirMode ? false : isEntrySelectable"
+      view-mode="line"
     />
     <div class="open-dialog__selected-count" v-if="!dirMode">
       <span v-if="max > 0">Select at most {{ max }} items. </span>
