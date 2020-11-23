@@ -14,12 +14,6 @@ import (
 	"time"
 )
 
-func init() {
-	common.R().Register("taskRunner", func(c *common.ComponentRegistry) interface{} {
-		return NewTunnyRunner(100)
-	}, 0)
-}
-
 type TunnyRunner struct {
 	pool       *tunny.Pool
 	store      cmap.ConcurrentMap
@@ -28,12 +22,13 @@ type TunnyRunner struct {
 
 var cleanThreshold = 1 * time.Minute
 
-func NewTunnyRunner(workers int) *TunnyRunner {
+func NewTunnyRunner(config common.Config, ch *common.ComponentsHolder) *TunnyRunner {
 	tr := &TunnyRunner{
-		pool:  tunny.NewFunc(workers, executor),
+		pool:  tunny.NewFunc(config.MaxConcurrentTask, executor),
 		store: cmap.New(),
 	}
 	tr.tickerStop = common.TimeTick(tr.clean, 30*time.Second)
+	ch.Add("taskRunner", tr)
 	return tr
 }
 

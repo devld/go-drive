@@ -54,12 +54,8 @@ func Copy(dst io.Writer, src io.Reader, ctx types.TaskCtx) (written int64, err e
 	return
 }
 
-func CopyReaderToTempFile(reader io.Reader, ctx types.TaskCtx) (*os.File, error) {
-	dir, e := common.Conf().GetDir("temp", true)
-	if e != nil {
-		return nil, e
-	}
-	file, e := ioutil.TempFile(dir, "drive-copy")
+func CopyReaderToTempFile(reader io.Reader, ctx types.TaskCtx, tempDir string) (*os.File, error) {
+	file, e := ioutil.TempFile(tempDir, "drive-copy")
 	if e != nil {
 		return nil, e
 	}
@@ -86,12 +82,12 @@ func GetIContentReader(content types.IContent) (io.ReadCloser, error) {
 	return content.GetReader()
 }
 
-func CopyIContentToTempFile(content types.IContent, ctx types.TaskCtx) (*os.File, error) {
+func CopyIContentToTempFile(content types.IContent, ctx types.TaskCtx, tempDir string) (*os.File, error) {
 	reader, e := GetIContentReader(content)
 	if e != nil {
 		return nil, e
 	}
-	return CopyReaderToTempFile(reader, ctx)
+	return CopyReaderToTempFile(reader, ctx, tempDir)
 }
 
 func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.Request, forceProxy bool) error {
@@ -290,12 +286,12 @@ func CopyAll(entry types.IEntry, driveTo types.IDrive, to string, override bool,
 	return err
 }
 
-func CopyEntry(from types.IEntry, driveTo types.IDrive, to string, override bool, ctx types.TaskCtx) error {
+func CopyEntry(from types.IEntry, driveTo types.IDrive, to string, override bool, ctx types.TaskCtx, tempDir string) error {
 	content, ok := from.(types.IContent)
 	if !ok {
 		return common.NewNotAllowedMessageError(fmt.Sprintf("file '%s' is not readable", from.Path()))
 	}
-	file, e := CopyIContentToTempFile(content, task.DummyContext())
+	file, e := CopyIContentToTempFile(content, task.DummyContext(), tempDir)
 	if e != nil {
 		return e
 	}

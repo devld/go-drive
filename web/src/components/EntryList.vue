@@ -197,10 +197,33 @@ export default {
   .entry-list__entries {
     display: flex;
     flex-wrap: wrap;
-    align-items: stretch;
 
     & > li {
+      width: 16.666%;
       margin-bottom: 10px;
+    }
+
+    .entry-link {
+      display: block;
+      height: 100%;
+    }
+  }
+
+  @media screen and (max-width: 800px) {
+    .entry-list__entries > li {
+      width: 25%;
+    }
+  }
+
+  @media screen and (max-width: 500px) {
+    .entry-list__entries > li {
+      width: 33.333%;
+    }
+  }
+
+  @media screen and (max-width: 320px) {
+    .entry-list__entries > li {
+      width: 50%;
     }
   }
 }

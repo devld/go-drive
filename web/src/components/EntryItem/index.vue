@@ -14,26 +14,22 @@
           `${$.formatBytes(entry.size)}`
     "
   >
-    <i-icon
-      class="entry-item__icon"
-      v-if="icon"
-      :svg="icon"
-      @click="$emit('icon-click', $event)"
-    />
-    <entry-icon
-      v-else
-      class="entry-item__icon"
-      :entry="entry"
-      @click="$emit('icon-click', $event)"
-    />
+    <span class="entry-item__icon-wrapper">
+      <entry-icon
+        class="entry-item__icon"
+        :entry="entry"
+        :icon="icon"
+        @click="$emit('icon-click', $event)"
+      />
+    </span>
     <span class="entry-item__info">
       <span class="entry-item__name">
         <i v-if="entry.meta.is_mount">@</i>{{ entry.name }}
       </span>
-      <span class="entry-item__modified-time">{{
+      <span class="entry-item__modified-time" v-if="viewMode === 'line'">{{
         entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : ""
       }}</span>
-      <span class="entry-item__size">{{
+      <span class="entry-item__size" v-if="viewMode === 'line'">{{
         entry.size >= 0 ? $.formatBytes(entry.size) : ""
       }}</span>
     </span>
@@ -78,10 +74,7 @@ export default {
   padding: 4px 16px;
 
   .entry-item__icon {
-    width: 42px;
-    height: 42px;
     margin-right: 0.5em;
-    font-size: 42px;
   }
 
   .entry-item__info {
@@ -110,9 +103,28 @@ export default {
 }
 
 .entry-item--view-block {
-  $size: 90px;
-  width: $size;
-  padding: 10px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+
+  .entry-item__icon-wrapper {
+    display: block;
+    width: 100%;
+    padding-top: 100%;
+    position: relative;
+  }
+
+  .entry-item__icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    width: unset;
+    height: unset;
+    margin-bottom: 10px;
+  }
 
   .entry-icon__thumbnail {
     transition: 0.3s;
@@ -124,29 +136,13 @@ export default {
     }
   }
 
-  .entry-item__icon {
-    width: 100%;
-    height: $size;
-    display: block;
-    font-size: $size;
-    margin-bottom: 10px;
-  }
-
   .entry-item__name {
     display: block;
     white-space: nowrap;
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 12px;
-  }
-
-  .entry-item__modified-time {
-    display: none;
-  }
-
-  .entry-item__size {
-    display: none;
+    font-size: 14px;
   }
 }
 </style>

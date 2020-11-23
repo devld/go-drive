@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"go-drive/common"
@@ -18,27 +17,14 @@ import (
 
 const minChunkSize = 5 * 1024 * 1024
 
-func init() {
-	common.R().Register("chunkUploader", func(c *common.ComponentRegistry) interface{} {
-		chunksTempDir, e := c.Get("config").(common.Config).GetDir("upload_temp", true)
-		common.PanicIfError(e)
-		cu, e := NewChunkUploader(chunksTempDir)
-		common.PanicIfError(e)
-		return cu
-	}, 0)
-}
-
 type ChunkUploader struct {
 	dir string
 }
 
-func NewChunkUploader(dir string) (*ChunkUploader, error) {
-	exists, e := common.FileExists(dir)
+func NewChunkUploader(config common.Config) (*ChunkUploader, error) {
+	dir, e := config.GetDir("upload_temp", true)
 	if e != nil {
 		return nil, e
-	}
-	if !exists {
-		return nil, errors.New("root dir does not exists")
 	}
 	return &ChunkUploader{dir}, nil
 }

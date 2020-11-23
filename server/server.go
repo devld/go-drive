@@ -4,26 +4,31 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
+	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/drive"
+	"go-drive/storage"
 	"net/http"
 	"runtime"
 	"time"
 )
 
-func init() {
-	common.R().Register("httpServer", func(c *common.ComponentRegistry) interface{} {
-		resDir := c.Get("config").(common.Config).GetResDir()
-		engine, e := InitServer(resDir)
-		common.PanicIfError(e)
-		return engine
-	}, 4096)
+func InitServer(config common.Config,
+	ch *common.ComponentsHolder,
+	rootDrive *drive.RootDrive,
+	tokenStore types.TokenStore,
+	thumbnail *Thumbnail,
+	signer *common.Signer,
+	chunkUploader *ChunkUploader,
+	runner task.Runner,
+	userDAO *storage.UserDAO,
+	groupDAO *storage.GroupDAO,
+	driveDAO *storage.DriveDAO,
+	driveCacheDAO *storage.DriveCacheDAO,
+	driveDataDAO *storage.DriveDataDAO,
+	permissionDAO *storage.PathPermissionDAO,
+	pathMountDAO *storage.PathMountDAO) *gin.Engine {
 
-	common.R().Register("runtimeStat", func(c *common.ComponentRegistry) interface{} {
-		return runtimeStat{}
-	}, 0)
-}
-
-func InitServer(resDir string) (*gin.Engine, error) {
 	if common.IsDebugOn() {
 		gin.SetMode(gin.DebugMode)
 	} else {
@@ -36,15 +41,20 @@ func InitServer(resDir string) (*gin.Engine, error) {
 	engine.Use(Logger())
 	engine.Use(apiResultHandler)
 
-	InitAuthRoutes(engine)
-	InitAdminRoutes(engine)
-	InitDriveRoutes(engine)
+	InitAuthRoutes(engine, tokenStore, userDAO)
 
-	if resDir != "" {
-		engine.NoRoute(Static("/", resDir))
+	InitAdminRoutes(engine, ch, rootDrive, tokenStore, userDAO, groupDAO,
+		driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO)
+
+	InitDriveRoutes(engine, config, rootDrive, permissionDAO, thumbnail,
+		signer, chunkUploader, runner, tokenStore)
+
+	if config.GetResDir() != "" {
+		engine.NoRoute(Static("/", config.GetResDir()))
 	}
 
-	return engine, nil
+	ch.Add("runtimeStat", runtimeStat{})
+	return engine
 }
 
 func apiResultHandler(c *gin.Context) {

@@ -1,16 +1,11 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"log"
 	"math/rand"
+	"net/http"
 	"time"
-
-	_ "go-drive/common"
-	_ "go-drive/common/task"
-	_ "go-drive/server"
-	_ "go-drive/storage"
 )
 
 func init() {
@@ -18,9 +13,12 @@ func init() {
 }
 
 func main() {
-	common.R().Init()
+	ch := common.NewComponentHolder()
 
-	log.Fatalln(
-		common.R().Get("httpServer").(*gin.Engine).Run(common.Conf().GetListen()),
-	)
+	engine, e := Initialize(ch)
+	if e != nil {
+		log.Fatalln(e)
+	}
+
+	log.Fatalln(http.ListenAndServe(ch.Get("config").(common.Config).Listen, engine))
 }

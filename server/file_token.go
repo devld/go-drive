@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"go-drive/common"
@@ -16,54 +15,42 @@ import (
 
 const sessionPrefix = "s_"
 
-type FileToken struct {
+type FileTokenStore struct {
 	root        string
 	validity    time.Duration
 	autoRefresh bool
 	stopCleaner func()
 }
 
-func init() {
-	common.R().Register("tokenStore", func(c *common.ComponentRegistry) interface{} {
-		dir, e := c.Get("config").(common.Config).GetDir("sessions", true)
-		common.PanicIfError(e)
-		ts, e := NewFileTokenStore(dir, 2*time.Hour, true, 6*time.Hour)
-		common.PanicIfError(e)
-		return ts
-	}, 0)
-}
-
-// NewFileTokenStore creates a FileToken
-func NewFileTokenStore(root string, validity time.Duration, autoRefresh bool,
-	cleanupDuration time.Duration) (*FileToken, error) {
-	if isDir, _ := common.IsDir(root); !isDir {
-		return nil, errors.New("root not exists or is not a directory")
+// NewFileTokenStore creates a FileTokenStore
+func NewFileTokenStore(config common.Config, ch *common.ComponentsHolder) (*FileTokenStore, error) {
+	root, e := config.GetDir("sessions", true)
+	if e != nil {
+		return nil, e
 	}
-	if cleanupDuration <= 0 {
-		panic("invalid cleanupDuration")
-	}
-	ft := &FileToken{
+	ft := &FileTokenStore{
 		root:        root,
-		autoRefresh: autoRefresh,
-		validity:    validity,
+		autoRefresh: config.TokenRefresh,
+		validity:    config.TokenValidity,
 	}
-	ft.stopCleaner = common.TimeTick(ft.clean, cleanupDuration)
+	ft.stopCleaner = common.TimeTick(ft.clean, 2*config.TokenValidity)
+	ch.Add("tokenStore", ft)
 	return ft, nil
 }
 
-func (f *FileToken) Create(value types.Session) (types.Token, error) {
+func (f *FileTokenStore) Create(value types.Session) (types.Token, error) {
 	token := uuid.New().String()
 	return f.writeFile(token, &value, os.O_CREATE|os.O_WRONLY)
 }
 
-func (f *FileToken) Update(token string, value types.Session) (types.Token, error) {
+func (f *FileTokenStore) Update(token string, value types.Session) (types.Token, error) {
 	if _, e := f.readFile(token, false); e != nil {
 		return types.Token{}, e
 	}
 	return f.writeFile(token, &value, os.O_TRUNC|os.O_WRONLY)
 }
 
-func (f *FileToken) Validate(token string) (types.Token, error) {
+func (f *FileTokenStore) Validate(token string) (types.Token, error) {
 	t, e := f.readFile(token, true)
 	if e != nil {
 		return types.Token{}, e
@@ -74,16 +61,16 @@ func (f *FileToken) Validate(token string) (types.Token, error) {
 	return *t, nil
 }
 
-func (f *FileToken) Revoke(token string) error {
+func (f *FileTokenStore) Revoke(token string) error {
 	_ = os.Remove(f.getSessionFile(token))
 	return nil
 }
 
-func (f *FileToken) getSessionFile(token string) string {
+func (f *FileTokenStore) getSessionFile(token string) string {
 	return filepath.Join(f.root, sessionPrefix+token)
 }
 
-func (f *FileToken) readFile(token string, read bool) (*types.Token, error) {
+func (f *FileTokenStore) readFile(token string, read bool) (*types.Token, error) {
 	filePath := f.getSessionFile(token)
 	stat, e := os.Stat(filePath)
 	if os.IsNotExist(e) || f.isExpired(stat.ModTime()) {
@@ -109,7 +96,7 @@ func (f *FileToken) readFile(token string, read bool) (*types.Token, error) {
 	}, nil
 }
 
-func (f *FileToken) writeFile(token string, value *types.Session, flag int) (types.Token, error) {
+func (f *FileTokenStore) writeFile(token string, value *types.Session, flag int) (types.Token, error) {
 	file, e := os.OpenFile(f.getSessionFile(token), flag, 0644)
 	if e != nil {
 		return types.Token{}, e
@@ -126,16 +113,16 @@ func (f *FileToken) writeFile(token string, value *types.Session, flag int) (typ
 	}, nil
 }
 
-func (f *FileToken) isExpired(modTime time.Time) bool {
+func (f *FileTokenStore) isExpired(modTime time.Time) bool {
 	return modTime.Before(time.Now().Add(-f.validity))
 }
 
-func (f *FileToken) Dispose() error {
+func (f *FileTokenStore) Dispose() error {
 	f.stopCleaner()
 	return nil
 }
 
-func (f *FileToken) forEachSession(fn func(string, os.FileInfo)) error {
+func (f *FileTokenStore) forEachSession(fn func(string, os.FileInfo)) error {
 	return filepath.Walk(f.root, func(path string, info os.FileInfo, e error) error {
 		if e != nil || info.IsDir() || !strings.HasPrefix(filepath.Base(path), sessionPrefix) {
 			return nil
@@ -145,7 +132,7 @@ func (f *FileToken) forEachSession(fn func(string, os.FileInfo)) error {
 	})
 }
 
-func (f *FileToken) clean() {
+func (f *FileTokenStore) clean() {
 	n := 0
 	notBefore := time.Now().Add(-f.validity)
 	e := f.forEachSession(func(path string, info os.FileInfo) {
@@ -164,7 +151,7 @@ func (f *FileToken) clean() {
 	}
 }
 
-func (f *FileToken) Status() (string, types.SM, error) {
+func (f *FileTokenStore) Status() (string, types.SM, error) {
 	total := 0
 	active := 0
 	if e := f.forEachSession(func(path string, info os.FileInfo) {

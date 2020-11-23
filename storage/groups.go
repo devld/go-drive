@@ -7,14 +7,6 @@ import (
 	"go-drive/common/types"
 )
 
-func init() {
-	common.R().Register("groupDAO", func(c *common.ComponentRegistry) interface{} {
-		ds, e := NewGroupDAO(c.Get("db").(*DB))
-		common.PanicIfError(e)
-		return ds
-	}, DbOrder+1)
-}
-
 type GroupDAO struct {
 	db *DB
 }
@@ -24,8 +16,8 @@ type GroupWithUsers struct {
 	Users []types.User `json:"users"`
 }
 
-func NewGroupDAO(db *DB) (*GroupDAO, error) {
-	return &GroupDAO{db}, nil
+func NewGroupDAO(db *DB) *GroupDAO {
+	return &GroupDAO{db}
 }
 
 func (g *GroupDAO) ListGroup() ([]types.Group, error) {

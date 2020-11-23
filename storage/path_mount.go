@@ -2,25 +2,15 @@ package storage
 
 import (
 	"github.com/jinzhu/gorm"
-	"go-drive/common"
 	"go-drive/common/types"
 )
-
-func init() {
-	common.R().Register("pathMountDAO", func(c *common.ComponentRegistry) interface{} {
-		ds, e := NewPathMountDAO(c.Get("db").(*DB))
-		common.PanicIfError(e)
-		return ds
-	}, DbOrder+1)
-}
 
 type PathMountDAO struct {
 	db *DB
 }
 
-func NewPathMountDAO(db *DB) (*PathMountDAO, error) {
-	pd := PathMountDAO{db}
-	return &pd, nil
+func NewPathMountDAO(db *DB) *PathMountDAO {
+	return &PathMountDAO{db}
 }
 
 func (p *PathMountDAO) GetMounts() ([]types.PathMount, error) {

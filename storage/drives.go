@@ -7,21 +7,12 @@ import (
 	"go-drive/common/types"
 )
 
-func init() {
-	common.R().Register("driveDAO", func(c *common.ComponentRegistry) interface{} {
-		ds, e := NewDriveDAO(c.Get("db").(*DB))
-		common.PanicIfError(e)
-		return ds
-	}, DbOrder+1)
-}
-
 type DriveDAO struct {
 	db *DB
 }
 
-func NewDriveDAO(db *DB) (*DriveDAO, error) {
-	ds := DriveDAO{db: db}
-	return &ds, nil
+func NewDriveDAO(db *DB) *DriveDAO {
+	return &DriveDAO{db: db}
 }
 
 func (d *DriveDAO) GetDrives() ([]types.Drive, error) {

@@ -8,20 +8,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func init() {
-	common.R().Register("userDAO", func(c *common.ComponentRegistry) interface{} {
-		ds, e := NewUserDAO(c.Get("db").(*DB))
-		common.PanicIfError(e)
-		return ds
-	}, DbOrder+1)
-}
-
 type UserDAO struct {
 	db *DB
 }
 
-func NewUserDAO(db *DB) (*UserDAO, error) {
-	return &UserDAO{db}, nil
+func NewUserDAO(db *DB) *UserDAO {
+	return &UserDAO{db}
 }
 
 func (u *UserDAO) GetUser(username string) (types.User, error) {

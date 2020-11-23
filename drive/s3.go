@@ -27,6 +27,8 @@ type S3Drive struct {
 	downloadProxy bool
 	cache         drive_util.DriveCache
 	cacheTTL      time.Duration
+
+	tempDir string
 }
 
 // NewS3Drive creates a S3 compatible storage
@@ -70,6 +72,7 @@ func NewS3Drive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (typ
 		uploadProxy:   proxyUpload != "",
 		downloadProxy: proxyDownload != "",
 		cacheTTL:      cacheTtl,
+		tempDir:       utils.Config.TempDir,
 	}
 	d.cache = utils.CreateCache(d.deserializeEntry, nil)
 	return d, d.check()
@@ -142,7 +145,7 @@ func (s *S3Drive) Save(path string, _ int64, _ bool, reader io.Reader, ctx types
 	if rs, ok := reader.(io.ReadSeeker); ok {
 		readSeeker = rs
 	} else {
-		file, e := drive_util.CopyReaderToTempFile(reader, ctx)
+		file, e := drive_util.CopyReaderToTempFile(reader, ctx, s.tempDir)
 		if e != nil {
 			return nil, e
 		}

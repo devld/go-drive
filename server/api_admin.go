@@ -4,19 +4,31 @@ import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/types"
+	"go-drive/drive"
 	"go-drive/storage"
 	"regexp"
 	"sort"
 )
 
-func InitAdminRoutes(r gin.IRouter) {
-	r = r.Group("/admin", Auth(), UserGroupRequired("admin"))
+func InitAdminRoutes(r gin.IRouter,
+	ch *common.ComponentsHolder,
+	rootDrive *drive.RootDrive,
+	tokenStore types.TokenStore,
+	userDAO *storage.UserDAO,
+	groupDAO *storage.GroupDAO,
+	driveDAO *storage.DriveDAO,
+	driveCacheDAO *storage.DriveCacheDAO,
+	driveDataDAO *storage.DriveDataDAO,
+	permissionDAO *storage.PathPermissionDAO,
+	pathMountDAO *storage.PathMountDAO) {
+
+	r = r.Group("/admin", Auth(tokenStore), UserGroupRequired("admin"))
 
 	// region user
 
 	// list users
 	r.GET("/users", func(c *gin.Context) {
-		users, e := UserDAO().ListUser()
+		users, e := userDAO.ListUser()
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -30,7 +42,7 @@ func InitAdminRoutes(r gin.IRouter) {
 	// get user by username
 	r.GET("/user/:username", func(c *gin.Context) {
 		username := c.Param("username")
-		user, e := UserDAO().GetUser(username)
+		user, e := userDAO.GetUser(username)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -46,7 +58,7 @@ func InitAdminRoutes(r gin.IRouter) {
 			_ = c.Error(e)
 			return
 		}
-		addUser, e := UserDAO().AddUser(user)
+		addUser, e := userDAO.AddUser(user)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -62,7 +74,7 @@ func InitAdminRoutes(r gin.IRouter) {
 			return
 		}
 		username := c.Param("username")
-		e := UserDAO().UpdateUser(username, user)
+		e := userDAO.UpdateUser(username, user)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -72,7 +84,7 @@ func InitAdminRoutes(r gin.IRouter) {
 	// delete user
 	r.DELETE("/user/:username", func(c *gin.Context) {
 		username := c.Param("username")
-		e := UserDAO().DeleteUser(username)
+		e := userDAO.DeleteUser(username)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -85,7 +97,7 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// list groups
 	r.GET("/groups", func(c *gin.Context) {
-		groups, e := GroupDAO().ListGroup()
+		groups, e := groupDAO.ListGroup()
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -96,7 +108,7 @@ func InitAdminRoutes(r gin.IRouter) {
 	// get group and it's users
 	r.GET("/group/:name", func(c *gin.Context) {
 		name := c.Param("name")
-		group, e := GroupDAO().GetGroup(name)
+		group, e := groupDAO.GetGroup(name)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -111,7 +123,7 @@ func InitAdminRoutes(r gin.IRouter) {
 			_ = c.Error(e)
 			return
 		}
-		addGroup, e := GroupDAO().AddGroup(group)
+		addGroup, e := groupDAO.AddGroup(group)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -126,7 +138,7 @@ func InitAdminRoutes(r gin.IRouter) {
 			_ = c.Error(e)
 			return
 		}
-		if e := GroupDAO().UpdateGroup(name, gus); e != nil {
+		if e := groupDAO.UpdateGroup(name, gus); e != nil {
 			_ = c.Error(e)
 			return
 		}
@@ -135,7 +147,7 @@ func InitAdminRoutes(r gin.IRouter) {
 	// delete group
 	r.DELETE("/group/:name", func(c *gin.Context) {
 		name := c.Param("name")
-		e := GroupDAO().DeleteGroup(name)
+		e := groupDAO.DeleteGroup(name)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -147,7 +159,7 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// get drives
 	r.GET("/drives", func(c *gin.Context) {
-		drives, e := DriveDAO().GetDrives()
+		drives, e := driveDAO.GetDrives()
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -157,21 +169,21 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// add drive
 	r.POST("/drive", func(c *gin.Context) {
-		drive := types.Drive{}
-		if e := c.Bind(&drive); e != nil {
+		d := types.Drive{}
+		if e := c.Bind(&d); e != nil {
 			_ = c.Error(e)
 			return
 		}
-		if e := checkDriveName(drive.Name); e != nil {
+		if e := checkDriveName(d.Name); e != nil {
 			_ = c.Error(e)
 			return
 		}
-		drive, e := DriveDAO().AddDrive(drive)
+		d, e := driveDAO.AddDrive(d)
 		if e != nil {
 			_ = c.Error(e)
 			return
 		}
-		SetResult(c, drive)
+		SetResult(c, d)
 	})
 
 	// update drive
@@ -181,12 +193,12 @@ func InitAdminRoutes(r gin.IRouter) {
 			_ = c.Error(e)
 			return
 		}
-		drive := types.Drive{}
-		if e := c.Bind(&drive); e != nil {
+		d := types.Drive{}
+		if e := c.Bind(&d); e != nil {
 			_ = c.Error(e)
 			return
 		}
-		e := DriveDAO().UpdateDrive(name, drive)
+		e := driveDAO.UpdateDrive(name, d)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -196,9 +208,9 @@ func InitAdminRoutes(r gin.IRouter) {
 	// delete drive
 	r.DELETE("/drive/:name", func(c *gin.Context) {
 		name := c.Param("name")
-		e := DriveDAO().DeleteDrive(name)
-		_ = DriveCacheDAO().Remove(name)
-		_ = DriveDataDAO().Remove(name)
+		e := driveDAO.DeleteDrive(name)
+		_ = driveCacheDAO.Remove(name)
+		_ = driveDataDAO.Remove(name)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -208,7 +220,7 @@ func InitAdminRoutes(r gin.IRouter) {
 	// get drive initialization information
 	r.GET("/drive/:name/init", func(c *gin.Context) {
 		name := c.Param("name")
-		data, e := RootDrive().DriveInitConfig(name)
+		data, e := rootDrive.DriveInitConfig(name)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -224,7 +236,7 @@ func InitAdminRoutes(r gin.IRouter) {
 			_ = c.Error(e)
 			return
 		}
-		if e := RootDrive().DriveInit(name, data); e != nil {
+		if e := rootDrive.DriveInit(name, data); e != nil {
 			_ = c.Error(e)
 			return
 		}
@@ -232,7 +244,7 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// reload drives
 	r.POST("/drives/reload", func(c *gin.Context) {
-		if e := RootDrive().ReloadDrive(false); e != nil {
+		if e := rootDrive.ReloadDrive(false); e != nil {
 			_ = c.Error(e)
 		}
 	})
@@ -244,7 +256,7 @@ func InitAdminRoutes(r gin.IRouter) {
 	// get by path
 	r.GET("/path-permissions/*path", func(c *gin.Context) {
 		path := common.CleanPath(c.Param("path"))
-		permissions, e := PermissionDAO().GetByPath(path)
+		permissions, e := permissionDAO.GetByPath(path)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -260,7 +272,7 @@ func InitAdminRoutes(r gin.IRouter) {
 			_ = c.Error(e)
 			return
 		}
-		if e := PermissionDAO().SavePathPermissions(path, permissions); e != nil {
+		if e := permissionDAO.SavePathPermissions(path, permissions); e != nil {
 			_ = c.Error(e)
 			return
 		}
@@ -285,11 +297,11 @@ func InitAdminRoutes(r gin.IRouter) {
 		for i, p := range src {
 			mounts[i] = types.PathMount{Path: &to, Name: p.Name, MountAt: p.Path}
 		}
-		if e := PathMountDAO().SaveMounts(mounts, true); e != nil {
+		if e := pathMountDAO.SaveMounts(mounts, true); e != nil {
 			_ = c.Error(e)
 			return
 		}
-		_ = RootDrive().ReloadMounts()
+		_ = rootDrive.ReloadMounts()
 	})
 
 	// endregion
@@ -298,13 +310,13 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// clean all PathPermission and PathMount that is point to invalid path
 	r.POST("/clean-permissions-mounts", func(c *gin.Context) {
-		root := RootDrive().Get()
-		pps, e := PermissionDAO().GetAll()
+		root := rootDrive.Get()
+		pps, e := permissionDAO.GetAll()
 		if e != nil {
 			_ = c.Error(e)
 			return
 		}
-		ms, e := PathMountDAO().GetMounts()
+		ms, e := pathMountDAO.GetMounts()
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -332,11 +344,11 @@ func InitAdminRoutes(r gin.IRouter) {
 			if ok {
 				continue
 			}
-			if e := PermissionDAO().DeleteByPath(p); e != nil {
+			if e := permissionDAO.DeleteByPath(p); e != nil {
 				_ = c.Error(e)
 				return
 			}
-			if e := PathMountDAO().DeleteByMountAt(p); e != nil {
+			if e := pathMountDAO.DeleteByMountAt(p); e != nil {
 				_ = c.Error(e)
 				return
 			}
@@ -347,7 +359,7 @@ func InitAdminRoutes(r gin.IRouter) {
 
 	// get service stats
 	r.GET("/stats", func(c *gin.Context) {
-		stats := common.R().Gets(func(c interface{}) bool {
+		stats := ch.Gets(func(c interface{}) bool {
 			_, ok := c.(types.IStatistics)
 			return ok
 		})

@@ -7,20 +7,12 @@ import (
 	"sort"
 )
 
-func init() {
-	common.R().Register("pathPermissionDAO", func(c *common.ComponentRegistry) interface{} {
-		ds, e := NewPathPermissionDAO(c.Get("db").(*DB))
-		common.PanicIfError(e)
-		return ds
-	}, DbOrder+1)
-}
-
 type PathPermissionDAO struct {
 	db *DB
 }
 
-func NewPathPermissionDAO(db *DB) (*PathPermissionDAO, error) {
-	return &PathPermissionDAO{db}, nil
+func NewPathPermissionDAO(db *DB) *PathPermissionDAO {
+	return &PathPermissionDAO{db}
 }
 
 func (p *PathPermissionDAO) GetAll() ([]types.PathPermission, error) {

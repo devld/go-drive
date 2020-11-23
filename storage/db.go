@@ -7,37 +7,42 @@ import (
 	"go-drive/common/types"
 )
 
-const DbOrder = -4096
+func NewDB(config common.Config, ch *common.ComponentsHolder) (*DB, error) {
+	dialect, args := config.GetDB()
 
-func init() {
-	common.R().Register("db", func(c *common.ComponentRegistry) interface{} {
-		dialect, args := c.Get("config").(common.Config).GetDB()
+	db, e := gorm.Open(dialect, args)
+	if e != nil {
+		return nil, e
+	}
 
-		db, e := gorm.Open(dialect, args)
-		if e != nil {
-			panic(e)
-		}
+	if common.IsDebugOn() {
+		db.LogMode(true)
+	}
 
-		if common.IsDebugOn() {
-			db.LogMode(true)
-		}
+	if e := db.AutoMigrate(
+		&types.User{},
+		&types.Group{},
+		&types.UserGroup{},
+		&types.Drive{},
+		&types.PathMount{},
+		&types.DriveData{},
+		&types.DriveCache{},
+	).Error; e != nil {
+		_ = db.Close()
+		return nil, e
+	}
 
-		db.AutoMigrate(
-			&types.User{},
-			&types.Group{},
-			&types.UserGroup{},
-			&types.Drive{},
-			&types.PathMount{},
-			&types.DriveData{},
-			&types.DriveCache{},
-		)
-
-		return &DB{db: db}
-	}, DbOrder)
+	d := &DB{db: db}
+	ch.Add("db", d)
+	return d, nil
 }
 
 type DB struct {
 	db *gorm.DB
+}
+
+func (d *DB) Dispose() error {
+	return d.db.Close()
 }
 
 func (d *DB) C() *gorm.DB {

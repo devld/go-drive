@@ -24,11 +24,12 @@ type PermissionWrapperDrive struct {
 	subjects          []string
 	request           *http.Request
 	permissionStorage *storage.PathPermissionDAO
+	signer            *common.Signer
 }
 
 func NewPermissionWrapperDrive(
 	request *http.Request, session types.Session, drive types.IDrive,
-	permissionStorage *storage.PathPermissionDAO) *PermissionWrapperDrive {
+	permissionStorage *storage.PathPermissionDAO, signer *common.Signer) *PermissionWrapperDrive {
 
 	subjects := make([]string, 0, 3)
 	subjects = append(subjects, types.AnySubject) // Anonymous
@@ -46,6 +47,7 @@ func NewPermissionWrapperDrive(
 		subjects:          subjects,
 		request:           request,
 		permissionStorage: permissionStorage,
+		signer:            signer,
 	}
 }
 
@@ -54,7 +56,7 @@ func (p *PermissionWrapperDrive) Meta() types.DriveMeta {
 }
 
 func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
-	canRead := checkSignature(p.request, path)
+	canRead := checkSignature(p.signer, p.request, path)
 	var permission = types.PermissionRead
 	if !canRead {
 		var e error
@@ -71,7 +73,7 @@ func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
 		p:          p,
 		entry:      entry,
 		permission: permission,
-		accessKey:  signPathRequest(p.request, path, time.Now().Add(accessKeyValidity)),
+		accessKey:  signPathRequest(p.signer, p.request, path, time.Now().Add(accessKeyValidity)),
 	}, nil
 }
 
@@ -166,7 +168,7 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 		if per.CanRead() {
 			accessKey := ""
 			if e.Type().IsFile() {
-				accessKey = signPathRequest(p.request, e.Path(), time.Now().Add(accessKeyValidity))
+				accessKey = signPathRequest(p.signer, p.request, e.Path(), time.Now().Add(accessKeyValidity))
 			}
 			result = append(
 				result,

@@ -76,7 +76,8 @@ export default {
       return {
         type: 'file',
         name: filename(this.task.task.path),
-        path: this.task.task.path
+        path: this.task.task.path,
+        meta: {}
       }
     },
     dir () {

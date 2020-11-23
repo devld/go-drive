@@ -10,23 +10,16 @@ import (
 	"time"
 )
 
-func init() {
-	common.R().Register("driveCacheDAO", func(c *common.ComponentRegistry) interface{} {
-		ds, e := NewDriveCacheDAO(c.Get("db").(*DB))
-		common.PanicIfError(e)
-		return ds
-	}, DbOrder+1)
-}
-
 type DriveCacheDAO struct {
 	db        *DB
 	timerStop func()
 }
 
-func NewDriveCacheDAO(db *DB) (*DriveCacheDAO, error) {
+func NewDriveCacheDAO(db *DB, ch *common.ComponentsHolder) *DriveCacheDAO {
 	c := &DriveCacheDAO{db: db}
 	c.timerStop = common.TimeTick(c.cleanExpired, 60*time.Second)
-	return c, nil
+	ch.Add("driveCacheDAO", c)
+	return c
 }
 
 func (d *DriveCacheDAO) cleanExpired() {
