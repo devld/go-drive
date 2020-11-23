@@ -21,14 +21,17 @@ type DispatcherDrive struct {
 	drives map[string]types.IDrive
 	mounts map[string]map[string]types.PathMount
 
+	tempDir string
+
 	mountStorage *storage.PathMountDAO
 	mux          *sync.Mutex
 }
 
-func NewDispatcherDrive(mountStorage *storage.PathMountDAO) *DispatcherDrive {
+func NewDispatcherDrive(mountStorage *storage.PathMountDAO, config common.Config) *DispatcherDrive {
 	return &DispatcherDrive{
 		drives:       make(map[string]types.IDrive),
 		mountStorage: mountStorage,
+		tempDir:      config.TempDir,
 		mux:          &sync.Mutex{},
 	}
 }
@@ -204,7 +207,7 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 			if !common.IsUnsupportedError(e) {
 				return e
 			}
-			return drive_util.CopyEntry(from, driveTo, pathTo, true, ctxWrapper)
+			return drive_util.CopyEntry(from, driveTo, pathTo, true, ctxWrapper, d.tempDir)
 		}, nil)
 	if e != nil {
 		return nil, e

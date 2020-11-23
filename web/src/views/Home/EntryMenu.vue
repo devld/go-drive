@@ -51,19 +51,28 @@ export default {
 }
 
 .entry-menu__entry {
+  display: flex;
+
   padding: 0 20px;
   margin: 0 0 16px;
 
   font-size: 26px;
   font-weight: normal;
 
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  .entry-icon {
+    vertical-align: middle;
+  }
 }
 
 .entry-menu__entry-name {
+  flex: 1;
+  display: inline-block;
   margin-left: 0.5em;
+  line-height: 42px;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .entry-menu__menus {

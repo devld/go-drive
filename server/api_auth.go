@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/types"
+	"go-drive/storage"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -12,21 +13,29 @@ const (
 	headerAuth = "Authorization"
 )
 
-func InitAuthRoutes(r gin.IRouter) {
-
-	r.POST("/auth/init", initAuth)
-
-	auth := r.Group("/auth", Auth())
-	{
-		auth.POST("/login", login)
-		auth.POST("/logout", logout)
-		auth.GET("/user", getUser)
+func InitAuthRoutes(r gin.IRouter, tokenStore types.TokenStore, userDAO *storage.UserDAO) {
+	ar := authRoute{
+		userDAO:    userDAO,
+		tokenStore: tokenStore,
 	}
 
+	r.POST("/auth/init", ar.init)
+
+	auth := r.Group("/auth", Auth(tokenStore))
+	{
+		auth.POST("/login", ar.login)
+		auth.POST("/logout", ar.logout)
+		auth.GET("/user", ar.getUser)
+	}
 }
 
-func initAuth(c *gin.Context) {
-	token, e := TokenStore().Create(types.Session{})
+type authRoute struct {
+	userDAO    *storage.UserDAO
+	tokenStore types.TokenStore
+}
+
+func (a *authRoute) init(c *gin.Context) {
+	token, e := a.tokenStore.Create(types.Session{})
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -34,13 +43,13 @@ func initAuth(c *gin.Context) {
 	SetResult(c, token)
 }
 
-func login(c *gin.Context) {
+func (a *authRoute) login(c *gin.Context) {
 	user := types.User{}
 	if e := c.Bind(&user); e != nil {
 		_ = c.Error(e)
 		return
 	}
-	getUser, e := UserDAO().GetUser(user.Username)
+	getUser, e := a.userDAO.GetUser(user.Username)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -49,17 +58,17 @@ func login(c *gin.Context) {
 		_ = c.Error(common.NewBadRequestError("invalid username or password"))
 		return
 	}
-	e = UpdateSessionUser(c, getUser)
+	e = UpdateSessionUser(c, a.tokenStore, getUser)
 	if e != nil {
 		_ = c.Error(e)
 	}
 }
 
-func logout(c *gin.Context) {
-	_ = UpdateSessionUser(c, types.User{})
+func (a *authRoute) logout(c *gin.Context) {
+	_ = UpdateSessionUser(c, a.tokenStore, types.User{})
 }
 
-func getUser(c *gin.Context) {
+func (a *authRoute) getUser(c *gin.Context) {
 	s := GetSession(c)
 	if !s.IsAnonymous() {
 		u := s.User
@@ -68,10 +77,10 @@ func getUser(c *gin.Context) {
 	}
 }
 
-func Auth() gin.HandlerFunc {
+func Auth(tokenStore types.TokenStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenKey := c.GetHeader(headerAuth)
-		token, e := TokenStore().Validate(tokenKey)
+		token, e := tokenStore.Validate(tokenKey)
 		if e != nil {
 			_ = c.Error(e)
 			c.Abort()

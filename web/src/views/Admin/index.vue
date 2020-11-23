@@ -37,7 +37,7 @@ export default {
 </script>
 <style lang="scss">
 .admin-page {
-  max-width: 880px;
+  max-width: 900px;
   margin: 16px auto 0;
   @include var(background-color, primary-bg-color);
   border-radius: 16px;

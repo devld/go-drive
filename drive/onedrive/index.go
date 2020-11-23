@@ -289,7 +289,9 @@ func (o *OneDrive) Dispose() error {
 func (o *OneDrive) newEntry(item driveItem) *oneDriveEntry {
 	modTime, _ := time.Parse(time.RFC3339, item.ModTime)
 	thumbnailUrl := ""
-	if item.Thumbnails != nil && len(item.Thumbnails) > 0 && item.Thumbnails[0].Large != nil {
+	if supportThumbnail(item) &&
+		item.Thumbnails != nil && len(item.Thumbnails) > 0 &&
+		item.Thumbnails[0].Large != nil {
 		thumbnailUrl = item.Thumbnails[0].Large.URL
 	}
 	return &oneDriveEntry{
@@ -301,7 +303,7 @@ func (o *OneDrive) newEntry(item driveItem) *oneDriveEntry {
 		d:                    o,
 		thumbnail:            thumbnailUrl,
 		downloadUrl:          item.DownloadURL,
-		downloadUrlExpiresAt: time.Now().Add(downloadUrlTTl).Unix(),
+		downloadUrlExpiresAt: time.Now().Add(downloadUrlTTL).Unix(),
 	}
 }
 
@@ -376,7 +378,7 @@ func (o *oneDriveEntry) GetURL() (string, bool, error) {
 		}
 		u = resp.Response().Header.Get("Location")
 		o.downloadUrl = u
-		o.downloadUrlExpiresAt = time.Now().Add(downloadUrlTTl).Unix()
+		o.downloadUrlExpiresAt = time.Now().Add(downloadUrlTTL).Unix()
 		_ = o.d.cache.PutEntry(o, o.d.cacheTTL)
 	}
 	return o.downloadUrl, o.d.downloadProxy, nil

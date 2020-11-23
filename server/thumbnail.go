@@ -28,37 +28,40 @@ const (
 	thumbnailTimeout = 30 * time.Second
 )
 
-var supportedExtensions = map[string]bool{
-	".png":  true,
-	".jpg":  true,
-	".jpeg": true,
-	".gif":  true,
-}
+var supportedExtensions = make(map[string]bool)
 
 func init() {
-	common.R().Register("thumbnail", func(c *common.ComponentRegistry) interface{} {
-		config := c.Get("config").(common.Config)
-		dir, e := config.GetDir("thumbnails", true)
-		common.PanicIfError(e)
-		return NewThumbnail(dir, config.ThumbnailCacheTTl, config.ThumbnailConcurrent)
-	}, 0)
+	for _, ext := range strings.Split("jpg jpeg png gif", " ") {
+		supportedExtensions["."+ext] = true
+	}
 }
 
 type Thumbnail struct {
-	cacheDir    string
-	validity    time.Duration
+	cacheDir string
+
+	validity  time.Duration
+	maxPixels int
+	maxSize   int64
+
 	pool        *tunny.Pool
 	stopCleaner func()
 }
 
-func NewThumbnail(dir string, validity time.Duration, concurrent int) *Thumbnail {
-	t := &Thumbnail{
-		cacheDir: dir,
-		validity: validity,
+func NewThumbnail(config common.Config, ch *common.ComponentsHolder) (*Thumbnail, error) {
+	dir, e := config.GetDir("thumbnails", true)
+	if e != nil {
+		return nil, e
 	}
-	t.pool = tunny.NewFunc(concurrent, t.createThumbnail_)
+	t := &Thumbnail{
+		cacheDir:  dir,
+		validity:  config.ThumbnailCacheTTl,
+		maxPixels: config.ThumbnailMaxPixels,
+		maxSize:   config.GetThumbnailMaxSize(),
+	}
+	t.pool = tunny.NewFunc(config.ThumbnailConcurrent, t.createThumbnail_)
 	t.stopCleaner = common.TimeTick(t.clean, 12*time.Hour)
-	return t
+	ch.Add("thumbnail", t)
+	return t, nil
 }
 
 func (t *Thumbnail) Create(entry types.IEntry) (*os.File, error) {
@@ -102,7 +105,10 @@ func (t *Thumbnail) createThumbnail_(payload interface{}) interface{} {
 }
 
 func (t *Thumbnail) createThumbnail(content types.IContent, filePath string) error {
-	tempFile, e := drive_util.CopyIContentToTempFile(content, task.DummyContext())
+	if content.Size() > t.maxSize {
+		return common.NewNotFoundMessageError("file size is too large to create thumbnail")
+	}
+	tempFile, e := drive_util.CopyIContentToTempFile(content, task.DummyContext(), t.cacheDir)
 	if e != nil {
 		return e
 	}
@@ -110,6 +116,17 @@ func (t *Thumbnail) createThumbnail(content types.IContent, filePath string) err
 		_ = tempFile.Close()
 		_ = os.Remove(tempFile.Name())
 	}()
+	imgConf, _, e := image.DecodeConfig(tempFile)
+	if e != nil {
+		return e
+	}
+	if imgConf.Width*imgConf.Height > t.maxPixels {
+		return common.NewNotFoundMessageError("image is too large to create thumbnail")
+	}
+	_, e = tempFile.Seek(0, 0)
+	if e != nil {
+		return e
+	}
 	img, _, e := image.Decode(tempFile)
 	if e != nil {
 		return e
@@ -151,7 +168,7 @@ func (t *Thumbnail) isExpired(modTime time.Time) bool {
 
 func (t *Thumbnail) getFile(path string) string {
 	key := md5.Sum([]byte(path))
-	return filepath.Join(t.cacheDir, fmt.Sprintf("%x.jpg", key))
+	return filepath.Join(t.cacheDir, fmt.Sprintf("%x", key))
 }
 
 func (t *Thumbnail) clean() {

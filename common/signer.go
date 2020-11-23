@@ -8,12 +8,6 @@ import (
 	"time"
 )
 
-func init() {
-	R().Register("signer", func(c *ComponentRegistry) interface{} {
-		return NewSigner(RandString(32))
-	}, 0)
-}
-
 type Signer struct {
 	secret []byte
 }
@@ -24,8 +18,8 @@ func sha256(v []byte) []byte {
 	return sha256.Sum(nil)
 }
 
-func NewSigner(secret string) *Signer {
-	return &Signer{[]byte(secret)}
+func NewSigner() *Signer {
+	return &Signer{[]byte(RandString(16))}
 }
 
 func (s *Signer) sign(v string, notAfter int64, r uint32) string {

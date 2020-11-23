@@ -11,7 +11,7 @@ import (
 const uploadChunkSize = 4 * 1024 * 1024
 
 // https://docs.microsoft.com/en-us/graph/api/resources/driveitem?view=graph-rest-1.0#instance-attributes
-const downloadUrlTTl = 40 * time.Minute
+const downloadUrlTTL = 40 * time.Minute
 
 type getTokenResp struct {
 	AccessToken  string `json:"access_token"`

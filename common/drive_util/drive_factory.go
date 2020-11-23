@@ -1,12 +1,14 @@
 package drive_util
 
 import (
+	"go-drive/common"
 	"go-drive/common/types"
 )
 
 type DriveUtils struct {
 	Data        DriveDataStore
 	CreateCache DriveCacheFactory
+	Config      common.Config
 }
 
 type DriveCacheFactory = func(EntryDeserialize, EntrySerialize) DriveCache

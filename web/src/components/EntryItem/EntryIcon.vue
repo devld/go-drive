@@ -1,6 +1,6 @@
 <template>
   <span class="entry-icon" @click="$emit('click', $event)">
-    <i-icon :svg="entryIcon" />
+    <i-icon :svg="icon || entryIcon" />
     <img
       class="entry-icon__thumbnail"
       v-if="thumbnail && !err"
@@ -20,6 +20,9 @@ export default {
     entry: {
       type: Object,
       required: true
+    },
+    icon: {
+      type: String
     }
   },
   data () {
@@ -43,9 +46,14 @@ export default {
   position: relative;
   overflow: hidden;
   border-radius: 10px;
+  display: inline-block;
+  width: 42px;
+  height: 42px;
 
   .icon {
-    font-size: inherit;
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 }
 

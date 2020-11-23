@@ -190,7 +190,7 @@ export function isAdmin (user) {
 
 const thumbnailExts = { png: true, jpg: true, jpeg: true, gif: true }
 export function supportThumbnail (entry) {
-  return entry.type === 'file' && !!thumbnailExts[filenameExt(entry.name)]
+  return !!(entry.meta.thumbnail || (entry.type === 'file' && thumbnailExts[filenameExt(entry.name)]))
 }
 
 export function wait (ms) {

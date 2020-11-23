@@ -11,21 +11,6 @@ import (
 	"log"
 )
 
-const RootOrder = -1024
-
-func init() {
-	common.R().Register("rootDrive", func(c *common.ComponentRegistry) interface{} {
-		rd, e := NewRootDrive(
-			c.Get("driveDAO").(*storage.DriveDAO),
-			c.Get("pathMountDAO").(*storage.PathMountDAO),
-			c.Get("driveDataDAO").(*storage.DriveDataDAO),
-			c.Get("driveCacheDAO").(*storage.DriveCacheDAO),
-		)
-		common.PanicIfError(e)
-		return rd
-	}, RootOrder)
-}
-
 var driveFactories = map[string]drive_util.DriveFactory{
 	"fs":       {Create: NewFsDrive},
 	"s3":       {Create: NewS3Drive},
@@ -38,20 +23,24 @@ type RootDrive struct {
 	mountStorage      *storage.PathMountDAO
 	driveDataStorage  *storage.DriveDataDAO
 	driveCacheStorage *storage.DriveCacheDAO
+
+	config common.Config
 }
 
 func NewRootDrive(
+	config common.Config,
 	driveStorage *storage.DriveDAO,
 	mountStorage *storage.PathMountDAO,
 	dataStorage *storage.DriveDataDAO,
 	driveCacheStorage *storage.DriveCacheDAO) (*RootDrive, error) {
-	root := NewDispatcherDrive(mountStorage)
+	root := NewDispatcherDrive(mountStorage, config)
 	r := &RootDrive{
 		root:              root,
 		driveStorage:      driveStorage,
 		mountStorage:      mountStorage,
 		driveDataStorage:  dataStorage,
 		driveCacheStorage: driveCacheStorage,
+		config:            config,
 	}
 	if e := r.ReloadMounts(); e != nil {
 		return nil, e
@@ -166,5 +155,6 @@ func (d *RootDrive) createDriveUtils(name string) drive_util.DriveUtils {
 			}
 			return d.driveCacheStorage.GetCacheStore(name, s, de)
 		},
+		Config: d.config,
 	}
 }

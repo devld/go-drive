@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.34.25
 	github.com/gin-gonic/gin v1.6.2
 	github.com/google/uuid v1.1.1
+	github.com/google/wire v0.4.0
 	github.com/jinzhu/gorm v1.9.15
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646

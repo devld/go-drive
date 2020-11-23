@@ -30,13 +30,13 @@ type fsFile struct {
 // NewFsDrive creates a file system drive
 // params:
 //   - path: root key of this drive
-func NewFsDrive(config drive_util.DriveConfig, _ drive_util.DriveUtils) (types.IDrive, error) {
+func NewFsDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (types.IDrive, error) {
 	path := config["path"]
 	if common.CleanPath(path) == "" {
 		return nil, common.NewNotAllowedMessageError("invalid root path")
 	}
 
-	localRoot, e := common.Conf().GetLocalFsDir()
+	localRoot, e := utils.Config.GetLocalFsDir()
 	if e != nil {
 		return nil, e
 	}
