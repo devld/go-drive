@@ -24,6 +24,7 @@ func NewDB(config common.Config, ch *common.ComponentsHolder) (*DB, error) {
 		&types.Group{},
 		&types.UserGroup{},
 		&types.Drive{},
+		&types.PathPermission{},
 		&types.PathMount{},
 		&types.DriveData{},
 		&types.DriveCache{},

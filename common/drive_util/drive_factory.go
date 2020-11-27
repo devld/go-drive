@@ -5,28 +5,32 @@ import (
 	"go-drive/common/types"
 )
 
-type DriveUtils struct {
-	Data        DriveDataStore
-	CreateCache DriveCacheFactory
-	Config      common.Config
+type DriveFactoryConfig struct {
+	Type        string           `json:"type"`
+	DisplayName string           `json:"display_name"`
+	README      string           `json:"readme"`
+	ConfigForm  []types.FormItem `json:"config_form"`
+	Factory     DriveFactory     `json:"-"`
 }
 
-type DriveCacheFactory = func(EntryDeserialize, EntrySerialize) DriveCache
-
 type DriveInitConfig struct {
-	Configured bool             `json:"configured"`
-	OAuth      *OAuthInitConfig `json:"oauth"`
+	Configured bool         `json:"configured"`
+	OAuth      *OAuthConfig `json:"oauth"`
 
 	Form  []types.FormItem `json:"form"`
 	Value types.SM         `json:"value"`
 }
 
-type OAuthInitConfig struct {
+type OAuthConfig struct {
 	Url  string `json:"url"`
 	Text string `json:"text"`
 
 	Principal string `json:"principal"`
 }
+
+type DriveConfig = types.SM
+
+type DriveCacheFactory = func(EntryDeserialize, EntrySerialize) DriveCache
 
 // DriveDataStore is a place to store drive's runtime data, such as token, refresh token.
 type DriveDataStore interface {
@@ -34,13 +38,17 @@ type DriveDataStore interface {
 	Load(...string) (types.SM, error)
 }
 
-type DriveConfig = types.SM
+type DriveUtils struct {
+	Data        DriveDataStore
+	CreateCache DriveCacheFactory
+	Config      common.Config
+}
 
 type DriveFactory struct {
-	// Create creates a drive instance by config map
-	Create func(DriveConfig, DriveUtils) (types.IDrive, error)
 	// InitConfig gets the initialization information.
-	InitConfig func(DriveConfig, DriveUtils) (DriveInitConfig, error)
+	InitConfig func(DriveConfig, DriveUtils) (*DriveInitConfig, error)
 	// Init configures a drive's initial data.
 	Init func(types.SM, DriveConfig, DriveUtils) error
+	// Create creates a drive instance by config map
+	Create func(DriveConfig, DriveUtils) (types.IDrive, error)
 }

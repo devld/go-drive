@@ -29,11 +29,12 @@ type FormItemOption struct {
 }
 
 type FormItem struct {
-	Label       string           `json:"label"`
-	Type        string           `json:"type"`
-	Field       string           `json:"field"`
-	Required    bool             `json:"required"`
-	Description string           `json:"description"`
-	Disabled    bool             `json:"disabled"`
-	Options     []FormItemOption `json:"options"`
+	Label        string           `json:"label"`
+	Type         string           `json:"type"`
+	Field        string           `json:"field"`
+	Required     bool             `json:"required"`
+	Description  string           `json:"description"`
+	Disabled     bool             `json:"disabled"`
+	Options      []FormItemOption `json:"options"`
+	DefaultValue string           `json:"default_value"`
 }

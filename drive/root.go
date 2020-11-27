@@ -12,11 +12,74 @@ import (
 	"sync"
 )
 
-var driveFactories = map[string]drive_util.DriveFactory{
-	"fs":       {Create: NewFsDrive},
-	"s3":       {Create: NewS3Drive},
-	"onedrive": {Create: onedrive.NewOneDrive, InitConfig: onedrive.InitConfig, Init: onedrive.Init},
-	"webdav":   {Create: NewWebDAVDrive},
+var driveFactories = []drive_util.DriveFactoryConfig{
+	{
+		Type: "fs", DisplayName: "File System",
+		README: "Local file system drive",
+		ConfigForm: []types.FormItem{
+			{Field: "path", Label: "Root", Type: "text", Required: true, Description: "The path of root"},
+		},
+		Factory: drive_util.DriveFactory{Create: NewFsDrive},
+	},
+	{
+		Type: "s3", DisplayName: "S3",
+		README: "S3 compatible storage",
+		ConfigForm: []types.FormItem{
+			{Field: "id", Label: "AccessKey", Type: "text", Required: true},
+			{Field: "secret", Label: "SecretKey", Type: "password", Required: true},
+			{Field: "bucket", Label: "Bucket", Type: "text", Required: true},
+			{Field: "path_style", Label: "PathStyle", Type: "checkbox", Description: "Force use path style api"},
+			{Field: "region", Label: "Region", Type: "text"},
+			{Field: "endpoint", Label: "Endpoint", Type: "text", Description: "The S3 api endpoint"},
+			{Field: "proxy_upload", Label: "ProxyIn", Type: "checkbox", Description: "Upload files to server proxy"},
+			{Field: "proxy_download", Label: "ProxyOut", Type: "checkbox", Description: "Download files from server proxy"},
+			{Field: "cache_ttl", Label: "CacheTTL", Type: "text", Description: "Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'."},
+		},
+		Factory: drive_util.DriveFactory{Create: NewS3Drive},
+	},
+	{
+		Type: "webdav", DisplayName: "WebDAV",
+		README: "WebDAV protocol drive",
+		ConfigForm: []types.FormItem{
+			{Field: "url", Label: "URL", Type: "text", Required: true, Description: "The base URL"},
+			{Field: "username", Label: "Username", Type: "text", Description: "The username, if omitted, no authorization is required"},
+			{Field: "password", Label: "Password", Type: "password"},
+			{Field: "cache_ttl", Label: "CacheTTL", Type: "text", Description: "Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'."},
+		},
+		Factory: drive_util.DriveFactory{Create: NewWebDAVDrive},
+	},
+	{
+		Type: "onedrive", DisplayName: "OneDrive",
+		README: "OneDrive, see [Setup OneDrive](https://go-drive.top/drives/onedrive)",
+		ConfigForm: []types.FormItem{
+			{Field: "client_id", Label: "Client Id", Type: "text", Required: true},
+			{Field: "client_secret", Label: "Client Secret", Type: "password", Required: true},
+			{Field: "proxy_upload", Label: "ProxyIn", Type: "checkbox", Description: "Upload files to server proxy"},
+			{Field: "proxy_download", Label: "ProxyOut", Type: "checkbox", Description: "Download files from server proxy"},
+			{Field: "cache_ttl", Label: "CacheTTL", Type: "text", Description: "Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.", DefaultValue: "2h"},
+		},
+		Factory: drive_util.DriveFactory{Create: onedrive.NewOneDrive, InitConfig: onedrive.InitConfig, Init: onedrive.Init},
+	},
+}
+
+var driveFactoriesMap = make(map[string]drive_util.DriveFactoryConfig)
+
+func init() {
+	for _, f := range driveFactories {
+		driveFactoriesMap[f.Type] = f
+	}
+}
+
+func GetDrives() []drive_util.DriveFactoryConfig {
+	return driveFactories
+}
+
+func GetDrive(driveType string) *drive_util.DriveFactoryConfig {
+	f, ok := driveFactoriesMap[driveType]
+	if ok {
+		return &f
+	}
+	return nil
 }
 
 type RootDrive struct {
@@ -61,7 +124,7 @@ func (d *RootDrive) Get() types.IDrive {
 }
 
 func checkAndParseConfig(dc types.Drive) (*drive_util.DriveFactory, types.SM, error) {
-	factory, ok := driveFactories[dc.Type]
+	f, ok := driveFactoriesMap[dc.Type]
 	if !ok {
 		return nil, nil, common.NewBadRequestError(fmt.Sprintf("invalid drive type '%s'", dc.Type))
 	}
@@ -70,7 +133,7 @@ func checkAndParseConfig(dc types.Drive) (*drive_util.DriveFactory, types.SM, er
 	if e != nil {
 		return nil, nil, common.NewBadRequestError(fmt.Sprintf("invalid drive config of '%s'", dc.Name))
 	}
-	return &factory, config, nil
+	return &f.Factory, config, nil
 }
 
 func (d *RootDrive) ReloadDrive(ignoreFailure bool) error {
@@ -136,7 +199,7 @@ func (d *RootDrive) DriveInitConfig(name string) (*drive_util.DriveInitConfig, e
 		return nil, nil
 	}
 	initConfig, e := factory.InitConfig(config, d.createDriveUtils(name))
-	return &initConfig, e
+	return initConfig, e
 }
 
 func (d *RootDrive) DriveInit(name string, data types.SM) error {

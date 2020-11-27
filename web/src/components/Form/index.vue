@@ -47,6 +47,9 @@ export default {
       data: {}
     }
   },
+  created () {
+    this.fillDefaultValue()
+  },
   methods: {
     async validate () {
       await Promise.all(this.$refs.fields.map(f => f.validate()))
@@ -58,6 +61,15 @@ export default {
     },
     onSubmit (e) {
       e.preventDefault()
+    },
+    fillDefaultValue () {
+      if (this.value) return
+      const dat = {}
+      for (const f of this.form) {
+        if (f.default_value) dat[f.field] = f.default_value
+      }
+      this.data = dat
+      this.emitInput()
     },
     emitInput () {
       this.$emit('input', this.data)

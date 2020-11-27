@@ -74,7 +74,7 @@ export default {
 
   // pc
   .menu-list {
-    width: 120px;
+    width: 100px;
     padding: 16px 0 42px;
     border-right: solid 1px;
     @include var(border-color, border-color);
