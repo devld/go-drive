@@ -248,7 +248,7 @@ func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx 
 		}
 	} else {
 		// no mounts matched and toPath is in root or trying to move drive
-		if driveTo == nil || !isSelf {
+		if driveTo == nil {
 			return nil, common.NewNotAllowedError()
 		}
 	}
@@ -407,11 +407,11 @@ func (d *entryWrapper) GetReader() (io.ReadCloser, error) {
 	return nil, common.NewNotAllowedError()
 }
 
-func (d *entryWrapper) GetURL() (string, bool, error) {
+func (d *entryWrapper) GetURL() (*types.ContentURL, error) {
 	if content, ok := d.entry.(types.IContent); ok {
 		return content.GetURL()
 	}
-	return "", false, common.NewNotAllowedError()
+	return nil, common.NewNotAllowedError()
 }
 
 func (d *entryWrapper) Drive() types.IDrive {
@@ -457,8 +457,8 @@ func (d *driveEntry) GetReader() (io.ReadCloser, error) {
 	return nil, common.NewNotAllowedError()
 }
 
-func (d *driveEntry) GetURL() (string, bool, error) {
-	return "", false, common.NewNotAllowedError()
+func (d *driveEntry) GetURL() (*types.ContentURL, error) {
+	return nil, common.NewNotAllowedError()
 }
 
 func (d *driveEntry) Drive() types.IDrive {

@@ -283,11 +283,11 @@ func (p *permissionWrapperEntry) GetReader() (io.ReadCloser, error) {
 	return nil, common.NewUnsupportedError()
 }
 
-func (p *permissionWrapperEntry) GetURL() (string, bool, error) {
+func (p *permissionWrapperEntry) GetURL() (*types.ContentURL, error) {
 	if c, ok := p.entry.(types.IContent); ok {
 		return c.GetURL()
 	}
-	return "", false, common.NewUnsupportedError()
+	return &types.ContentURL{}, common.NewUnsupportedError()
 }
 
 func (p *permissionWrapperEntry) GetIEntry() types.IEntry {

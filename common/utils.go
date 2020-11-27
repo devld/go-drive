@@ -103,12 +103,6 @@ func RandString(n int) string {
 	return string(b)
 }
 
-func PanicIfError(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 func RegSplit(text string, reg *regexp.Regexp) []string {
 	indexes := reg.FindAllStringIndex(text, -1)
 	lastStart := 0
@@ -223,8 +217,17 @@ func BuildURL(pattern string, variables ...string) string {
 	return pattern
 }
 
-func GetURL(u string) (io.ReadCloser, error) {
-	resp, e := http.Get(u)
+func GetURL(u string, header types.SM) (io.ReadCloser, error) {
+	req, e := http.NewRequest("GET", u, nil)
+	if e != nil {
+		return nil, e
+	}
+	if header != nil {
+		for k, v := range header {
+			req.Header.Set(k, v)
+		}
+	}
+	resp, e := http.DefaultClient.Do(req)
 	if e != nil {
 		return nil, e
 	}

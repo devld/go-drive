@@ -19,6 +19,7 @@ export default {
     'properties', 'yml', 'yaml', 'ini',
     'c', 'h', 'cpp',
     'go',
-    'java', 'kt', 'gradle'
+    'java', 'kt', 'gradle',
+    'ps1'
   ].includes(filenameExt(entry.name)) && entry.size <= TEXT_EDITOR_MAX_FILE_SIZE
 }

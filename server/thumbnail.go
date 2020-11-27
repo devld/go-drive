@@ -56,7 +56,7 @@ func NewThumbnail(config common.Config, ch *common.ComponentsHolder) (*Thumbnail
 		cacheDir:  dir,
 		validity:  config.ThumbnailCacheTTl,
 		maxPixels: config.ThumbnailMaxPixels,
-		maxSize:   config.GetThumbnailMaxSize(),
+		maxSize:   config.ThumbnailMaxSize,
 	}
 	t.pool = tunny.NewFunc(config.ThumbnailConcurrent, t.createThumbnail_)
 	t.stopCleaner = common.TimeTick(t.clean, 12*time.Hour)
