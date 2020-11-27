@@ -1,9 +1,11 @@
-package common
+package req
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/xml"
+	"go-drive/common"
 	"go-drive/common/types"
 	"io"
 	"io/ioutil"
@@ -23,18 +25,18 @@ var defaultClient = &http.Client{
 	},
 }
 
-type HttpClient struct {
+type Client struct {
 	c       *http.Client
 	baseURL *url.URL
 	before  func(*http.Request) error
-	after   func(HttpResponse) error
+	after   func(Response) error
 }
 
-func NewHttpClient(
+func NewClient(
 	baseURL string,
 	before func(*http.Request) error,
-	after func(HttpResponse) error,
-	client *http.Client) (*HttpClient, error) {
+	after func(Response) error,
+	client *http.Client) (*Client, error) {
 
 	var u *url.URL = nil
 	if baseURL != "" {
@@ -44,7 +46,7 @@ func NewHttpClient(
 		}
 		u = temp
 	}
-	return &HttpClient{
+	return &Client{
 		c:       client,
 		baseURL: u,
 		before:  before,
@@ -52,7 +54,7 @@ func NewHttpClient(
 	}, nil
 }
 
-func (h *HttpClient) buildURL(requestUrl string) (string, error) {
+func (h *Client) BuildURL(requestUrl string) (string, error) {
 	if h.baseURL == nil {
 		return requestUrl, nil
 	}
@@ -76,9 +78,9 @@ func (h *HttpClient) buildURL(requestUrl string) (string, error) {
 	return u.String(), nil
 }
 
-func (h *HttpClient) newRequest(method string, requestUrl string, headers types.SM,
-	body HttpRequestBody, ctx context.Context) (*http.Request, error) {
-	requestUrl, e := h.buildURL(requestUrl)
+func (h *Client) newRequest(method string, requestUrl string, headers types.SM,
+	body RequestBody, ctx context.Context) (*http.Request, error) {
+	requestUrl, e := h.BuildURL(requestUrl)
 	if e != nil {
 		return nil, e
 	}
@@ -112,19 +114,19 @@ func (h *HttpClient) newRequest(method string, requestUrl string, headers types.
 	return req, nil
 }
 
-func (h *HttpClient) client() *http.Client {
+func (h *Client) client() *http.Client {
 	if h.c != nil {
 		return h.c
 	}
 	return defaultClient
 }
 
-func (h *HttpClient) request(req *http.Request) (HttpResponse, error) {
-	if IsDebugOn() {
+func (h *Client) request(req *http.Request) (Response, error) {
+	if common.IsDebugOn() {
 		log.Printf("[HttpClient  req] %s %s %v", req.Method, req.URL.String(), req.Header)
 	}
 	r, e := h.client().Do(req)
-	if IsDebugOn() {
+	if common.IsDebugOn() {
 		var v interface{} = nil
 		if e == nil {
 			v = r.StatusCode
@@ -147,7 +149,7 @@ func (h *HttpClient) request(req *http.Request) (HttpResponse, error) {
 	return resp, nil
 }
 
-func (h *HttpClient) Request(method, requestUrl string, headers types.SM, body HttpRequestBody) (HttpResponse, error) {
+func (h *Client) Request(method, requestUrl string, headers types.SM, body RequestBody) (Response, error) {
 	req, e := h.newRequest(method, requestUrl, headers, body, nil)
 	if e != nil {
 		return nil, e
@@ -155,8 +157,8 @@ func (h *HttpClient) Request(method, requestUrl string, headers types.SM, body H
 	return h.request(req)
 }
 
-func (h *HttpClient) RequestWithContext(method, requestUrl string, headers types.SM,
-	body HttpRequestBody, ctx context.Context) (HttpResponse, error) {
+func (h *Client) RequestWithContext(method, requestUrl string, headers types.SM,
+	body RequestBody, ctx context.Context) (Response, error) {
 	req, e := h.newRequest(method, requestUrl, headers, body, ctx)
 	if e != nil {
 		return nil, e
@@ -164,19 +166,12 @@ func (h *HttpClient) RequestWithContext(method, requestUrl string, headers types
 	return h.request(req)
 }
 
-func (h *HttpClient) Get(requestUrl string, headers types.SM) (HttpResponse, error) {
+func (h *Client) Get(requestUrl string, headers types.SM) (Response, error) {
 	return h.Request("GET", requestUrl, headers, nil)
 }
 
-func (h *HttpClient) Post(requestUrl string, headers types.SM, body HttpRequestBody) (HttpResponse, error) {
+func (h *Client) Post(requestUrl string, headers types.SM, body RequestBody) (Response, error) {
 	return h.Request("POST", requestUrl, headers, body)
-}
-
-type HttpResponse interface {
-	Response() *http.Response
-	Status() int
-	Json(v interface{}) error
-	Dispose() error
 }
 
 type httpResp struct {
@@ -216,6 +211,15 @@ func (r *httpResp) Json(v interface{}) error {
 	return json.Unmarshal(dat, v)
 }
 
+func (r *httpResp) XML(v interface{}) error {
+	defer func() { _ = r.r.Body.Close() }()
+	dat, e := r.getBody()
+	if e != nil {
+		return e
+	}
+	return xml.Unmarshal(dat, v)
+}
+
 func (r *httpResp) Dispose() error {
 	if r.r.Body != nil {
 		return r.r.Body.Close()
@@ -224,13 +228,7 @@ func (r *httpResp) Dispose() error {
 	return nil
 }
 
-type HttpRequestBody interface {
-	ContentLength() int64
-	ContentType() string
-	Reader() io.Reader
-}
-
-func NewURLEncodedBody(v types.SM) HttpRequestBody {
+func NewURLEncodedBody(v types.SM) RequestBody {
 	q := make(url.Values)
 	for k, v := range v {
 		q.Set(k, v)
@@ -238,7 +236,7 @@ func NewURLEncodedBody(v types.SM) HttpRequestBody {
 	return &byteBody{b: []byte(q.Encode()), t: "application/x-www-form-urlencoded"}
 }
 
-func NewJsonBody(v interface{}) HttpRequestBody {
+func NewJsonBody(v interface{}) RequestBody {
 	b, _ := json.Marshal(v)
 	if b == nil {
 		b = make([]byte, 0)
@@ -263,7 +261,7 @@ func (b *byteBody) ContentLength() int64 {
 	return int64(len(b.b))
 }
 
-func NewReadBody(r io.Reader, length int64) HttpRequestBody {
+func NewReaderBody(r io.Reader, length int64) RequestBody {
 	if length < 0 {
 		length = -1
 	}

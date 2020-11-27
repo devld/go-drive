@@ -74,7 +74,11 @@ func NewS3Drive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (typ
 		cacheTTL:      cacheTtl,
 		tempDir:       utils.Config.TempDir,
 	}
-	d.cache = utils.CreateCache(d.deserializeEntry, nil)
+	if cacheTtl <= 0 {
+		d.cache = drive_util.DummyCache()
+	} else {
+		d.cache = utils.CreateCache(d.deserializeEntry, nil)
+	}
 	return d, d.check()
 }
 
@@ -140,7 +144,16 @@ func (s *S3Drive) Get(path string) (types.IEntry, error) {
 	return entry, nil
 }
 
-func (s *S3Drive) Save(path string, _ int64, _ bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
+func (s *S3Drive) Save(path string, _ int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
+	if !override {
+		_, e := s.Get(path)
+		if e != nil && !common.IsNotFoundError(e) {
+			return nil, e
+		}
+		if e == nil {
+			return nil, common.NewNotAllowedMessageError("file exists")
+		}
+	}
 	var readSeeker io.ReadSeeker
 	if rs, ok := reader.(io.ReadSeeker); ok {
 		readSeeker = rs
@@ -230,6 +243,7 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCt
 	if e != nil {
 		return nil, false, e
 	}
+	_ = s.cache.Evict(to, true)
 	_ = s.cache.Evict(common.PathParent(to), false)
 	ctx.Progress(from.Size(), false)
 	return s.newS3ObjectEntry(to, &from.size, obj.CopyObjectResult.LastModified), false, nil
@@ -513,16 +527,16 @@ func (s *s3Entry) GetReader() (io.ReadCloser, error) {
 	return obj.Body, nil
 }
 
-func (s *s3Entry) GetURL() (string, bool, error) {
+func (s *s3Entry) GetURL() (*types.ContentURL, error) {
 	req, _ := s.c.c.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: s.c.bucket,
 		Key:    aws.String(s.key),
 	})
 	downloadUrl, e := req.Presign(8 * time.Hour)
 	if e != nil {
-		return "", false, e
+		return nil, e
 	}
-	return downloadUrl, s.c.downloadProxy, nil
+	return &types.ContentURL{URL: downloadUrl, Proxy: s.c.downloadProxy}, nil
 }
 
 func errCodeMatches(e error, code string) bool {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go-drive/common"
 	"go-drive/common/drive_util"
+	"go-drive/common/req"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"io"
@@ -17,7 +18,7 @@ import (
 	"time"
 )
 
-var httpApi, _ = common.NewHttpClient("", nil, ifApiCallError, nil)
+var httpApi, _ = req.NewClient("", nil, ifApiCallError, nil)
 
 var thumbnailExtensions = make(map[string]bool)
 
@@ -171,7 +172,7 @@ func getToken(refresh bool, codeOrRefreshToken, clientId, clientSecret string, d
 
 	resp, e := httpApi.Post(
 		"https://login.microsoftonline.com/consumers/oauth2/v2.0/token", nil,
-		common.NewURLEncodedBody(types.SM{
+		req.NewURLEncodedBody(types.SM{
 			"client_id":     clientId,
 			"scope":         scope,
 			"redirect_uri":  redirectUri,
@@ -254,12 +255,12 @@ func (o *OneDrive) uploadSmallFile(parentId, filename string, size int64,
 	resp, e := o.c.Request("PUT",
 		idURL(parentId)+":"+common.BuildURL("/{}:/content", filename),
 		types.SM{"Content-Type": "application/octet-stream"},
-		common.NewReadBody(reader, size),
+		req.NewReaderBody(reader, size),
 	)
 	if e != nil {
 		return nil, e
 	}
-	ctx.Progress(size, true)
+	ctx.Progress(size, false)
 	return o.toEntry(resp)
 }
 
@@ -270,12 +271,11 @@ func (o *OneDrive) uploadSmallFileOverride(id string, size int64,
 	resp, e := o.c.Request("PUT",
 		idURL(id)+"/content",
 		types.SM{"Content-Type": "application/octet-stream"},
-		common.NewReadBody(reader, size),
+		req.NewReaderBody(drive_util.ProgressReader(reader, ctx), size),
 	)
 	if e != nil {
 		return nil, e
 	}
-	ctx.Progress(size, true)
 	return o.toEntry(resp)
 }
 
@@ -287,7 +287,7 @@ func (o *OneDrive) uploadLargeFile(parentId, filename string, size int64, overri
 		return nil, e
 	}
 	chunkSize := int64(uploadChunkSize)
-	var finalResp common.HttpResponse = nil
+	var finalResp req.Response = nil
 	for s := int64(0); s < size; s += chunkSize {
 		if ctx.Canceled() {
 			_ = deleteUploadSession(sessionUrl)
@@ -304,7 +304,7 @@ func (o *OneDrive) uploadLargeFile(parentId, filename string, size int64, overri
 				"Content-Range": contentRange,
 				"Content-Type":  "application/octet-stream",
 			},
-			common.NewReadBody(io.LimitReader(reader, chunkSize), end-s),
+			req.NewReaderBody(drive_util.ProgressReader(io.LimitReader(reader, chunkSize), ctx), end-s),
 			ctx,
 		)
 		if e != nil {
@@ -316,7 +316,6 @@ func (o *OneDrive) uploadLargeFile(parentId, filename string, size int64, overri
 		} else {
 			_ = resp.Dispose()
 		}
-		ctx.Progress(end-s+1, false)
 	}
 	if finalResp == nil {
 		panic("expect finalResp is not nil")
@@ -335,7 +334,7 @@ func (o *OneDrive) createUploadSession(parentId, filename string, override bool)
 	}
 	resp, e := o.c.Post(
 		idURL(parentId)+":"+common.BuildURL("/{}:/createUploadSession", filename), nil,
-		common.NewJsonBody(types.M{"item": types.M{"@microsoft.graph.conflictBehavior": conflictBehavior}}),
+		req.NewJsonBody(types.M{"item": types.M{"@microsoft.graph.conflictBehavior": conflictBehavior}}),
 	)
 	if e != nil {
 		return "", e
@@ -372,7 +371,7 @@ func waitLongRunningAction(waitUrl string) error {
 	}
 }
 
-func (o *OneDrive) toEntry(resp common.HttpResponse) (*oneDriveEntry, error) {
+func (o *OneDrive) toEntry(resp req.Response) (*oneDriveEntry, error) {
 	item := driveItem{}
 	if e := resp.Json(&item); e != nil {
 		return nil, e
@@ -399,7 +398,7 @@ func (o *OneDrive) deserializeEntry(dat string) (types.IEntry, error) {
 	}, nil
 }
 
-func ifApiCallError(resp common.HttpResponse) error {
+func ifApiCallError(resp req.Response) error {
 	if resp.Status() < 200 || resp.Status() >= 400 {
 		err := apiError{}
 		if e := resp.Json(&err); e != nil {

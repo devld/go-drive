@@ -1,5 +1,9 @@
 <template>
-  <form class="simple-form" @submit="onSubmit">
+  <form
+    class="simple-form"
+    @submit="onSubmit"
+    :autocomplete="noAutoComplete ? 'off' : 'on'"
+  >
     <form-item
       v-for="item in form"
       :key="item.field"
@@ -23,6 +27,9 @@ export default {
     },
     value: {
       type: Object
+    },
+    noAutoComplete: {
+      type: Boolean
     }
   },
   watch: {

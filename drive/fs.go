@@ -20,7 +20,6 @@ type fsFile struct {
 	drive *FsDrive
 	path  string
 
-	name  string
 	size  int64
 	isDir bool
 
@@ -67,7 +66,6 @@ func (f *FsDrive) newFsFile(path string, file os.FileInfo) (types.IEntry, error)
 	return &fsFile{
 		drive:   f,
 		path:    path,
-		name:    file.Name(),
 		size:    file.Size(),
 		isDir:   file.IsDir(),
 		modTime: common.Millisecond(file.ModTime()),
@@ -270,7 +268,7 @@ func (f *fsFile) Drive() types.IDrive {
 }
 
 func (f *fsFile) Name() string {
-	return f.name
+	return common.PathBase(f.path)
 }
 
 func (f *fsFile) GetReader() (io.ReadCloser, error) {
@@ -288,6 +286,6 @@ func (f *fsFile) GetReader() (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
-func (f *fsFile) GetURL() (string, bool, error) {
-	return "", false, common.NewUnsupportedError()
+func (f *fsFile) GetURL() (*types.ContentURL, error) {
+	return nil, common.NewUnsupportedError()
 }

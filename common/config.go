@@ -14,56 +14,29 @@ const (
 	DbFilename = "data.db"
 	LocalFsDir = "local"
 	Listen     = ":8089"
-
-	DefaultMaxProxySize = 1 * 1024 * 1024
-
-	DefaultThumbnailMaxSize    = 16
-	DefaultThumbnailCacheTTL   = "48h"
-	DefaultThumbnailConcurrent = 16
-	DefaultThumbnailMaxPixels  = 22369621
-
-	DefaultMaxConcurrentTask = 100
-
-	DefaultTokenValidity = "2h"
 )
 
 func InitConfig(ch *ComponentsHolder) (Config, error) {
 	config := Config{}
-	flag.StringVar(&config.Listen, "l", Listen,
-		"address listen on")
-	flag.StringVar(&config.dataDir, "d", "./",
-		"path to the data dir")
-	flag.StringVar(&config.resDir, "s", "",
-		"path to the static files")
-	flag.BoolVar(&config.freeFs, "f", false,
-		"enable unlimited local fs drive(absolute path)")
 
-	flag.Int64Var(&config.ProxyMaxSize, "proxy-max-size", DefaultMaxProxySize,
-		"maximum file size that can be proxied")
+	flag.StringVar(&config.Listen, "l", Listen, "address listen on")
+	flag.StringVar(&config.dataDir, "d", "./", "path to the data dir")
+	flag.StringVar(&config.resDir, "s", "", "path to the static files")
+	flag.BoolVar(&config.freeFs, "f", false, "enable unlimited local fs drive(absolute path)")
 
-	flag.Int64Var(&config.maxThumbnailSize, "thumbnail-max-size", DefaultThumbnailMaxSize,
-		"maximum file size to create thumbnail")
-	flag.IntVar(&config.ThumbnailMaxPixels, "thumbnail-max-pixels", DefaultThumbnailMaxPixels,
-		"maximum pixels(W*H) of original image to thumbnails")
-	flag.IntVar(&config.ThumbnailConcurrent, "thumbnail-concurrent", DefaultThumbnailConcurrent,
-		"maximum number of concurrent creation of thumbnails")
-	var tcTtl string
-	flag.StringVar(&tcTtl, "thumbnail-cache-ttl", DefaultThumbnailCacheTTL,
-		"thumbnail cache validity, valid time units are \"s\", \"m\", \"h\".")
+	flag.Int64Var(&config.ProxyMaxSize, "proxy-max-size", 1*1024*1024, "maximum file size that can be proxied")
 
-	flag.IntVar(&config.MaxConcurrentTask, "max-concurrent-task", DefaultMaxConcurrentTask,
-		"maximum concurrent task(copy, move, upload, delete files)")
+	flag.Int64Var(&config.ThumbnailMaxSize, "thumbnail-max-size", 16*1024*1024, "maximum file size to create thumbnail")
+	flag.IntVar(&config.ThumbnailMaxPixels, "thumbnail-max-pixels", 22369621, "maximum pixels(W*H) of original image to thumbnails")
+	flag.IntVar(&config.ThumbnailConcurrent, "thumbnail-concurrent", 16, "maximum number of concurrent creation of thumbnails")
+	flag.DurationVar(&config.ThumbnailCacheTTl, "thumbnail-cache-ttl", 48*time.Hour, "thumbnail cache validity")
 
-	var tokenTtl string
-	flag.StringVar(&tokenTtl, "token-validity", DefaultTokenValidity, "token validity, valid time units are \"s\", \"m\", \"h\".")
+	flag.IntVar(&config.MaxConcurrentTask, "max-concurrent-task", 100, "maximum concurrent task(copy, move, upload, delete files)")
+
+	flag.DurationVar(&config.TokenValidity, "token-validity", 2*time.Hour, "token validity")
 	flag.BoolVar(&config.TokenRefresh, "token-refresh", true, "enable auto refresh token")
 
 	flag.Parse()
-
-	config.ThumbnailCacheTTl = parseDuration(tcTtl, 1, 48*time.Hour)
-	config.ThumbnailConcurrent = parseInt(config.ThumbnailConcurrent, 1, DefaultThumbnailConcurrent)
-
-	config.TokenValidity = parseDuration(tokenTtl, 1, 2*time.Hour)
 
 	if exists, _ := FileExists(config.dataDir); !exists {
 		return config, errors.New(fmt.Sprintf("dataDir '%s' does not exist", config.dataDir))
@@ -95,8 +68,8 @@ type Config struct {
 	// The size is unlimited when maxProxySize is <= 0
 	ProxyMaxSize int64
 
-	// maxThumbnailSize is the maximum file size(MB) to create thumbnail
-	maxThumbnailSize    int64
+	// ThumbnailMaxSize is the maximum file size(MB) to create thumbnail
+	ThumbnailMaxSize    int64
 	ThumbnailCacheTTl   time.Duration
 	ThumbnailConcurrent int
 	ThumbnailMaxPixels  int
@@ -136,23 +109,4 @@ func (c Config) GetLocalFsDir() (string, error) {
 		return "", nil
 	}
 	return c.GetDir(LocalFsDir, true)
-}
-
-func (c Config) GetThumbnailMaxSize() int64 {
-	return c.maxThumbnailSize * 1024 * 1024
-}
-
-func parseDuration(d string, min time.Duration, def time.Duration) time.Duration {
-	r, e := time.ParseDuration(d)
-	if e != nil || r < min {
-		return def
-	}
-	return r
-}
-
-func parseInt(val int, min int, def int) int {
-	if val < min {
-		return def
-	}
-	return val
 }

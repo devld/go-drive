@@ -7,6 +7,16 @@ export default {
       { field: 'path', label: 'Root', type: 'text', description: 'The path of root', required: true }
     ]
   },
+  webdav: {
+    name: 'WebDAV',
+    description: 'WebDAV protocol drive',
+    configForm: [
+      { field: 'url', label: 'URL', type: 'text', description: 'The base URL', required: true },
+      { field: 'username', label: 'Username', type: 'text', description: 'The username, if omitted, no authorization is required' },
+      { field: 'password', label: 'Password', type: 'password' },
+      { field: 'cache_ttl', label: 'CacheTTL', type: 'text', description: 'Cache time to live, if omitted, no cache. Valid time units are "ms", "s", "m", "h".' }
+    ]
+  },
   s3: {
     name: 'S3',
     description: 'S3 compatible storage',
@@ -19,7 +29,7 @@ export default {
       { field: 'endpoint', label: 'Endpoint', type: 'text', description: 'The S3 api endpoint' },
       { field: 'proxy_upload', label: 'ProxyIn', type: 'checkbox', description: 'Upload files to server proxy' },
       { field: 'proxy_download', label: 'ProxyOut', type: 'checkbox', description: 'Download files from server proxy' },
-      { field: 'cache_ttl', label: 'CacheTTL', type: 'text', description: 'Cache time to live. Valid time units are "ms", "s", "m", "h".' }
+      { field: 'cache_ttl', label: 'CacheTTL', type: 'text', description: 'Cache time to live, if omitted, no cache. Valid time units are "ms", "s", "m", "h".' }
     ]
   },
   onedrive: {
@@ -30,7 +40,7 @@ export default {
       { field: 'client_secret', label: 'Client Secret', type: 'password', required: true },
       { field: 'proxy_upload', label: 'ProxyIn', type: 'checkbox', description: 'Upload files to server proxy' },
       { field: 'proxy_download', label: 'ProxyOut', type: 'checkbox', description: 'Download files from server proxy' },
-      { field: 'cache_ttl', label: 'CacheTTL', type: 'text', description: 'Cache time to live. Valid time units are "ms", "s", "m", "h".' }
+      { field: 'cache_ttl', label: 'CacheTTL', type: 'text', description: 'Cache time to live, if omitted, no cache. Valid time units are "ms", "s", "m", "h".' }
     ]
   }
 

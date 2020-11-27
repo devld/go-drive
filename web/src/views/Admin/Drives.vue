@@ -57,10 +57,16 @@
         {{ edit ? `Edit drive: ${drive.name}` : "Add drive" }}
       </div>
       <div class="drive-form">
-        <simple-form ref="baseForm" :form="baseForm" v-model="drive" />
+        <simple-form
+          ref="baseForm"
+          :form="baseForm"
+          v-model="drive"
+          no-auto-complete
+        />
         <simple-form
           v-if="drive.type && driveForms[drive.type]"
           ref="configForm"
+          no-auto-complete
           :form="driveForms[drive.type].configForm"
           v-model="drive.config"
         />

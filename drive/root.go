@@ -9,12 +9,14 @@ import (
 	"go-drive/drive/onedrive"
 	"go-drive/storage"
 	"log"
+	"sync"
 )
 
 var driveFactories = map[string]drive_util.DriveFactory{
 	"fs":       {Create: NewFsDrive},
 	"s3":       {Create: NewS3Drive},
 	"onedrive": {Create: onedrive.NewOneDrive, InitConfig: onedrive.InitConfig, Init: onedrive.Init},
+	"webdav":   {Create: NewWebDAVDrive},
 }
 
 type RootDrive struct {
@@ -25,6 +27,8 @@ type RootDrive struct {
 	driveCacheStorage *storage.DriveCacheDAO
 
 	config common.Config
+
+	mux *sync.Mutex
 }
 
 func NewRootDrive(
@@ -41,6 +45,7 @@ func NewRootDrive(
 		driveDataStorage:  dataStorage,
 		driveCacheStorage: driveCacheStorage,
 		config:            config,
+		mux:               &sync.Mutex{},
 	}
 	if e := r.ReloadMounts(); e != nil {
 		return nil, e
@@ -69,6 +74,9 @@ func checkAndParseConfig(dc types.Drive) (*drive_util.DriveFactory, types.SM, er
 }
 
 func (d *RootDrive) ReloadDrive(ignoreFailure bool) error {
+	d.mux.Lock()
+	defer d.mux.Unlock()
+
 	drivesConfig, e := d.driveStorage.GetDrives()
 	if e != nil {
 		return e

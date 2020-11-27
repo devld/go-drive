@@ -75,9 +75,9 @@ func CopyReaderToTempFile(reader io.Reader, ctx types.TaskCtx, tempDir string) (
 }
 
 func GetIContentReader(content types.IContent) (io.ReadCloser, error) {
-	url, _, e := content.GetURL()
+	u, e := content.GetURL()
 	if e == nil {
-		return common.GetURL(url)
+		return common.GetURL(u.URL, u.Header)
 	}
 	return content.GetReader()
 }
@@ -91,10 +91,10 @@ func CopyIContentToTempFile(content types.IContent, ctx types.TaskCtx, tempDir s
 }
 
 func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.Request, forceProxy bool) error {
-	url, proxy, e := content.GetURL()
+	u, e := content.GetURL()
 	if e == nil {
-		if proxy || forceProxy {
-			dest, e := url2.Parse(url)
+		if u.Proxy || forceProxy || u.Header != nil {
+			dest, e := url2.Parse(u.URL)
 			if e != nil {
 				return e
 			}
@@ -103,6 +103,11 @@ func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.R
 				r.Host = dest.Host
 				r.Header.Del("Referer")
 				r.Header.Del("Authorization")
+				if u.Header != nil {
+					for k, v := range u.Header {
+						r.Header.Set(k, v)
+					}
+				}
 			}}
 
 			defer func() {
@@ -115,9 +120,12 @@ func DownloadIContent(content types.IContent, w http.ResponseWriter, req *http.R
 			return nil
 		} else {
 			w.WriteHeader(http.StatusFound)
-			w.Header().Set("Location", url)
+			w.Header().Set("Location", u.URL)
 		}
 		return nil
+	}
+	if !common.IsUnsupportedError(e) {
+		return e
 	}
 	reader, e := content.GetReader()
 	if e != nil {
@@ -304,3 +312,20 @@ func CopyEntry(from types.IEntry, driveTo types.IDrive, to string, override bool
 }
 
 // endregion
+
+type progressReader struct {
+	r   io.Reader
+	ctx types.TaskCtx
+}
+
+func (p *progressReader) Read(b []byte) (n int, err error) {
+	read, e := p.r.Read(b)
+	if e == nil || e == io.EOF {
+		p.ctx.Progress(int64(read), false)
+	}
+	return read, e
+}
+
+func ProgressReader(reader io.Reader, ctx types.TaskCtx) io.Reader {
+	return &progressReader{r: reader, ctx: ctx}
+}

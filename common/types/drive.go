@@ -24,15 +24,19 @@ type EntryMeta struct {
 	Props     M
 }
 
+type ContentURL struct {
+	URL    string
+	Header SM
+	Proxy  bool
+}
+
 type IContent interface {
 	Name() string
 	Size() int64
 	ModTime() int64
 
 	GetReader() (io.ReadCloser, error)
-	// GetURL gets the download url of the file.
-	// if second parameter is `true`, this file will be downloaded by proxy
-	GetURL() (string, bool, error)
+	GetURL() (*ContentURL, error)
 }
 
 type IEntry interface {
