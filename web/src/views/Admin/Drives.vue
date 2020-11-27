@@ -56,6 +56,7 @@
       <div class="small-title">
         {{ edit ? `Edit drive: ${drive.name}` : "Add drive" }}
       </div>
+
       <div class="drive-form">
         <simple-form
           ref="baseForm"
@@ -63,13 +64,30 @@
           v-model="drive"
           no-auto-complete
         />
-        <simple-form
-          v-if="drive.type && driveForms[drive.type]"
-          ref="configForm"
-          no-auto-complete
-          :form="driveForms[drive.type].configForm"
-          v-model="drive.config"
-        />
+
+        <template v-if="drive.type && driveFactoriesMap[drive.type]">
+          <details
+            v-if="driveFactoriesMap[drive.type].readme"
+            class="drive-config-readme"
+          >
+            <summary>
+              {{ driveFactoriesMap[drive.type].display_name }} README
+            </summary>
+            <div
+              class="markdown-body"
+              v-markdown="driveFactoriesMap[drive.type].readme"
+            ></div>
+          </details>
+
+          <simple-form
+            ref="configForm"
+            no-auto-complete
+            :key="drive.type"
+            :form="driveFactoriesMap[drive.type].config_form"
+            v-model="drive.config"
+          />
+        </template>
+
         <div class="form-item save-button">
           <simple-button small @click="saveDrive" :loading="saving"
             >Save</simple-button
@@ -114,10 +132,10 @@
   </div>
 </template>
 <script>
-import { createDrive, deleteDrive, getDrives, reloadDrives, updateDrive, getDriveInitConfig, initDrive } from '@/api/admin'
-import Drives from './drives-config'
+import { createDrive, deleteDrive, getDrives, reloadDrives, updateDrive, getDriveInitConfig, initDrive, getDriveFactories } from '@/api/admin'
 
 import OAuthConfigure from './drive-configure/OAuth'
+import { mapOf } from '@/utils'
 
 export default {
   name: 'DrivesManager',
@@ -135,20 +153,22 @@ export default {
 
       reloading: false,
 
-      driveForms: Drives
+      driveFactories: []
     }
   },
   computed: {
+    driveFactoriesMap () {
+      return mapOf(this.driveFactories, f => f.type)
+    },
     baseForm () {
       return [
         { field: 'name', label: 'Name', type: 'text', required: true, disabled: this.edit },
         { field: 'enabled', label: 'Enabled', type: 'checkbox' },
         {
-          field: 'type', label: 'Type', type: 'select', required: true,
-          options: Object.keys(Drives).map(type => ({
-            name: Drives[type].name,
-            value: type,
-            title: Drives[type].description
+          field: 'type', label: 'Type', type: 'select', required: true, disabled: this.edit,
+          options: this.driveFactories.map(f => ({
+            name: f.display_name,
+            value: f.type
           }))
         }
       ]
@@ -160,6 +180,7 @@ export default {
   methods: {
     async loadDrives () {
       try {
+        this.driveFactories = await getDriveFactories()
         this.drives = await getDrives()
       } catch (e) {
         this.$alert(e.message)
@@ -290,6 +311,14 @@ export default {
 
   .not-enabled-drive {
     color: #999;
+  }
+
+  .drive-config-readme {
+    margin: 1em 0 2em;
+
+    .markdown-body {
+      margin-top: 1em;
+    }
   }
 
   .drive-init {

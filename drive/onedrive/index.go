@@ -13,22 +13,10 @@ import (
 	"time"
 )
 
-const (
-	scope                = "Files.ReadWrite offline_access User.Read"
-	redirectUri          = "https://go-drive.top/oauth_callback"
-	tokenRefreshInterval = 30 * time.Minute
-)
-
 type OneDrive struct {
-	accessToken string
-	driveId     string
+	driveId string
 
-	ds               drive_util.DriveDataStore
-	refreshTokenStop func()
-	c                *req.Client
-
-	clientId     string
-	clientSecret string
+	c *req.Client
 
 	cacheTTL time.Duration
 	cache    drive_util.DriveCache
@@ -38,13 +26,9 @@ type OneDrive struct {
 }
 
 func NewOneDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (types.IDrive, error) {
-	params, e := utils.Data.Load("token", "expires_at", "drive_id")
+	resp, e := drive_util.OAuthGet(oauth, config, utils.Data)
 	if e != nil {
 		return nil, e
-	}
-	expiresAt := time.Unix(common.ToInt64(params["expires_at"], -1), 0)
-	if expiresAt.Before(time.Now()) {
-		return nil, common.NewNotAllowedMessageError("drive not configured")
 	}
 
 	proxyUpload := config["proxy_upload"]
@@ -54,11 +38,8 @@ func NewOneDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (ty
 		cacheTtl = -1
 	}
 
+	params, e := utils.Data.Load("drive_id")
 	od := &OneDrive{
-		accessToken:   params["token"],
-		ds:            utils.Data,
-		clientId:      config["client_id"],
-		clientSecret:  config["client_secret"],
 		driveId:       params["drive_id"],
 		cacheTTL:      cacheTtl,
 		uploadProxy:   proxyUpload != "",
@@ -71,19 +52,14 @@ func NewOneDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (ty
 	}
 
 	if od.driveId == "" {
-		return nil, common.NewNotAllowedMessageError("drive not configured")
+		return nil, common.NewNotAllowedMessageError("drive not yet selected")
 	}
-	od.refreshToken()
-	od.refreshTokenStop = common.TimeTick(od.refreshToken, tokenRefreshInterval)
 
 	od.c, e = req.NewClient(
 		common.BuildURL("https://graph.microsoft.com/v1.0/drives/{}", od.driveId),
-		od.addToken, ifApiCallError, nil)
-	if e != nil {
-		_ = od.Dispose()
-		return nil, e
-	}
-	return od, nil
+		nil, ifApiCallError, resp.Client(nil))
+
+	return od, e
 }
 
 func (o *OneDrive) Meta() types.DriveMeta {
@@ -285,11 +261,6 @@ func (o *OneDrive) Upload(path string, size int64, override bool, config types.S
 			Config:   types.SM{"url": sessionUrl},
 		}, nil
 	}
-}
-
-func (o *OneDrive) Dispose() error {
-	o.refreshTokenStop()
-	return nil
 }
 
 func (o *OneDrive) newEntry(item driveItem) *oneDriveEntry {

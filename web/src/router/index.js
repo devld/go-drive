@@ -4,6 +4,7 @@ import VueRouter from 'vue-router'
 import AppWrapper from '@/views/AppWrapper'
 
 import Home from '@/views/Home'
+import { setTitle } from '@/utils'
 
 Vue.use(VueRouter)
 
@@ -28,22 +29,26 @@ const routes = [
           {
             name: 'UsersManager',
             path: '/admin/users',
-            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Users')
+            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Users'),
+            meta: { title: 'Users' }
           },
           {
             name: 'GroupsManager',
             path: '/admin/groups',
-            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Groups')
+            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Groups'),
+            meta: { title: 'Groups' }
           },
           {
             name: 'DrivesManager',
             path: '/admin/drives',
-            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Drives')
+            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Drives'),
+            meta: { title: 'Drives' }
           },
           {
             name: 'MiscSettings',
             path: '/admin/misc',
-            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Misc')
+            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Misc'),
+            meta: { title: 'Misc' }
           }
         ]
       }
@@ -59,11 +64,17 @@ const router = new VueRouter({
 // detect it's IE11
 if ('-ms-scroll-limit' in document.documentElement.style && '-ms-ime-align' in document.documentElement.style) {
   window.addEventListener('hashchange', function (event) {
-    var currentPath = window.location.hash.slice(1)
+    const currentPath = window.location.hash.slice(1)
     if (router.currentRoute !== currentPath) {
       router.push(currentPath)
     }
   }, false)
 }
+
+router.afterEach((to) => {
+  if (to.meta && to.meta.title) {
+    setTitle(to.meta.title)
+  }
+})
 
 export default router

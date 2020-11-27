@@ -1,6 +1,8 @@
 package server
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/types"
@@ -33,8 +35,8 @@ func InitAdminRoutes(r gin.IRouter,
 			_ = c.Error(e)
 			return
 		}
-		for _, u := range users {
-			u.Password = ""
+		for i := range users {
+			users[i].Password = ""
 		}
 		SetResult(c, users)
 	})
@@ -157,12 +159,24 @@ func InitAdminRoutes(r gin.IRouter,
 
 	// region drive
 
+	// get drive factories
+	r.GET("/drive-factories", func(c *gin.Context) {
+		SetResult(c, drive.GetDrives())
+	})
+
 	// get drives
 	r.GET("/drives", func(c *gin.Context) {
 		drives, e := driveDAO.GetDrives()
 		if e != nil {
 			_ = c.Error(e)
 			return
+		}
+		for i, d := range drives {
+			f := drive.GetDrive(d.Type)
+			if f == nil {
+				continue
+			}
+			drives[i].Config = escapeDriveConfigSecrets(f.ConfigForm, d.Config)
 		}
 		SetResult(c, drives)
 	})
@@ -198,7 +212,18 @@ func InitAdminRoutes(r gin.IRouter,
 			_ = c.Error(e)
 			return
 		}
-		e := driveDAO.UpdateDrive(name, d)
+		f := drive.GetDrive(d.Type)
+		if f == nil {
+			_ = c.Error(common.NewNotAllowedMessageError(fmt.Sprintf("unknown drive type '%s'", d.Type)))
+			return
+		}
+		savedDrive, e := driveDAO.GetDrive(name)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		d.Config = unescapeDriveConfigSecrets(f.ConfigForm, savedDrive.Config, d.Config)
+		e = driveDAO.UpdateDrive(name, d)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -399,4 +424,32 @@ func checkDriveName(name string) error {
 		return common.NewBadRequestError("invalid drive name '" + name + "'")
 	}
 	return nil
+}
+
+const escapedPassword = "YOU CAN'T SEE ME"
+
+func escapeDriveConfigSecrets(form []types.FormItem, config string) string {
+	val := types.SM{}
+	_ = json.Unmarshal([]byte(config), &val)
+	for _, f := range form {
+		if f.Type == "password" && val[f.Field] != "" {
+			val[f.Field] = escapedPassword
+		}
+	}
+	s, _ := json.Marshal(val)
+	return string(s)
+}
+
+func unescapeDriveConfigSecrets(form []types.FormItem, savedConfig string, config string) string {
+	savedVal := types.SM{}
+	val := types.SM{}
+	_ = json.Unmarshal([]byte(savedConfig), &savedVal)
+	_ = json.Unmarshal([]byte(config), &val)
+	for _, f := range form {
+		if f.Type == "password" && val[f.Field] == escapedPassword {
+			val[f.Field] = savedVal[f.Field]
+		}
+	}
+	s, _ := json.Marshal(val)
+	return string(s)
 }

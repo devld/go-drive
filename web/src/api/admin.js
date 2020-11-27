@@ -40,6 +40,10 @@ export function deleteGroup (name) {
   return axios.delete(`/admin/group/${name}`)
 }
 
+export function getDriveFactories () {
+  return axios.get('/admin/drive-factories')
+}
+
 export function getDrives () {
   return axios.get('/admin/drives')
 }

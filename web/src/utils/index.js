@@ -12,6 +12,12 @@ import UiUtils from './ui-utils'
 
 export const IS_DEBUG = process.env.NODE_ENV === 'development'
 
+export function setTitle (title) {
+  if (title) title += ' - ' + process.env.VUE_APP_SITE_TITLE
+  else title = process.env.VUE_APP_SITE_TITLE
+  document.title = title
+}
+
 export function formatTime (d, toFormat) {
   const date = dayjs(d)
   if (!date.isValid()) return ''

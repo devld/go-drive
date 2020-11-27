@@ -69,7 +69,7 @@ import EntryMenu from './EntryMenu'
 import NewEntryArea from './NewEntryArea'
 
 import { getEntry, getContent } from '@/api'
-import { filename, dir, debounce, supportThumbnail } from '@/utils'
+import { filename, dir, debounce, supportThumbnail, setTitle } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
 import { makeEntryHandlerLink, getBaseLink } from '@/utils/routes'
@@ -87,12 +87,6 @@ const getHistoryFlag = () => {
   const val = sessionStorage.getItem(HISTORY_FLAG)
   sessionStorage.removeItem(HISTORY_FLAG)
   return !!val
-}
-
-function setTitle (title) {
-  if (title) title += ' - ' + process.env.VUE_APP_SITE_TITLE
-  else title = process.env.VUE_APP_SITE_TITLE
-  document.title = title
 }
 
 export default {
@@ -229,6 +223,8 @@ export default {
       if (this.entryHandlerView && this.entryHandlerView.entryName) {
         this.entryHandlerView.entry =
           entries.find(e => e.name === this.entryHandlerView.entryName)
+
+        setTitle(`${this.entryHandlerView.entryName}`)
       }
 
       // load current path

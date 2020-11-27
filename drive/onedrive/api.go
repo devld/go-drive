@@ -13,14 +13,6 @@ const uploadChunkSize = 4 * 1024 * 1024
 // https://docs.microsoft.com/en-us/graph/api/resources/driveitem?view=graph-rest-1.0#instance-attributes
 const downloadUrlTTL = 40 * time.Minute
 
-type getTokenResp struct {
-	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int64  `json:"expires_in"`
-	Scope        string `json:"scope"`
-	RefreshToken string `json:"refresh_token"`
-}
-
 type userProfile struct {
 	DisplayName       string `json:"displayName"`
 	UserPrincipalName string `json:"userPrincipalName"`

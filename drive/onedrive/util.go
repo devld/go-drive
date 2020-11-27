@@ -8,15 +8,23 @@ import (
 	"go-drive/common/req"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"golang.org/x/oauth2"
 	"io"
-	"log"
-	"net/http"
-	"net/url"
 	path2 "path"
-	"strconv"
 	"strings"
 	"time"
 )
+
+var oauth = drive_util.OAuthRequest{
+	Endpoint: oauth2.Endpoint{
+		AuthURL:   "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
+		TokenURL:  "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+		AuthStyle: oauth2.AuthStyleInParams,
+	},
+	RedirectURL: drive_util.CommonRedirectURL,
+	Scopes:      []string{"Files.ReadWrite", "offline_access", "User.Read"},
+	Text:        "Connect to OneDrive",
+}
 
 var httpApi, _ = req.NewClient("", nil, ifApiCallError, nil)
 
@@ -51,53 +59,35 @@ func itemPath(path string) string {
 	return common.BuildURL("/drive/root:/{}", path)
 }
 
-func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (drive_util.DriveInitConfig, error) {
-	clientId := config["client_id"]
-	state := common.RandString(5)
-	if e := utils.Data.Save(types.SM{"state": state}); e != nil {
-		return drive_util.DriveInitConfig{}, e
-	}
-	oauthUrl, _ := url.Parse("https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?" +
-		"response_type=code&response_mode=query")
-	q := oauthUrl.Query()
-	q.Set("client_id", clientId)
-	q.Set("scope", scope)
-	q.Set("state", state)
-	q.Set("redirect_uri", redirectUri)
-	oauthUrl.RawQuery = q.Encode()
-
-	params, e := utils.Data.Load("token", "expires_at", "drive_id", "refresh_token")
+func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
+	initConfig, resp, e := drive_util.OAuthInitConfig(oauth, config, utils.Data)
 	if e != nil {
-		return drive_util.DriveInitConfig{}, e
+		return nil, e
 	}
-	expiresAt := time.Unix(common.ToInt64(params["expires_at"], -1), 0)
-
-	configured := !expiresAt.Before(time.Now().Add(-30 * 24 * time.Hour))
-	principal := ""
-
-	if configured && expiresAt.Before(time.Now()) {
-		// token expired
-		r, e := getToken(true, params["refresh_token"], clientId, config["client_secret"], utils.Data)
-		configured = e == nil
-		if e == nil {
-			params["token"] = r.AccessToken
-		}
+	if resp == nil {
+		return initConfig, nil
+	}
+	reqClient, e := req.NewClient("", nil, ifApiCallError, resp.Client(nil))
+	if e != nil {
+		return nil, e
 	}
 
-	if configured {
-		user, e := getUser(params["token"])
-		configured = e == nil
-		if e == nil {
-			principal = fmt.Sprintf("%s <%s>", user.DisplayName, user.UserPrincipalName)
-		}
+	// get user
+	user, e := getUser(reqClient)
+	initConfig.Configured = e == nil
+	if e == nil {
+		initConfig.OAuth.Principal = fmt.Sprintf("%s <%s>", user.DisplayName, user.UserPrincipalName)
 	}
 
-	var form []types.FormItem = nil
-	var formValue types.SM = nil
+	params, e := utils.Data.Load("drive_id")
+	if e != nil {
+		return nil, e
+	}
 
-	if configured {
-		drives, e := getDrives(params["token"])
-		configured = e == nil
+	// get drives
+	if initConfig.Configured {
+		drives, e := getDrives(reqClient)
+		initConfig.Configured = e == nil
 		if e == nil {
 			opts := make([]types.FormItemOption, len(drives))
 			for i, d := range drives {
@@ -116,93 +106,35 @@ func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (dri
 					Value: d.Id,
 				}
 			}
-			form = []types.FormItem{
+			initConfig.Form = []types.FormItem{
 				{Label: "Drive", Type: "select", Field: "drive_id", Required: true, Options: opts},
 			}
-			formValue = types.SM{"drive_id": params["drive_id"]}
+			initConfig.Value = types.SM{"drive_id": params["drive_id"]}
 		}
 	}
 
-	if configured {
-		configured = params["drive_id"] != ""
+	if initConfig.Configured {
+		initConfig.Configured = params["drive_id"] != ""
 	}
 
-	return drive_util.DriveInitConfig{
-		Configured: configured,
-		OAuth: &drive_util.OAuthInitConfig{
-			Url:       oauthUrl.String(),
-			Text:      "Connect to OneDrive",
-			Principal: principal,
-		},
-		Form:  form,
-		Value: formValue,
-	}, nil
+	return initConfig, nil
 }
 
 func Init(data types.SM, config drive_util.DriveConfig, utils drive_util.DriveUtils) error {
-	code := data["code"]
-	state := data["state"]
-	driveId := data["drive_id"]
-
-	params, e := utils.Data.Load("state", "drive_id")
+	_, e := drive_util.OAuthInit(oauth, data, config, utils.Data)
 	if e != nil {
 		return e
 	}
-	if code != "" {
-		if state != params["state"] {
-			return common.NewNotAllowedMessageError("state does not match")
-		}
-		_, e = getToken(false, code, config["client_id"], config["client_secret"], utils.Data)
-		return e
-	}
+	driveId := data["drive_id"]
 	if driveId != "" {
 		return utils.Data.Save(types.SM{"drive_id": driveId})
 	}
-
-	return common.NewBadRequestError("bad request")
+	return nil
 }
 
-func getToken(refresh bool, codeOrRefreshToken, clientId, clientSecret string, ds drive_util.DriveDataStore) (getTokenResp, error) {
-	key := "code"
-	grantType := "authorization_code"
-	if refresh {
-		key = "refresh_token"
-		grantType = "refresh_token"
-	}
-
-	resp, e := httpApi.Post(
-		"https://login.microsoftonline.com/consumers/oauth2/v2.0/token", nil,
-		req.NewURLEncodedBody(types.SM{
-			"client_id":     clientId,
-			"scope":         scope,
-			"redirect_uri":  redirectUri,
-			"grant_type":    grantType,
-			"client_secret": clientSecret,
-			key:             codeOrRefreshToken,
-		}),
-	)
-	r := getTokenResp{}
-	if e != nil {
-		return r, e
-	}
-	if e := resp.Json(&r); e != nil {
-		return r, e
-	}
-
-	return r, ds.Save(types.SM{
-		"state":         "",
-		"token":         r.TokenType + " " + r.AccessToken,
-		"refresh_token": r.RefreshToken,
-		"expires_at":    strconv.FormatInt(time.Now().Add(time.Duration(r.ExpiresIn)*time.Second).Unix(), 10),
-	})
-}
-
-func getUser(token string) (userProfile, error) {
+func getUser(req *req.Client) (userProfile, error) {
 	user := userProfile{}
-	resp, e := httpApi.Get(
-		"https://graph.microsoft.com/v1.0/me",
-		types.SM{"Authorization": token},
-	)
+	resp, e := req.Get("https://graph.microsoft.com/v1.0/me", nil)
 	if e != nil {
 		return user, e
 	}
@@ -212,12 +144,9 @@ func getUser(token string) (userProfile, error) {
 	return user, nil
 }
 
-func getDrives(token string) ([]driveInfo, error) {
+func getDrives(req *req.Client) ([]driveInfo, error) {
 	o := userDrives{}
-	resp, e := httpApi.Get(
-		"https://graph.microsoft.com/v1.0/me/drives",
-		types.SM{"Authorization": token},
-	)
+	resp, e := req.Get("https://graph.microsoft.com/v1.0/me/drives", nil)
 	if e != nil {
 		return nil, e
 	}
@@ -225,27 +154,6 @@ func getDrives(token string) ([]driveInfo, error) {
 		return nil, e
 	}
 	return o.Drives, nil
-}
-
-func (o *OneDrive) addToken(req *http.Request) error {
-	req.Header.Add("Authorization", o.accessToken)
-	return nil
-}
-
-func (o *OneDrive) refreshToken() {
-	params, e := o.ds.Load("refresh_token")
-	if e != nil {
-		log.Printf("load params error: %v", e)
-		return
-	}
-	refreshToken := params["refresh_token"]
-
-	r, e := getToken(true, refreshToken, o.clientId, o.clientSecret, o.ds)
-	if e != nil {
-		log.Printf("failed refresh access token: %v", e)
-	} else {
-		o.accessToken = r.TokenType + " " + r.AccessToken
-	}
 }
 
 // uploadSmallFile uploads a new file that less than 4Mb
