@@ -56,7 +56,7 @@ func itemPath(path string) string {
 	if common.IsRootPath(path) {
 		return "/drive/root:"
 	}
-	return common.BuildURL("/drive/root:/{}", path)
+	return "/drive/root:/" + path
 }
 
 func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
@@ -269,7 +269,7 @@ func waitLongRunningAction(waitUrl string) error {
 		if e := resp.Json(&s); e != nil {
 			return e
 		}
-		if s.Status != "inProgress" {
+		if s.Status != "inProgress" && s.Status != "notStarted" {
 			if s.Status != "completed" {
 				return errors.New(fmt.Sprintf("unknown action status: %s", s.Status))
 			}

@@ -16,7 +16,9 @@
           :href="$.fileUrl(singleEntry.path, singleEntry.meta.access_key)"
         >
           Download
-          <span class="file-size">{{ $.formatBytes(singleEntry.size) }}</span>
+          <span class="file-size" v-if="singleEntry.size >= 0">{{
+            $.formatBytes(singleEntry.size)
+          }}</span>
         </a>
       </template>
       <template v-else>

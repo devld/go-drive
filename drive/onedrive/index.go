@@ -96,8 +96,11 @@ func (o *OneDrive) Save(path string, size int64, override bool, reader io.Reader
 	if !override && entry != nil {
 		return nil, common.NewNotAllowedMessageError("file exists")
 	}
-	parent, e := o.Get(common.PathParent(path))
 	filename := common.PathBase(path)
+	if filename == "" {
+		return nil, common.NewBadRequestError("invalid filename")
+	}
+	parent, e := o.Get(common.PathParent(path))
 	if e != nil {
 		return nil, e
 	}
@@ -142,7 +145,7 @@ func (o *OneDrive) isSelf(e types.IEntry) bool {
 
 func (o *OneDrive) Copy(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, o.isSelf)
-	if from == nil || from.Type().IsDir() {
+	if from == nil {
 		return nil, common.NewUnsupportedError()
 	}
 	ctx.Total(from.Size(), false)
@@ -174,7 +177,7 @@ func (o *OneDrive) Copy(from types.IEntry, to string, _ bool, ctx types.TaskCtx)
 
 func (o *OneDrive) Move(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, o.isSelf)
-	if from == nil || from.Type().IsDir() {
+	if from == nil {
 		return nil, common.NewUnsupportedError()
 	}
 	ctx.Total(from.Size(), false)

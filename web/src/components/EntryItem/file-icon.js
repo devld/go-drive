@@ -28,9 +28,10 @@ const parentDirIcon = 'iconfanhuishangyiji'
 const fileFallbackIcon = 'file'
 
 export function getIconSVG (entry) {
+  const ext = entry.meta.ext || filenameExt(entry.name)
   let icon
   if (entry.type === 'dir') icon = dirIcon
-  if (entry.type === 'file') icon = extMapping[filenameExt(entry.name)] || fileFallbackIcon
+  if (entry.type === 'file') icon = extMapping[ext] || fileFallbackIcon
   if (entry.name === '..') icon = parentDirIcon
   return '#icon-' + icon
 }
