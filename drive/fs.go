@@ -143,7 +143,7 @@ func (f *FsDrive) isSelf(entry types.IEntry) bool {
 	return false
 }
 
-func (f *FsDrive) Move(from types.IEntry, to string, _ bool, _ types.TaskCtx) (types.IEntry, error) {
+func (f *FsDrive) Move(from types.IEntry, to string, override bool, _ types.TaskCtx) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, f.isSelf)
 	if from == nil {
 		return nil, common.NewUnsupportedError()
@@ -161,7 +161,12 @@ func (f *FsDrive) Move(from types.IEntry, to string, _ bool, _ types.TaskCtx) (t
 		return nil, e
 	}
 	if exists {
-		return nil, common.NewUnsupportedMessageError("file exists")
+		if !override {
+			return nil, common.NewNotAllowedMessageError("file exists")
+		}
+		if e := f.Delete(to, task.DummyContext()); e != nil {
+			return nil, e
+		}
 	}
 	if e := os.Rename(fromPath, toPath); e != nil {
 		return nil, e

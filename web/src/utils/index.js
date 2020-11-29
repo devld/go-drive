@@ -222,6 +222,7 @@ export async function taskDone (task, cb, interval = 1000) {
     await wait(interval)
   }
   if (task.status === 'done') {
+    cb && await cb(task)
     return task.result
   } else if (task.status === 'error') {
     throw task.error

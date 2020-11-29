@@ -32,6 +32,13 @@ func (o *OAuthResponse) Client(ctx context.Context) *http.Client {
 	return o.Config.Client(ctx, o.Token)
 }
 
+func (o *OAuthResponse) TokenSource(ctx context.Context) oauth2.TokenSource {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return o.Config.TokenSource(ctx, o.Token)
+}
+
 func getOAuthConfig(o OAuthRequest, config DriveConfig) *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     config["client_id"],

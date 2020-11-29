@@ -11,7 +11,9 @@
       entry.name === '..'
         ? ''
         : `${entry.name}\n${$.formatTime(entry.mod_time)}\n` +
-          `${$.formatBytes(entry.size)}`
+          `${entry.type === 'file' ? 'File' : 'Folder'} | ${$.formatBytes(
+            entry.size
+          )}`
     "
   >
     <span class="entry-item__icon-wrapper">
@@ -24,7 +26,8 @@
     </span>
     <span class="entry-item__info">
       <span class="entry-item__name">
-        <i v-if="entry.meta.is_mount">@</i>{{ entry.name }}
+        <i v-if="entry.meta.is_mount">@</i>{{ entry.name
+        }}<template v-if="entry.meta.ext">.{{ entry.meta.ext }}</template>
       </span>
       <span class="entry-item__modified-time" v-if="viewMode === 'line'">{{
         entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : ""

@@ -3,7 +3,7 @@ import { deleteTask } from '@/api'
 import axios from '@/api/axios'
 import { taskDone } from '@/utils'
 import ChunkUploadTask from '../chunk-task'
-import { STATUS_COMPLETED } from '../task'
+import { STATUS_COMPLETED, STATUS_UPLOADING } from '../task'
 
 export default class LocalChunkUploadTask extends ChunkUploadTask {
   /**
@@ -67,6 +67,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
         params: { id: this._uploadId }
       }), task => {
         this._mergeTask = task
+        this._onChange(STATUS_UPLOADING, task.progress)
       })
     } finally {
       this._mergeTask = undefined

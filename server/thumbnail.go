@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	thumbnailSize    = 320
+	thumbnailSize    = 220
 	thumbnailQuality = 50
 	thumbnailTimeout = 30 * time.Second
 )

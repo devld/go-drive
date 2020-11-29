@@ -6,6 +6,7 @@ import (
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	"go-drive/common/types"
+	"go-drive/drive/gdrive"
 	"go-drive/drive/onedrive"
 	"go-drive/storage"
 	"log"
@@ -59,6 +60,16 @@ var driveFactories = []drive_util.DriveFactoryConfig{
 			{Field: "cache_ttl", Label: "CacheTTL", Type: "text", Description: "Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.", DefaultValue: "2h"},
 		},
 		Factory: drive_util.DriveFactory{Create: onedrive.NewOneDrive, InitConfig: onedrive.InitConfig, Init: onedrive.Init},
+	},
+	{
+		Type: "gdrive", DisplayName: "Google Drive",
+		README: "Google Drive",
+		ConfigForm: []types.FormItem{
+			{Field: "client_id", Label: "Client Id", Type: "text", Required: true},
+			{Field: "client_secret", Label: "Client Secret", Type: "password", Required: true},
+			{Field: "cache_ttl", Label: "CacheTTL", Type: "text", Description: "Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.", DefaultValue: "4h"},
+		},
+		Factory: drive_util.DriveFactory{Create: gdrive.NewGDrive, InitConfig: gdrive.InitConfig, Init: gdrive.Init},
 	},
 }
 
