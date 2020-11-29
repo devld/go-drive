@@ -403,6 +403,16 @@ func InitAdminRoutes(r gin.IRouter,
 		SetResult(c, res)
 	})
 
+	// clean drive cache
+	r.DELETE("/drive-cache/:name", func(c *gin.Context) {
+		name := c.Param("name")
+		e := driveCacheDAO.Remove(name)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+	})
+
 	// endregion
 
 }

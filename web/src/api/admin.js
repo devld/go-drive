@@ -88,6 +88,10 @@ export function cleanPermissionsAndMounts () {
   return axios.post('/admin/clean-permissions-mounts')
 }
 
+export function cleanDriveCache (name) {
+  return axios.delete(`/admin/drive-cache/${name}`)
+}
+
 export function loadStats () {
   return axios.get('/admin/stats')
 }

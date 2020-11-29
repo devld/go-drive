@@ -24,6 +24,21 @@
       </simple-button>
     </div>
     <div class="section">
+      <h1 class="section-title">Clean cache</h1>
+      <simple-form-item
+        class="cache-clean-form-item"
+        :item="drivesForm"
+        v-model="cacheSelectedDrive"
+      />
+      <simple-button
+        :loading="cacheCleaning"
+        @click="cleanDriveCache"
+        :disabled="!cacheSelectedDrive"
+      >
+        Clean
+      </simple-button>
+    </div>
+    <div class="section">
       <h1 class="section-title">
         Statistics
         <simple-button :loading="statLoading" @click="loadStats">
@@ -47,7 +62,7 @@
   </div>
 </template>
 <script>
-import { cleanPermissionsAndMounts, loadStats } from '@/api/admin'
+import { cleanDriveCache, cleanPermissionsAndMounts, getDrives, loadStats } from '@/api/admin'
 import PermissionsEditor from './PermissionsEditor'
 
 export default {
@@ -62,9 +77,24 @@ export default {
 
       cleaning: false,
 
+      drives: [],
+      cacheSelectedDrive: null,
+      cacheCleaning: false,
+
       stats: [],
       refreshCountDown: 0,
       statLoading: false
+    }
+  },
+  computed: {
+    drivesForm () {
+      return {
+        type: 'select',
+        options: [
+          { name: '', value: '' },
+          ...this.drives.map(d => ({ name: d.name, value: d.name }))
+        ]
+      }
     }
   },
   watch: {
@@ -76,6 +106,7 @@ export default {
     }
   },
   created () {
+    this.loadDrives()
     this.loadStats()
   },
   beforeDestroy () {
@@ -101,6 +132,23 @@ export default {
         this.$alert(e.message)
       } finally {
         this.cleaning = false
+      }
+    },
+    async loadDrives () {
+      try {
+        this.drives = await getDrives()
+      } catch (e) {
+        this.$alert(e.message)
+      }
+    },
+    async cleanDriveCache () {
+      this.cacheCleaning = true
+      try {
+        await cleanDriveCache(this.cacheSelectedDrive)
+      } catch (e) {
+        await this.$alert(e.message)
+      } finally {
+        this.cacheCleaning = false
       }
     },
     async loadStats () {
@@ -158,6 +206,11 @@ export default {
 
   .stat-item {
     margin: 0 2em 2em 0;
+  }
+
+  .cache-clean-form-item {
+    display: inline-block;
+    margin-right: 1em;
   }
 }
 </style>
