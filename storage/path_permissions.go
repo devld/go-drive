@@ -2,8 +2,8 @@ package storage
 
 import (
 	"github.com/jinzhu/gorm"
-	"go-drive/common"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"sort"
 )
 
@@ -62,7 +62,7 @@ func (p *PathPermissionDAO) SavePathPermissions(path string, permissions []types
 		}
 		for _, p := range permissions {
 			p.Path = &path
-			p.Depth = uint8(common.PathDepth(path))
+			p.Depth = uint8(utils.PathDepth(path))
 			if e := tx.Create(&p).Error; e != nil {
 				return e
 			}
@@ -76,7 +76,7 @@ func (p *PathPermissionDAO) DeleteByPath(path string) error {
 }
 
 func (p *PathPermissionDAO) ResolvePathPermission(subjects []string, path string) (types.Permission, error) {
-	paths := common.PathParentTree(path)
+	paths := utils.PathParentTree(path)
 	items, e := p.GetByPaths(subjects, paths)
 	if e != nil {
 		return types.PermissionEmpty, e
@@ -85,7 +85,7 @@ func (p *PathPermissionDAO) ResolvePathPermission(subjects []string, path string
 }
 
 func (p *PathPermissionDAO) ResolvePathChildrenPermission(subjects []string, parentPath string) (map[string]types.Permission, error) {
-	permissions, e := p.GetChildrenByPath(subjects, parentPath, int8(common.PathDepth(parentPath)+1))
+	permissions, e := p.GetChildrenByPath(subjects, parentPath, int8(utils.PathDepth(parentPath)+1))
 	if e != nil {
 		return nil, e
 	}

@@ -1,11 +1,12 @@
+import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
 import MediaView from '@/views/HandlerViews/MediaView.vue'
 
 export default {
   name: 'media',
   display: {
-    name: 'Play',
-    description: 'Play media',
+    name: T('handler.media.name'),
+    description: T('handler.media.desc'),
     icon: '#icon-play-circle'
   },
   view: {

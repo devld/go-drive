@@ -49,13 +49,7 @@ export default {
       loadedPath: '',
       entries: [],
 
-      error: null,
-
-      errorMessages: {
-        403: 'Operation Not Allowed',
-        404: 'Resource Not Found',
-        500: 'Server Error'
-      }
+      error: null
     }
   },
   computed: {

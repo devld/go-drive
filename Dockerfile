@@ -14,6 +14,7 @@ RUN apk add sqlite && \
         tar xf app.tar.gz && \
         rm app.tar.gz && \
         mv go-drive_linux_${ARCH}/* . && \
+        mv lang/ data/lang && \
         rmdir go-drive_linux_${ARCH}
 
 ENTRYPOINT ["/app/go-drive", "-d", "/app/data", "-s", "/app/web"]

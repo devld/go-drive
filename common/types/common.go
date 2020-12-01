@@ -22,18 +22,18 @@ type IStatistics interface {
 }
 
 type FormItemOption struct {
-	Name     string `json:"name"`
-	Title    string `json:"title"`
+	Name     string `json:"name" i18n:""`
+	Title    string `json:"title" i18n:""`
 	Value    string `json:"value"`
 	Disabled bool   `json:"disabled"`
 }
 
 type FormItem struct {
-	Label        string           `json:"label"`
+	Label        string           `json:"label" i18n:""`
 	Type         string           `json:"type"`
 	Field        string           `json:"field"`
 	Required     bool             `json:"required"`
-	Description  string           `json:"description"`
+	Description  string           `json:"description" i18n:""`
 	Disabled     bool             `json:"disabled"`
 	Options      []FormItemOption `json:"options"`
 	DefaultValue string           `json:"default_value"`

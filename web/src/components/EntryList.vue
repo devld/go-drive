@@ -44,7 +44,7 @@
       </li>
     </ul>
     <div class="entry-list__empty" v-if="sortedEntries.length === 0">
-      Nothing here
+      {{ $t("app.empty_list") }}
     </div>
   </div>
 </template>

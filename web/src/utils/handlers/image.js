@@ -1,10 +1,11 @@
+import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
 
 export default {
   name: 'image',
   display: {
-    name: 'Gallery',
-    description: 'View images',
+    name: T('handler.image.name'),
+    description: T('handler.image.desc'),
     icon: '#icon-image'
   },
   view: {

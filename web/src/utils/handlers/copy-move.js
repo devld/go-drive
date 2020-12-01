@@ -1,12 +1,13 @@
 import { copyEntry, deleteTask, moveEntry } from '@/api'
+import { T } from '@/i18n'
 import { formatBytes, pathClean, pathJoin, taskDone, TASK_CANCELLED } from '..'
 
 const createHandler = (isMove) => {
   return {
     name: isMove ? 'move' : 'copy',
     display: {
-      name: (isMove ? 'Move' : 'Copy') + ' to',
-      description: (isMove ? 'Move' : 'Copy') + ' files',
+      name: T(isMove ? 'handler.copy_move.move_to' : 'handler.copy_move.copy_to'),
+      description: T(isMove ? 'handler.copy_move.move_desc' : 'handler.copy_move.copy_desc'),
       icon: isMove ? '#icon-move' : '#icon-copy'
     },
     multiple: true,
@@ -20,13 +21,15 @@ const createHandler = (isMove) => {
       if (!Array.isArray(entries)) entries = [entries]
       return new Promise((resolve) => {
         open({
-          title: 'Select ' + (isMove ? 'move' : 'copy') + ' to', type: 'dir', filter: 'write',
+          title: T(isMove ? 'handler.copy_move.move_open_title' : 'handler.copy_move.copy_open_title'),
+          type: 'dir', filter: 'write',
           async onOk (path) {
             let override = true
             try {
               await confirm({
-                message: 'Override or skip for duplicates?',
-                confirmType: 'danger', confirmText: 'Override', cancelText: 'Skip'
+                message: T('handler.copy_move.override_or_skip'),
+                confirmType: 'danger', confirmText: T('handler.copy_move.override'),
+                cancelText: ('handler.copy_move.skip')
               })
             } catch { override = false }
             let canceled = false
@@ -40,7 +43,7 @@ const createHandler = (isMove) => {
                 if (canceled) break
                 const entry = entries[i]
                 const dest = pathClean(pathJoin(path, entry.name))
-                loading({ text: `${isMove ? 'Moving' : 'Copying'} ${entry.name}`, onCancel })
+                loading({ text: T(isMove ? 'handler.copy_move.moving' : 'handler.copy_move.copying', { n: entry.name }), onCancel })
                 const copyOrMove = isMove ? moveEntry : copyEntry
                 await taskDone(
                   copyOrMove(entry.path, dest, override),
@@ -48,8 +51,8 @@ const createHandler = (isMove) => {
                     if (canceled) return false
                     task = t
                     loading({
-                      text: `${isMove ? 'Moving' : 'Copying'} ${entry.name} ` +
-                        `${formatBytes(task.progress.loaded)}/${formatBytes(task.progress.total)}`,
+                      text: T(isMove ? 'handler.copy_move.moving' : 'handler.copy_move.copying',
+                        { n: entry.name, p: `${formatBytes(task.progress.loaded)}/${formatBytes(task.progress.total)}` }),
                       onCancel
                     })
                   }

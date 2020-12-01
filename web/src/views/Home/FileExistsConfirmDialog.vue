@@ -1,9 +1,9 @@
 <template>
   <div class="file-exists-confirm-inner">
-    <p>'{{ opts.filename }}' already exists, override or skip?</p>
+    <p>{{ $t("p.home.file_exists", { n: opts.filename }) }}</p>
     <p>
       <input type="checkbox" v-model="all" />
-      Apply for all
+      {{ $t("p.home.apply_all") }}
     </p>
   </div>
 </template>

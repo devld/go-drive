@@ -2,6 +2,7 @@ package main
 
 import (
 	"go-drive/common"
+	"go-drive/common/registry"
 	"log"
 	"math/rand"
 	"net/http"
@@ -13,7 +14,7 @@ func init() {
 }
 
 func main() {
-	ch := common.NewComponentHolder()
+	ch := registry.NewComponentHolder()
 
 	engine, e := Initialize(ch)
 	if e != nil {

@@ -4,21 +4,26 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
+	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/storage"
 	"net/http"
+	"reflect"
 	"runtime"
 	"time"
 )
 
 func InitServer(config common.Config,
-	ch *common.ComponentsHolder,
+	ch *registry.ComponentsHolder,
 	rootDrive *drive.RootDrive,
 	tokenStore types.TokenStore,
 	thumbnail *Thumbnail,
-	signer *common.Signer,
+	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
 	runner task.Runner,
 	userDAO *storage.UserDAO,
@@ -27,9 +32,10 @@ func InitServer(config common.Config,
 	driveCacheDAO *storage.DriveCacheDAO,
 	driveDataDAO *storage.DriveDataDAO,
 	permissionDAO *storage.PathPermissionDAO,
-	pathMountDAO *storage.PathMountDAO) *gin.Engine {
+	pathMountDAO *storage.PathMountDAO,
+	messageSource i18n.MessageSource) *gin.Engine {
 
-	if common.IsDebugOn() {
+	if utils.IsDebugOn() {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -39,7 +45,7 @@ func InitServer(config common.Config,
 
 	engine.Use(gin.Recovery())
 	engine.Use(Logger())
-	engine.Use(apiResultHandler)
+	engine.Use(apiResultHandler(messageSource))
 
 	InitAuthRoutes(engine, tokenStore, userDAO)
 
@@ -57,27 +63,39 @@ func InitServer(config common.Config,
 	return engine
 }
 
-func apiResultHandler(c *gin.Context) {
-	c.Next()
-	if len(c.Errors) == 0 {
-		result, exists := GetResult(c)
-		if exists {
-			c.JSON(200, result)
+func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {
+	return func(c *gin.Context) {
+		c.Next()
+		if len(c.Errors) == 0 {
+			result, exists := GetResult(c)
+			if exists {
+				writeJSON(c, ms, 200, result)
+			}
+			return
 		}
-		return
+		e := c.Errors[0]
+		code := 500
+		result := types.M{
+			"message": e.Err.Error(),
+		}
+		if re, ok := e.Err.(err.RequestError); ok {
+			code = re.Code()
+		}
+		if red, ok := e.Err.(err.RequestErrorWithData); ok {
+			result["data"] = red.Data()
+		}
+		writeJSON(c, ms, code, result)
 	}
-	e := c.Errors[0]
-	code := 500
-	result := types.M{
-		"message": e.Err.Error(),
+}
+
+func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v interface{}) {
+	result := TranslateV(c, ms, v)
+	rv := reflect.ValueOf(v)
+	if (rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface) && rv.IsNil() {
+		c.Status(code)
+	} else {
+		c.JSON(code, result)
 	}
-	if re, ok := e.Err.(common.RequestError); ok {
-		code = re.Code()
-	}
-	if red, ok := e.Err.(common.RequestErrorWithData); ok {
-		result["data"] = red.Data()
-	}
-	c.JSON(code, result)
 }
 
 func Static(prefix, root string) gin.HandlerFunc {
@@ -110,9 +128,9 @@ func (r runtimeStat) Status() (string, types.SM, error) {
 		"TotalAlloc":   fmt.Sprintf("%d", m.TotalAlloc),
 		"Alloc":        fmt.Sprintf("%d", m.Alloc),
 		"HeapObjects":  fmt.Sprintf("%d", m.HeapObjects),
-		"Sys":          common.FormatBytes(m.Sys, 2),
-		"HeapSys":      common.FormatBytes(m.HeapSys, 2),
-		"HeapInUse":    common.FormatBytes(m.HeapInuse, 2),
+		"Sys":          utils.FormatBytes(m.Sys, 2),
+		"HeapSys":      utils.FormatBytes(m.HeapSys, 2),
+		"HeapInUse":    utils.FormatBytes(m.HeapInuse, 2),
 		"LastGC":       time.Unix(0, int64(m.LastGC)).Format(time.RubyDate),
 		"StopTheWorld": fmt.Sprintf("%d ms", m.PauseTotalNs/uint64(time.Millisecond)),
 		"NumGC":        fmt.Sprintf("%d", m.NumGC),

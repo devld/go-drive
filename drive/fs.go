@@ -1,10 +1,12 @@
 package drive
 
 import (
-	"go-drive/common"
 	"go-drive/common/drive_util"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"io"
 	"io/ioutil"
 	"os"
@@ -29,13 +31,13 @@ type fsFile struct {
 // NewFsDrive creates a file system drive
 // params:
 //   - path: root key of this drive
-func NewFsDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (types.IDrive, error) {
+func NewFsDrive(config drive_util.DriveConfig, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	path := config["path"]
-	if common.CleanPath(path) == "" {
-		return nil, common.NewNotAllowedMessageError("invalid root path")
+	if utils.CleanPath(path) == "" {
+		return nil, err.NewNotAllowedMessageError(i18n.T("drive.fs.invalid_root_path"))
 	}
 
-	localRoot, e := utils.Config.GetLocalFsDir()
+	localRoot, e := driveUtils.Config.GetLocalFsDir()
 	if e != nil {
 		return nil, e
 	}
@@ -44,8 +46,8 @@ func NewFsDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (typ
 	if e != nil {
 		return nil, e
 	}
-	if exists, _ := common.FileExists(path); !exists {
-		return nil, common.NewNotFoundMessageError("root path not exists")
+	if exists, _ := utils.FileExists(path); !exists {
+		return nil, err.NewNotFoundMessageError(i18n.T("drive.fs.root_path_not_exists"))
 	}
 	return &FsDrive{path}, nil
 }
@@ -53,7 +55,7 @@ func NewFsDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (typ
 func (f *FsDrive) newFsFile(path string, file os.FileInfo) (types.IEntry, error) {
 	path, e := filepath.Abs(path)
 	if e != nil {
-		return nil, common.NewNotFoundMessageError("invalid key")
+		return nil, err.NewNotFoundMessageError(i18n.T("drive.invalid_path"))
 	}
 	if !strings.HasPrefix(path, f.path) {
 		panic("invalid file key")
@@ -68,7 +70,7 @@ func (f *FsDrive) newFsFile(path string, file os.FileInfo) (types.IEntry, error)
 		path:    path,
 		size:    file.Size(),
 		isDir:   file.IsDir(),
-		modTime: common.Millisecond(file.ModTime()),
+		modTime: utils.Millisecond(file.ModTime()),
 	}, nil
 }
 
@@ -85,7 +87,7 @@ func (f *FsDrive) Get(path string) (types.IEntry, error) {
 	path = f.getPath(path)
 	stat, e := os.Stat(path)
 	if os.IsNotExist(e) {
-		return nil, common.NewNotFoundError()
+		return nil, err.NewNotFoundError()
 	}
 	if e != nil {
 		return nil, e
@@ -133,7 +135,7 @@ func (f *FsDrive) MakeDir(path string) (types.IEntry, error) {
 }
 
 func (f *FsDrive) Copy(types.IEntry, string, bool, types.TaskCtx) (types.IEntry, error) {
-	return nil, common.NewUnsupportedError()
+	return nil, err.NewUnsupportedError()
 }
 
 func (f *FsDrive) isSelf(entry types.IEntry) bool {
@@ -146,23 +148,23 @@ func (f *FsDrive) isSelf(entry types.IEntry) bool {
 func (f *FsDrive) Move(from types.IEntry, to string, override bool, _ types.TaskCtx) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, f.isSelf)
 	if from == nil {
-		return nil, common.NewUnsupportedError()
+		return nil, err.NewUnsupportedError()
 	}
 	fromPath := f.getPath(from.(*fsFile).path)
 	toPath := f.getPath(to)
 	if f.isRootPath(fromPath) || f.isRootPath(toPath) {
-		return nil, common.NewNotAllowedError()
+		return nil, err.NewNotAllowedError()
 	}
 	if e := requireFile(fromPath, true); e != nil {
 		return nil, e
 	}
-	exists, e := common.FileExists(toPath)
+	exists, e := utils.FileExists(toPath)
 	if e != nil {
 		return nil, e
 	}
 	if exists {
 		if !override {
-			return nil, common.NewNotAllowedMessageError("file exists")
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 		}
 		if e := f.Delete(to, task.DummyContext()); e != nil {
 			return nil, e
@@ -180,16 +182,16 @@ func (f *FsDrive) Move(from types.IEntry, to string, override bool, _ types.Task
 
 func (f *FsDrive) List(path string) ([]types.IEntry, error) {
 	path = f.getPath(path)
-	isDir, e := common.IsDir(path)
+	isDir, e := utils.IsDir(path)
 	if os.IsNotExist(e) {
-		return nil, common.NewNotFoundError()
+		return nil, err.NewNotFoundError()
 	}
 	if !isDir {
-		return nil, common.NewNotAllowedMessageError("cannot list on file")
+		return nil, err.NewNotAllowedMessageError(i18n.T("drive.fs.cannot_list_file"))
 	}
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		return nil, err
+	files, ee := ioutil.ReadDir(path)
+	if ee != nil {
+		return nil, ee
 	}
 	entries := make([]types.IEntry, len(files))
 	for i, file := range files {
@@ -205,7 +207,7 @@ func (f *FsDrive) List(path string) ([]types.IEntry, error) {
 func (f *FsDrive) Delete(path string, _ types.TaskCtx) error {
 	path = f.getPath(path)
 	if f.isRootPath(path) {
-		return common.NewNotAllowedMessageError("root cannot be deleted")
+		return err.NewNotAllowedMessageError(i18n.T("drive.fs.cannot_delete_root"))
 	}
 	if e := requireFile(path, true); e != nil {
 		return e
@@ -225,15 +227,15 @@ func (f *FsDrive) Upload(path string, size int64, override bool,
 }
 
 func requireFile(path string, requireExists bool) error {
-	exists, e := common.FileExists(path)
+	exists, e := utils.FileExists(path)
 	if e != nil {
 		return e
 	}
 	if requireExists && !exists {
-		return common.NewNotFoundMessageError("file does not exist")
+		return err.NewNotFoundMessageError(i18n.T("drive.file_not_exists"))
 	}
 	if !requireExists && exists {
-		return common.NewNotAllowedMessageError("file exists")
+		return err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 	}
 	return nil
 }
@@ -273,24 +275,24 @@ func (f *fsFile) Drive() types.IDrive {
 }
 
 func (f *fsFile) Name() string {
-	return common.PathBase(f.path)
+	return utils.PathBase(f.path)
 }
 
 func (f *fsFile) GetReader() (io.ReadCloser, error) {
 	if !f.Type().IsFile() {
-		return nil, common.NewNotAllowedError()
+		return nil, err.NewNotAllowedError()
 	}
 	path := f.drive.getPath(f.path)
-	exists, e := common.FileExists(path)
+	exists, e := utils.FileExists(path)
 	if e != nil {
 		return nil, e
 	}
 	if !exists {
-		return nil, common.NewNotFoundMessageError("file does not exist")
+		return nil, err.NewNotFoundMessageError(i18n.T("drive.file_not_exists"))
 	}
 	return os.Open(path)
 }
 
 func (f *fsFile) GetURL() (*types.ContentURL, error) {
-	return nil, common.NewUnsupportedError()
+	return nil, err.NewUnsupportedError()
 }

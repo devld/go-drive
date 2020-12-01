@@ -1,9 +1,9 @@
 package server
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/storage"
 	"golang.org/x/crypto/bcrypt"
@@ -55,7 +55,7 @@ func (a *authRoute) login(c *gin.Context) {
 		return
 	}
 	if e := bcrypt.CompareHashAndPassword([]byte(getUser.Password), []byte(user.Password)); e != nil {
-		_ = c.Error(common.NewBadRequestError("invalid username or password"))
+		_ = c.Error(err.NewBadRequestError(i18n.T("api.auth.invalid_username_or_password")))
 		return
 	}
 	e = UpdateSessionUser(c, a.tokenStore, getUser)
@@ -106,7 +106,7 @@ func UserGroupRequired(group string) gin.HandlerFunc {
 				}
 			}
 		}
-		_ = c.Error(common.NewPermissionDeniedError(fmt.Sprintf("permission of group '%s' required", group)))
+		_ = c.Error(err.NewPermissionDeniedError(i18n.T("api.auth.group_permission_required", group)))
 		c.Abort()
 	}
 }

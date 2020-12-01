@@ -5,6 +5,7 @@ import AppWrapper from '@/views/AppWrapper'
 
 import Home from '@/views/Home'
 import { setTitle } from '@/utils'
+import { T } from '@/i18n'
 
 Vue.use(VueRouter)
 
@@ -30,25 +31,25 @@ const routes = [
             name: 'UsersManager',
             path: '/admin/users',
             component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Users'),
-            meta: { title: 'Users' }
+            meta: { title: T('routes.title.users') }
           },
           {
             name: 'GroupsManager',
             path: '/admin/groups',
             component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Groups'),
-            meta: { title: 'Groups' }
+            meta: { title: T('routes.title.groups') }
           },
           {
             name: 'DrivesManager',
             path: '/admin/drives',
             component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Drives'),
-            meta: { title: 'Drives' }
+            meta: { title: T('routes.title.drives') }
           },
           {
             name: 'MiscSettings',
             path: '/admin/misc',
             component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Misc'),
-            meta: { title: 'Misc' }
+            meta: { title: T('routes.title.misc') }
           }
         ]
       }

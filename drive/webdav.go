@@ -4,14 +4,16 @@ import (
 	"encoding/base64"
 	"encoding/xml"
 	"errors"
-	"fmt"
-	"go-drive/common"
 	"go-drive/common/drive_util"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/req"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -79,7 +81,7 @@ func (w *WebDAVDrive) Get(path string) (types.IEntry, error) {
 	if cached, _ := w.cache.GetEntry(path); cached != nil {
 		return cached, nil
 	}
-	resp, e := w.c.Request("PROPFIND", common.BuildURL(path), types.SM{"Depth": "0"}, nil)
+	resp, e := w.c.Request("PROPFIND", utils.BuildURL(path), types.SM{"Depth": "0"}, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -95,11 +97,11 @@ func (w *WebDAVDrive) Get(path string) (types.IEntry, error) {
 func (w *WebDAVDrive) Save(path string, size int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
 	if !override {
 		_, e := w.Get(path)
-		if e != nil && !common.IsNotFoundError(e) {
+		if e != nil && !err.IsNotFoundError(e) {
 			return nil, e
 		}
 		if e == nil {
-			return nil, common.NewNotAllowedMessageError("file exists")
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 		}
 	}
 	resp, e := w.c.RequestWithContext("PUT", path, nil,
@@ -108,7 +110,7 @@ func (w *WebDAVDrive) Save(path string, size int64, override bool, reader io.Rea
 		return nil, e
 	}
 	_ = resp.Dispose()
-	_ = w.cache.Evict(common.PathParent(path), false)
+	_ = w.cache.Evict(utils.PathParent(path), false)
 	_ = w.cache.Evict(path, false)
 	return w.Get(path)
 }
@@ -119,7 +121,7 @@ func (w *WebDAVDrive) MakeDir(path string) (types.IEntry, error) {
 		return nil, e
 	}
 	_ = resp.Dispose()
-	_ = w.cache.Evict(common.PathParent(path), false)
+	_ = w.cache.Evict(utils.PathParent(path), false)
 	return w.Get(path)
 }
 
@@ -133,7 +135,7 @@ func (w *WebDAVDrive) isSelf(e types.IEntry) bool {
 func (w *WebDAVDrive) copyOrMove(method string, from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, w.isSelf)
 	if from == nil || from.Type().IsDir() {
-		return nil, common.NewUnsupportedError()
+		return nil, err.NewUnsupportedError()
 	}
 	wEntry := from.(*webDavEntry)
 	dest, e := w.c.BuildURL(to)
@@ -152,10 +154,10 @@ func (w *WebDAVDrive) copyOrMove(method string, from types.IEntry, to string, ov
 		_ = resp.Dispose()
 	}
 	_ = w.cache.Evict(to, true)
-	_ = w.cache.Evict(common.PathParent(to), false)
+	_ = w.cache.Evict(utils.PathParent(to), false)
 	if method == "MOVE" {
 		_ = w.cache.Evict(from.Path(), true)
-		_ = w.cache.Evict(common.PathParent(from.Path()), false)
+		_ = w.cache.Evict(utils.PathParent(from.Path()), false)
 	}
 	return w.Get(to)
 }
@@ -172,7 +174,7 @@ func (w *WebDAVDrive) List(path string) ([]types.IEntry, error) {
 	if cached, _ := w.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
-	resp, e := w.c.Request("PROPFIND", common.BuildURL(path), types.SM{"Depth": "1"}, nil)
+	resp, e := w.c.Request("PROPFIND", utils.BuildURL(path), types.SM{"Depth": "1"}, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -181,10 +183,10 @@ func (w *WebDAVDrive) List(path string) ([]types.IEntry, error) {
 		return nil, e
 	}
 
-	depth := common.PathDepth(path)
+	depth := utils.PathDepth(path)
 	entries := make([]types.IEntry, 0)
 	for _, e := range res.Response {
-		if common.PathDepth(e.Href)-common.PathDepth(w.pathPrefix) > depth {
+		if utils.PathDepth(e.Href)-utils.PathDepth(w.pathPrefix) > depth {
 			entries = append(entries, w.newEntry(e))
 		}
 	}
@@ -199,7 +201,7 @@ func (w *WebDAVDrive) Delete(path string, _ types.TaskCtx) error {
 	}
 	_ = resp.Dispose()
 	_ = w.cache.Evict(path, true)
-	_ = w.cache.Evict(common.PathParent(path), false)
+	_ = w.cache.Evict(utils.PathParent(path), false)
 	return nil
 }
 
@@ -219,15 +221,15 @@ var errorPreconditionFailed = errors.New("precondition failed")
 func (w *WebDAVDrive) afterRequest(resp req.Response) error {
 	if resp.Status() < 200 || resp.Status() >= 300 {
 		if resp.Status() == http.StatusNotFound {
-			return common.NewNotFoundError()
+			return err.NewNotFoundError()
 		}
 		if resp.Status() == http.StatusPreconditionFailed {
 			return errorPreconditionFailed
 		}
 		if resp.Status() == http.StatusUnauthorized {
-			return common.NewUnauthorizedError("maybe the username or password is not correct")
+			return err.NewUnauthorizedError(i18n.T("drive.webdav.wrong_user_or_password"))
 		}
-		return common.NewRemoteApiError(500, fmt.Sprintf("remote service error: %d", resp.Status()))
+		return err.NewRemoteApiError(500, i18n.T("drive.webdav.remote_error", strconv.Itoa(resp.Status())))
 	}
 	return nil
 }
@@ -248,8 +250,8 @@ func (w *WebDAVDrive) newEntry(res propfindResponse) *webDavEntry {
 	href, _ := url.PathUnescape(res.Href)
 	href = href[len(w.pathPrefix):]
 	return &webDavEntry{
-		path:    common.CleanPath(href),
-		modTime: common.Millisecond(modTime),
+		path:    utils.CleanPath(href),
+		modTime: utils.Millisecond(modTime),
 		size:    res.Size,
 		isDir:   res.CollectionMark != nil,
 		d:       w,
@@ -296,7 +298,7 @@ func (w *webDavEntry) Drive() types.IDrive {
 }
 
 func (w *webDavEntry) Name() string {
-	return common.PathBase(w.path)
+	return utils.PathBase(w.path)
 }
 
 func (w *webDavEntry) GetReader() (io.ReadCloser, error) {
@@ -309,7 +311,7 @@ func (w *webDavEntry) GetReader() (io.ReadCloser, error) {
 
 func (w *webDavEntry) GetURL() (*types.ContentURL, error) {
 	if !w.Type().IsFile() {
-		return nil, common.NewNotAllowedError()
+		return nil, err.NewNotAllowedError()
 	}
 	u, e := w.d.c.BuildURL(w.path)
 	if e != nil {

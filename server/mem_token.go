@@ -3,8 +3,10 @@ package server
 import (
 	"github.com/google/uuid"
 	cmap "github.com/orcaman/concurrent-map"
-	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"log"
 	"sync"
 	"time"
@@ -38,7 +40,7 @@ func NewMemTokenStore(validity time.Duration, autoRefresh bool, cleanupDuration 
 		autoRefresh: autoRefresh,
 		mux:         &sync.Mutex{},
 	}
-	tokenStore.tickerStop = common.TimeTick(tokenStore.clean, cleanupDuration)
+	tokenStore.tickerStop = utils.TimeTick(tokenStore.clean, cleanupDuration)
 	return tokenStore
 }
 
@@ -58,7 +60,7 @@ func (m *MemTokenStore) Update(token string, value types.Session) (types.Token, 
 	defer m.mux.Unlock()
 	t, ok := m.store.Get(token)
 	if !ok {
-		return types.Token{}, common.NewUnauthorizedError("invalid token '" + token + "'")
+		return types.Token{}, err.NewUnauthorizedError(i18n.T("api.mem_token.invalid_token"))
 	}
 	tt := t.(types.Token)
 	tt.Value = value
@@ -76,11 +78,11 @@ func (m *MemTokenStore) Validate(token string) (types.Token, error) {
 	}
 	t, ok := m.store.Get(token)
 	if !ok {
-		return types.Token{}, common.NewUnauthorizedError("invalid token '" + token + "'")
+		return types.Token{}, err.NewUnauthorizedError(i18n.T("api.mem_token.invalid_token"))
 	}
 	tt := t.(types.Token)
 	if !m.isValid(tt) {
-		return types.Token{}, common.NewUnauthorizedError("token expired '" + token + "'")
+		return types.Token{}, err.NewUnauthorizedError(i18n.T("api.mem_token.invalid_token"))
 	}
 	if m.refreshEnabled() {
 		tt.ExpiredAt = time.Now().Add(m.validity).Unix()

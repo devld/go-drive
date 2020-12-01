@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"fmt"
 	"github.com/jinzhu/gorm"
-	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,7 +20,7 @@ func (u *UserDAO) GetUser(username string) (types.User, error) {
 	user := types.User{}
 	e := u.db.C().First(&user, "username = ?", username).Related(&user.Groups, "groups").Error
 	if gorm.IsRecordNotFoundError(e) {
-		return user, common.NewNotFoundMessageError(fmt.Sprintf("user '%s' not found", username))
+		return user, err.NewNotFoundMessageError(i18n.T("storage.users.user_not_exists", username))
 	}
 	return user, e
 }
@@ -29,7 +29,7 @@ func (u *UserDAO) AddUser(user types.User) (types.User, error) {
 	e := u.db.C().Where("username = ?", user.Username).Find(&types.User{}).Error
 	if e == nil {
 		return types.User{},
-			common.NewNotAllowedMessageError(fmt.Sprintf("user '%s' exists", user.Username))
+			err.NewNotAllowedMessageError(i18n.T("storage.users.user_exists", user.Username))
 	}
 	if !gorm.IsRecordNotFoundError(e) {
 		return types.User{}, e
@@ -60,7 +60,7 @@ func (u *UserDAO) UpdateUser(username string, user types.User) error {
 				return s.Error
 			}
 			if s.RowsAffected != 1 {
-				return common.NewNotFoundMessageError(fmt.Sprintf("user '%s' not found", username))
+				return err.NewNotFoundMessageError(i18n.T("storage.users.user_not_exists", username))
 			}
 		}
 		if user.Groups != nil {
@@ -84,7 +84,7 @@ func (u *UserDAO) DeleteUser(username string) error {
 			return s.Error
 		}
 		if s.RowsAffected != 1 {
-			return common.NewNotFoundMessageError(fmt.Sprintf("user '%s' not found", username))
+			return err.NewNotFoundMessageError(i18n.T("storage.users.user_not_exists", username))
 
 		}
 		if e := tx.Where("username = ?", username).Delete(&types.UserGroup{}).Error; e != nil {

@@ -2,7 +2,7 @@
   <div class="oauth-configure">
     <simple-button @click="doOauth">{{ data.text }}</simple-button>
     <div class="oauth-principal" v-if="data.principal">
-      Already connected to {{ data.principal }}
+      {{ $t("p.admin.oauth_connected", { p: data.principal }) }}
     </div>
   </div>
 </template>

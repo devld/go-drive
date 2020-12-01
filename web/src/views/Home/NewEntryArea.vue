@@ -4,10 +4,10 @@
       v-if="!readonly"
       class="button-new-item"
       v-model="floatMenuShowing"
-      title="New Item"
+      :title="$t('p.new_entry.new_item')"
       :buttons="[
-        { slot: 'file', title: 'Upload file' },
-        { slot: 'folder', title: 'Create folder' },
+        { slot: 'file', title: $t('p.new_entry.upload_file') },
+        { slot: 'folder', title: $t('p.new_entry.create_folder') },
       ]"
       @click="newButtonClicked"
     >
@@ -20,7 +20,7 @@
 
     <dialog-view
       v-model="taskManagerShowing"
-      title="Upload Tasks"
+      :title="$t('p.new_entry.upload_tasks')"
       esc-close
       overlay-close
       transition="tm-dialog"
@@ -42,10 +42,13 @@
       v-if="taskManagerButtonShowing"
       @click="showTaskManager"
     >
-      Tasks{{
-        uploadStatus && uploadStatus.total > 0
-          ? `: ${uploadStatus.completed}/${uploadStatus.total}`
-          : ""
+      {{
+        $t("p.new_entry.tasks_status", {
+          p:
+            uploadStatus && uploadStatus.total > 0
+              ? `: ${uploadStatus.completed}/${uploadStatus.total}`
+              : "",
+        })
       }}
     </button>
     <input
@@ -57,7 +60,7 @@
     />
 
     <div v-if="dropZoneActive" class="drop-zone-indicator">
-      Drop files here to upload
+      {{ $t("p.new_entry.drop_tip") }}
     </div>
   </div>
 </template>
@@ -178,10 +181,10 @@ export default {
     },
     createDir () {
       this.$input({
-        title: 'Create Folder',
+        title: this.$t('p.new_entry.create_folder'),
         validator: {
           pattern: /^[^/]+$/,
-          message: 'Invalid folder name.'
+          message: this.$t('p.new_entry.invalid_folder_name')
         },
         onOk: text => {
           return makeDir(pathClean(pathJoin(this.path, text)))
@@ -210,13 +213,13 @@ export default {
       uploadManager.pauseTask(task.id)
     },
     async stopTask (task) {
-      try { await this.$confirm('Stop this task?') } catch { return }
+      try { await this.$confirm(this.$t('p.new_entry.confirm_stop_task')) } catch { return }
       uploadManager.stopTask(task.id)
     },
     async removeTask (task) {
       try {
         await this.$confirm({
-          message: 'Remove this task, cannot be undone?',
+          message: this.$t('p.new_entry.confirm_remove_task'),
           confirmType: 'danger'
         })
       } catch { return }
@@ -230,10 +233,10 @@ export default {
     async confirmFileExists (file) {
       try {
         const all = (await this.$dialog(FileExistsDialog, {
-          title: 'File exists',
-          message: `'${file.name}' already exists, override or skip?`,
-          confirmText: 'Skip',
-          cancelText: 'Override', cancelType: 'danger',
+          title: this.$t('p.new_entry.file_exists'),
+          message: this.$t('p.new_entry.file_exists_confirm', { m: file.name }),
+          confirmText: this.$t('p.new_entry.skip'),
+          cancelText: this.$t('p.new_entry.override'), cancelType: 'danger',
           filename: file.name
         })).all
         return { all, override: false }

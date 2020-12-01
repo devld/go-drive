@@ -2,10 +2,11 @@
 
 CREATE TABLE drives
 (
-    name   VARCHAR
+    name    VARCHAR
         PRIMARY KEY,
-    type   VARCHAR NOT NULL,
-    config VARCHAR NOT NULL
+    type    VARCHAR NOT NULL,
+    config  VARCHAR NOT NULL,
+    enabled INTEGER
 );
 
 CREATE TABLE path_mount

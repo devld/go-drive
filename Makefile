@@ -5,7 +5,7 @@ build_dir = $(work_dir)/$(target_name)
 
 all: $(build_dir)/$(target_name).tar.gz
 
-$(build_dir)/$(target_name).tar.gz: $(build_dir)/go-drive $(build_dir)/web
+$(build_dir)/$(target_name).tar.gz: $(build_dir)/go-drive $(build_dir)/web $(build_dir)/lang
 	cd $(work_dir); tar acf $(target_name).tar.gz --owner=0 --group=0 $(target_name)
 
 $(build_dir)/go-drive: $(build_dir)
@@ -14,6 +14,9 @@ $(build_dir)/go-drive: $(build_dir)
 $(build_dir)/web: $(build_dir)
 	cd web; npm install && npm run build
 	cp -R web/dist $(build_dir)/web
+
+$(build_dir)/lang: $(build_dir)
+	cp -R docs/lang $(build_dir)/
 
 $(build_dir): check-env
 	mkdir -p $(build_dir)

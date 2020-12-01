@@ -5,24 +5,24 @@
         <simple-button
           class="add-button"
           icon="#icon-add"
-          title="Add drive"
+          :title="$t('p.admin.drive.add_drive')"
           @click="addDrive"
         />
         <simple-button
           icon="#icon-refresh2"
-          title="Reload drives to take effect"
+          :title="$t('p.admin.drive.reload_tip')"
           :loading="reloading"
           @click="reloadDrives"
         >
-          Reload drives
+          {{ $t("p.admin.drive.reload_drives") }}
         </simple-button>
       </div>
       <table class="simple-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Operation</th>
+            <th>{{ $t("p.admin.drive.name") }}</th>
+            <th>{{ $t("p.admin.drive.type") }}</th>
+            <th>{{ $t("p.admin.drive.operation") }}</th>
           </tr>
         </thead>
         <tbody>
@@ -33,15 +33,15 @@
           >
             <td class="center">{{ d.name }}</td>
             <td class="center">{{ d.type }}</td>
-            <td class="center">
+            <td class="center line">
               <simple-button
-                title="Edit"
+                :title="$t('p.admin.drive.edit')"
                 small
                 icon="#icon-edit"
                 @click="editDrive(d)"
               />
               <simple-button
-                title="Delete"
+                :title="$t('p.admin.drive.delete')"
                 type="danger"
                 small
                 icon="#icon-delete"
@@ -54,7 +54,11 @@
     </div>
     <div class="drive-edit" v-if="drive">
       <div class="small-title">
-        {{ edit ? `Edit drive: ${drive.name}` : "Add drive" }}
+        {{
+          edit
+            ? $t("p.admin.drive.edit_drive", { n: drive.name })
+            : $t("p.admin.drive.add_drive")
+        }}
       </div>
 
       <div class="drive-form">
@@ -89,21 +93,25 @@
         </template>
 
         <div class="form-item save-button">
-          <simple-button small @click="saveDrive" :loading="saving"
-            >Save</simple-button
-          >
-          <simple-button small type="info" @click="cancelEdit"
-            >Cancel</simple-button
-          >
+          <simple-button small @click="saveDrive" :loading="saving">
+            {{ $t("p.admin.drive.save") }}
+          </simple-button>
+          <simple-button small type="info" @click="cancelEdit">
+            {{ $t("p.admin.drive.cancel") }}
+          </simple-button>
         </div>
       </div>
       <div v-if="drive && driveInit" class="drive-init">
         <div class="small-title">
-          Configure
+          {{ $t("p.admin.drive.configure") }}
           <span
             class="drive-init-state"
             :class="{ 'drive-configured': driveInit.configured }"
-            >{{ driveInit.configured ? "Configured" : "Not configured" }}</span
+            >{{
+              driveInit.configured
+                ? $t("p.admin.drive.configured")
+                : $t("p.admin.drive.not_configured")
+            }}</span
           >
         </div>
         <o-auth-configure
@@ -120,14 +128,17 @@
             :form="driveInit.form"
             v-model="driveInitForm"
           />
-          <simple-button small @click="saveDriveConfig">Save</simple-button>
+          <simple-button small @click="saveDriveConfig">
+            {{ $t("p.admin.drive.save") }}
+          </simple-button>
         </div>
       </div>
     </div>
     <div class="edit-tips" v-else>
-      <simple-button icon="#icon-add" title="Add drive" @click="addDrive" small
-        >Add</simple-button
-      >&nbsp;or edit drive
+      <simple-button icon="#icon-add" title="Add drive" @click="addDrive" small>
+        {{ $t("p.admin.drive.add") }}
+      </simple-button>
+      {{ $t("p.admin.drive.or_edit") }}
     </div>
   </div>
 </template>
@@ -162,10 +173,10 @@ export default {
     },
     baseForm () {
       return [
-        { field: 'name', label: 'Name', type: 'text', required: true, disabled: this.edit },
-        { field: 'enabled', label: 'Enabled', type: 'checkbox' },
+        { field: 'name', label: this.$t('p.admin.drive.f_name'), type: 'text', required: true, disabled: this.edit },
+        { field: 'enabled', label: this.$t('p.admin.drive.f_enabled'), type: 'checkbox' },
         {
-          field: 'type', label: 'Type', type: 'select', required: true, disabled: this.edit,
+          field: 'type', label: this.$t('p.admin.drive.f_type'), type: 'select', required: true, disabled: this.edit,
           options: this.driveFactories.map(f => ({
             name: f.display_name,
             value: f.type
@@ -207,8 +218,8 @@ export default {
     },
     async deleteDrive (drive) {
       this.$confirm({
-        title: 'Delete drive',
-        message: `Are you sure to delete drive ${drive.name}`,
+        title: this.$t('p.admin.drive.delete_drive'),
+        message: this.$t('p.admin.drive.confirm_delete', { n: drive.name }),
         confirmType: 'danger',
         onOk: () => {
           return deleteDrive(drive.name)

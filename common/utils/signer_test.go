@@ -1,4 +1,4 @@
-package common
+package utils
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestSigner(t *testing.T) {
-	s := NewSigner("test")
+	s := NewSigner()
 
 	signature := s.Sign("hello world", time.Now().Add(900*time.Millisecond))
 

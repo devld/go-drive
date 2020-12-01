@@ -8,7 +8,10 @@ import (
 	"github.com/google/uuid"
 	cmap "github.com/orcaman/concurrent-map"
 	"go-drive/common"
+	"go-drive/common/i18n"
+	"go-drive/common/registry"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"log"
 	"sync"
 	"time"
@@ -22,12 +25,12 @@ type TunnyRunner struct {
 
 var cleanThreshold = 1 * time.Minute
 
-func NewTunnyRunner(config common.Config, ch *common.ComponentsHolder) *TunnyRunner {
+func NewTunnyRunner(config common.Config, ch *registry.ComponentsHolder) *TunnyRunner {
 	tr := &TunnyRunner{
 		pool:  tunny.NewFunc(config.MaxConcurrentTask, executor),
 		store: cmap.New(),
 	}
-	tr.tickerStop = common.TimeTick(tr.clean, 30*time.Second)
+	tr.tickerStop = utils.TimeTick(tr.clean, 30*time.Second)
 	ch.Add("taskRunner", tr)
 	return tr
 }
@@ -154,12 +157,12 @@ func (t *TunnyRunner) Status() (string, types.SM, error) {
 		total++
 	})
 	return "Task", types.SM{
-		"Total":    fmt.Sprintf("%d", total),
-		"Pending":  fmt.Sprintf("%d", pending),
-		"Running":  fmt.Sprintf("%d", running),
-		"Done":     fmt.Sprintf("%d", done),
-		"Error":    fmt.Sprintf("%d", err),
-		"Canceled": fmt.Sprintf("%d", canceled),
+		i18n.T("stat.task.total"):    fmt.Sprintf("%d", total),
+		i18n.T("stat.task.pending"):  fmt.Sprintf("%d", pending),
+		i18n.T("stat.task.running"):  fmt.Sprintf("%d", running),
+		i18n.T("stat.task.done"):     fmt.Sprintf("%d", done),
+		i18n.T("stat.task.error"):    fmt.Sprintf("%d", err),
+		i18n.T("stat.task.canceled"): fmt.Sprintf("%d", canceled),
 	}, nil
 }
 

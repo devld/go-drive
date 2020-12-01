@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"io"
 	"io/ioutil"
 	"math"
 	"os"
-	fsPath "path"
+	path2 "path"
 	"strconv"
 	"strings"
 )
@@ -32,19 +35,19 @@ func NewChunkUploader(config common.Config) (*ChunkUploader, error) {
 func (c *ChunkUploader) CreateUpload(size, chunkSize int64) (ChunkUpload, error) {
 	if chunkSize < minChunkSize {
 		return ChunkUpload{},
-			common.NewBadRequestError(fmt.Sprintf("chunk size cannot be less than %d", minChunkSize))
+			err.NewBadRequestError(i18n.T("api.chunk_uploader.chunk_size_cannot_less_than", strconv.Itoa(minChunkSize)))
 	}
 	if size <= 0 {
-		return ChunkUpload{}, common.NewBadRequestError("invalid file size")
+		return ChunkUpload{}, err.NewBadRequestError(i18n.T("api.chunk_uploader.invalid_file_size"))
 	}
 	id := c.generateUploadId(size, chunkSize)
 	dir := c.getDir(id)
-	exists, e := common.FileExists(dir)
+	exists, e := utils.FileExists(dir)
 	if e != nil {
 		return ChunkUpload{}, e
 	}
 	if exists {
-		return ChunkUpload{}, common.NewNotAllowedError()
+		return ChunkUpload{}, err.NewNotAllowedError()
 	}
 	if e := os.Mkdir(dir, 0755); e != nil {
 		return ChunkUpload{}, e
@@ -69,7 +72,7 @@ func (c *ChunkUploader) ChunkUpload(id string, seq int, reader io.Reader) error 
 		return e
 	}
 	if seq < 0 || seq >= upload.Chunks {
-		return common.NewNotAllowedMessageError("invalid chunk seq")
+		return err.NewNotAllowedMessageError(i18n.T("api.chunk_uploader.invalid_chunk_seq"))
 	}
 	chunkSize := upload.ChunkSize
 	if seq == upload.Chunks-1 {
@@ -91,7 +94,8 @@ func (c *ChunkUploader) ChunkUpload(id string, seq int, reader io.Reader) error 
 		return e
 	}
 	if written != chunkSize {
-		return common.NewBadRequestError(fmt.Sprintf("expect %d bytes, but %d bytes received", chunkSize, written))
+		return err.NewBadRequestError(i18n.T("api.chunk_uploader.expected__bytes_but__bytes",
+			strconv.FormatInt(chunkSize, 10), strconv.FormatInt(written, 10)))
 	}
 	success = true
 	return nil
@@ -103,12 +107,12 @@ func (c *ChunkUploader) CompleteUpload(id string, ctx types.TaskCtx) (*os.File, 
 		return nil, e
 	}
 	for seq := 0; seq < upload.Chunks; seq++ {
-		exists, e := common.FileExists(c.getChunk(upload, seq))
+		exists, e := utils.FileExists(c.getChunk(upload, seq))
 		if e != nil {
 			return nil, e
 		}
 		if !exists {
-			return nil, common.NewNotAllowedMessageError("missing chunks")
+			return nil, err.NewNotAllowedMessageError(i18n.T("missing_chunks"))
 		}
 	}
 	file, e := os.OpenFile(c.getFile(upload), os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
@@ -173,33 +177,33 @@ func (c ChunkUploader) generateUploadId(size, chunkSize int64) string {
 func (c *ChunkUploader) getUpload(id string) (*ChunkUpload, error) {
 	temp := strings.Split(id, "_")
 	if len(temp) != 3 {
-		return nil, common.NewBadRequestError("invalid upload id")
+		return nil, err.NewBadRequestError(i18n.T("api.chunk_uploader.invalid_upload_id"))
 	}
 	dir := c.getDir(id)
-	exists, e := common.FileExists(dir)
+	exists, e := utils.FileExists(dir)
 	if e != nil {
 		return nil, e
 	}
 	if !exists {
-		return nil, common.NewNotFoundError()
+		return nil, err.NewNotFoundError()
 	}
-	size := common.ToInt64(temp[1], -1)
-	chunkSize := common.ToInt64(temp[2], -1)
+	size := utils.ToInt64(temp[1], -1)
+	chunkSize := utils.ToInt64(temp[2], -1)
 	if size <= 0 || chunkSize <= 0 {
-		return nil, common.NewBadRequestError("invalid upload id")
+		return nil, err.NewBadRequestError(i18n.T("api.chunk_uploader.invalid_upload_id"))
 	}
 	return newChunkUpload(id, size, chunkSize), nil
 }
 
 func (c *ChunkUploader) isMarkedDelete(upload *ChunkUpload) bool {
 	deleteFile := c.getDeleteMark(upload)
-	exists, _ := common.FileExists(deleteFile)
+	exists, _ := utils.FileExists(deleteFile)
 	return exists
 }
 
 func (c *ChunkUploader) markDeleted(upload *ChunkUpload) error {
 	deleteFile := c.getDeleteMark(upload)
-	exists, e := common.FileExists(deleteFile)
+	exists, e := utils.FileExists(deleteFile)
 	if e != nil {
 		return e
 	}
@@ -212,19 +216,19 @@ func (c *ChunkUploader) markDeleted(upload *ChunkUpload) error {
 }
 
 func (c *ChunkUploader) getFile(upload *ChunkUpload) string {
-	return fsPath.Join(c.getDir(upload.Id), "file")
+	return path2.Join(c.getDir(upload.Id), "file")
 }
 
 func (c *ChunkUploader) getChunk(upload *ChunkUpload, seq int) string {
-	return fsPath.Join(c.getDir(upload.Id), strconv.Itoa(seq))
+	return path2.Join(c.getDir(upload.Id), strconv.Itoa(seq))
 }
 
 func (c *ChunkUploader) getDeleteMark(upload *ChunkUpload) string {
-	return fsPath.Join(c.getDir(upload.Id), "deleted")
+	return path2.Join(c.getDir(upload.Id), "deleted")
 }
 
 func (c *ChunkUploader) getDir(id string) string {
-	return fsPath.Join(c.dir, id)
+	return path2.Join(c.dir, id)
 }
 
 type ChunkUpload struct {

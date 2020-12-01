@@ -3,9 +3,9 @@
     <table class="simple-table">
       <thead>
         <tr>
-          <th>Subject</th>
-          <th>(R/W)</th>
-          <th>Policy</th>
+          <th>{{ $t("p.admin.p_edit.subject") }}</th>
+          <th>{{ $t("p.admin.p_edit.rw") }}</th>
+          <th>{{ $t("p.admin.p_edit.policy") }}</th>
           <th></th>
         </tr>
       </thead>
@@ -18,7 +18,13 @@
                 :key="s.subject"
                 :value="s.subject"
                 :disabled="selectedSubjects[s.subject]"
-              >{{ s.type === 'any' ? 'ANY' : `${s.type}: ${s.name}` }}</option>
+              >
+                {{
+                  s.type === "any"
+                    ? $t("p.admin.p_edit.any")
+                    : `${s.type}: ${s.name}`
+                }}
+              </option>
             </select>
           </td>
           <td class="center">
@@ -27,14 +33,14 @@
           </td>
           <td class="center">
             <simple-button
-              title="Reject"
+              :title="$t('p.admin.p_edit.reject')"
               @click="p.policy = 0"
               icon="#icon-reject"
               small
               :type="p.policy === 0 ? 'danger' : 'info'"
             />
             <simple-button
-              title="Accept"
+              :title="$t('p.admin.p_edit.accept')"
               @click="p.policy = 1"
               icon="#icon-accept"
               small
@@ -42,7 +48,12 @@
             />
           </td>
           <td>
-            <simple-button type="danger" icon="#icon-delete" small @click="removePermission(i)" />
+            <simple-button
+              type="danger"
+              icon="#icon-delete"
+              small
+              @click="removePermission(i)"
+            />
           </td>
         </tr>
         <tr>

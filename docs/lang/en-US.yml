@@ -1,0 +1,158 @@
+error:
+  not_found: Not found
+  not_allowed: Operation not allowed
+util:
+  request_failed: "[{{ 1 }}] Request failed"
+oauth:
+  state_mismatch: state does not match
+api:
+  admin:
+    unknown_drive_type: Unknown drive type '{{ 1 }}'
+    invalid_drive_name: Invalid drive name '{{ 1 }}'
+  auth:
+    invalid_username_or_password: Invalid username or password
+    group_permission_required: Permission of group '{{ 1 }}' required
+  drive:
+    copy_to_same_path_not_allowed: Copy or move to same path is not allowed
+    copy_to_child_path_not_allowed: Copy or move to child path is not allowed
+    invalid_file_size: Invalid file size
+    invalid_size_or_chunk_size: Invalid size or chunk_size
+  chunk_uploader:
+    invalid_file_size: Invalid file size
+    invalid_chunk_seq: Invalid chunk seq
+    chunk_size_cannot_less_than: Chunk size cannot be less than {{ 1 }}
+    expected__bytes_but__bytes: Expect {{ 1 }} bytes, but {{ 2 }} bytes received
+    missing_chunks: Missing chunks
+    invalid_upload_id: Invalid upload id
+  mem_token:
+    invalid_token: Invalid token
+  file_token:
+    invalid_token: Invalid token
+  permission_wrapper:
+    no_subfolder_permission: You don't have the appropriate permission for the subfolders
+  thumbnail:
+    file_too_large: File size is too large to create thumbnail
+    image_too_large: Image is too large to create thumbnail
+storage:
+  drives:
+    drive_exists: Drive '{{ 1 }}' exists
+  groups:
+    group_not_exists: Group '{{ 1 }}' not exists
+    group_exists: Group '{{ 1 }}' exists
+  users:
+    user_not_exists: User '{{ 1 }}' not exists
+    user_exists: User '{{ 1 }}' exists
+drive:
+  not_configured: Drive not configured
+  copy_type_mismatch1: Dest '{{ 2 }}' is a file, but src '{{ 1 }}' is a dir
+  copy_type_mismatch2: Dest '{{ 2 }}' is a dir, but src '{{ 1 }}' is a file
+  file_not_readable: File {{ 1 }} is not readable
+  file_exists: File exists
+  file_not_exists: File not exist
+  invalid_path: Invalid path
+  file_not_downloadable: This file is not downloadable
+  root:
+    invalid_drive_type: Invalid drive type '{{ 1 }}'
+    invalid_drive_config: Invalid drive config of '{{ 1 }}'
+    error_create_drive: "Error when creating drive '{{ 1 }}': {{ 2 }}"
+  dispatcher:
+    move_across_not_supported: Move across drives is not supported
+  gdrive:
+    name: Google Drive
+    readme: Google Drive
+    form:
+      client_id:
+        label: Client Id
+      client_secret:
+        label: Client Secret
+      cache_ttl:
+        label: CacheTTL
+        description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
+    oauth_text: Connect to Google Drive
+  onedrive:
+    name: OneDrive
+    readme: OneDrive, see [Setup OneDrive](https://go-drive.top/drives/onedrive)
+    form:
+      client_id:
+        label: Client Id
+      client_secret:
+        label: Client Secret
+      proxy_in:
+        label: Proxy Upload
+        description: Upload files through server proxy
+      proxy_out:
+        label: Proxy Download
+        description: Download files through server proxy
+      cache_ttl:
+        label: CacheTTL
+        description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
+    drive_not_selected: Drive not yet selected
+    oauth_text: Connect to OneDrive
+    drive_select: Select drive
+    drive_used: "{{ 1 }} / {{ 2 }} | {{ 3 }} used"
+    unexpected_status: Unexpected status code {{ 1 }}
+    unknown_action_status: "Unknown action status: {{ 1 }}"
+  fs:
+    name: File System
+    readme: Local file system drive
+    form:
+      path:
+        label: Root
+        description: The path of root
+    invalid_root_path: Invalid root path
+    root_path_not_exists: Root path not exists
+    cannot_list_file: Cannot list on file
+    cannot_delete_root: Root cannot be deleted
+  s3:
+    name: S3
+    readme: S3 compatible storage
+    form:
+      ak:
+        label: AccessKey
+      sk:
+        label: SecretKey
+      bucket:
+        label: Bucket
+      path_style:
+        label: PathStyle
+        description: Force use path style api
+      region:
+        label: Region
+      endpoint:
+        label: Endpoint
+        description: The S3 api endpoint
+      proxy_in:
+        label: Proxy Upload
+        description: Upload files through server proxy
+      proxy_out:
+        label: Proxy Download
+        description: Download files through server proxy
+      cache_ttl:
+        label: CacheTTL
+        description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
+    bucket_not_exists: Bucket '{{ 1 }}' not found
+  webdav:
+    name: WebDAV
+    readme: WebDAV protocol drive
+    form:
+      url:
+        label: URL
+        description: The base URL
+      username:
+        label: Username
+        description: The username, if omitted, no authorization is required
+      password:
+        label: Password
+      cache_ttl:
+        label: CacheTTL
+        description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
+    wrong_user_or_password: Maybe the username or password is not correct
+    remote_error: "Remote service error: {{ 1 }}"
+stat:
+  task:
+    total: Total
+    pending: Pending
+    running: Running
+    done: Done
+    error: Error
+    canceled: Canceled

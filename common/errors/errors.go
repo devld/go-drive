@@ -1,6 +1,7 @@
-package common
+package err
 
 import (
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"net/http"
 	"strconv"
@@ -145,7 +146,7 @@ func NewUnauthorizedError(msg string) UnauthorizedError {
 }
 
 func NewNotFoundError() NotFoundError {
-	return NotFoundError{"not found"}
+	return NotFoundError{i18n.T("error.not_found")}
 }
 
 func NewNotFoundMessageError(msg string) NotFoundError {
@@ -153,7 +154,7 @@ func NewNotFoundMessageError(msg string) NotFoundError {
 }
 
 func NewNotAllowedError() NotAllowedError {
-	return NotAllowedError{"operation not allowed"}
+	return NotAllowedError{i18n.T("error.not_allowed")}
 }
 
 func NewPermissionDeniedError(msg string) PermissionDeniedError {

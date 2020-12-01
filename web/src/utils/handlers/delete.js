@@ -1,11 +1,12 @@
 import { deleteEntry, deleteTask } from '@/api'
+import { T } from '@/i18n'
 import { taskDone, TASK_CANCELLED } from '..'
 
 export default {
   name: 'delete',
   display: {
-    name: 'Delete',
-    description: 'Delete this file',
+    name: T('handler.delete.name'),
+    description: T('handler.delete.desc'),
     type: 'danger',
     icon: '#icon-delete'
   },
@@ -19,7 +20,7 @@ export default {
     if (!Array.isArray(entries)) entries = [entries]
     try {
       await confirm({
-        message: entries.length > 1 ? `Delete these ${entries.length} files?` : 'Delete this file?',
+        message: entries.length > 1 ? T('handler.delete.confirm_n', { n: entries.length }) : T('handler.delete.confirm'),
         confirmType: 'danger'
       })
     } catch { return }
@@ -33,15 +34,14 @@ export default {
     try {
       for (const entry of entries) {
         if (canceled) break
-        loading({ text: `Deleting ${entry.name}` })
+        loading({ text: T('handler.delete.deleting', { n: entry.name }) })
         await taskDone(
           deleteEntry(entry.path),
           t => {
             if (canceled) return false
             task = t
             loading({
-              text: `Deleting ${entry.name} ` +
-                `${task.progress.loaded}/${task.progress.total}`,
+              text: T('handler.delete.deleting', { n: entry.name, p: `${task.progress.loaded}/${task.progress.total}` }),
               onCancel
             })
           }

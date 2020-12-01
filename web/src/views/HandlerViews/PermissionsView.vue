@@ -6,8 +6,9 @@
         @click="savePermissions"
         :loading="saving"
         :disabled="!canSave"
-        >Save</simple-button
       >
+        {{ $t("hv.permission.save") }}
+      </simple-button>
       <span :title="filename">{{ filename }}</span>
       <button
         class="header-button close-button plain-button"

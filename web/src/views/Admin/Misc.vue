@@ -2,13 +2,13 @@
   <div class="misc-settings">
     <div class="section">
       <h1 class="section-title">
-        Permission of root
+        {{ $t("p.admin.misc.permission_of_root") }}
         <simple-button
           @click="savePermissions"
           :loading="saving"
           :disabled="!permissionsCanSave"
         >
-          Save
+          {{ $t("p.admin.misc.save") }}
         </simple-button>
       </h1>
       <permissions-editor
@@ -18,13 +18,13 @@
       />
     </div>
     <div class="section">
-      <h1 class="section-title">Clean invalid permissions and mounts</h1>
+      <h1 class="section-title">{{ $t("p.admin.misc.clean_invalid") }}</h1>
       <simple-button :loading="cleaning" @click="cleanPermissionsAndMounts">
-        Clean
+        {{ $t("p.admin.misc.clean") }}
       </simple-button>
     </div>
     <div class="section">
-      <h1 class="section-title">Clean cache</h1>
+      <h1 class="section-title">{{ $t("p.admin.misc.clean_cache") }}</h1>
       <simple-form-item
         class="cache-clean-form-item"
         :item="drivesForm"
@@ -35,14 +35,14 @@
         @click="cleanDriveCache"
         :disabled="!cacheSelectedDrive"
       >
-        Clean
+        {{ $t("p.admin.misc.clean") }}
       </simple-button>
     </div>
     <div class="section">
       <h1 class="section-title">
-        Statistics
+        {{ $t("p.admin.misc.statistics") }}
         <simple-button :loading="statLoading" @click="loadStats">
-          Refresh in {{ refreshCountDown }}s
+          {{ $t("p.admin.misc.refresh_in", { n: refreshCountDown }) }}
         </simple-button>
       </h1>
       <div class="statistics">

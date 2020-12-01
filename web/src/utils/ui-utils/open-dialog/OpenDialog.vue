@@ -11,9 +11,11 @@
       view-mode="line"
     />
     <div class="open-dialog__selected-count" v-if="!dirMode">
-      <span v-if="max > 0">Select at most {{ max }} items. </span>
-      <span>{{ selection.length }} items selected.</span>
-      <a href="javascript:;" @click="clearSelection">clear</a>
+      <span v-if="max > 0">{{ $t("dialog.open.max_items", { n: max }) }}</span>
+      <span>{{ $t("dialog.open.n_selected", { n: selection.length }) }}</span>
+      <a href="javascript:;" @click="clearSelection">
+        {{ $t("dialog.open.clear") }}
+      </a>
     </div>
   </div>
 </template>

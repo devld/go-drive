@@ -3,11 +3,14 @@ package drive
 import (
 	"go-drive/common"
 	"go-drive/common/drive_util"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"go-drive/storage"
 	"io"
-	fsPath "path"
+	path2 "path"
 	"regexp"
 	"strings"
 	"sync"
@@ -83,23 +86,23 @@ func (d *DispatcherDrive) resolve(path string) (types.IDrive, string, error) {
 	}
 	paths := pathRegexp.FindStringSubmatch(path)
 	if paths == nil {
-		return nil, "", common.NewNotFoundError()
+		return nil, "", err.NewNotFoundError()
 	}
 	driveName := paths[1]
 	entryPath := paths[3]
 	drive, ok := d.drives[driveName]
 	if !ok {
-		return nil, "", common.NewNotFoundError()
+		return nil, "", err.NewNotFoundError()
 	}
 	return drive, entryPath, nil
 }
 
 func (d *DispatcherDrive) resolveMount(path string) string {
-	tree := common.PathParentTree(path)
+	tree := utils.PathParentTree(path)
 	var mountAt, prefix string
 	for _, p := range tree {
-		dir := common.PathParent(p)
-		name := common.PathBase(p)
+		dir := utils.PathParent(p)
+		name := utils.PathBase(p)
 		temp := d.mounts[dir]
 		if temp != nil {
 			mountAt = temp[name].MountAt
@@ -113,9 +116,9 @@ func (d *DispatcherDrive) resolveMount(path string) string {
 		return ""
 	}
 
-	return fsPath.Join(
+	return path2.Join(
 		mountAt,
-		common.CleanPath(path[len(prefix):]),
+		utils.CleanPath(path[len(prefix):]),
 	)
 }
 
@@ -124,9 +127,9 @@ func (d *DispatcherDrive) resolveMountedChildren(path string) ([]types.PathMount
 	isSelf := false
 	for mountParent, mounts := range d.mounts {
 		for mountName, m := range mounts {
-			if strings.HasPrefix(fsPath.Join(mountParent, mountName), path) {
+			if strings.HasPrefix(path2.Join(mountParent, mountName), path) {
 				result = append(result, m)
-				if !isSelf && fsPath.Join(*m.Path, m.Name) == path {
+				if !isSelf && path2.Join(*m.Path, m.Name) == path {
 					isSelf = true
 				}
 			}
@@ -136,7 +139,7 @@ func (d *DispatcherDrive) resolveMountedChildren(path string) ([]types.PathMount
 }
 
 func (d *DispatcherDrive) Get(path string) (types.IEntry, error) {
-	if common.IsRootPath(path) {
+	if utils.IsRootPath(path) {
 		return &driveEntry{d: d, path: "", name: "", meta: types.DriveMeta{
 			CanWrite: false,
 		}}, nil
@@ -188,7 +191,7 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 		if e == nil {
 			return entry, nil
 		}
-		if !common.IsUnsupportedError(e) {
+		if !err.IsUnsupportedError(e) {
 			return nil, e
 		}
 	}
@@ -204,7 +207,7 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 			if e == nil {
 				return nil
 			}
-			if !common.IsUnsupportedError(e) {
+			if !err.IsUnsupportedError(e) {
 				return e
 			}
 			return drive_util.CopyEntry(from, driveTo, pathTo, true, ctxWrapper, d.tempDir)
@@ -222,7 +225,7 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
 	driveTo, pathTo, e := d.resolve(to)
 	// if path depth is 1, move mounts
-	if e != nil && common.PathDepth(to) != 1 {
+	if e != nil && utils.PathDepth(to) != 1 {
 		return nil, e
 	}
 	fromPath := from.Path()
@@ -230,13 +233,13 @@ func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx 
 	if len(children) > 0 {
 		movedMounts := make([]types.PathMount, 0, len(children))
 		for _, m := range children {
-			t := fsPath.Join(
+			t := path2.Join(
 				to,
-				fsPath.Join(*m.Path, m.Name)[len(fromPath):],
+				path2.Join(*m.Path, m.Name)[len(fromPath):],
 			)
-			mPath := common.PathParent(t)
+			mPath := utils.PathParent(t)
 			m.Path = &mPath
-			m.Name = common.PathBase(t)
+			m.Name = utils.PathBase(t)
 			movedMounts = append(movedMounts, m)
 		}
 		if e := d.mountStorage.DeleteAndSaveMounts(children, movedMounts, true); e != nil {
@@ -249,14 +252,14 @@ func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx 
 	} else {
 		// no mounts matched and toPath is in root or trying to move drive
 		if driveTo == nil {
-			return nil, common.NewNotAllowedError()
+			return nil, err.NewNotAllowedError()
 		}
 	}
 	if driveTo != nil {
 		move, e := driveTo.Move(from, pathTo, override, ctx)
 		if e != nil {
-			if common.IsUnsupportedError(e) {
-				return nil, common.NewNotAllowedMessageError("move across drives is not supported")
+			if err.IsUnsupportedError(e) {
+				return nil, err.NewNotAllowedMessageError(i18n.T("drive.dispatcher.move_across_not_supported"))
 			}
 			return nil, e
 		}
@@ -267,7 +270,7 @@ func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx 
 
 func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 	var entries []types.IEntry
-	if common.IsRootPath(path) {
+	if utils.IsRootPath(path) {
 		drives := make([]types.IEntry, 0, len(d.drives))
 		for k, v := range d.drives {
 			drives = append(drives, &driveEntry{d: d, path: k, name: k, meta: v.Meta()})
@@ -295,17 +298,17 @@ func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 			}
 			entry, e := drive.Get(entryPath)
 			if e != nil {
-				if common.IsNotFoundError(e) {
+				if err.IsNotFoundError(e) {
 					continue
 				}
 				return nil, e
 			}
-			mountedMap[name] = &entryWrapper{d: d, path: fsPath.Join(path, name), entry: entry, isMount: true}
+			mountedMap[name] = &entryWrapper{d: d, path: path2.Join(path, name), entry: entry, isMount: true}
 		}
 
 		newEntries := make([]types.IEntry, 0, len(entries)+len(mountedMap))
 		for _, e := range entries {
-			if mountedMap[common.PathBase(e.Path())] == nil {
+			if mountedMap[utils.PathBase(e.Path())] == nil {
 				newEntries = append(newEntries, e)
 			}
 		}
@@ -333,8 +336,8 @@ func (d *DispatcherDrive) Delete(path string, ctx types.TaskCtx) error {
 	if e != nil {
 		return e
 	}
-	if common.IsRootPath(path) {
-		return common.NewNotAllowedError()
+	if utils.IsRootPath(path) {
+		return err.NewNotAllowedError()
 	}
 	return drive.Delete(path, ctx)
 }
@@ -358,7 +361,7 @@ func (d *DispatcherDrive) mapDriveEntries(dir string, entries []types.IEntry) []
 		path := e.Path()
 		mappedEntries = append(
 			mappedEntries,
-			d.mapDriveEntry(fsPath.Join(dir, common.PathBase(path)), e),
+			d.mapDriveEntry(path2.Join(dir, utils.PathBase(path)), e),
 		)
 	}
 	return mappedEntries
@@ -386,7 +389,7 @@ func (d *entryWrapper) Size() int64 {
 func (d *entryWrapper) Meta() types.EntryMeta {
 	meta := d.entry.Meta()
 	if d.isMount {
-		meta.Props = common.CopyMap(meta.Props)
+		meta.Props = utils.CopyMap(meta.Props)
 		meta.Props["is_mount"] = true
 	}
 	return meta
@@ -397,21 +400,21 @@ func (d *entryWrapper) ModTime() int64 {
 }
 
 func (d *entryWrapper) Name() string {
-	return common.PathBase(d.path)
+	return utils.PathBase(d.path)
 }
 
 func (d *entryWrapper) GetReader() (io.ReadCloser, error) {
 	if content, ok := d.entry.(types.IContent); ok {
 		return content.GetReader()
 	}
-	return nil, common.NewNotAllowedError()
+	return nil, err.NewNotAllowedError()
 }
 
 func (d *entryWrapper) GetURL() (*types.ContentURL, error) {
 	if content, ok := d.entry.(types.IContent); ok {
 		return content.GetURL()
 	}
-	return nil, common.NewNotAllowedError()
+	return nil, err.NewNotAllowedError()
 }
 
 func (d *entryWrapper) Drive() types.IDrive {
@@ -454,11 +457,11 @@ func (d *driveEntry) Name() string {
 }
 
 func (d *driveEntry) GetReader() (io.ReadCloser, error) {
-	return nil, common.NewNotAllowedError()
+	return nil, err.NewNotAllowedError()
 }
 
 func (d *driveEntry) GetURL() (*types.ContentURL, error) {
-	return nil, common.NewNotAllowedError()
+	return nil, err.NewNotAllowedError()
 }
 
 func (d *driveEntry) Drive() types.IDrive {

@@ -1,7 +1,9 @@
 <template>
   <ul class="path-bar">
     <li class="path-bar__segment" v-for="s in segments" :key="s.path">
-      <entry-link class="path-bar__path" :path="s.path" @click="pathChange">{{ s.name }}</entry-link>
+      <entry-link class="path-bar__path" :path="s.path" @click="pathChange">{{
+        s.name
+      }}</entry-link>
     </li>
   </ul>
 </template>
@@ -22,7 +24,7 @@ export default {
     segments () {
       if (!this.path) return []
       const ss = this.path.replace(/\/+/g, '/').split('/').filter(Boolean)
-      const pathSegments = [{ name: 'Root', path: '' }]
+      const pathSegments = [{ name: this.$t('app.root_path'), path: '' }]
       ss.forEach((s, i) => {
         pathSegments.push({ name: s, path: ss.slice(0, i + 1).join('/') })
       })

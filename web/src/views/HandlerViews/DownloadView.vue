@@ -1,7 +1,7 @@
 <template>
   <div class="download-view-page">
     <h1 class="page-title">
-      <span>Download</span>
+      <span>{{ $t("hv.download.download") }}</span>
       <button class="plain-button close-button" @click="$emit('close')">
         <i-icon svg="#icon-close" />
       </button>
@@ -15,7 +15,7 @@
           target="_blank"
           :href="$.fileUrl(singleEntry.path, singleEntry.meta.access_key)"
         >
-          Download
+          {{ $t("hv.download.download") }}
           <span class="file-size" v-if="singleEntry.size >= 0">{{
             $.formatBytes(singleEntry.size)
           }}</span>

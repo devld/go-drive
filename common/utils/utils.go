@@ -1,9 +1,8 @@
-package common
+package utils
 
 import (
 	"fmt"
 	"go-drive/common/types"
-	"io"
 	"math"
 	"math/rand"
 	"net/http"
@@ -103,26 +102,14 @@ func RandString(n int) string {
 	return string(b)
 }
 
-func RegSplit(text string, reg *regexp.Regexp) []string {
-	indexes := reg.FindAllStringIndex(text, -1)
-	lastStart := 0
-	result := make([]string, len(indexes)+1)
-	for i, element := range indexes {
-		result[i] = text[lastStart:element[0]]
-		lastStart = element[1]
-	}
-	result[len(indexes)] = text[lastStart:]
-	return result
-}
-
 func GetRealIP(r *http.Request) string {
 	clientIP := r.RemoteAddr[:strings.LastIndex(r.RemoteAddr, ":")]
 	forwarded := r.Header.Get("X-Forwarded-For")
 	if forwarded == "" {
 		return clientIP
 	}
-	ips := RegSplit(forwarded, regexp.MustCompile(",\\s*"))
-	return ips[0]
+	ips := strings.Split(forwarded, ",")
+	return strings.TrimSpace(ips[0])
 }
 
 func Millisecond(t time.Time) int64 {
@@ -147,6 +134,33 @@ func ToInt(s string, def int) int {
 		return def
 	}
 	return v
+}
+
+func FlattenStringMap(m map[string]interface{}, separator string) map[string]string {
+	r := make(map[string]string)
+	for k, v := range m {
+		flattenStringMap(k, v, separator, r)
+	}
+	return r
+}
+
+func flattenStringMap(prefix string, val interface{}, separator string, result map[string]string) {
+	m, isMap := val.(map[interface{}]interface{})
+	if isMap {
+		for k, v := range m {
+			flattenStringMap(prefix+separator+k.(string), v, separator, result)
+		}
+		return
+	}
+	a, isArr := val.([]interface{})
+	if isArr {
+		result[prefix+separator+"size"] = strconv.Itoa(len(a))
+		for i, v := range a {
+			flattenStringMap(prefix+separator+strconv.Itoa(i), v, separator, result)
+		}
+		return
+	}
+	result[prefix] = fmt.Sprintf("%v", val)
 }
 
 func CopyMap(m types.M) types.M {
@@ -215,25 +229,4 @@ func BuildURL(pattern string, variables ...string) string {
 		j++
 	}
 	return pattern
-}
-
-func GetURL(u string, header types.SM) (io.ReadCloser, error) {
-	req, e := http.NewRequest("GET", u, nil)
-	if e != nil {
-		return nil, e
-	}
-	if header != nil {
-		for k, v := range header {
-			req.Header.Set(k, v)
-		}
-	}
-	resp, e := http.DefaultClient.Do(req)
-	if e != nil {
-		return nil, e
-	}
-	if resp.StatusCode != 200 {
-		_ = resp.Body.Close()
-		return nil, NewRemoteApiError(resp.StatusCode, fmt.Sprintf("[%d] request failed", resp.StatusCode))
-	}
-	return resp.Body, nil
 }

@@ -7,8 +7,8 @@ import (
 
 type DriveFactoryConfig struct {
 	Type        string           `json:"type"`
-	DisplayName string           `json:"display_name"`
-	README      string           `json:"readme"`
+	DisplayName string           `json:"display_name" i18n:""`
+	README      string           `json:"readme" i18n:""`
 	ConfigForm  []types.FormItem `json:"config_form"`
 	Factory     DriveFactory     `json:"-"`
 }
@@ -23,7 +23,7 @@ type DriveInitConfig struct {
 
 type OAuthConfig struct {
 	Url  string `json:"url"`
-	Text string `json:"text"`
+	Text string `json:"text" i18n:""`
 
 	Principal string `json:"principal"`
 }
