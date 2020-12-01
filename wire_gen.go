@@ -8,7 +8,10 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
+	"go-drive/common/i18n"
+	"go-drive/common/registry"
 	"go-drive/common/task"
+	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server"
 	"go-drive/storage"
@@ -16,7 +19,7 @@ import (
 
 // Injectors from wire.go:
 
-func Initialize(ch *common.ComponentsHolder) (*gin.Engine, error) {
+func Initialize(ch *registry.ComponentsHolder) (*gin.Engine, error) {
 	config, err := common.InitConfig(ch)
 	if err != nil {
 		return nil, err
@@ -41,7 +44,7 @@ func Initialize(ch *common.ComponentsHolder) (*gin.Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	signer := common.NewSigner()
+	signer := utils.NewSigner()
 	chunkUploader, err := server.NewChunkUploader(config)
 	if err != nil {
 		return nil, err
@@ -50,6 +53,10 @@ func Initialize(ch *common.ComponentsHolder) (*gin.Engine, error) {
 	userDAO := storage.NewUserDAO(db)
 	groupDAO := storage.NewGroupDAO(db)
 	pathPermissionDAO := storage.NewPathPermissionDAO(db)
-	engine := server.InitServer(config, ch, rootDrive, fileTokenStore, thumbnail, signer, chunkUploader, tunnyRunner, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO)
+	fileMessageSource, err := i18n.NewFileMessageSource(config)
+	if err != nil {
+		return nil, err
+	}
+	engine := server.InitServer(config, ch, rootDrive, fileTokenStore, thumbnail, signer, chunkUploader, tunnyRunner, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, fileMessageSource)
 	return engine, nil
 }

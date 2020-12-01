@@ -2,9 +2,10 @@ package drive
 
 import (
 	"encoding/json"
-	"fmt"
 	"go-drive/common"
 	"go-drive/common/drive_util"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/drive/gdrive"
 	"go-drive/drive/onedrive"
@@ -15,59 +16,59 @@ import (
 
 var driveFactories = []drive_util.DriveFactoryConfig{
 	{
-		Type: "fs", DisplayName: "File System",
-		README: "Local file system drive",
+		Type: "fs", DisplayName: i18n.T("drive.fs.name"),
+		README: i18n.T("drive.fs.readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "path", Label: "Root", Type: "text", Required: true, Description: "The path of root"},
+			{Field: "path", Label: i18n.T("drive.fs.form.path.label"), Type: "text", Required: true, Description: i18n.T("drive.fs.form.path.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: NewFsDrive},
 	},
 	{
-		Type: "s3", DisplayName: "S3",
-		README: "S3 compatible storage",
+		Type: "s3", DisplayName: i18n.T("drive.s3.name"),
+		README: i18n.T("drive.s3.readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "id", Label: "AccessKey", Type: "text", Required: true},
-			{Field: "secret", Label: "SecretKey", Type: "password", Required: true},
-			{Field: "bucket", Label: "Bucket", Type: "text", Required: true},
-			{Field: "path_style", Label: "PathStyle", Type: "checkbox", Description: "Force use path style api"},
-			{Field: "region", Label: "Region", Type: "text"},
-			{Field: "endpoint", Label: "Endpoint", Type: "text", Description: "The S3 api endpoint"},
-			{Field: "proxy_upload", Label: "ProxyIn", Type: "checkbox", Description: "Upload files to server proxy"},
-			{Field: "proxy_download", Label: "ProxyOut", Type: "checkbox", Description: "Download files from server proxy"},
-			{Field: "cache_ttl", Label: "CacheTTL", Type: "text", Description: "Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'."},
+			{Field: "id", Label: i18n.T("drive.s3.form.ak.label"), Type: "text", Required: true},
+			{Field: "secret", Label: i18n.T("drive.s3.form.sk.label"), Type: "password", Required: true},
+			{Field: "bucket", Label: i18n.T("drive.s3.form.bucket.label"), Type: "text", Required: true},
+			{Field: "path_style", Label: i18n.T("drive.s3.form.path_style.label"), Type: "checkbox", Description: i18n.T("drive.s3.form.path_style.description")},
+			{Field: "region", Label: i18n.T("drive.s3.form.region.label"), Type: "text"},
+			{Field: "endpoint", Label: i18n.T("drive.s3.form.endpoint.label"), Type: "text", Description: i18n.T("drive.s3.form.endpoint.description")},
+			{Field: "proxy_upload", Label: i18n.T("drive.s3.form.proxy_in.label"), Type: "checkbox", Description: i18n.T("drive.s3.form.proxy_in.description")},
+			{Field: "proxy_download", Label: i18n.T("drive.s3.form.proxy_out.label"), Type: "checkbox", Description: i18n.T("drive.s3.form.proxy_out.description")},
+			{Field: "cache_ttl", Label: i18n.T("drive.s3.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.s3.form.cache_ttl.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: NewS3Drive},
 	},
 	{
-		Type: "webdav", DisplayName: "WebDAV",
-		README: "WebDAV protocol drive",
+		Type: "webdav", DisplayName: i18n.T("drive.webdav.name"),
+		README: i18n.T("drive.webdav.readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "url", Label: "URL", Type: "text", Required: true, Description: "The base URL"},
-			{Field: "username", Label: "Username", Type: "text", Description: "The username, if omitted, no authorization is required"},
-			{Field: "password", Label: "Password", Type: "password"},
-			{Field: "cache_ttl", Label: "CacheTTL", Type: "text", Description: "Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'."},
+			{Field: "url", Label: i18n.T("drive.webdav.form.url.label"), Type: "text", Required: true, Description: i18n.T("drive.webdav.form.url.description")},
+			{Field: "username", Label: i18n.T("drive.webdav.form.username.label"), Type: "text", Description: i18n.T("drive.webdav.form.username.description")},
+			{Field: "password", Label: i18n.T("drive.webdav.form.password.label"), Type: "password"},
+			{Field: "cache_ttl", Label: i18n.T("drive.webdav.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.webdav.form.cache_ttl.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: NewWebDAVDrive},
 	},
 	{
-		Type: "onedrive", DisplayName: "OneDrive",
-		README: "OneDrive, see [Setup OneDrive](https://go-drive.top/drives/onedrive)",
+		Type: "onedrive", DisplayName: i18n.T("drive.onedrive.name"),
+		README: i18n.T("drive.onedrive.readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "client_id", Label: "Client Id", Type: "text", Required: true},
-			{Field: "client_secret", Label: "Client Secret", Type: "password", Required: true},
-			{Field: "proxy_upload", Label: "ProxyIn", Type: "checkbox", Description: "Upload files to server proxy"},
-			{Field: "proxy_download", Label: "ProxyOut", Type: "checkbox", Description: "Download files from server proxy"},
-			{Field: "cache_ttl", Label: "CacheTTL", Type: "text", Description: "Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.", DefaultValue: "2h"},
+			{Field: "client_id", Label: i18n.T("drive.onedrive.form.client_id.label"), Type: "text", Required: true},
+			{Field: "client_secret", Label: i18n.T("drive.onedrive.form.client_secret.label"), Type: "password", Required: true},
+			{Field: "proxy_upload", Label: i18n.T("drive.onedrive.form.proxy_in.label"), Type: "checkbox", Description: i18n.T("drive.onedrive.form.proxy_in.description")},
+			{Field: "proxy_download", Label: i18n.T("drive.onedrive.form.proxy_out.label"), Type: "checkbox", Description: i18n.T("drive.onedrive.form.proxy_out.description")},
+			{Field: "cache_ttl", Label: i18n.T("drive.onedrive.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.onedrive.form.cache_ttl.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: onedrive.NewOneDrive, InitConfig: onedrive.InitConfig, Init: onedrive.Init},
 	},
 	{
-		Type: "gdrive", DisplayName: "Google Drive",
-		README: "Google Drive",
+		Type: "gdrive", DisplayName: i18n.T("drive.gdrive.name"),
+		README: i18n.T("drive.gdrive.readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "client_id", Label: "Client Id", Type: "text", Required: true},
-			{Field: "client_secret", Label: "Client Secret", Type: "password", Required: true},
-			{Field: "cache_ttl", Label: "CacheTTL", Type: "text", Description: "Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.", DefaultValue: "4h"},
+			{Field: "client_id", Label: i18n.T("drive.gdrive.form.client_id.label"), Type: "text", Required: true},
+			{Field: "client_secret", Label: i18n.T("drive.gdrive.form.client_secret.label"), Type: "password", Required: true},
+			{Field: "cache_ttl", Label: i18n.T("drive.gdrive.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.gdrive.form.cache_ttl.description"), DefaultValue: "4h"},
 		},
 		Factory: drive_util.DriveFactory{Create: gdrive.NewGDrive, InitConfig: gdrive.InitConfig, Init: gdrive.Init},
 	},
@@ -82,7 +83,14 @@ func init() {
 }
 
 func GetDrives() []drive_util.DriveFactoryConfig {
-	return driveFactories
+	r := make([]drive_util.DriveFactoryConfig, len(driveFactories))
+	copy(r, driveFactories)
+	for i, f := range r {
+		form := make([]types.FormItem, len(f.ConfigForm))
+		copy(form, f.ConfigForm)
+		r[i].ConfigForm = form
+	}
+	return r
 }
 
 func GetDrive(driveType string) *drive_util.DriveFactoryConfig {
@@ -137,12 +145,12 @@ func (d *RootDrive) Get() types.IDrive {
 func checkAndParseConfig(dc types.Drive) (*drive_util.DriveFactory, types.SM, error) {
 	f, ok := driveFactoriesMap[dc.Type]
 	if !ok {
-		return nil, nil, common.NewBadRequestError(fmt.Sprintf("invalid drive type '%s'", dc.Type))
+		return nil, nil, err.NewBadRequestError(i18n.T("drive.root.invalid_drive_type", dc.Type))
 	}
 	config := make(types.SM)
 	e := json.Unmarshal([]byte(dc.Config), &config)
 	if e != nil {
-		return nil, nil, common.NewBadRequestError(fmt.Sprintf("invalid drive config of '%s'", dc.Name))
+		return nil, nil, err.NewBadRequestError(i18n.T("drive.root.invalid_drive_config", dc.Name))
 	}
 	return &f.Factory, config, nil
 }
@@ -184,7 +192,7 @@ func (d *RootDrive) ReloadDrive(ignoreFailure bool) error {
 				log.Printf("[%s]: %v", dc.Name, e)
 				continue
 			}
-			return common.NewBadRequestError(fmt.Sprintf("error when creating drive '%s': %s", dc.Name, e.Error()))
+			return err.NewBadRequestError(i18n.T("drive.root.error_create_drive", dc.Name, e.Error()))
 		}
 		drives[dc.Name] = iDrive
 	}

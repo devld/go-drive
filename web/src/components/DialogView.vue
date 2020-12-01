@@ -41,7 +41,7 @@ export default {
       type: Boolean
     },
     title: {
-      type: String
+      type: [String, Object]
     },
     transition: {
       type: String,

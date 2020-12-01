@@ -4,8 +4,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go-drive/common/registry"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 )
 
@@ -16,13 +18,14 @@ const (
 	Listen     = ":8089"
 )
 
-func InitConfig(ch *ComponentsHolder) (Config, error) {
+func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	config := Config{}
 
 	flag.StringVar(&config.Listen, "l", Listen, "address listen on")
 	flag.StringVar(&config.dataDir, "d", "./", "path to the data dir")
 	flag.StringVar(&config.resDir, "s", "", "path to the static files")
 	flag.BoolVar(&config.freeFs, "f", false, "enable unlimited local fs drive(absolute path)")
+	flag.StringVar(&config.DefaultLang, "lang", "en-US", "default language code")
 
 	flag.Int64Var(&config.ProxyMaxSize, "proxy-max-size", 1*1024*1024, "maximum file size that can be proxied")
 
@@ -38,7 +41,7 @@ func InitConfig(ch *ComponentsHolder) (Config, error) {
 
 	flag.Parse()
 
-	if exists, _ := FileExists(config.dataDir); !exists {
+	if _, e := os.Stat(config.dataDir); os.IsNotExist(e) {
 		return config, errors.New(fmt.Sprintf("dataDir '%s' does not exist", config.dataDir))
 	}
 	tempDir, e := config.GetDir("temp", true)
@@ -59,6 +62,9 @@ type Config struct {
 	// unlimited fs drive path,
 	// fs drive path will be limited in dataDir/local if freeFs is false
 	freeFs bool
+
+	// DefaultLang is the default language
+	DefaultLang string
 
 	TempDir string
 
@@ -85,13 +91,9 @@ func (c Config) GetDB() (string, string) {
 }
 
 func (c Config) GetDir(name string, create bool) (string, error) {
-	name = path.Join(c.dataDir, name)
+	name = filepath.Join(c.dataDir, name)
 	if create {
-		exists, e := FileExists(name)
-		if e != nil {
-			return "", e
-		}
-		if !exists {
+		if _, e := os.Stat(name); os.IsNotExist(e) {
 			if e := os.Mkdir(name, 0755); e != nil {
 				return "", e
 			}

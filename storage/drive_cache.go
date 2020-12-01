@@ -3,9 +3,10 @@ package storage
 import (
 	"encoding/json"
 	"github.com/jinzhu/gorm"
-	"go-drive/common"
 	"go-drive/common/drive_util"
+	"go-drive/common/registry"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"log"
 	"time"
 )
@@ -15,9 +16,9 @@ type DriveCacheDAO struct {
 	timerStop func()
 }
 
-func NewDriveCacheDAO(db *DB, ch *common.ComponentsHolder) *DriveCacheDAO {
+func NewDriveCacheDAO(db *DB, ch *registry.ComponentsHolder) *DriveCacheDAO {
 	c := &DriveCacheDAO{db: db}
-	c.timerStop = common.TimeTick(c.cleanExpired, 60*time.Second)
+	c.timerStop = utils.TimeTick(c.cleanExpired, 60*time.Second)
 	ch.Add("driveCacheDAO", c)
 	return c
 }
@@ -25,7 +26,7 @@ func NewDriveCacheDAO(db *DB, ch *common.ComponentsHolder) *DriveCacheDAO {
 func (d *DriveCacheDAO) cleanExpired() {
 	now := time.Now().Unix()
 	rows := d.db.C().Delete(&types.DriveCache{}, "expires_at > 0 AND expires_at < ?", now).RowsAffected
-	if common.IsDebugOn() && rows > 0 {
+	if utils.IsDebugOn() && rows > 0 {
 		log.Printf("%d expired caches item cleaned", rows)
 	}
 }
@@ -55,7 +56,7 @@ func (d *dbDriveNamespacedCacheStore) put(db *gorm.DB, path string, cacheType ui
 	if ttl > 0 {
 		expiresAt = time.Now().Add(ttl).Unix()
 	}
-	depth := uint8(common.PathDepth(path))
+	depth := uint8(utils.PathDepth(path))
 	path = path + "/"
 	c := 0
 	e := db.Model(&types.DriveCache{}).Where(
@@ -76,7 +77,7 @@ func (d *dbDriveNamespacedCacheStore) put(db *gorm.DB, path string, cacheType ui
 }
 
 func (d *dbDriveNamespacedCacheStore) get(path string, cacheType uint8) (string, error) {
-	depth := common.PathDepth(path)
+	depth := utils.PathDepth(path)
 	path = path + "/"
 	c := types.DriveCache{}
 	e := d.db.C().Find(&c,
@@ -93,14 +94,14 @@ func (d *dbDriveNamespacedCacheStore) get(path string, cacheType uint8) (string,
 }
 
 func pathLike(path string) string {
-	if common.IsRootPath(path) {
+	if utils.IsRootPath(path) {
 		return path
 	}
 	return path + "/"
 }
 
 func (d *dbDriveNamespacedCacheStore) delete(db *gorm.DB, path string, descendants bool) error {
-	depth := common.PathDepth(path)
+	depth := utils.PathDepth(path)
 	if descendants {
 		return db.Delete(&types.DriveCache{},
 			"drive = ? AND depth >= ? AND path LIKE (? || '%')", d.ns, depth, pathLike(path)).Error
@@ -159,7 +160,7 @@ func (d *dbDriveNamespacedCacheStore) GetEntry(path string) (types.IEntry, error
 }
 
 func (d *dbDriveNamespacedCacheStore) GetChildren(path string) ([]types.IEntry, error) {
-	depth := common.PathDepth(path)
+	depth := utils.PathDepth(path)
 	v, e := d.get(path, types.CacheChildren)
 	if e != nil {
 		return nil, e

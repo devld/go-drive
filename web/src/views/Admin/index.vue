@@ -21,10 +21,10 @@ export default {
   data () {
     return {
       menus: [
-        { name: 'Users', path: '/admin/users' },
-        { name: 'Groups', path: '/admin/groups' },
-        { name: 'Drives', path: '/admin/drives' },
-        { name: 'Misc', path: '/admin/misc' }
+        { name: this.$t('p.admin.t_users'), path: '/admin/users' },
+        { name: this.$t('p.admin.t_groups'), path: '/admin/groups' },
+        { name: this.$t('p.admin.t_drives'), path: '/admin/drives' },
+        { name: this.$t('p.admin.t_misc'), path: '/admin/misc' }
       ]
     }
   },

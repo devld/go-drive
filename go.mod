@@ -18,7 +18,8 @@ require (
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
 	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
 	golang.org/x/sys v0.0.0-20201126233918-771906719818 // indirect
-	golang.org/x/text v0.3.4 // indirect
+	golang.org/x/text v0.3.4
 	google.golang.org/api v0.30.0
 	google.golang.org/appengine v1.6.7 // indirect
+	gopkg.in/yaml.v2 v2.2.8
 )

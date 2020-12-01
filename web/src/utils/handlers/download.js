@@ -1,11 +1,12 @@
 
+import { T } from '@/i18n'
 import DownloadView from '@/views/HandlerViews/DownloadView.vue'
 
 export default {
   name: 'download',
   display: {
-    name: 'Download',
-    description: 'Download this file',
+    name: T('handler.download.name'),
+    description: T('handler.download.desc'),
     icon: '#icon-download'
   },
   view: {

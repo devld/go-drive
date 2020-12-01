@@ -5,8 +5,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/drive_util"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/storage"
 	"net/http"
@@ -21,7 +24,7 @@ func InitDriveRoutes(router gin.IRouter,
 	rootDrive *drive.RootDrive,
 	permissionDAO *storage.PathPermissionDAO,
 	thumbnail *Thumbnail,
-	signer *common.Signer,
+	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
 	runner task.Runner,
 	tokenStore types.TokenStore) {
@@ -71,7 +74,7 @@ func InitDriveRoutes(router gin.IRouter,
 	r.GET("/task/:id", func(c *gin.Context) {
 		t, e := dr.runner.GetTask(c.Param("id"))
 		if e != nil && e == task.ErrorNotFound {
-			e = common.NewNotFoundMessageError(e.Error())
+			e = err.NewNotFoundMessageError(e.Error())
 		}
 		if e != nil {
 			_ = c.Error(e)
@@ -84,7 +87,7 @@ func InitDriveRoutes(router gin.IRouter,
 	r.DELETE("/task/:id", func(c *gin.Context) {
 		_, e := dr.runner.StopTask(c.Param("id"))
 		if e != nil && e == task.ErrorNotFound {
-			e = common.NewNotFoundMessageError(e.Error())
+			e = err.NewNotFoundMessageError(e.Error())
 		}
 		if e != nil {
 			_ = c.Error(e)
@@ -99,7 +102,7 @@ type driveRoute struct {
 	chunkUploader *ChunkUploader
 	thumbnail     *Thumbnail
 	runner        task.Runner
-	signer        *common.Signer
+	signer        *utils.Signer
 }
 
 func (dr *driveRoute) getDrive(c *gin.Context) types.IDrive {
@@ -113,7 +116,7 @@ func (dr *driveRoute) getDrive(c *gin.Context) types.IDrive {
 }
 
 func (dr *driveRoute) list(c *gin.Context) {
-	path := common.CleanPath(c.Param("path"))
+	path := utils.CleanPath(c.Param("path"))
 	entries, e := dr.getDrive(c).List(path)
 	if e != nil {
 		_ = c.Error(e)
@@ -127,7 +130,7 @@ func (dr *driveRoute) list(c *gin.Context) {
 }
 
 func (dr *driveRoute) get(c *gin.Context) {
-	path := common.CleanPath(c.Param("path"))
+	path := utils.CleanPath(c.Param("path"))
 	entry, e := dr.getDrive(c).Get(path)
 	if e != nil {
 		_ = c.Error(e)
@@ -137,7 +140,7 @@ func (dr *driveRoute) get(c *gin.Context) {
 }
 
 func (dr *driveRoute) makeDir(c *gin.Context) {
-	path := common.CleanPath(c.Param("path"))
+	path := utils.CleanPath(c.Param("path"))
 	entry, e := dr.getDrive(c).MakeDir(path)
 	if e != nil {
 		_ = c.Error(e)
@@ -148,13 +151,13 @@ func (dr *driveRoute) makeDir(c *gin.Context) {
 
 func (dr *driveRoute) copyEntry(c *gin.Context) {
 	drive_ := dr.getDrive(c)
-	from := common.CleanPath(c.Query("from"))
+	from := utils.CleanPath(c.Query("from"))
 	fromEntry, e := drive_.Get(from)
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
-	to := common.CleanPath(c.Query("to"))
+	to := utils.CleanPath(c.Query("to"))
 	if e := checkCopyOrMove(from, to); e != nil {
 		_ = c.Error(e)
 		return
@@ -177,13 +180,13 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 
 func (dr *driveRoute) move(c *gin.Context) {
 	drive_ := dr.getDrive(c)
-	from := common.CleanPath(c.Query("from"))
+	from := utils.CleanPath(c.Query("from"))
 	fromEntry, e := drive_.Get(from)
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
-	to := common.CleanPath(c.Query("to"))
+	to := utils.CleanPath(c.Query("to"))
 	if e := checkCopyOrMove(from, to); e != nil {
 		_ = c.Error(e)
 		return
@@ -206,16 +209,16 @@ func (dr *driveRoute) move(c *gin.Context) {
 
 func checkCopyOrMove(from, to string) error {
 	if from == to {
-		return common.NewNotAllowedMessageError("Copy or move to same path is not allowed")
+		return err.NewNotAllowedMessageError(i18n.T("api.drive.copy_to_same_path_not_allowed"))
 	}
-	if strings.HasPrefix(to, from) && common.PathDepth(from) != common.PathDepth(to) {
-		return common.NewNotAllowedMessageError("Copy or move to child path is not allowed")
+	if strings.HasPrefix(to, from) && utils.PathDepth(from) != utils.PathDepth(to) {
+		return err.NewNotAllowedMessageError(i18n.T("api.drive.copy_to_child_path_not_allowed"))
 	}
 	return nil
 }
 
 func (dr *driveRoute) deleteEntry(c *gin.Context) {
-	path := common.CleanPath(c.Param("path"))
+	path := utils.CleanPath(c.Param("path"))
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
 		return nil, dr.getDrive(c).Delete(path, ctx)
 	}, 2*time.Second)
@@ -227,9 +230,9 @@ func (dr *driveRoute) deleteEntry(c *gin.Context) {
 }
 
 func (dr *driveRoute) upload(c *gin.Context) {
-	path := common.CleanPath(c.Param("path"))
+	path := utils.CleanPath(c.Param("path"))
 	override := c.Query("override")
-	size := common.ToInt64(c.Query("size"), -1)
+	size := utils.ToInt64(c.Query("size"), -1)
 	request := make(types.SM, 0)
 	if e := c.Bind(&request); e != nil {
 		_ = c.Error(e)
@@ -246,7 +249,7 @@ func (dr *driveRoute) upload(c *gin.Context) {
 }
 
 func (dr *driveRoute) getContent(c *gin.Context) {
-	path := common.CleanPath(c.Param("path"))
+	path := utils.CleanPath(c.Param("path"))
 	file, e := dr.getDrive(c).Get(path)
 	if e != nil {
 		_ = c.Error(e)
@@ -263,13 +266,13 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 		}
 		return
 	}
-	_ = c.Error(common.NewNotAllowedError())
+	_ = c.Error(err.NewNotAllowedError())
 }
 
 func (dr *driveRoute) getThumbnail(c *gin.Context) {
-	path := common.CleanPath(c.Param("path"))
+	path := utils.CleanPath(c.Param("path"))
 	if !checkSignature(dr.signer, c.Request, path) {
-		_ = c.Error(common.NewNotFoundError())
+		_ = c.Error(err.NewNotFoundError())
 		return
 	}
 	entry, e := dr.getDrive(c).Get(path)
@@ -297,9 +300,9 @@ func (dr *driveRoute) getThumbnail(c *gin.Context) {
 }
 
 func (dr *driveRoute) writeContent(c *gin.Context) {
-	path := common.CleanPath(c.Param("path"))
+	path := utils.CleanPath(c.Param("path"))
 	override := c.Query("override")
-	size := common.ToInt64(c.GetHeader("Content-Length"), -1)
+	size := utils.ToInt64(c.GetHeader("Content-Length"), -1)
 	defer func() { _ = c.Request.Body.Close() }()
 	file, e := drive_util.CopyReaderToTempFile(c.Request.Body, task.DummyContext(), dr.config.TempDir)
 	if e != nil {
@@ -316,7 +319,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 	if size != stat.Size() {
 		_ = file.Close()
 		_ = os.Remove(file.Name())
-		_ = c.Error(common.NewBadRequestError("invalid file size"))
+		_ = c.Error(err.NewBadRequestError(i18n.T("api.drive.invalid_file_size")))
 		return
 	}
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
@@ -334,10 +337,10 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 }
 
 func (dr *driveRoute) chunkUploadRequest(c *gin.Context) {
-	size := common.ToInt64(c.Query("size"), -1)
-	chunkSize := common.ToInt64(c.Query("chunk_size"), -1)
+	size := utils.ToInt64(c.Query("size"), -1)
+	chunkSize := utils.ToInt64(c.Query("chunk_size"), -1)
 	if size <= 0 || chunkSize <= 0 {
-		_ = c.Error(common.NewBadRequestError("invalid size or chunk_size"))
+		_ = c.Error(err.NewBadRequestError(i18n.T("api.drive.invalid_size_or_chunk_size")))
 		return
 	}
 	upload, e := dr.chunkUploader.CreateUpload(size, chunkSize)
@@ -361,7 +364,7 @@ func (dr *driveRoute) chunkUpload(c *gin.Context) {
 }
 
 func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
-	path := common.CleanPath(c.Param("path"))
+	path := utils.CleanPath(c.Param("path"))
 	id := c.Query("id")
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
 		file, e := dr.chunkUploader.CompleteUpload(id, ctx)
@@ -408,14 +411,14 @@ type entryJson struct {
 
 func newEntryJson(e types.IEntry) *entryJson {
 	entryMeta := e.Meta()
-	meta := common.CopyMap(entryMeta.Props)
+	meta := utils.CopyMap(entryMeta.Props)
 	meta["can_write"] = entryMeta.CanWrite
 	if entryMeta.Thumbnail != "" {
 		meta["thumbnail"] = entryMeta.Thumbnail
 	}
 	return &entryJson{
 		Path:    e.Path(),
-		Name:    common.PathBase(e.Path()),
+		Name:    utils.PathBase(e.Path()),
 		Type:    e.Type(),
 		Size:    e.Size(),
 		Meta:    meta,

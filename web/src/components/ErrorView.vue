@@ -1,18 +1,23 @@
 <template>
   <div class="error-view">
-    <span class="error-code" :title="message">{{ status || 'ERROR' }}</span>
-    <span class="error-message">{{ ERROR_MESSAGES[status] || message }}</span>
+    <span class="error-code" :title="message">{{ status || "ERROR" }}</span>
+    <span class="error-message">{{
+      (ERROR_MESSAGES[status] && $t(ERROR_MESSAGES[status], { status })) ||
+      message
+    }}</span>
     <div class="back-button">
-      <simple-button @click="$router.go(-1)">Go Back</simple-button>
+      <simple-button @click="$router.go(-1)">{{
+        $t("app.go_back")
+      }}</simple-button>
     </div>
   </div>
 </template>
 <script>
 
 const ERROR_MESSAGES = {
-  403: 'Operation Not Allowed',
-  404: 'Resource Not Found',
-  500: 'Server Error'
+  403: 'error.not_allowed',
+  404: 'error.not_found',
+  500: 'error.server_error'
 }
 
 export default {

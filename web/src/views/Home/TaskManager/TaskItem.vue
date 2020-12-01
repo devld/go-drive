@@ -15,15 +15,15 @@
       >{{ task.task.size | formatBytes(1) }}</span
     >
     <span class="upload-task-item__location">
-      <entry-link :path="dir" @click="$emit('navigate', $event)">{{
-        $.filename(dir)
-      }}</entry-link>
+      <entry-link :path="dir" @click="$emit('navigate', $event)">
+        {{ $.filename(dir) }}
+      </entry-link>
     </span>
     <span class="upload-task-item__status">{{ statusText }}</span>
     <span class="upload-task-item__ops">
       <button
         class="upload-task-item__start plain-button"
-        title="Start"
+        :title="$t('p.task.start')"
         v-if="showStart"
         @click="$emit('start')"
       >
@@ -31,7 +31,7 @@
       </button>
       <button
         class="upload-task-item__pause plain-button"
-        title="Pause"
+        :title="$t('p.task.pause')"
         v-if="showPause"
         @click="$emit('pause')"
       >
@@ -39,7 +39,7 @@
       </button>
       <button
         class="upload-task-item__stop plain-button"
-        title="Stop"
+        :title="$t('p.task.stop')"
         v-if="showStop"
         @click="$emit('stop')"
       >
@@ -47,7 +47,7 @@
       </button>
       <button
         class="upload-task-item__remove plain-button"
-        title="Remove"
+        :title="$t('p.task.remove')"
         v-if="showRemove"
         @click="$emit('remove')"
       >
@@ -89,19 +89,19 @@ export default {
     statusText () {
       switch (this.task.status) {
         case STATUS_CREATED:
-          return 'Created'
+          return this.$t('p.task.s_created')
         case STATUS_STARTING:
-          return 'Starting'
+          return this.$t('p.task.s_starting')
         case STATUS_PAUSED:
-          return 'Paused'
+          return this.$t('p.task.s_paused')
         case STATUS_UPLOADING:
           return formatPercent(this.progress)
         case STATUS_STOPPED:
-          return 'Stopped'
+          return this.$t('p.task.s_stopped')
         case STATUS_ERROR:
-          return 'Error'
+          return this.$t('p.task.s_error')
         case STATUS_COMPLETED:
-          return 'Completed'
+          return this.$t('p.task.s_completed')
       }
       return ''
     },

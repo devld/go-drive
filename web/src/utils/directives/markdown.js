@@ -1,3 +1,4 @@
+import { T } from '@/i18n'
 
 let marked
 async function getRender () {
@@ -24,6 +25,6 @@ export default function (el, binding) {
   getRender().then(render => {
     el.innerHTML = render(binding.value)
   }, e => {
-    el.innerHTML = '<p style="text-align: center;">An error occurred while rendering markdown</p>'
+    el.innerHTML = `<p style="text-align: center;">${T('md.error')}</p>`
   })
 }

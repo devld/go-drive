@@ -76,8 +76,6 @@ import { makeEntryHandlerLink, getBaseLink } from '@/utils/routes'
 import { mapMutations, mapState } from 'vuex'
 
 const README_FILENAME = 'readme.md'
-const README_LOADING = '<p style="text-align: center">Loading README...</p>'
-const README_FAILED_CONTENT = '<p style="text-align: center;">Failed to load README.md</p>'
 
 const HISTORY_FLAG = '_h'
 const setHistoryFlag = () => {
@@ -278,7 +276,7 @@ export default {
     },
     confirmUnsavedState () {
       if (!this.entryHandlerView || this.entryHandlerView.savedState) return Promise.resolve()
-      return this.$confirm('You have some unsaved changes, are you sure to leave?')
+      return this.$confirm(this.$t('p.home.unsaved_confirm'))
     },
     onWindowUnload (e) {
       if (!this.entryHandlerView || this.entryHandlerView.savedState) return
@@ -328,13 +326,13 @@ export default {
     async loadReadme (entry) {
       if (this._readmeTask) this._readmeTask.cancel()
       let content
-      this.readmeContent = README_LOADING
+      this.readmeContent = `<p style="text-align: center">${this.$t('p.home.readme_loading')}</p>`
       this._readmeTask = getContent(entry.path, entry.meta.access_key)
       try {
         content = await this._readmeTask
       } catch (e) {
         if (e.isCancel) return
-        content = README_FAILED_CONTENT
+        content = `<p style="text-align: center;">${this.$t('p.home.readme_failed')}</p>`
       }
       if (this.path === dir(entry.path)) {
         this.readmeContent = content

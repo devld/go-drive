@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
+	"go-drive/common/registry"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"log"
 	"os"
 	"path/filepath"
@@ -23,7 +27,7 @@ type FileTokenStore struct {
 }
 
 // NewFileTokenStore creates a FileTokenStore
-func NewFileTokenStore(config common.Config, ch *common.ComponentsHolder) (*FileTokenStore, error) {
+func NewFileTokenStore(config common.Config, ch *registry.ComponentsHolder) (*FileTokenStore, error) {
 	root, e := config.GetDir("sessions", true)
 	if e != nil {
 		return nil, e
@@ -33,7 +37,7 @@ func NewFileTokenStore(config common.Config, ch *common.ComponentsHolder) (*File
 		autoRefresh: config.TokenRefresh,
 		validity:    config.TokenValidity,
 	}
-	ft.stopCleaner = common.TimeTick(ft.clean, 2*config.TokenValidity)
+	ft.stopCleaner = utils.TimeTick(ft.clean, 2*config.TokenValidity)
 	ch.Add("tokenStore", ft)
 	return ft, nil
 }
@@ -74,7 +78,7 @@ func (f *FileTokenStore) readFile(token string, read bool) (*types.Token, error)
 	filePath := f.getSessionFile(token)
 	stat, e := os.Stat(filePath)
 	if os.IsNotExist(e) || f.isExpired(stat.ModTime()) {
-		return nil, common.NewUnauthorizedError("invalid token")
+		return nil, err.NewUnauthorizedError(i18n.T("api.file_token.invalid_token"))
 	}
 	if !read {
 		return nil, nil

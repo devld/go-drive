@@ -1,5 +1,6 @@
 import BaseDialog from './BaseDialog.vue'
 import { IS_DEBUG } from '@/utils'
+import i18n, { T } from '@/i18n'
 
 /**
  * @typedef Options
@@ -74,7 +75,7 @@ export function createDialog (name, component) {
         this.opts = opts
 
         this.title = opts.title || ''
-        this.confirmText = opts.confirmText || 'OK'
+        this.confirmText = opts.confirmText || T('dialog.base.ok')
         this.confirmType = opts.confirmType
         this.cancelText = opts.cancelText
         this.cancelType = opts.cancelType || 'info'
@@ -170,7 +171,7 @@ export default function showBaseDialog (Vue, component, opts) {
   const div = document.createElement('div')
   document.body.appendChild(div)
 
-  const vm = new Vue(component)
+  const vm = new Vue({ i18n, ...component })
   vm.$mount(div)
 
   vm.$once('closed', () => {

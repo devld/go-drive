@@ -1,11 +1,12 @@
 import { moveEntry } from '@/api'
+import { T } from '@/i18n'
 import { dir, pathClean, pathJoin, taskDone, TASK_CANCELLED } from '..'
 
 export default {
   name: 'rename',
   display: {
-    name: 'Rename',
-    description: 'Rename this file',
+    name: T('handler.rename.name'),
+    description: T('handler.rename.desc'),
     icon: '#icon-rename'
   },
   supports: (entry, parentEntry) => entry.meta.can_write &&
@@ -13,11 +14,11 @@ export default {
   handler: (entry, { input, alert }) => {
     return new Promise((resolve) => {
       input({
-        title: 'Rename',
+        title: T('handler.rename.input_title'),
         text: entry.name,
         validator: {
           pattern: /^[^/\0:*"<>|]+$/,
-          message: 'Invalid filename'
+          message: T('handler.rename.invalid_filename')
         },
         onOk: async text => {
           if (text === entry.name) return

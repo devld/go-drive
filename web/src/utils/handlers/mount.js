@@ -1,11 +1,12 @@
 import { mountPaths } from '@/api/admin'
+import { T } from '@/i18n'
 import { isAdmin } from '..'
 
 export default {
   name: 'mount',
   display: {
-    name: 'Mount to',
-    description: 'Mount entries to another location',
+    name: T('handler.mount.name'),
+    description: T('handler.mount.desc'),
     icon: '#icon-path'
   },
   supports: (entry, parentEntry, user) => isAdmin(user) &&
@@ -14,7 +15,7 @@ export default {
   async handler (entries, { open, loading }) {
     if (!Array.isArray(entries)) entries = [entries]
     open({
-      title: 'Select mount to', type: 'dir',
+      title: T('handler.mount.open_title'), type: 'dir',
       async onOk (path) {
         loading(true)
         try {

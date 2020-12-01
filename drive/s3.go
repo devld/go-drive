@@ -8,10 +8,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"go-drive/common"
 	"go-drive/common/drive_util"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"io"
 	"math"
 	"net/url"
@@ -90,7 +92,7 @@ func (s *S3Drive) check() error {
 		if ae, ok := e.(awserr.Error); ok {
 			switch ae.Code() {
 			case s3.ErrCodeNoSuchBucket:
-				return common.NewNotFoundMessageError(fmt.Sprintf("Bucket '%s' not found", *s.bucket))
+				return err.NewNotFoundMessageError(i18n.T("drive.s3.bucket_not_exists", *s.bucket))
 			}
 		}
 	}
@@ -117,7 +119,7 @@ func (s *S3Drive) get(path string) (*s3Entry, error) {
 	if e != nil {
 		if errCodeMatches(e, "NotFound") {
 			if strings.HasSuffix(path, "/") {
-				return nil, common.NewNotFoundError()
+				return nil, err.NewNotFoundError()
 			}
 			return s.get(path + "/")
 		}
@@ -130,7 +132,7 @@ func (s *S3Drive) get(path string) (*s3Entry, error) {
 }
 
 func (s *S3Drive) Get(path string) (types.IEntry, error) {
-	if common.IsRootPath(path) {
+	if utils.IsRootPath(path) {
 		return s.newS3DirEntry(path, nil), nil
 	}
 	if cached, _ := s.cache.GetEntry(path); cached != nil {
@@ -147,11 +149,11 @@ func (s *S3Drive) Get(path string) (types.IEntry, error) {
 func (s *S3Drive) Save(path string, _ int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
 	if !override {
 		_, e := s.Get(path)
-		if e != nil && !common.IsNotFoundError(e) {
+		if e != nil && !err.IsNotFoundError(e) {
 			return nil, e
 		}
 		if e == nil {
-			return nil, common.NewNotAllowedMessageError("file exists")
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 		}
 	}
 	var readSeeker io.ReadSeeker
@@ -177,7 +179,7 @@ func (s *S3Drive) Save(path string, _ int64, override bool, reader io.Reader, ct
 		return nil, e
 	}
 	_ = s.cache.Evict(path, false)
-	_ = s.cache.Evict(common.PathParent(path), false)
+	_ = s.cache.Evict(utils.PathParent(path), false)
 	get, e := s.Get(path)
 	if e != nil {
 		return nil, e
@@ -190,9 +192,9 @@ func (s *S3Drive) MakeDir(path string) (types.IEntry, error) {
 	path = path + "/"
 	_, e := s.Get(path)
 	if e == nil {
-		return nil, common.NewNotAllowedMessageError("file exists")
+		return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 	}
-	if !common.IsNotFoundError(e) {
+	if !err.IsNotFoundError(e) {
 		return nil, e
 	}
 	_, e = s.c.PutObject(&s3.PutObjectInput{
@@ -202,7 +204,7 @@ func (s *S3Drive) MakeDir(path string) (types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	_ = s.cache.Evict(common.PathParent(path), false)
+	_ = s.cache.Evict(utils.PathParent(path), false)
 	return s.newS3DirEntry(path, nil), nil
 }
 
@@ -216,7 +218,7 @@ func (s *S3Drive) isSelf(e types.IEntry) bool {
 func (s *S3Drive) Copy(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, s.isSelf)
 	if from == nil || from.Type().IsDir() {
-		return nil, common.NewUnsupportedError()
+		return nil, err.NewUnsupportedError()
 	}
 	entry, _, e := s.copy(from.(*s3Entry), to, override, ctx)
 	return entry, e
@@ -226,11 +228,11 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCt
 	if !override {
 		_, e := s.Get(to)
 		if e == nil {
-			modTime := common.Time(from.modTime)
+			modTime := utils.Time(from.modTime)
 			// skip
 			return s.newS3ObjectEntry(to, &from.size, &modTime), true, nil
 		}
-		if !common.IsNotFoundError(e) {
+		if !err.IsNotFoundError(e) {
 			return nil, false, e
 		}
 	}
@@ -244,7 +246,7 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCt
 		return nil, false, e
 	}
 	_ = s.cache.Evict(to, true)
-	_ = s.cache.Evict(common.PathParent(to), false)
+	_ = s.cache.Evict(utils.PathParent(to), false)
 	ctx.Progress(from.Size(), false)
 	return s.newS3ObjectEntry(to, &from.size, obj.CopyObjectResult.LastModified), false, nil
 }
@@ -252,7 +254,7 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCt
 func (s *S3Drive) Move(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, s.isSelf)
 	if from == nil || from.Type().IsDir() {
-		return nil, common.NewUnsupportedError()
+		return nil, err.NewUnsupportedError()
 	}
 	fromEntry := from.(*s3Entry)
 	entry, skip, e := s.copy(fromEntry, to, override, ctx)
@@ -262,7 +264,7 @@ func (s *S3Drive) Move(from types.IEntry, to string, override bool, ctx types.Ta
 	if !skip {
 		e = s.delete(fromEntry.key, task.DummyContext())
 		_ = s.cache.Evict(fromEntry.key, true)
-		_ = s.cache.Evict(common.PathParent(fromEntry.key), false)
+		_ = s.cache.Evict(utils.PathParent(fromEntry.key), false)
 	}
 	return entry, e
 }
@@ -272,7 +274,7 @@ func (s *S3Drive) List(path string) ([]types.IEntry, error) {
 		return cached, nil
 	}
 	s3Path := path
-	if !common.IsRootPath(s3Path) {
+	if !utils.IsRootPath(s3Path) {
 		s3Path = s3Path + "/"
 	}
 	objs, e := s.c.ListObjects(&s3.ListObjectsInput{
@@ -347,7 +349,7 @@ func (s *S3Drive) delete(path string, ctx types.TaskCtx) error {
 
 func (s *S3Drive) Delete(path string, ctx types.TaskCtx) error {
 	e := s.delete(path, ctx)
-	_ = s.cache.Evict(common.PathParent(path), false)
+	_ = s.cache.Evict(utils.PathParent(path), false)
 	_ = s.cache.Evict(path, true)
 	return e
 }
@@ -357,7 +359,7 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 	action := config["action"]
 	uploadId := config["uploadId"]
 	partsEtag := config["parts"]
-	seq := common.ToInt64(config["seq"], -1)
+	seq := utils.ToInt64(config["seq"], -1)
 
 	r := types.DriveUploadConfig{
 		Provider: types.S3Provider,
@@ -386,7 +388,7 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 			},
 		})
 		_ = s.cache.Evict(path, false)
-		_ = s.cache.Evict(common.PathParent(path), false)
+		_ = s.cache.Evict(utils.PathParent(path), false)
 		return nil, e
 	case "AbortMultipartUpload":
 		_, e := s.c.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
@@ -397,7 +399,7 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 		return nil, e
 	case "CompletePutObject":
 		_ = s.cache.Evict(path, false)
-		_ = s.cache.Evict(common.PathParent(path), false)
+		_ = s.cache.Evict(utils.PathParent(path), false)
 		return nil, nil
 	default:
 		if s.uploadProxy {
@@ -446,9 +448,9 @@ func (s *S3Drive) Dispose() error {
 func (s *S3Drive) newS3DirEntry(path string, lastModified *time.Time) *s3Entry {
 	var mtime int64 = -1
 	if lastModified != nil {
-		mtime = common.Millisecond(*lastModified)
+		mtime = utils.Millisecond(*lastModified)
 	}
-	path = common.CleanPath(path)
+	path = utils.CleanPath(path)
 	return &s3Entry{
 		isDir:   true,
 		key:     path,
@@ -458,12 +460,12 @@ func (s *S3Drive) newS3DirEntry(path string, lastModified *time.Time) *s3Entry {
 }
 
 func (s *S3Drive) newS3ObjectEntry(path string, size *int64, lastModified *time.Time) *s3Entry {
-	path = common.CleanPath(path)
+	path = utils.CleanPath(path)
 	return &s3Entry{
 		isDir:   false,
 		key:     path,
 		size:    *size,
-		modTime: common.Millisecond(*lastModified),
+		modTime: utils.Millisecond(*lastModified),
 		c:       s,
 	}
 }
@@ -513,7 +515,7 @@ func (s *s3Entry) Drive() types.IDrive {
 }
 
 func (s *s3Entry) Name() string {
-	return common.PathBase(s.key)
+	return utils.PathBase(s.key)
 }
 
 func (s *s3Entry) GetReader() (io.ReadCloser, error) {

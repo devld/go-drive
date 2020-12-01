@@ -1,5 +1,6 @@
 import { waitPromise } from '@/utils'
 import Axios from 'axios'
+import { getLang } from '@/i18n'
 
 const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
@@ -232,6 +233,9 @@ async function processConfig (config) {
     config.headers[AUTH_HEADER] = token
     config._tokenUsing = token
   }
+
+  config.headers['Accept-Language'] = getLang()
+
   return config
 }
 

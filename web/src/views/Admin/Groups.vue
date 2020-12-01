@@ -2,27 +2,31 @@
   <div class="groups-manager" :class="{ editing: !!group }">
     <div class="groups-list">
       <div class="actions">
-        <simple-button icon="#icon-add" title="Add group" @click="addGroup" />
+        <simple-button
+          icon="#icon-add"
+          :title="$t('p.admin.group.add_group')"
+          @click="addGroup"
+        />
       </div>
       <table class="simple-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Operation</th>
+            <th>{{ $t("p.admin.group.name") }}</th>
+            <th>{{ $t("p.admin.group.operation") }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="g in groups" :key="g.name">
             <td class="center">{{ g.name }}</td>
-            <td class="center">
+            <td class="center line">
               <simple-button
-                title="Edit"
+                :title="$t('p.admin.group.edit')"
                 small
                 icon="#icon-edit"
                 @click="editGroup(g)"
               />
               <simple-button
-                title="Delete"
+                :title="$t('p.admin.group.delete')"
                 type="danger"
                 small
                 icon="#icon-delete"
@@ -35,12 +39,16 @@
     </div>
     <div class="group-edit" v-if="group">
       <div class="small-title">
-        {{ edit ? `Edit group: ${group.name}` : "Add group" }}
+        {{
+          edit
+            ? $t("p.admin.group.edit_group", { n: group.name })
+            : $t("p.admin.group.add_group")
+        }}
       </div>
       <div class="group-form">
         <simple-form ref="form" :form="groupForm" v-model="group" />
         <div class="form-item">
-          <span class="label">Users</span>
+          <span class="label">{{ $t("p.admin.group.users") }}</span>
           <div class="value">
             <span class="user-item" v-for="u in users" :key="u.username">
               <input
@@ -53,19 +61,25 @@
           </div>
         </div>
         <div class="form-item save-button">
-          <simple-button small @click="saveGroup" :loading="saving"
-            >Save</simple-button
-          >
-          <simple-button small type="info" @click="group = null"
-            >Cancel</simple-button
-          >
+          <simple-button small @click="saveGroup" :loading="saving">
+            {{ $t("p.admin.group.save") }}
+          </simple-button>
+          <simple-button small type="info" @click="group = null">
+            {{ $t("p.admin.group.cancel") }}
+          </simple-button>
         </div>
       </div>
     </div>
     <div class="edit-tips" v-else>
-      <simple-button icon="#icon-add" title="Add group" @click="addGroup" small
-        >Add</simple-button
-      >&nbsp;or edit group
+      <simple-button
+        icon="#icon-add"
+        :title="$t('p.admin.group.add_group')"
+        @click="addGroup"
+        small
+      >
+        {{ $t("p.admin.group.add") }}
+      </simple-button>
+      {{ $t("p.admin.group.or_edit") }}
     </div>
   </div>
 </template>
@@ -87,7 +101,7 @@ export default {
   computed: {
     groupForm () {
       return [
-        { field: 'name', label: 'Name', type: 'text', required: true, disabled: this.edit }
+        { field: 'name', label: this.$t('p.admin.group.f_name'), type: 'text', required: true, disabled: this.edit }
       ]
     }
   },
@@ -129,8 +143,8 @@ export default {
     },
     async deleteGroup (group) {
       this.$confirm({
-        title: 'Delete group',
-        message: `Are you sure to delete group ${group.name}`,
+        title: this.$t('p.admin.group.delete_group'),
+        message: this.$t('p.admin.group.delete_group', { n: group.name }),
         confirmType: 'danger',
         onOk: () => {
           return deleteGroup(group.name)

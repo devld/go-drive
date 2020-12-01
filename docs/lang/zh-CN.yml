@@ -1,0 +1,158 @@
+error:
+  not_found: 资源不存在
+  not_allowed: 不允许的操作
+util:
+  request_failed: "[{{ 1 }}] 请求失败"
+oauth:
+  state_mismatch: state 不匹配
+api:
+  admin:
+    unknown_drive_type: 未知的 Drive 类型 '{{ 1 }}'
+    invalid_drive_name: 无效的 Drive 名称 '{{ 1 }}'
+  auth:
+    invalid_username_or_password: 用户名或密码错误
+    group_permission_required: 需要 '{{ 1 }}' 用户组权限
+  drive:
+    copy_to_same_path_not_allowed: 不允许复制到相同的路径
+    copy_to_child_path_not_allowed: 不允许复制到子路径
+    invalid_file_size: 无效的文件大小
+    invalid_size_or_chunk_size: 无效的文件大小或分片大小
+  chunk_uploader:
+    invalid_file_size: 无效的文件大小
+    invalid_chunk_seq: 无效的分片序号
+    chunk_size_cannot_less_than: 分片不可小于 {{ 1 }}
+    expected__bytes_but__bytes: 预期读取 {{ 1 }} bytes, 但实际读取了 {{ 2 }} bytes
+    missing_chunks: 缺失分片
+    invalid_upload_id: 无效的分片上传
+  mem_token:
+    invalid_token: 无效的 token
+  file_token:
+    invalid_token: 无效的 token
+  permission_wrapper:
+    no_subfolder_permission: 你可能没有子路径的操作权限
+  thumbnail:
+    file_too_large: 文件过大无法创建缩略图
+    image_too_large: 图片过大无法创建缩略图
+storage:
+  drives:
+    drive_exists: Drive '{{ 1 }}' 已存在
+  groups:
+    group_not_exists: 用户组 '{{ 1 }}' 不存在
+    group_exists: 用户组 '{{ 1 }}' 已存在
+  users:
+    user_not_exists: 用户 '{{ 1 }}' 不存在
+    user_exists: 用户 '{{ 1 }}' 已存在
+drive:
+  not_configured: Drive 还未配置完成
+  copy_type_mismatch1: 目的路径 '{{ 2 }}' 是一个文件, 但源路径 '{{ 1 }}' 是一个文件夹
+  copy_type_mismatch2: 目的路径 '{{ 2 }}' 是一个文件夹, 但源路径 '{{ 1 }}' 是一个文件
+  file_not_readable: 文件 '{{ 1 }}' 不可读
+  file_exists: 文件已存在
+  file_not_exists: 文件不存在
+  invalid_path: 无效的路径
+  file_not_downloadable: 无法下载这个文件
+  root:
+    invalid_drive_type: 无效的 Drive 类型 '{{ 1 }}'
+    invalid_drive_config: Drive '{{ 1 }}' 的配置有问题
+    error_create_drive: "创建 Drive '{{ 1 }}' 时出现错误: {{ 2 }}"
+  dispatcher:
+    move_across_not_supported: 不支持跨 Drive 移动文件
+  gdrive:
+    name: Google Drive
+    readme: Google Drive
+    form:
+      client_id:
+        label: 客户端 ID
+      client_secret:
+        label: 客户端密钥
+      cache_ttl:
+        label: 缓存生命周期
+        description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
+    oauth_text: 连接到 Google Drive
+  onedrive:
+    name: OneDrive
+    readme: OneDrive, 请参阅 [配置 OneDrive](https://go-drive.top/drives/onedrive)
+    form:
+      client_id:
+        label: 客户端 ID
+      client_secret:
+        label: 客户端密钥
+      proxy_in:
+        label: 上传代理
+        description: 上传时是否经过服务器代理
+      proxy_out:
+        label: 下载代理
+        description: 下载时是否经过服务器代理
+      cache_ttl:
+        label: 缓存生命周期
+        description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
+    drive_not_selected: OneDrive 尚未配置完成
+    oauth_text: 连接到 OneDrive
+    drive_select: 选择 Drive
+    drive_used: "{{ 1 }} / {{ 2 }} | {{ 3 }} 已使用"
+    unexpected_status: 未预期的状态码 {{ 1 }}
+    unknown_action_status: "未知的状态: {{ 1 }}"
+  fs:
+    name: 本地文件
+    readme: 本地文件系统
+    form:
+      path:
+        label: 根目录
+        description: 根目录路径
+    invalid_root_path: 无效的根目录
+    root_path_not_exists: 根目录不存在
+    cannot_list_file: 无效文件类型
+    cannot_delete_root: 无法删除根路径
+  s3:
+    name: S3
+    readme: S3 兼容协议
+    form:
+      ak:
+        label: AccessKey
+      sk:
+        label: SecretKey
+      bucket:
+        label: Bucket
+      path_style:
+        label: PathStyle
+        description: 强制使用路径形式的 API
+      region:
+        label: 区域(Region)
+      endpoint:
+        label: Endpoint
+        description: API 端点
+      proxy_in:
+        label: 上传代理
+        description: 上传时是否经过服务器代理
+      proxy_out:
+        label: 下载代理
+        description: 下载时是否经过服务器代理
+      cache_ttl:
+        label: 缓存生命周期
+        description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
+    bucket_not_exists: Bucket '{{ 1 }}' 不存在
+  webdav:
+    name: WebDAV
+    readme: WebDAV 协议
+    form:
+      url:
+        label: URL
+        description: 根路径 URL
+      username:
+        label: 用户名
+        description: 如果省略，则表示无需认证
+      password:
+        label: 密码
+      cache_ttl:
+        label: 缓存生命周期
+        description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
+    wrong_user_or_password: 用户名或密码不正确
+    remote_error: "远程服务错误: {{ 1 }}"
+stat:
+  task:
+    total: 总计
+    pending: 等待中
+    running: 运行中
+    done: 已完成
+    error: 错误
+    canceled: 已取消

@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
-	"go-drive/common"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"io"
 	"io/ioutil"
 	"log"
@@ -122,11 +122,11 @@ func (h *Client) client() *http.Client {
 }
 
 func (h *Client) request(req *http.Request) (Response, error) {
-	if common.IsDebugOn() {
+	if utils.IsDebugOn() {
 		log.Printf("[HttpClient  req] %s %s %v", req.Method, req.URL.String(), req.Header)
 	}
 	r, e := h.client().Do(req)
-	if common.IsDebugOn() {
+	if utils.IsDebugOn() {
 		var v interface{} = nil
 		if e == nil {
 			v = r.StatusCode

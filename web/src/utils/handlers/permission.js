@@ -1,10 +1,11 @@
+import { T } from '@/i18n'
 import { isAdmin } from '..'
 
 export default {
   name: 'permission',
   display: {
-    name: 'Permissions',
-    description: 'Set permissions for this item',
+    name: T('handler.permission.name'),
+    description: T('handler.permission.desc'),
     icon: '#icon-permission'
   },
   view: {

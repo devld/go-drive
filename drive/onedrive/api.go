@@ -2,7 +2,7 @@ package onedrive
 
 import (
 	"fmt"
-	"go-drive/common"
+	"go-drive/common/utils"
 	"net/url"
 	path2 "path"
 	"time"
@@ -117,7 +117,7 @@ func (d driveItem) Path() string {
 	if e != nil {
 		parentPath = d.Parent.Path[12:]
 	}
-	return common.CleanPath(path2.Join(parentPath, d.Name))
+	return utils.CleanPath(path2.Join(parentPath, d.Name))
 }
 
 type driveItems struct {

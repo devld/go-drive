@@ -7,7 +7,7 @@
           class="value"
           type="text"
           required
-          placeholder="Username"
+          :placeholder="$t('p.login.username')"
           v-model="username"
         />
       </span>
@@ -17,14 +17,14 @@
           class="value"
           type="password"
           required
-          placeholder="Password"
+          :placeholder="$t('p.login.password')"
           v-model="password"
         />
       </span>
       <span class="form-item submit">
-        <simple-button native-type="submit" class="submit" :loading="loading"
-          >Login</simple-button
-        >
+        <simple-button native-type="submit" class="submit" :loading="loading">
+          {{ $t("p.login.login") }}
+        </simple-button>
       </span>
     </form>
   </div>

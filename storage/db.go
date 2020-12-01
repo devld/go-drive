@@ -4,10 +4,12 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 	"go-drive/common"
+	"go-drive/common/registry"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 )
 
-func NewDB(config common.Config, ch *common.ComponentsHolder) (*DB, error) {
+func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 	dialect, args := config.GetDB()
 
 	db, e := gorm.Open(dialect, args)
@@ -15,7 +17,7 @@ func NewDB(config common.Config, ch *common.ComponentsHolder) (*DB, error) {
 		return nil, e
 	}
 
-	if common.IsDebugOn() {
+	if utils.IsDebugOn() {
 		db.LogMode(true)
 	}
 

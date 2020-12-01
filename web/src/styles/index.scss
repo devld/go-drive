@@ -61,6 +61,7 @@
     font-weight: normal;
     text-align: center;
     user-select: none;
+    white-space: nowrap;
   }
 
   thead {
@@ -91,6 +92,10 @@
       border-bottom: solid 1px;
       @include var(border-color, border-color);
     }
+  }
+
+  .line {
+    white-space: nowrap;
   }
 
   .center {

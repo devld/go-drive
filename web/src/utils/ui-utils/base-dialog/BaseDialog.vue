@@ -55,11 +55,11 @@ export default {
       required: true
     },
     title: {
-      type: String,
+      type: [String, Object],
       required: true
     },
     confirmText: {
-      type: String,
+      type: [String, Object],
       required: true
     },
     confirmType: {
@@ -69,7 +69,7 @@ export default {
       type: Boolean
     },
     cancelText: {
-      type: String
+      type: [String, Object]
     },
     cancelType: {
       type: String,

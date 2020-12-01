@@ -2,10 +2,12 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
+	"go-drive/common/registry"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/storage"
 	"regexp"
@@ -13,7 +15,7 @@ import (
 )
 
 func InitAdminRoutes(r gin.IRouter,
-	ch *common.ComponentsHolder,
+	ch *registry.ComponentsHolder,
 	rootDrive *drive.RootDrive,
 	tokenStore types.TokenStore,
 	userDAO *storage.UserDAO,
@@ -214,7 +216,7 @@ func InitAdminRoutes(r gin.IRouter,
 		}
 		f := drive.GetDrive(d.Type)
 		if f == nil {
-			_ = c.Error(common.NewNotAllowedMessageError(fmt.Sprintf("unknown drive type '%s'", d.Type)))
+			_ = c.Error(err.NewNotAllowedMessageError(i18n.T("api.admin.unknown_drive_type", d.Type)))
 			return
 		}
 		savedDrive, e := driveDAO.GetDrive(name)
@@ -280,7 +282,7 @@ func InitAdminRoutes(r gin.IRouter,
 
 	// get by path
 	r.GET("/path-permissions/*path", func(c *gin.Context) {
-		path := common.CleanPath(c.Param("path"))
+		path := utils.CleanPath(c.Param("path"))
 		permissions, e := permissionDAO.GetByPath(path)
 		if e != nil {
 			_ = c.Error(e)
@@ -291,7 +293,7 @@ func InitAdminRoutes(r gin.IRouter,
 
 	// save path permissions
 	r.PUT("/path-permissions/*path", func(c *gin.Context) {
-		path := common.CleanPath(c.Param("path"))
+		path := utils.CleanPath(c.Param("path"))
 		permissions := make([]types.PathPermission, 0)
 		if e := c.Bind(&permissions); e != nil {
 			_ = c.Error(e)
@@ -309,7 +311,7 @@ func InitAdminRoutes(r gin.IRouter,
 
 	// save mounts
 	r.POST("/mount/*to", func(c *gin.Context) {
-		to := common.CleanPath(c.Param("to"))
+		to := utils.CleanPath(c.Param("to"))
 		src := make([]mountSource, 0)
 		if e := c.Bind(&src); e != nil {
 			_ = c.Error(e)
@@ -356,7 +358,7 @@ func InitAdminRoutes(r gin.IRouter,
 		for p := range paths {
 			_, e := root.Get(p)
 			if e != nil {
-				if common.IsNotFoundError(e) {
+				if err.IsNotFoundError(e) {
 					paths[p] = false
 					continue
 				}
@@ -431,7 +433,7 @@ var driveNamePattern = regexp.MustCompile("^[^/\\\\0:*\"<>|]+$")
 
 func checkDriveName(name string) error {
 	if name == "" || name == "." || name == ".." || !driveNamePattern.MatchString(name) {
-		return common.NewBadRequestError("invalid drive name '" + name + "'")
+		return err.NewBadRequestError(i18n.T("api.admin.invalid_drive_name", name))
 	}
 	return nil
 }

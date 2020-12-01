@@ -11,9 +11,9 @@
       entry.name === '..'
         ? ''
         : `${entry.name}\n${$.formatTime(entry.mod_time)}\n` +
-          `${entry.type === 'file' ? 'File' : 'Folder'} | ${$.formatBytes(
-            entry.size
-          )}`
+          `${
+            entry.type === 'file' ? $t('app.file') : $t('app.folder')
+          } | ${$.formatBytes(entry.size)}`
     "
   >
     <span class="entry-item__icon-wrapper">

@@ -3,14 +3,17 @@ package onedrive
 import (
 	"errors"
 	"fmt"
-	"go-drive/common"
 	"go-drive/common/drive_util"
+	err "go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/req"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"golang.org/x/oauth2"
 	"io"
 	path2 "path"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -23,7 +26,7 @@ var oauth = drive_util.OAuthRequest{
 	},
 	RedirectURL: drive_util.CommonRedirectURL,
 	Scopes:      []string{"Files.ReadWrite", "offline_access", "User.Read"},
-	Text:        "Connect to OneDrive",
+	Text:        i18n.T("drive.onedrive.oauth_text"),
 }
 
 var httpApi, _ = req.NewClient("", nil, ifApiCallError, nil)
@@ -42,25 +45,25 @@ func supportThumbnail(item driveItem) bool {
 }
 
 func pathURL(path string) string {
-	if common.IsRootPath(path) {
+	if utils.IsRootPath(path) {
 		return "/root"
 	}
-	return common.BuildURL("/root:/{}:", path)
+	return utils.BuildURL("/root:/{}:", path)
 }
 
 func idURL(id string) string {
-	return common.BuildURL("/items/{}", id)
+	return utils.BuildURL("/items/{}", id)
 }
 
 func itemPath(path string) string {
-	if common.IsRootPath(path) {
+	if utils.IsRootPath(path) {
 		return "/drive/root:"
 	}
 	return "/drive/root:/" + path
 }
 
-func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
-	initConfig, resp, e := drive_util.OAuthInitConfig(oauth, config, utils.Data)
+func InitConfig(config drive_util.DriveConfig, driveUtils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
+	initConfig, resp, e := drive_util.OAuthInitConfig(oauth, config, driveUtils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -79,7 +82,7 @@ func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*dr
 		initConfig.OAuth.Principal = fmt.Sprintf("%s <%s>", user.DisplayName, user.UserPrincipalName)
 	}
 
-	params, e := utils.Data.Load("drive_id")
+	params, e := driveUtils.Data.Load("drive_id")
 	if e != nil {
 		return nil, e
 	}
@@ -97,17 +100,15 @@ func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*dr
 				}
 				opts[i] = types.FormItemOption{
 					Name: fmt.Sprintf("%s %d", d.DriveType, i+1),
-					Title: fmt.Sprintf(
-						"%s / %s | %s used",
-						common.FormatBytes(uint64(d.Quota.Used), 1),
-						common.FormatBytes(uint64(d.Quota.Total), 1),
-						used,
-					),
+					Title: i18n.T("drive.onedrive.drive_used",
+						utils.FormatBytes(uint64(d.Quota.Used), 1),
+						utils.FormatBytes(uint64(d.Quota.Total), 1),
+						used),
 					Value: d.Id,
 				}
 			}
 			initConfig.Form = []types.FormItem{
-				{Label: "Drive", Type: "select", Field: "drive_id", Required: true, Options: opts},
+				{Label: i18n.T("drive.onedrive.drive_select"), Type: "select", Field: "drive_id", Required: true, Options: opts},
 			}
 			initConfig.Value = types.SM{"drive_id": params["drive_id"]}
 		}
@@ -161,7 +162,7 @@ func (o *OneDrive) uploadSmallFile(parentId, filename string, size int64,
 	reader io.Reader, ctx types.TaskCtx) (*oneDriveEntry, error) {
 	ctx.Total(size, true)
 	resp, e := o.c.Request("PUT",
-		idURL(parentId)+":"+common.BuildURL("/{}:/content", filename),
+		idURL(parentId)+":"+utils.BuildURL("/{}:/content", filename),
 		types.SM{"Content-Type": "application/octet-stream"},
 		req.NewReaderBody(reader, size),
 	)
@@ -230,7 +231,7 @@ func (o *OneDrive) uploadLargeFile(parentId, filename string, size int64, overri
 	}
 	if finalResp.Status() != 201 {
 		_ = deleteUploadSession(sessionUrl)
-		return nil, errors.New(fmt.Sprintf("unexpected status code %d", finalResp.Status()))
+		return nil, errors.New(i18n.T("drive.onedrive.unexpected_status", strconv.Itoa(finalResp.Status())))
 	}
 	return o.toEntry(finalResp)
 }
@@ -241,7 +242,7 @@ func (o *OneDrive) createUploadSession(parentId, filename string, override bool)
 		conflictBehavior = "replace"
 	}
 	resp, e := o.c.Post(
-		idURL(parentId)+":"+common.BuildURL("/{}:/createUploadSession", filename), nil,
+		idURL(parentId)+":"+utils.BuildURL("/{}:/createUploadSession", filename), nil,
 		req.NewJsonBody(types.M{"item": types.M{"@microsoft.graph.conflictBehavior": conflictBehavior}}),
 	)
 	if e != nil {
@@ -271,7 +272,7 @@ func waitLongRunningAction(waitUrl string) error {
 		}
 		if s.Status != "inProgress" && s.Status != "notStarted" {
 			if s.Status != "completed" {
-				return errors.New(fmt.Sprintf("unknown action status: %s", s.Status))
+				return errors.New(i18n.T("drive.onedrive.unknown_action_status", s.Status))
 			}
 			return nil
 		}
@@ -301,21 +302,21 @@ func (o *OneDrive) deserializeEntry(dat string) (types.IEntry, error) {
 		d: o, id: ed["id"],
 		path: ec.Path, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir(),
 		downloadUrl:          ed["du"],
-		downloadUrlExpiresAt: common.ToInt64(ed["de"], -1),
+		downloadUrlExpiresAt: utils.ToInt64(ed["de"], -1),
 		thumbnail:            ed["th"],
 	}, nil
 }
 
 func ifApiCallError(resp req.Response) error {
 	if resp.Status() < 200 || resp.Status() >= 400 {
-		err := apiError{}
-		if e := resp.Json(&err); e != nil {
+		ee := apiError{}
+		if e := resp.Json(&ee); e != nil {
 			return e
 		}
-		if err.Err.Code == "itemNotFound" {
-			return common.NewNotFoundMessageError(err.Err.Message)
+		if ee.Err.Code == "itemNotFound" {
+			return err.NewNotFoundMessageError(ee.Err.Message)
 		}
-		return err
+		return ee
 	}
 	return nil
 }

@@ -2,9 +2,11 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
-	"go-drive/common"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -51,13 +53,22 @@ func UpdateSessionUser(c *gin.Context, tokenStore types.TokenStore, user types.U
 }
 
 func getSignPayload(req *http.Request, path string) string {
-	return req.Host + "." + path + "." + common.GetRealIP(req)
+	return req.Host + "." + path + "." + utils.GetRealIP(req)
 }
 
-func checkSignature(signer *common.Signer, req *http.Request, path string) bool {
+func checkSignature(signer *utils.Signer, req *http.Request, path string) bool {
 	return signer.Validate(getSignPayload(req, path), req.URL.Query().Get(signatureQueryKey))
 }
 
-func signPathRequest(signer *common.Signer, req *http.Request, path string, notAfter time.Time) string {
+func signPathRequest(signer *utils.Signer, req *http.Request, path string, notAfter time.Time) string {
 	return signer.Sign(getSignPayload(req, path), notAfter)
+}
+
+func TranslateV(c *gin.Context, ms i18n.MessageSource, v interface{}) interface{} {
+	lang := c.GetHeader("accept-language")
+	i := strings.IndexByte(lang, ',')
+	if i >= 0 {
+		lang = lang[:i]
+	}
+	return i18n.TranslateV(lang, ms, v)
 }

@@ -6,8 +6,9 @@
         v-if="!readonly"
         @click="saveFile"
         :loading="saving"
-        >Save</simple-button
       >
+        {{ $t("hv.text_edit.save") }}
+      </simple-button>
       <span :title="filename">{{ filename }}</span>
       <button
         class="header-button close-button plain-button"

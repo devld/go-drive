@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"fmt"
 	"github.com/jinzhu/gorm"
-	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 )
 
@@ -31,7 +31,7 @@ func (g *GroupDAO) GetGroup(name string) (GroupWithUsers, error) {
 	group := types.Group{}
 	e := g.db.C().First(&group, "name = ?", name).Error
 	if gorm.IsRecordNotFoundError(e) {
-		return gus, common.NewNotFoundMessageError(fmt.Sprintf("group '%s' not found", name))
+		return gus, err.NewNotFoundMessageError(i18n.T("storage.groups.group_not_exists", name))
 	}
 	if e != nil {
 		return gus, e
@@ -70,7 +70,7 @@ func (g *GroupDAO) AddGroup(group GroupWithUsers) (GroupWithUsers, error) {
 	e := g.db.C().Where("name = ?", group.Name).Find(&types.Group{}).Error
 	if e == nil {
 		return GroupWithUsers{},
-			common.NewNotAllowedMessageError(fmt.Sprintf("group '%s' exists", group.Name))
+			err.NewNotAllowedMessageError(i18n.T("storage.groups.group_exists", group.Name))
 	}
 	if !gorm.IsRecordNotFoundError(e) {
 		return GroupWithUsers{}, e
@@ -92,7 +92,7 @@ func (g *GroupDAO) UpdateGroup(name string, gus GroupWithUsers) error {
 		group := types.Group{}
 		e := tx.First(&group, "name = ?", name).Error
 		if gorm.IsRecordNotFoundError(e) {
-			return common.NewNotFoundMessageError(fmt.Sprintf("group '%s' not found", name))
+			return err.NewNotFoundMessageError(i18n.T("storage.groups.group_not_exists", name))
 		}
 		if e != nil {
 			return e
@@ -111,7 +111,7 @@ func (g *GroupDAO) DeleteGroup(name string) error {
 			return s.Error
 		}
 		if s.RowsAffected != 1 {
-			return common.NewNotFoundMessageError(fmt.Sprintf("group '%s' not found", name))
+			return err.NewNotFoundMessageError(i18n.T("storage.groups.group_not_exists", name))
 		}
 		if e := tx.Where("group_name = ?", name).Delete(&types.UserGroup{}).Error; e != nil {
 			return e

@@ -7,7 +7,7 @@
           v-if="!isLoggedIn"
           @click="login"
         >
-          Login
+          {{ $t("app.login") }}
         </button>
 
         <router-link
@@ -15,19 +15,21 @@
           :key="m.to"
           class="plain-button small nav-button"
           :to="m.to"
-          >{{ m.name }}</router-link
         >
+          {{ m.name }}
+        </router-link>
 
         <span class="user-info" v-if="isLoggedIn">
           <span
             class="username"
-            :title="`Username: ${user.username}\nGroups: ${user.groups
-              .map((g) => g.name)
-              .join(', ')}`"
+            :title="`
+              ${$t('app.username')}: ${user.username}\n${$t('app.groups')}
+              : ${user.groups.map((g) => g.name).join(', ')}
+            `"
             >{{ user.username }}</span
           >
           <button class="plain-button small logout-button" @click="logout">
-            Logout
+            {{ $t("app.logout") }}
           </button>
         </span>
       </div>
@@ -41,7 +43,7 @@
       overlay-close
       esc-close
       transition="flip-fade"
-      title="Login"
+      :title="$t('app.login')"
     >
       <login-view @success="afterLogin" />
     </dialog-view>
@@ -72,9 +74,9 @@ export default {
     ...mapGetters(['isAdmin']),
     isLoggedIn () { return !!this.user },
     navMenus () {
-      const menus = [{ name: 'Home', to: '/' }]
+      const menus = [{ name: this.$t('app.home'), to: '/' }]
       if (this.isAdmin) {
-        menus.push({ name: 'Admin', to: '/admin' })
+        menus.push({ name: this.$t('app.admin'), to: '/admin' })
       }
       return menus
     }

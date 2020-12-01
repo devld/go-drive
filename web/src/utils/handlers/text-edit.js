@@ -1,3 +1,4 @@
+import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
 
 const TEXT_EDITOR_MAX_FILE_SIZE = 128 * 1024 // 128kb
@@ -5,8 +6,8 @@ const TEXT_EDITOR_MAX_FILE_SIZE = 128 * 1024 // 128kb
 export default {
   name: 'editor',
   display: (entry) => ({
-    name: entry.meta.can_write ? 'Edit' : 'View',
-    description: entry.meta.can_write ? 'Edit this file' : 'View this file',
+    name: T(entry.meta.can_write ? 'handler.text_edit.edit_name' : 'handler.text_edit.view_name'),
+    description: T(entry.meta.can_write ? 'handler.text_edit.edit_desc' : 'handler.text_edit.view_desc'),
     icon: '#icon-cursor-text'
   }),
   view: {

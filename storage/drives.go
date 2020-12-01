@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"fmt"
 	"github.com/jinzhu/gorm"
-	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 )
 
@@ -25,7 +25,7 @@ func (d *DriveDAO) GetDrive(name string) (types.Drive, error) {
 	var config types.Drive
 	e := d.db.C().Where("name = ?", name).Find(&config).Error
 	if gorm.IsRecordNotFoundError(e) {
-		return config, common.NewNotFoundError()
+		return config, err.NewNotFoundError()
 	}
 	return config, e
 }
@@ -34,7 +34,7 @@ func (d *DriveDAO) AddDrive(drive types.Drive) (types.Drive, error) {
 	e := d.db.C().Where("name = ?", drive.Name).Find(&types.Drive{}).Error
 	if e == nil {
 		return types.Drive{},
-			common.NewNotAllowedMessageError(fmt.Sprintf("drive '%s' exists", drive.Name))
+			err.NewNotAllowedMessageError(i18n.T("storage.drives.drive_exists", drive.Name))
 	}
 	if !gorm.IsRecordNotFoundError(e) {
 		return types.Drive{}, e

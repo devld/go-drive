@@ -79,7 +79,7 @@ export default {
   methods: {
     async validate () {
       if (this.item.required && !this.value) {
-        this.error = `${this.item.field} is required`
+        this.error = this.$t('form.required_msg', { f: this.item.label })
         throw new Error(this.error)
       }
       return this.value

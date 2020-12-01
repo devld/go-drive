@@ -3,9 +3,11 @@ package gdrive
 import (
 	"context"
 	"fmt"
-	"go-drive/common"
 	"go-drive/common/drive_util"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
@@ -63,12 +65,12 @@ func (g *GDrive) Get(path string) (types.IEntry, error) {
 
 func (g *GDrive) Save(path string, size int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
 	_, e := g.getByPath(path)
-	if e != nil && !common.IsNotFoundError(e) {
+	if e != nil && !err.IsNotFoundError(e) {
 		return nil, e
 	}
 	exists := e == nil
 	if !override && exists {
-		return nil, common.NewNotAllowedMessageError("file exists")
+		return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 	}
 	parent, filename, e := g.getParentTarget(path)
 	if e != nil {
@@ -89,7 +91,7 @@ func (g *GDrive) Save(path string, size int64, override bool, reader io.Reader, 
 		return nil, e
 	}
 
-	_ = g.cache.Evict(common.PathParent(path), false)
+	_ = g.cache.Evict(utils.PathParent(path), false)
 	_ = g.cache.Evict(path, false)
 
 	return g.newEntry(parent.path, resp), nil
@@ -104,7 +106,7 @@ func (g *GDrive) MakeDir(path string) (types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	_ = g.cache.Evict(common.PathParent(path), false)
+	_ = g.cache.Evict(utils.PathParent(path), false)
 	return g.newEntry(parent.path, resp), nil
 }
 
@@ -119,7 +121,7 @@ func (g *GDrive) Copy(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (
 	from = drive_util.GetIEntry(from, g.isSelf)
 	if from == nil || from.Type().IsDir() {
 		// google drive api does not support to copy folder
-		return nil, common.NewUnsupportedError()
+		return nil, err.NewUnsupportedError()
 	}
 	ctx.Total(from.Size(), false)
 	parent, filename, e := g.getParentTarget(to)
@@ -134,7 +136,7 @@ func (g *GDrive) Copy(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (
 	ctx.Progress(from.Size(), false)
 
 	_ = g.cache.Evict(to, true)
-	_ = g.cache.Evict(common.PathParent(to), false)
+	_ = g.cache.Evict(utils.PathParent(to), false)
 
 	return g.newEntry(parent.path, resp), nil
 }
@@ -142,14 +144,14 @@ func (g *GDrive) Copy(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (
 func (g *GDrive) Move(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, g.isSelf)
 	if from == nil {
-		return nil, common.NewUnsupportedError()
+		return nil, err.NewUnsupportedError()
 	}
 	ctx.Total(from.Size(), false)
 	parent, filename, e := g.getParentTarget(to)
 	if e != nil {
 		return nil, e
 	}
-	fromParent, e := g.getByPath(common.PathParent(from.Path()))
+	fromParent, e := g.getByPath(utils.PathParent(from.Path()))
 	if e != nil {
 		return nil, e
 	}
@@ -160,19 +162,19 @@ func (g *GDrive) Move(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (
 	}
 	ctx.Progress(from.Size(), false)
 
-	_ = g.cache.Evict(common.PathParent(to), false)
+	_ = g.cache.Evict(utils.PathParent(to), false)
 	_ = g.cache.Evict(from.Path(), true)
-	_ = g.cache.Evict(common.PathParent(from.Path()), false)
+	_ = g.cache.Evict(utils.PathParent(from.Path()), false)
 
 	return g.newEntry(parent.path, resp), nil
 }
 
 func (g *GDrive) getParentTarget(path string) (*gdriveEntry, string, error) {
-	name := common.PathBase(path)
+	name := utils.PathBase(path)
 	if name == "" {
-		return nil, "", common.NewBadRequestError("invalid path")
+		return nil, "", err.NewBadRequestError(i18n.T("drive.invalid_path"))
 	}
-	parent, e := g.getByPath(common.PathParent(path))
+	parent, e := g.getByPath(utils.PathParent(path))
 	if e != nil {
 		return nil, "", e
 	}
@@ -180,13 +182,13 @@ func (g *GDrive) getParentTarget(path string) (*gdriveEntry, string, error) {
 }
 
 func (g *GDrive) getByPath(path string) (*gdriveEntry, error) {
-	if common.IsRootPath(path) {
+	if utils.IsRootPath(path) {
 		return &gdriveEntry{id: "root", isDir: true, modTime: -1, d: g}, nil
 	}
 	if cached, _ := g.cache.GetEntry(path); cached != nil {
 		return cached.(*gdriveEntry), nil
 	}
-	siblings, e := g.List(common.PathParent(path))
+	siblings, e := g.List(utils.PathParent(path))
 	if e != nil {
 		return nil, e
 	}
@@ -199,7 +201,7 @@ func (g *GDrive) getByPath(path string) (*gdriveEntry, error) {
 		}
 	}
 	if found == nil {
-		return nil, common.NewNotFoundError()
+		return nil, err.NewNotFoundError()
 	}
 	_ = g.cache.PutEntry(found, g.cacheTTL)
 	return found, nil
@@ -210,7 +212,7 @@ func (g *GDrive) List(path string) ([]types.IEntry, error) {
 		return cached, nil
 	}
 	id := "root"
-	if !common.IsRootPath(path) {
+	if !utils.IsRootPath(path) {
 		ge, e := g.getByPath(path)
 		if e != nil {
 			return nil, e
@@ -238,7 +240,7 @@ func (g *GDrive) Delete(path string, _ types.TaskCtx) error {
 	e = g.s.Files.Delete(ge.id).Do()
 	if e == nil {
 		_ = g.cache.Evict(path, true)
-		_ = g.cache.Evict(common.PathParent(path), false)
+		_ = g.cache.Evict(utils.PathParent(path), false)
 	}
 	return e
 }
@@ -299,7 +301,7 @@ func (g *GDrive) newEntry(parentPath string, file *drive.File) *gdriveEntry {
 		d: g, id: file.Id, mime: file.MimeType,
 		path:  path2.Join(parentPath, file.Name),
 		isDir: file.MimeType == typeFolder || targetMime == typeFolder,
-		size:  size, modTime: common.Millisecond(modTime),
+		size:  size, modTime: utils.Millisecond(modTime),
 		targetId: targetId, targetMime: targetMime, thumbnail: thumbnail,
 	}
 }
@@ -371,7 +373,7 @@ func (g *gdriveEntry) Drive() types.IDrive {
 }
 
 func (g *gdriveEntry) Name() string {
-	return common.PathBase(g.path)
+	return utils.PathBase(g.path)
 }
 
 func (g *gdriveEntry) GetReader() (io.ReadCloser, error) {
@@ -379,7 +381,7 @@ func (g *gdriveEntry) GetReader() (io.ReadCloser, error) {
 	if e != nil {
 		return nil, e
 	}
-	return common.GetURL(u.URL, u.Header)
+	return drive_util.GetURL(u.URL, u.Header)
 }
 
 func (g *gdriveEntry) GetURL() (*types.ContentURL, error) {
@@ -388,15 +390,15 @@ func (g *gdriveEntry) GetURL() (*types.ContentURL, error) {
 	fileId := g.fileId()
 	exportMime := exportMimeTypeMap[g.mimeType()]
 	if exportMime != "" {
-		downloadUrl = common.BuildURL(g.d.s.BasePath+"files/{}/export", fileId) +
+		downloadUrl = utils.BuildURL(g.d.s.BasePath+"files/{}/export", fileId) +
 			"?alt=media&mimeType=" + url2.QueryEscape(exportMime)
 	} else {
 		if strings.HasPrefix(g.mimeType(), typeGoogleAppPrefix) {
-			return nil, common.NewNotAllowedMessageError("this file is not downloadable")
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_not_downloadable"))
 		}
 	}
 	if downloadUrl == "" {
-		downloadUrl = common.BuildURL(g.d.s.BasePath+"files/{}", fileId) + "?alt=media"
+		downloadUrl = utils.BuildURL(g.d.s.BasePath+"files/{}", fileId) + "?alt=media"
 	}
 
 	t, e := g.d.ts.Token()

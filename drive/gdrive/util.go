@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common/drive_util"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -13,8 +14,7 @@ import (
 )
 
 const (
-	typeFolder   = "application/vnd.google-apps.folder"
-	typeShortcut = "application/vnd.google-apps.shortcut"
+	typeFolder = "application/vnd.google-apps.folder"
 
 	typeGoogleAppPrefix = "application/vnd.google-apps."
 )
@@ -40,7 +40,7 @@ var oauth = drive_util.OAuthRequest{
 	Endpoint:       google.Endpoint,
 	RedirectURL:    drive_util.CommonRedirectURL,
 	Scopes:         []string{"https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/userinfo.profile"},
-	Text:           "Connect to Google Drive",
+	Text:           i18n.T("drive.gdrive.oauth_text"),
 	AutoCodeOption: []oauth2.AuthCodeOption{oauth2.AccessTypeOffline},
 }
 

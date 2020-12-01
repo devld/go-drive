@@ -33,7 +33,7 @@ export default {
 
       this._cancelCallback = opts.onCancel
 
-      this.cancelText = this._cancelCallback ? (opts.cancelText || 'Cancel') : ''
+      this.cancelText = this._cancelCallback ? (opts.cancelText || this.$t('dialog.loading.cancel')) : ''
       this.cancelType = opts.cancelType || 'info'
 
       this.showing = true

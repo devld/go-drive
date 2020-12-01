@@ -2,8 +2,10 @@ package drive_util
 
 import (
 	"context"
-	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"golang.org/x/oauth2"
 	"net/http"
 	"strconv"
@@ -54,7 +56,7 @@ func oauthGet(o OAuthRequest, config DriveConfig, ds DriveDataStore) (*OAuthResp
 	if e != nil {
 		return nil, e
 	}
-	expiresAt := time.Unix(common.ToInt64(params["expires_at"], -1), 0)
+	expiresAt := time.Unix(utils.ToInt64(params["expires_at"], -1), 0)
 	t := &oauth2.Token{
 		AccessToken:  params["token"],
 		TokenType:    params["token_type"],
@@ -76,7 +78,7 @@ func OAuthInitConfig(o OAuthRequest, config DriveConfig, ds DriveDataStore) (*Dr
 		return nil, nil, e
 	}
 
-	state := common.RandString(6)
+	state := utils.RandString(6)
 	if e := ds.Save(types.SM{"state": state}); e != nil {
 		return nil, nil, e
 	}
@@ -109,7 +111,7 @@ func OAuthInit(o OAuthRequest, data types.SM, config DriveConfig, ds DriveDataSt
 		return nil, e
 	}
 	if state != params["state"] {
-		return nil, common.NewNotAllowedMessageError("state does not match")
+		return nil, err.NewNotAllowedMessageError(i18n.T("oauth.state_mismatch"))
 	}
 	t, e := oauthConf.Exchange(context.Background(), code)
 	if e != nil {
@@ -131,7 +133,7 @@ func OAuthGet(o OAuthRequest, config DriveConfig, ds DriveDataStore) (*OAuthResp
 		return nil, e
 	}
 	if resp.Token == nil {
-		return nil, common.NewNotAllowedMessageError("drive not configured")
+		return nil, err.NewNotAllowedMessageError("drive.not_configured")
 	}
 	return resp, e
 }

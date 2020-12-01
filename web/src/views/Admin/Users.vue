@@ -2,27 +2,31 @@
   <div class="users-manager" :class="{ editing: !!user }">
     <div class="users-list">
       <div class="actions">
-        <simple-button icon="#icon-add" title="Add user" @click="addUser" />
+        <simple-button
+          icon="#icon-add"
+          :title="$t('p.admin.user.add_user')"
+          @click="addUser"
+        />
       </div>
       <table class="simple-table">
         <thead>
           <tr>
-            <th>Username</th>
-            <th>Operation</th>
+            <th>{{ $t("p.admin.user.username") }}</th>
+            <th>{{ $t("p.admin.user.operation") }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="u in users" :key="u.username">
             <td class="center">{{ u.username }}</td>
-            <td class="center">
+            <td class="center line">
               <simple-button
-                title="Edit"
+                :title="$t('p.admin.user.edit')"
                 small
                 icon="#icon-edit"
                 @click="editUser(u)"
               />
               <simple-button
-                title="Delete"
+                :title="$t('p.admin.user.delete')"
                 type="danger"
                 small
                 icon="#icon-delete"
@@ -35,12 +39,16 @@
     </div>
     <div class="user-edit" v-if="user">
       <div class="small-title">
-        {{ edit ? `Edit user: ${user.username}` : "Add user" }}
+        {{
+          edit
+            ? $t("p.admin.user.edit_user", { n: user.username })
+            : $t("p.admin.user.add_user")
+        }}
       </div>
       <div class="user-form">
         <simple-form ref="form" :form="userForm" v-model="user" />
         <div class="form-item">
-          <span class="label">Groups</span>
+          <span class="label">{{ $t("p.admin.user.groups") }}</span>
           <div class="value">
             <span class="group-item" v-for="g in groups" :key="g.name">
               <input type="checkbox" :value="g.name" v-model="user.groups" />
@@ -49,19 +57,20 @@
           </div>
         </div>
         <div class="form-item save-button">
-          <simple-button small @click="saveUser" :loading="saving"
-            >Save</simple-button
-          >
-          <simple-button small type="info" @click="user = null"
-            >Cancel</simple-button
-          >
+          <simple-button small @click="saveUser" :loading="saving">
+            {{ $t("p.admin.user.save") }}
+          </simple-button>
+          <simple-button small type="info" @click="user = null">
+            {{ $t("p.admin.user.cancel") }}
+          </simple-button>
         </div>
       </div>
     </div>
     <div class="edit-tips" v-else>
-      <simple-button icon="#icon-add" title="Add user" @click="addUser" small
-        >Add</simple-button
-      >&nbsp;or edit user
+      <simple-button icon="#icon-add" title="Add user" @click="addUser" small>
+        {{ $t("p.admin.user.add") }}
+      </simple-button>
+      {{ $t("p.admin.user.or_edit") }}
     </div>
   </div>
 </template>
@@ -83,8 +92,8 @@ export default {
   computed: {
     userForm () {
       return [
-        { field: 'username', label: 'Username', type: 'text', required: true, disabled: this.edit },
-        { field: 'password', label: 'Password', type: 'text', required: !this.edit }
+        { field: 'username', label: this.$t('p.admin.user.f_username'), type: 'text', required: true, disabled: this.edit },
+        { field: 'password', label: this.$t('p.admin.user.f_password'), type: 'text', required: !this.edit }
       ]
     }
   },
@@ -127,8 +136,8 @@ export default {
     },
     async deleteUser (user) {
       this.$confirm({
-        title: 'Delete user',
-        message: `Are you sure to delete user ${user.username}`,
+        title: this.$t('p.admin.user.delete_user'),
+        message: this.$t('p.admin.user.confirm_delete', { n: user.username }),
         confirmType: 'danger',
         onOk: () => {
           return deleteUser(user.username)

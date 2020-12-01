@@ -1,8 +1,10 @@
 package server
 
 import (
-	"go-drive/common"
+	"go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"go-drive/storage"
 	"io"
 	"net/http"
@@ -24,12 +26,12 @@ type PermissionWrapperDrive struct {
 	subjects          []string
 	request           *http.Request
 	permissionStorage *storage.PathPermissionDAO
-	signer            *common.Signer
+	signer            *utils.Signer
 }
 
 func NewPermissionWrapperDrive(
 	request *http.Request, session types.Session, drive types.IDrive,
-	permissionStorage *storage.PathPermissionDAO, signer *common.Signer) *PermissionWrapperDrive {
+	permissionStorage *storage.PathPermissionDAO, signer *utils.Signer) *PermissionWrapperDrive {
 
 	subjects := make([]string, 0, 3)
 	subjects = append(subjects, types.AnySubject) // Anonymous
@@ -142,9 +144,9 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	if !common.IsRootPath(path) {
+	if !utils.IsRootPath(path) {
 		if !permission.CanRead() {
-			return nil, common.NewNotFoundError()
+			return nil, err.NewNotFoundError()
 		}
 	}
 	entries, e := p.drive.List(path)
@@ -201,8 +203,8 @@ func (p *PermissionWrapperDrive) Upload(path string, size int64, override bool,
 }
 
 func (p *PermissionWrapperDrive) requireFolderWritePermission(path string) (types.Permission, error) {
-	if !common.IsRootPath(path) {
-		perm, e := p.requirePermission(common.PathParent(path), types.PermissionReadWrite)
+	if !utils.IsRootPath(path) {
+		perm, e := p.requirePermission(utils.PathParent(path), types.PermissionReadWrite)
 		if e != nil {
 			return perm, e
 		}
@@ -216,7 +218,7 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 		return types.PermissionEmpty, e
 	}
 	if resolved&require != require {
-		return resolved, common.NewNotFoundError()
+		return resolved, err.NewNotFoundError()
 	}
 	return resolved, nil
 }
@@ -228,7 +230,7 @@ func (p *PermissionWrapperDrive) requireDescendantPermission(path string, requir
 	}
 	for _, p := range permission {
 		if p&require != require {
-			return common.NewNotAllowedMessageError("You don't have the appropriate permission for the subfolders.")
+			return err.NewNotAllowedMessageError(i18n.T("api.permission_wrapper.no_subfolder_permission"))
 		}
 	}
 	return nil
@@ -258,7 +260,7 @@ func (p *permissionWrapperEntry) Meta() types.EntryMeta {
 	meta.CanRead = meta.CanRead && p.permission.CanRead()
 	meta.CanWrite = meta.CanWrite && p.permission.CanWrite()
 	if p.accessKey != "" {
-		meta.Props = common.CopyMap(meta.Props)
+		meta.Props = utils.CopyMap(meta.Props)
 		meta.Props["access_key"] = p.accessKey
 	}
 	return meta
@@ -273,21 +275,21 @@ func (p *permissionWrapperEntry) Drive() types.IDrive {
 }
 
 func (p *permissionWrapperEntry) Name() string {
-	return common.PathBase(p.entry.Path())
+	return utils.PathBase(p.entry.Path())
 }
 
 func (p *permissionWrapperEntry) GetReader() (io.ReadCloser, error) {
 	if c, ok := p.entry.(types.IContent); ok {
 		return c.GetReader()
 	}
-	return nil, common.NewUnsupportedError()
+	return nil, err.NewUnsupportedError()
 }
 
 func (p *permissionWrapperEntry) GetURL() (*types.ContentURL, error) {
 	if c, ok := p.entry.(types.IContent); ok {
 		return c.GetURL()
 	}
-	return &types.ContentURL{}, common.NewUnsupportedError()
+	return &types.ContentURL{}, err.NewUnsupportedError()
 }
 
 func (p *permissionWrapperEntry) GetIEntry() types.IEntry {
