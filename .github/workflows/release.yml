@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - v*
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Install build-essential
+        run: sudo apt-get install zip build-essential gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-mingw-w64-x86-64
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.13
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2.1.2
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: Build
+        shell: bash
+        run: |
+          set -e
+          export BUILD_VERSION=${GITHUB_REF##*/}
+          BUILDS=(  linux_amd64 windows_amd64          linux_arm64           linux_arm)
+          CGO_ARGS=(gcc         x86_64-w64-mingw32-gcc aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc)
+          make clean
+          for i in "${!BUILDS[@]}"; do
+              os_arch=${BUILDS[$i]}
+              cgo_cc=${CGO_ARGS[$i]}
+              export GOOS=${os_arch%_*}
+              export GOARCH=${os_arch#*_}
+              echo building for ${GOOS}_${GOARCH}
+              target=all
+              if [ ${GOOS} == 'windows' ]; then
+                  target=zip
+              fi
+              export CC=
+              export CGO_ENABLED=1
+              if [ ! -z "$cgo_cc" ]; then
+                  export CC=${cgo_cc}
+              fi
+              make ${target}
+          done
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          for i in `find build/ -maxdepth 1 -type f -name '*.tar.gz' -or -name '*.zip'`; do
+            assets="${assets} -a ${i}"
+          done
+          hub release create -d -p ${assets} -m "Release ${GITHUB_REF##*/}" ${GITHUB_REF##*/}
