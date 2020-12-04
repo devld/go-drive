@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+var (
+	version = "unknown"
+	hash    = "unknown"
+	build   = "unknown"
+)
+
 const (
 	DbType     = "sqlite3"
 	DbFilename = "data.db"
@@ -20,6 +26,9 @@ const (
 
 func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	config := Config{}
+
+	var v bool
+	flag.BoolVar(&v, "v", false, "print version")
 
 	flag.StringVar(&config.Listen, "l", Listen, "address listen on")
 	flag.StringVar(&config.dataDir, "d", "./", "path to the data dir")
@@ -40,6 +49,11 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	flag.BoolVar(&config.TokenRefresh, "token-refresh", true, "enable auto refresh token")
 
 	flag.Parse()
+
+	if v {
+		fmt.Printf("%s %s build-%s", version, hash, build)
+		os.Exit(0)
+	}
 
 	if _, e := os.Stat(config.dataDir); os.IsNotExist(e) {
 		return config, errors.New(fmt.Sprintf("dataDir '%s' does not exist", config.dataDir))
