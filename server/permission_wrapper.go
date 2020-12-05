@@ -104,7 +104,7 @@ func (p *PermissionWrapperDrive) MakeDir(path string) (types.IEntry, error) {
 }
 
 func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
-	toPermission, e := p.requirePermission(to, types.PermissionReadWrite)
+	toPermission, e := p.requirePathAndParentWritable(to)
 	if e != nil {
 		return nil, e
 	}
@@ -122,11 +122,14 @@ func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override boo
 }
 
 func (p *PermissionWrapperDrive) Move(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
-	toPermission, e := p.requireFolderWritePermission(to)
+	toPermission, e := p.requirePathAndParentWritable(to)
 	if e != nil {
 		return nil, e
 	}
-	if e := p.requireDescendantPermission(from.Path(), types.PermissionRead); e != nil {
+	if _, e := p.requirePathAndParentWritable(from.Path()); e != nil {
+		return nil, e
+	}
+	if e := p.requireDescendantPermission(from.Path(), types.PermissionReadWrite); e != nil {
 		return nil, e
 	}
 	if e := p.requireDescendantPermission(to, types.PermissionReadWrite); e != nil {
@@ -187,7 +190,7 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 }
 
 func (p *PermissionWrapperDrive) Delete(path string, ctx types.TaskCtx) error {
-	if _, e := p.requireFolderWritePermission(path); e != nil {
+	if _, e := p.requirePathAndParentWritable(path); e != nil {
 		return e
 	}
 	return p.drive.Delete(path, ctx)
@@ -202,7 +205,7 @@ func (p *PermissionWrapperDrive) Upload(path string, size int64, override bool,
 	return p.drive.Upload(path, size, override, config)
 }
 
-func (p *PermissionWrapperDrive) requireFolderWritePermission(path string) (types.Permission, error) {
+func (p *PermissionWrapperDrive) requirePathAndParentWritable(path string) (types.Permission, error) {
 	if !utils.IsRootPath(path) {
 		perm, e := p.requirePermission(utils.PathParent(path), types.PermissionReadWrite)
 		if e != nil {
@@ -218,7 +221,7 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 		return types.PermissionEmpty, e
 	}
 	if resolved&require != require {
-		return resolved, err.NewNotFoundError()
+		return resolved, err.NewNotFoundMessageError(i18n.T("error.permission_denied"))
 	}
 	return resolved, nil
 }

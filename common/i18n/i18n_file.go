@@ -21,7 +21,7 @@ type FileMessageSource struct {
 
 // NewFileMessageSource creates a MessageSource read translated texts from file
 func NewFileMessageSource(config common.Config) (*FileMessageSource, error) {
-	langDir, _ := config.GetDir("lang", false)
+	langDir := config.GetLangDir()
 
 	msg := make(map[language.Tag]map[string]string)
 
@@ -52,15 +52,6 @@ func NewFileMessageSource(config common.Config) (*FileMessageSource, error) {
 		msgMap:      msg,
 		matcher:     language.NewMatcher(lang),
 	}, nil
-}
-
-func (f *FileMessageSource) TranslateT(lang, t string) string {
-	arr, e := UnmarshalT(t)
-	if e != nil || len(arr) == 0 {
-		return t
-	}
-	message := f.getMessage(arr[0], lang)
-	return Translate(message, arr[1:]...)
 }
 
 func (f *FileMessageSource) Translate(lang, key string, args ...string) string {

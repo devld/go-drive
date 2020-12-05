@@ -19,7 +19,7 @@ import (
 )
 
 func NewGDrive(config types.SM, utils drive_util.DriveUtils) (types.IDrive, error) {
-	resp, e := drive_util.OAuthGet(oauth, config, utils.Data)
+	resp, e := drive_util.OAuthGet(*oauthReq(utils.Config), config, utils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -102,7 +102,10 @@ func (g *GDrive) MakeDir(path string) (types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	resp, e := g.s.Files.Create(&drive.File{Name: dirName, Parents: []string{parent.fileId()}}).Do()
+	resp, e := g.s.Files.Create(&drive.File{
+		Name: dirName, Parents: []string{parent.fileId()},
+		MimeType: typeFolder,
+	}).Do()
 	if e != nil {
 		return nil, e
 	}
@@ -254,6 +257,7 @@ func (g *GDrive) processEntries(parentPath string, files []*drive.File) []types.
 	entries := make([]types.IEntry, 0, len(files))
 	nameMap := make(map[string][]*gdriveEntry)
 	for _, f := range files {
+		f.Name = strings.ReplaceAll(f.Name, "/", "_")
 		entry := g.newEntry(parentPath, f)
 		nameMap[f.Name] = append(nameMap[f.Name], entry)
 		entries = append(entries, entry)

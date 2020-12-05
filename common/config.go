@@ -32,9 +32,13 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 
 	flag.StringVar(&config.Listen, "l", Listen, "address listen on")
 	flag.StringVar(&config.dataDir, "d", "./", "path to the data dir")
-	flag.StringVar(&config.resDir, "s", "", "path to the static files")
+	flag.StringVar(&config.resDir, "s", "./web", "path to the static files")
 	flag.BoolVar(&config.freeFs, "f", false, "enable unlimited local fs drive(absolute path)")
+
+	flag.StringVar(&config.langDir, "lang-dir", "./lang", "languages configuration folder")
 	flag.StringVar(&config.DefaultLang, "lang", "en-US", "default language code")
+
+	flag.StringVar(&config.OAuthRedirectURI, "oauth-redirect-uri", "https://go-drive.top/oauth_callback", "OAuth2 redirect_uri")
 
 	flag.Int64Var(&config.ProxyMaxSize, "proxy-max-size", 1*1024*1024, "maximum file size that can be proxied")
 
@@ -51,7 +55,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	flag.Parse()
 
 	if v {
-		fmt.Printf("%s %s build-%s", version, hash, build)
+		fmt.Printf("%s %s build-%s\n", version, hash, build)
 		os.Exit(0)
 	}
 
@@ -77,10 +81,13 @@ type Config struct {
 	// fs drive path will be limited in dataDir/local if freeFs is false
 	freeFs bool
 
+	langDir string
 	// DefaultLang is the default language
 	DefaultLang string
 
 	TempDir string
+
+	OAuthRedirectURI string
 
 	// ProxyMaxSize is the maximum file size can be proxied when
 	// the API call explicitly specifies
@@ -118,6 +125,10 @@ func (c Config) GetDir(name string, create bool) (string, error) {
 
 func (c Config) GetResDir() string {
 	return c.resDir
+}
+
+func (c Config) GetLangDir() string {
+	return c.langDir
 }
 
 func (c Config) GetLocalFsDir() (string, error) {
