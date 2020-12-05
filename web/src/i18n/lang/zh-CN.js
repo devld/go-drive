@@ -117,7 +117,8 @@ export default {
         clean_invalid: '清理无效的权限项/挂载项',
         clean_cache: '清除缓存',
         statistics: '统计信息',
-        refresh_in: '{n} 秒后刷新'
+        refresh_in: '{n} 秒后刷新',
+        invalid_path_cleaned: '已清理 {n} 个无效的路径'
       },
       p_edit: {
         subject: '主体',
@@ -140,7 +141,7 @@ export default {
       s_paused: '已暂停',
       s_stopped: '已停止',
       s_error: '错误',
-      s_complete: '已完成'
+      s_completed: '已完成'
     },
     home: {
       file_exists: '\'{n}\' 已存在，覆盖还是跳过？',

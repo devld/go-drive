@@ -127,7 +127,7 @@ export default {
       this.cleaning = true
       try {
         const n = await cleanPermissionsAndMounts()
-        this.$alert(`${n} invalid paths cleaned`)
+        this.$alert(this.$t('p.admin.misc.invalid_path_cleaned', { n: n }))
       } catch (e) {
         this.$alert(e.message)
       } finally {

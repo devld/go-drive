@@ -118,7 +118,8 @@ export default {
         clean_invalid: 'Clean invalid permissions and mounts',
         clean_cache: 'Clean cache',
         statistics: 'Statistics',
-        refresh_in: 'Refresh in {n}s'
+        refresh_in: 'Refresh in {n}s',
+        invalid_path_cleaned: '{n} invalid paths cleaned'
       },
       p_edit: {
         subject: 'Subject',
@@ -141,7 +142,7 @@ export default {
       s_paused: 'Paused',
       s_stopped: 'Stopped',
       s_error: 'Error',
-      s_complete: 'Completed'
+      s_completed: 'Completed'
     },
     home: {
       file_exists: '\'{n}\' already exists, override or skip?',

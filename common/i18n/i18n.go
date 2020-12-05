@@ -9,7 +9,6 @@ import (
 )
 
 type MessageSource interface {
-	TranslateT(lang, t string) string
 	Translate(lang, key string, args ...string) string
 }
 
@@ -23,8 +22,20 @@ func TranslateV(lang string, ms MessageSource, v interface{}) interface{} {
 				return
 			}
 		}
-		v.SetString(ms.TranslateT(lang, v.String()))
+		v.SetString(TranslateT(lang, ms, v.String()))
 	})
+}
+
+func TranslateT(lang string, ms MessageSource, t string) string {
+	arr, e := UnmarshalT(t)
+	if e != nil || len(arr) == 0 {
+		return t
+	}
+	// translate args
+	for i := 1; i < len(arr); i++ {
+		arr[i] = TranslateT(lang, ms, arr[i])
+	}
+	return ms.Translate(lang, arr[0], arr[1:]...)
 }
 
 const (

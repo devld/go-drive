@@ -29,7 +29,7 @@ const createHandler = (isMove) => {
               await confirm({
                 message: T('handler.copy_move.override_or_skip'),
                 confirmType: 'danger', confirmText: T('handler.copy_move.override'),
-                cancelText: ('handler.copy_move.skip')
+                cancelText: T('handler.copy_move.skip')
               })
             } catch { override = false }
             let canceled = false

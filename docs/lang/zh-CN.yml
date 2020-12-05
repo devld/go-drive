@@ -1,6 +1,7 @@
 error:
   not_found: 资源不存在
   not_allowed: 不允许的操作
+  permission_denied: 资源不存在或权限不足
 util:
   request_failed: "[{{ 1 }}] 请求失败"
 oauth:
@@ -59,7 +60,7 @@ drive:
     move_across_not_supported: 不支持跨 Drive 移动文件
   gdrive:
     name: Google Drive
-    readme: Google Drive
+    readme: Google Drive, 请参阅 [配置 Google Drive](https://go-drive.top/drives/google-drive)
     form:
       client_id:
         label: 客户端 ID

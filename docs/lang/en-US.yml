@@ -1,6 +1,7 @@
 error:
   not_found: Not found
   not_allowed: Operation not allowed
+  permission_denied: Resource not found or permission denied
 util:
   request_failed: "[{{ 1 }}] Request failed"
 oauth:
@@ -59,7 +60,7 @@ drive:
     move_across_not_supported: Move across drives is not supported
   gdrive:
     name: Google Drive
-    readme: Google Drive
+    readme: Google Drive, see [Setup Google Drive](https://go-drive.top/drives/google-drive)
     form:
       client_id:
         label: Client Id

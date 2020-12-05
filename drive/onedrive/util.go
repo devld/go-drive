@@ -3,6 +3,7 @@ package onedrive
 import (
 	"errors"
 	"fmt"
+	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -18,15 +19,17 @@ import (
 	"time"
 )
 
-var oauth = drive_util.OAuthRequest{
-	Endpoint: oauth2.Endpoint{
-		AuthURL:   "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
-		TokenURL:  "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
-		AuthStyle: oauth2.AuthStyleInParams,
-	},
-	RedirectURL: drive_util.CommonRedirectURL,
-	Scopes:      []string{"Files.ReadWrite", "offline_access", "User.Read"},
-	Text:        i18n.T("drive.onedrive.oauth_text"),
+func oauthReq(c common.Config) *drive_util.OAuthRequest {
+	return &drive_util.OAuthRequest{
+		Endpoint: oauth2.Endpoint{
+			AuthURL:   "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
+			TokenURL:  "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+			AuthStyle: oauth2.AuthStyleInParams,
+		},
+		RedirectURL: c.OAuthRedirectURI,
+		Scopes:      []string{"Files.ReadWrite", "offline_access", "User.Read"},
+		Text:        i18n.T("drive.onedrive.oauth_text"),
+	}
 }
 
 var httpApi, _ = req.NewClient("", nil, ifApiCallError, nil)
@@ -63,7 +66,7 @@ func itemPath(path string) string {
 }
 
 func InitConfig(config drive_util.DriveConfig, driveUtils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
-	initConfig, resp, e := drive_util.OAuthInitConfig(oauth, config, driveUtils.Data)
+	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(driveUtils.Config), config, driveUtils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -122,7 +125,7 @@ func InitConfig(config drive_util.DriveConfig, driveUtils drive_util.DriveUtils)
 }
 
 func Init(data types.SM, config drive_util.DriveConfig, utils drive_util.DriveUtils) error {
-	_, e := drive_util.OAuthInit(oauth, data, config, utils.Data)
+	_, e := drive_util.OAuthInit(*oauthReq(utils.Config), data, config, utils.Data)
 	if e != nil {
 		return e
 	}

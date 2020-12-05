@@ -12,8 +12,6 @@ import (
 	"time"
 )
 
-const CommonRedirectURL = "https://go-drive.top/oauth_callback"
-
 type OAuthRequest struct {
 	Endpoint       oauth2.Endpoint
 	RedirectURL    string

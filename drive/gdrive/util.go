@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go-drive/common"
 	"go-drive/common/drive_util"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -36,16 +37,18 @@ var mimeTypeExtensionsMap = map[string]string{
 	"application/vnd.google-apps.script":       "json",
 }
 
-var oauth = drive_util.OAuthRequest{
-	Endpoint:       google.Endpoint,
-	RedirectURL:    drive_util.CommonRedirectURL,
-	Scopes:         []string{"https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/userinfo.profile"},
-	Text:           i18n.T("drive.gdrive.oauth_text"),
-	AutoCodeOption: []oauth2.AuthCodeOption{oauth2.AccessTypeOffline},
+func oauthReq(c common.Config) *drive_util.OAuthRequest {
+	return &drive_util.OAuthRequest{
+		Endpoint:       google.Endpoint,
+		RedirectURL:    c.OAuthRedirectURI,
+		Scopes:         []string{"https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/userinfo.profile"},
+		Text:           i18n.T("drive.gdrive.oauth_text"),
+		AutoCodeOption: []oauth2.AuthCodeOption{oauth2.AccessTypeOffline},
+	}
 }
 
 func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
-	initConfig, resp, e := drive_util.OAuthInitConfig(oauth, config, utils.Data)
+	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(utils.Config), config, utils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -69,7 +72,7 @@ func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*dr
 }
 
 func Init(data types.SM, config drive_util.DriveConfig, utils drive_util.DriveUtils) error {
-	_, e := drive_util.OAuthInit(oauth, data, config, utils.Data)
+	_, e := drive_util.OAuthInit(*oauthReq(utils.Config), data, config, utils.Data)
 	return e
 }
 

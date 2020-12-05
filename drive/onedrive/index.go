@@ -28,7 +28,7 @@ type OneDrive struct {
 }
 
 func NewOneDrive(config drive_util.DriveConfig, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
-	resp, e := drive_util.OAuthGet(oauth, config, driveUtils.Data)
+	resp, e := drive_util.OAuthGet(*oauthReq(driveUtils.Config), config, driveUtils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -70,7 +70,7 @@ func (o *OneDrive) Meta() types.DriveMeta {
 
 func (o *OneDrive) Get(path string) (types.IEntry, error) {
 	if utils.IsRootPath(path) {
-		return &oneDriveEntry{path: path, isDir: true}, nil
+		return &oneDriveEntry{id: "root", path: path, isDir: true}, nil
 	}
 	if cached, _ := o.cache.GetEntry(path); cached != nil {
 		return cached, nil
