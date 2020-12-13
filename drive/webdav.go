@@ -17,12 +17,22 @@ import (
 	"time"
 )
 
+func init() {
+	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+		Type:        "webdav",
+		DisplayName: i18n.T("drive.webdav.name"),
+		README:      i18n.T("drive.webdav.readme"),
+		ConfigForm: []types.FormItem{
+			{Field: "url", Label: i18n.T("drive.webdav.form.url.label"), Type: "text", Required: true, Description: i18n.T("drive.webdav.form.url.description")},
+			{Field: "username", Label: i18n.T("drive.webdav.form.username.label"), Type: "text", Description: i18n.T("drive.webdav.form.username.description")},
+			{Field: "password", Label: i18n.T("drive.webdav.form.password.label"), Type: "password"},
+			{Field: "cache_ttl", Label: i18n.T("drive.webdav.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.webdav.form.cache_ttl.description")},
+		},
+		Factory: drive_util.DriveFactory{Create: NewWebDAVDrive},
+	})
+}
+
 // NewWebDAVDrive creates a webdav drive
-// params:
-//   - url: root url
-//   - username: if omitted, no authorization is required
-//   - password:
-//   - cache_ttl:
 func NewWebDAVDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (types.IDrive, error) {
 	u := config["url"]
 	username := config["username"]

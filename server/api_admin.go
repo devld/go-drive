@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"github.com/gin-gonic/gin"
+	"go-drive/common/drive_util"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
@@ -163,7 +164,7 @@ func InitAdminRoutes(r gin.IRouter,
 
 	// get drive factories
 	r.GET("/drive-factories", func(c *gin.Context) {
-		SetResult(c, drive.GetDrives())
+		SetResult(c, drive_util.GetRegisteredDrives())
 	})
 
 	// get drives
@@ -174,7 +175,7 @@ func InitAdminRoutes(r gin.IRouter,
 			return
 		}
 		for i, d := range drives {
-			f := drive.GetDrive(d.Type)
+			f := drive_util.GetDrive(d.Type)
 			if f == nil {
 				continue
 			}
@@ -214,7 +215,7 @@ func InitAdminRoutes(r gin.IRouter,
 			_ = c.Error(e)
 			return
 		}
-		f := drive.GetDrive(d.Type)
+		f := drive_util.GetDrive(d.Type)
 		if f == nil {
 			_ = c.Error(err.NewNotAllowedMessageError(i18n.T("api.admin.unknown_drive_type", d.Type)))
 			return

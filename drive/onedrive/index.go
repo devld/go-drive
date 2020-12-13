@@ -15,6 +15,22 @@ import (
 	"time"
 )
 
+func init() {
+	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+		Type:        "onedrive",
+		DisplayName: i18n.T("drive.onedrive.name"),
+		README:      i18n.T("drive.onedrive.readme"),
+		ConfigForm: []types.FormItem{
+			{Field: "client_id", Label: i18n.T("drive.onedrive.form.client_id.label"), Type: "text", Required: true},
+			{Field: "client_secret", Label: i18n.T("drive.onedrive.form.client_secret.label"), Type: "password", Required: true},
+			{Field: "proxy_upload", Label: i18n.T("drive.onedrive.form.proxy_in.label"), Type: "checkbox", Description: i18n.T("drive.onedrive.form.proxy_in.description")},
+			{Field: "proxy_download", Label: i18n.T("drive.onedrive.form.proxy_out.label"), Type: "checkbox", Description: i18n.T("drive.onedrive.form.proxy_out.description")},
+			{Field: "cache_ttl", Label: i18n.T("drive.onedrive.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.onedrive.form.cache_ttl.description")},
+		},
+		Factory: drive_util.DriveFactory{Create: NewOneDrive, InitConfig: InitConfig, Init: Init},
+	})
+}
+
 type OneDrive struct {
 	driveId string
 

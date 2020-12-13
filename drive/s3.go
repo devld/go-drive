@@ -22,6 +22,26 @@ import (
 	"time"
 )
 
+func init() {
+	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+		Type:        "s3",
+		DisplayName: i18n.T("drive.s3.name"),
+		README:      i18n.T("drive.s3.readme"),
+		ConfigForm: []types.FormItem{
+			{Field: "id", Label: i18n.T("drive.s3.form.ak.label"), Type: "text", Required: true},
+			{Field: "secret", Label: i18n.T("drive.s3.form.sk.label"), Type: "password", Required: true},
+			{Field: "bucket", Label: i18n.T("drive.s3.form.bucket.label"), Type: "text", Required: true},
+			{Field: "path_style", Label: i18n.T("drive.s3.form.path_style.label"), Type: "checkbox", Description: i18n.T("drive.s3.form.path_style.description")},
+			{Field: "region", Label: i18n.T("drive.s3.form.region.label"), Type: "text"},
+			{Field: "endpoint", Label: i18n.T("drive.s3.form.endpoint.label"), Type: "text", Description: i18n.T("drive.s3.form.endpoint.description")},
+			{Field: "proxy_upload", Label: i18n.T("drive.s3.form.proxy_in.label"), Type: "checkbox", Description: i18n.T("drive.s3.form.proxy_in.description")},
+			{Field: "proxy_download", Label: i18n.T("drive.s3.form.proxy_out.label"), Type: "checkbox", Description: i18n.T("drive.s3.form.proxy_out.description")},
+			{Field: "cache_ttl", Label: i18n.T("drive.s3.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.s3.form.cache_ttl.description")},
+		},
+		Factory: drive_util.DriveFactory{Create: NewS3Drive},
+	})
+}
+
 type S3Drive struct {
 	c             *s3.S3
 	bucket        *string
@@ -34,16 +54,6 @@ type S3Drive struct {
 }
 
 // NewS3Drive creates a S3 compatible storage
-// params:
-//   - id: access key
-//   - secret: secret key
-//   - bucket: the bucket name
-//   - path_style: force path style api
-//   - region: service region
-//   - endpoint: the api endpoint
-//   - proxy_upload: whether it needs to be uploaded to server proxy
-//   - proxy_download: whether it needs to be downloaded from server proxy
-//   - cache_ttl: cache time to live
 func NewS3Drive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (types.IDrive, error) {
 	id := config["id"]
 	secret := config["secret"]
