@@ -18,6 +18,20 @@ import (
 	"time"
 )
 
+func init() {
+	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+		Type:        "gdrive",
+		DisplayName: i18n.T("drive.gdrive.name"),
+		README:      i18n.T("drive.gdrive.readme"),
+		ConfigForm: []types.FormItem{
+			{Field: "client_id", Label: i18n.T("drive.gdrive.form.client_id.label"), Type: "text", Required: true},
+			{Field: "client_secret", Label: i18n.T("drive.gdrive.form.client_secret.label"), Type: "password", Required: true},
+			{Field: "cache_ttl", Label: i18n.T("drive.gdrive.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.gdrive.form.cache_ttl.description"), DefaultValue: "4h"},
+		},
+		Factory: drive_util.DriveFactory{Create: NewGDrive, InitConfig: InitConfig, Init: Init},
+	})
+}
+
 func NewGDrive(config types.SM, utils drive_util.DriveUtils) (types.IDrive, error) {
 	resp, e := drive_util.OAuthGet(*oauthReq(utils.Config), config, utils.Data)
 	if e != nil {

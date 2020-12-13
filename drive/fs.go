@@ -14,6 +14,18 @@ import (
 	"strings"
 )
 
+func init() {
+	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+		Type:        "fs",
+		DisplayName: i18n.T("drive.fs.name"),
+		README:      i18n.T("drive.fs.readme"),
+		ConfigForm: []types.FormItem{
+			{Field: "path", Label: i18n.T("drive.fs.form.path.label"), Type: "text", Required: true, Description: i18n.T("drive.fs.form.path.description")},
+		},
+		Factory: drive_util.DriveFactory{Create: NewFsDrive},
+	})
+}
+
 type FsDrive struct {
 	path string
 }
@@ -29,8 +41,6 @@ type fsFile struct {
 }
 
 // NewFsDrive creates a file system drive
-// params:
-//   - path: root key of this drive
 func NewFsDrive(config drive_util.DriveConfig, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	path := config["path"]
 	if utils.CleanPath(path) == "" {
