@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/i18n"
@@ -19,7 +20,7 @@ import (
 
 // Injectors from wire.go:
 
-func Initialize(ch *registry.ComponentsHolder) (*gin.Engine, error) {
+func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine, error) {
 	config, err := common.InitConfig(ch)
 	if err != nil {
 		return nil, err
@@ -32,7 +33,7 @@ func Initialize(ch *registry.ComponentsHolder) (*gin.Engine, error) {
 	pathMountDAO := storage.NewPathMountDAO(db)
 	driveDataDAO := storage.NewDriveDataDAO(db)
 	driveCacheDAO := storage.NewDriveCacheDAO(db, ch)
-	rootDrive, err := drive.NewRootDrive(config, driveDAO, pathMountDAO, driveDataDAO, driveCacheDAO)
+	rootDrive, err := drive.NewRootDrive(ctx, config, driveDAO, pathMountDAO, driveDataDAO, driveCacheDAO)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -53,11 +54,11 @@ func NewPermissionWrapperDrive(
 	}
 }
 
-func (p *PermissionWrapperDrive) Meta() types.DriveMeta {
-	return p.drive.Meta()
+func (p *PermissionWrapperDrive) Meta(ctx context.Context) types.DriveMeta {
+	return p.drive.Meta(ctx)
 }
 
-func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	canRead := checkSignature(p.signer, p.request, path)
 	var permission = types.PermissionRead
 	if !canRead {
@@ -67,7 +68,7 @@ func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
 			return nil, e
 		}
 	}
-	entry, e := p.drive.Get(path)
+	entry, e := p.drive.Get(ctx, path)
 	if e != nil {
 		return nil, e
 	}
@@ -79,31 +80,32 @@ func (p *PermissionWrapperDrive) Get(path string) (types.IEntry, error) {
 	}, nil
 }
 
-func (p *PermissionWrapperDrive) Save(path string, size int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) Save(ctx types.TaskCtx, path string, size int64,
+	override bool, reader io.Reader) (types.IEntry, error) {
 	permission, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
 	}
-	entry, e := p.drive.Save(path, size, override, reader, ctx)
+	entry, e := p.drive.Save(ctx, path, size, override, reader)
 	if e != nil {
 		return nil, e
 	}
 	return &permissionWrapperEntry{p: p, entry: entry, permission: permission}, nil
 }
 
-func (p *PermissionWrapperDrive) MakeDir(path string) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
 	permission, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
 	}
-	entry, e := p.drive.MakeDir(path)
+	entry, e := p.drive.MakeDir(ctx, path)
 	if e != nil {
 		return nil, e
 	}
 	return &permissionWrapperEntry{p: p, entry: entry, permission: permission}, nil
 }
 
-func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	toPermission, e := p.requirePathAndParentWritable(to)
 	if e != nil {
 		return nil, e
@@ -114,14 +116,14 @@ func (p *PermissionWrapperDrive) Copy(from types.IEntry, to string, override boo
 	if e := p.requireDescendantPermission(to, types.PermissionReadWrite); e != nil {
 		return nil, e
 	}
-	entry, e := p.drive.Copy(from, to, override, ctx)
+	entry, e := p.drive.Copy(ctx, from, to, override)
 	if e != nil {
 		return nil, e
 	}
 	return &permissionWrapperEntry{p: p, entry: entry, permission: toPermission}, nil
 }
 
-func (p *PermissionWrapperDrive) Move(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (p *PermissionWrapperDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	toPermission, e := p.requirePathAndParentWritable(to)
 	if e != nil {
 		return nil, e
@@ -135,14 +137,14 @@ func (p *PermissionWrapperDrive) Move(from types.IEntry, to string, override boo
 	if e := p.requireDescendantPermission(to, types.PermissionReadWrite); e != nil {
 		return nil, e
 	}
-	entry, e := p.drive.Move(from, to, override, ctx)
+	entry, e := p.drive.Move(ctx, from, to, override)
 	if e != nil {
 		return nil, e
 	}
 	return &permissionWrapperEntry{p: p, entry: entry, permission: toPermission}, nil
 }
 
-func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
+func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	permission, e := p.permissionStorage.ResolvePathPermission(p.subjects, path)
 	if e != nil {
 		return nil, e
@@ -152,7 +154,7 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 			return nil, err.NewNotFoundError()
 		}
 	}
-	entries, e := p.drive.List(path)
+	entries, e := p.drive.List(ctx, path)
 	if e != nil {
 		return nil, e
 	}
@@ -189,20 +191,20 @@ func (p *PermissionWrapperDrive) List(path string) ([]types.IEntry, error) {
 	return result, nil
 }
 
-func (p *PermissionWrapperDrive) Delete(path string, ctx types.TaskCtx) error {
+func (p *PermissionWrapperDrive) Delete(ctx types.TaskCtx, path string) error {
 	if _, e := p.requirePathAndParentWritable(path); e != nil {
 		return e
 	}
-	return p.drive.Delete(path, ctx)
+	return p.drive.Delete(ctx, path)
 }
 
-func (p *PermissionWrapperDrive) Upload(path string, size int64, override bool,
-	config types.SM) (*types.DriveUploadConfig, error) {
+func (p *PermissionWrapperDrive) Upload(ctx context.Context, path string, size int64,
+	override bool, config types.SM) (*types.DriveUploadConfig, error) {
 	_, e := p.requirePermission(path, types.PermissionReadWrite)
 	if e != nil {
 		return nil, e
 	}
-	return p.drive.Upload(path, size, override, config)
+	return p.drive.Upload(ctx, path, size, override, config)
 }
 
 func (p *PermissionWrapperDrive) requirePathAndParentWritable(path string) (types.Permission, error) {
@@ -281,16 +283,16 @@ func (p *permissionWrapperEntry) Name() string {
 	return utils.PathBase(p.entry.Path())
 }
 
-func (p *permissionWrapperEntry) GetReader() (io.ReadCloser, error) {
+func (p *permissionWrapperEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	if c, ok := p.entry.(types.IContent); ok {
-		return c.GetReader()
+		return c.GetReader(ctx)
 	}
 	return nil, err.NewUnsupportedError()
 }
 
-func (p *permissionWrapperEntry) GetURL() (*types.ContentURL, error) {
+func (p *permissionWrapperEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 	if c, ok := p.entry.(types.IContent); ok {
-		return c.GetURL()
+		return c.GetURL(ctx)
 	}
 	return &types.ContentURL{}, err.NewUnsupportedError()
 }

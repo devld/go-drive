@@ -248,7 +248,7 @@ func InitAdminRoutes(r gin.IRouter,
 	// get drive initialization information
 	r.GET("/drive/:name/init", func(c *gin.Context) {
 		name := c.Param("name")
-		data, e := rootDrive.DriveInitConfig(name)
+		data, e := rootDrive.DriveInitConfig(c.Request.Context(), name)
 		if e != nil {
 			_ = c.Error(e)
 			return
@@ -264,7 +264,7 @@ func InitAdminRoutes(r gin.IRouter,
 			_ = c.Error(e)
 			return
 		}
-		if e := rootDrive.DriveInit(name, data); e != nil {
+		if e := rootDrive.DriveInit(c.Request.Context(), name, data); e != nil {
 			_ = c.Error(e)
 			return
 		}
@@ -272,7 +272,7 @@ func InitAdminRoutes(r gin.IRouter,
 
 	// reload drives
 	r.POST("/drives/reload", func(c *gin.Context) {
-		if e := rootDrive.ReloadDrive(false); e != nil {
+		if e := rootDrive.ReloadDrive(c.Request.Context(), false); e != nil {
 			_ = c.Error(e)
 		}
 	})
@@ -357,7 +357,7 @@ func InitAdminRoutes(r gin.IRouter,
 			paths[m.MountAt] = true
 		}
 		for p := range paths {
-			_, e := root.Get(p)
+			_, e := root.Get(c.Request.Context(), p)
 			if e != nil {
 				if err.IsNotFoundError(e) {
 					paths[p] = false

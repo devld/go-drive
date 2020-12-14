@@ -70,7 +70,8 @@ func oauthGet(o OAuthRequest, config DriveConfig, ds DriveDataStore) (*OAuthResp
 	return &OAuthResponse{Config: getOAuthConfig(o, config), Token: t}, nil
 }
 
-func OAuthInitConfig(o OAuthRequest, config DriveConfig, ds DriveDataStore) (*DriveInitConfig, *OAuthResponse, error) {
+func OAuthInitConfig(o OAuthRequest, config DriveConfig,
+	ds DriveDataStore) (*DriveInitConfig, *OAuthResponse, error) {
 	resp, e := oauthGet(o, config, ds)
 	if e != nil {
 		return nil, nil, e
@@ -94,7 +95,8 @@ func OAuthInitConfig(o OAuthRequest, config DriveConfig, ds DriveDataStore) (*Dr
 	return initConfig, resp, nil
 }
 
-func OAuthInit(o OAuthRequest, data types.SM, config DriveConfig, ds DriveDataStore) (*OAuthResponse, error) {
+func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
+	config DriveConfig, ds DriveDataStore) (*OAuthResponse, error) {
 	code := data["code"]
 	state := data["state"]
 
@@ -111,7 +113,7 @@ func OAuthInit(o OAuthRequest, data types.SM, config DriveConfig, ds DriveDataSt
 	if state != params["state"] {
 		return nil, err.NewNotAllowedMessageError(i18n.T("oauth.state_mismatch"))
 	}
-	t, e := oauthConf.Exchange(context.Background(), code)
+	t, e := oauthConf.Exchange(ctx, code)
 	if e != nil {
 		return nil, e
 	}

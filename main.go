@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"go-drive/common"
 	"go-drive/common/registry"
 	"log"
@@ -16,7 +17,7 @@ func init() {
 func main() {
 	ch := registry.NewComponentHolder()
 
-	engine, e := Initialize(ch)
+	engine, e := Initialize(context.Background(), ch)
 	if e != nil {
 		log.Fatalln(e)
 	}

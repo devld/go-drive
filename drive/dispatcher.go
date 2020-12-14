@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"context"
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	"go-drive/common/errors"
@@ -75,7 +76,7 @@ func (d *DispatcherDrive) reloadMounts() error {
 	return nil
 }
 
-func (d *DispatcherDrive) Meta() types.DriveMeta {
+func (d *DispatcherDrive) Meta(context.Context) types.DriveMeta {
 	panic("not supported")
 }
 
@@ -138,7 +139,7 @@ func (d *DispatcherDrive) resolveMountedChildren(path string) ([]types.PathMount
 	return result, isSelf
 }
 
-func (d *DispatcherDrive) Get(path string) (types.IEntry, error) {
+func (d *DispatcherDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	if utils.IsRootPath(path) {
 		return &driveEntry{d: d, path: "", name: "", meta: types.DriveMeta{
 			CanWrite: false,
@@ -148,38 +149,40 @@ func (d *DispatcherDrive) Get(path string) (types.IEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	entry, e := drive.Get(realPath)
+	entry, e := drive.Get(ctx, realPath)
 	if e != nil {
 		return nil, e
 	}
 	return d.mapDriveEntry(path, entry), nil
 }
 
-func (d *DispatcherDrive) Save(path string, size int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
+func (d *DispatcherDrive) Save(ctx types.TaskCtx, path string, size int64,
+	override bool, reader io.Reader) (types.IEntry, error) {
 	drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	save, e := drive.Save(realPath, size, override, reader, ctx)
+	save, e := drive.Save(ctx, realPath, size, override, reader)
 	if e != nil {
 		return nil, e
 	}
 	return d.mapDriveEntry(path, save), nil
 }
 
-func (d *DispatcherDrive) MakeDir(path string) (types.IEntry, error) {
+func (d *DispatcherDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
 	drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	dir, e := drive.MakeDir(realPath)
+	dir, e := drive.MakeDir(ctx, realPath)
 	if e != nil {
 		return nil, e
 	}
 	return d.mapDriveEntry(path, dir), nil
 }
 
-func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
+	override bool) (types.IEntry, error) {
 	driveTo, pathTo, e := d.resolve(to)
 	if e != nil {
 		return nil, e
@@ -187,7 +190,7 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 	mounts, _ := d.resolveMountedChildren(from.Path())
 	if len(mounts) == 0 {
 		// if `from` has no mounted children, then copy
-		entry, e := driveTo.Copy(from, pathTo, override, ctx)
+		entry, e := driveTo.Copy(ctx, from, pathTo, override)
 		if e == nil {
 			return entry, nil
 		}
@@ -196,33 +199,35 @@ func (d *DispatcherDrive) Copy(from types.IEntry, to string, override bool, ctx 
 		}
 	}
 	// if `from` has mounted children, we need to copy them
-	e = drive_util.CopyAll(from, d, to, override, ctx,
+	e = drive_util.CopyAll(ctx, from, d, to, override,
 		func(from types.IEntry, _ types.IDrive, to string, ctx types.TaskCtx) error {
 			driveTo, pathTo, e := d.resolve(to)
 			ctxWrapper := task.NewCtxWrapper(ctx, true, false)
 			if e != nil {
 				return e
 			}
-			_, e = driveTo.Copy(from, pathTo, true, ctxWrapper)
+			_, e = driveTo.Copy(ctxWrapper, from, pathTo, true)
 			if e == nil {
 				return nil
 			}
 			if !err.IsUnsupportedError(e) {
 				return e
 			}
-			return drive_util.CopyEntry(from, driveTo, pathTo, true, ctxWrapper, d.tempDir)
-		}, nil)
+			return drive_util.CopyEntry(ctxWrapper, from, driveTo, pathTo, true, d.tempDir)
+		},
+		nil,
+	)
 	if e != nil {
 		return nil, e
 	}
-	copied, e := driveTo.Get(pathTo)
+	copied, e := driveTo.Get(ctx, pathTo)
 	if e != nil {
 		return nil, e
 	}
 	return d.mapDriveEntry(to, copied), nil
 }
 
-func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	driveTo, pathTo, e := d.resolve(to)
 	// if path depth is 1, move mounts
 	if e != nil && utils.PathDepth(to) != 1 {
@@ -247,7 +252,7 @@ func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx 
 		}
 		_ = d.reloadMounts()
 		if isSelf {
-			return d.Get(to)
+			return d.Get(ctx, to)
 		}
 	} else {
 		// no mounts matched and toPath is in root or trying to move drive
@@ -256,7 +261,7 @@ func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx 
 		}
 	}
 	if driveTo != nil {
-		move, e := driveTo.Move(from, pathTo, override, ctx)
+		move, e := driveTo.Move(ctx, from, pathTo, override)
 		if e != nil {
 			if err.IsUnsupportedError(e) {
 				return nil, err.NewNotAllowedMessageError(i18n.T("drive.dispatcher.move_across_not_supported"))
@@ -265,15 +270,15 @@ func (d *DispatcherDrive) Move(from types.IEntry, to string, override bool, ctx 
 		}
 		return d.mapDriveEntry(to, move), nil
 	}
-	return d.Get(to)
+	return d.Get(ctx, to)
 }
 
-func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
+func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	var entries []types.IEntry
 	if utils.IsRootPath(path) {
 		drives := make([]types.IEntry, 0, len(d.drives))
 		for k, v := range d.drives {
-			drives = append(drives, &driveEntry{d: d, path: k, name: k, meta: v.Meta()})
+			drives = append(drives, &driveEntry{d: d, path: k, name: k, meta: v.Meta(ctx)})
 		}
 		entries = drives
 	} else {
@@ -281,7 +286,7 @@ func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 		if e != nil {
 			return nil, e
 		}
-		list, e := drive.List(realPath)
+		list, e := drive.List(ctx, realPath)
 		if e != nil {
 			return nil, e
 		}
@@ -296,7 +301,7 @@ func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 			if e != nil {
 				continue
 			}
-			entry, e := drive.Get(entryPath)
+			entry, e := drive.Get(ctx, entryPath)
 			if e != nil {
 				if err.IsNotFoundError(e) {
 					continue
@@ -320,7 +325,7 @@ func (d *DispatcherDrive) List(path string) ([]types.IEntry, error) {
 	return entries, nil
 }
 
-func (d *DispatcherDrive) Delete(path string, ctx types.TaskCtx) error {
+func (d *DispatcherDrive) Delete(ctx types.TaskCtx, path string) error {
 	children, isSelf := d.resolveMountedChildren(path)
 	if len(children) > 0 {
 		e := d.mountStorage.DeleteMounts(children)
@@ -339,16 +344,16 @@ func (d *DispatcherDrive) Delete(path string, ctx types.TaskCtx) error {
 	if utils.IsRootPath(path) {
 		return err.NewNotAllowedError()
 	}
-	return drive.Delete(path, ctx)
+	return drive.Delete(ctx, path)
 }
 
-func (d *DispatcherDrive) Upload(path string, size int64,
+func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 	override bool, config types.SM) (*types.DriveUploadConfig, error) {
 	drive, path, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	return drive.Upload(path, size, override, config)
+	return drive.Upload(ctx, path, size, override, config)
 }
 
 func (d *DispatcherDrive) mapDriveEntry(path string, entry types.IEntry) types.IEntry {
@@ -403,16 +408,16 @@ func (d *entryWrapper) Name() string {
 	return utils.PathBase(d.path)
 }
 
-func (d *entryWrapper) GetReader() (io.ReadCloser, error) {
+func (d *entryWrapper) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	if content, ok := d.entry.(types.IContent); ok {
-		return content.GetReader()
+		return content.GetReader(ctx)
 	}
 	return nil, err.NewNotAllowedError()
 }
 
-func (d *entryWrapper) GetURL() (*types.ContentURL, error) {
+func (d *entryWrapper) GetURL(ctx context.Context) (*types.ContentURL, error) {
 	if content, ok := d.entry.(types.IContent); ok {
-		return content.GetURL()
+		return content.GetURL(ctx)
 	}
 	return nil, err.NewNotAllowedError()
 }
@@ -456,11 +461,11 @@ func (d *driveEntry) Name() string {
 	return d.name
 }
 
-func (d *driveEntry) GetReader() (io.ReadCloser, error) {
+func (d *driveEntry) GetReader(context.Context) (io.ReadCloser, error) {
 	return nil, err.NewNotAllowedError()
 }
 
-func (d *driveEntry) GetURL() (*types.ContentURL, error) {
+func (d *driveEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return nil, err.NewNotAllowedError()
 }
 

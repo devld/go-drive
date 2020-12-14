@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"go-drive/common"
@@ -16,7 +17,7 @@ import (
 	"go-drive/storage"
 )
 
-func Initialize(ch *registry.ComponentsHolder) (*gin.Engine, error) {
+func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine, error) {
 	wire.Build(
 		common.InitConfig,
 		storage.NewDB,

@@ -47,7 +47,8 @@ func oauthReq(c common.Config) *drive_util.OAuthRequest {
 	}
 }
 
-func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
+func InitConfig(ctx context.Context, config drive_util.DriveConfig,
+	utils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
 	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(utils.Config), config, utils.Data)
 	if e != nil {
 		return nil, e
@@ -56,13 +57,13 @@ func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*dr
 		return initConfig, nil
 	}
 	httpClient := resp.Client(nil)
-	service, e := gOauth.NewService(context.Background(), option.WithHTTPClient(httpClient))
+	service, e := gOauth.NewService(ctx, option.WithHTTPClient(httpClient))
 	if e != nil {
 		return nil, e
 	}
 
 	// get user info
-	user, e := service.Userinfo.V2.Me.Get().Do()
+	user, e := service.Userinfo.V2.Me.Get().Context(ctx).Do()
 	initConfig.Configured = e == nil
 	if e == nil {
 		initConfig.OAuth.Principal = fmt.Sprintf("%s", user.Name)
@@ -71,8 +72,8 @@ func InitConfig(config drive_util.DriveConfig, utils drive_util.DriveUtils) (*dr
 	return initConfig, nil
 }
 
-func Init(data types.SM, config drive_util.DriveConfig, utils drive_util.DriveUtils) error {
-	_, e := drive_util.OAuthInit(*oauthReq(utils.Config), data, config, utils.Data)
+func Init(ctx context.Context, data types.SM, config drive_util.DriveConfig, utils drive_util.DriveUtils) error {
+	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config), data, config, utils.Data)
 	return e
 }
 

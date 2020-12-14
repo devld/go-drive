@@ -1,6 +1,7 @@
 package onedrive
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"go-drive/common/drive_util"
@@ -43,7 +44,8 @@ type OneDrive struct {
 	downloadProxy bool
 }
 
-func NewOneDrive(config drive_util.DriveConfig, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
+func NewOneDrive(_ context.Context, config drive_util.DriveConfig,
+	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	resp, e := drive_util.OAuthGet(*oauthReq(driveUtils.Config), config, driveUtils.Data)
 	if e != nil {
 		return nil, e
@@ -80,18 +82,18 @@ func NewOneDrive(config drive_util.DriveConfig, driveUtils drive_util.DriveUtils
 	return od, e
 }
 
-func (o *OneDrive) Meta() types.DriveMeta {
+func (o *OneDrive) Meta(context.Context) types.DriveMeta {
 	return types.DriveMeta{CanWrite: true}
 }
 
-func (o *OneDrive) Get(path string) (types.IEntry, error) {
+func (o *OneDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	if utils.IsRootPath(path) {
 		return &oneDriveEntry{id: "root", path: path, isDir: true}, nil
 	}
 	if cached, _ := o.cache.GetEntry(path); cached != nil {
 		return cached, nil
 	}
-	resp, e := o.c.Get(utils.BuildURL("/root:/{}?expand=thumbnails", path), nil)
+	resp, e := o.c.Get(ctx, utils.BuildURL("/root:/{}?expand=thumbnails", path), nil)
 	if e != nil {
 		return nil, e
 	}
@@ -102,9 +104,10 @@ func (o *OneDrive) Get(path string) (types.IEntry, error) {
 	return entry, nil
 }
 
-func (o *OneDrive) Save(path string, size int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
+func (o *OneDrive) Save(ctx types.TaskCtx, path string, size int64,
+	override bool, reader io.Reader) (types.IEntry, error) {
 	var entry *oneDriveEntry = nil
-	get, e := o.Get(path)
+	get, e := o.Get(ctx, path)
 	if e != nil && !err.IsNotFoundError(e) {
 		return nil, e
 	}
@@ -118,18 +121,18 @@ func (o *OneDrive) Save(path string, size int64, override bool, reader io.Reader
 	if filename == "" {
 		return nil, err.NewBadRequestError(i18n.T("drive.invalid_path"))
 	}
-	parent, e := o.Get(utils.PathParent(path))
+	parent, e := o.Get(ctx, utils.PathParent(path))
 	if e != nil {
 		return nil, e
 	}
 	if size <= uploadChunkSize {
 		if entry != nil {
-			entry, e = o.uploadSmallFileOverride(entry.id, size, reader, ctx)
+			entry, e = o.uploadSmallFileOverride(ctx, entry.id, size, reader)
 		} else {
-			entry, e = o.uploadSmallFile(parent.(*oneDriveEntry).id, filename, size, reader, ctx)
+			entry, e = o.uploadSmallFile(ctx, parent.(*oneDriveEntry).id, filename, size, reader)
 		}
 	} else {
-		entry, e = o.uploadLargeFile(parent.(*oneDriveEntry).id, filename, size, override, reader, ctx)
+		entry, e = o.uploadLargeFile(ctx, parent.(*oneDriveEntry).id, filename, size, override, reader)
 	}
 	if e != nil {
 		return nil, e
@@ -139,10 +142,16 @@ func (o *OneDrive) Save(path string, size int64, override bool, reader io.Reader
 	return entry, nil
 }
 
-func (o *OneDrive) MakeDir(path string) (types.IEntry, error) {
+func (o *OneDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
+	if dir, e := o.Get(ctx, path); e == nil {
+		if !dir.Type().IsDir() {
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
+		}
+		return dir, nil
+	}
 	parent := utils.PathParent(path)
 	name := utils.PathBase(path)
-	resp, e := o.c.Post(pathURL(parent)+"/children", nil, req.NewJsonBody(types.M{
+	resp, e := o.c.Post(ctx, pathURL(parent)+"/children", nil, req.NewJsonBody(types.M{
 		"name":                              name,
 		"folder":                            types.M{},
 		"@microsoft.graph.conflictBehavior": "fail",
@@ -161,21 +170,23 @@ func (o *OneDrive) isSelf(e types.IEntry) bool {
 	return false
 }
 
-func (o *OneDrive) Copy(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (o *OneDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, o.isSelf)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
+	if !override {
+		if _, e := drive_util.RequireFileNotExists(ctx, o, to); e != nil {
+			return nil, e
+		}
+	}
 	ctx.Total(from.Size(), false)
 	toParentPath := utils.PathParent(to)
 	toName := utils.PathBase(to)
-	resp, e := o.c.Post(
-		idURL(from.(*oneDriveEntry).id)+"/copy", nil,
-		req.NewJsonBody(types.M{
-			"parentReference": types.M{"path": itemPath(toParentPath)},
-			"name":            toName,
-		}),
-	)
+	resp, e := o.c.Post(ctx, idURL(from.(*oneDriveEntry).id)+"/copy", nil, req.NewJsonBody(types.M{
+		"parentReference": types.M{"path": itemPath(toParentPath)},
+		"name":            toName,
+	}))
 	if e != nil {
 		return nil, e
 	}
@@ -183,26 +194,30 @@ func (o *OneDrive) Copy(from types.IEntry, to string, _ bool, ctx types.TaskCtx)
 	if resp.Status() == 202 {
 		// we should wait for it to finish
 		waitUrl := resp.Response().Header.Get("Location")
-		if e := waitLongRunningAction(waitUrl); e != nil {
+		if e := waitLongRunningAction(ctx, waitUrl); e != nil {
 			return nil, e
 		}
 	}
 	ctx.Progress(from.Size(), false)
 	_ = o.cache.Evict(to, true)
 	_ = o.cache.Evict(utils.PathParent(to), false)
-	return o.Get(to)
+	return o.Get(ctx, to)
 }
 
-func (o *OneDrive) Move(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (o *OneDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, o.isSelf)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
+	if !override {
+		if _, e := drive_util.RequireFileNotExists(ctx, o, to); e != nil {
+			return nil, e
+		}
+	}
 	ctx.Total(from.Size(), false)
 	toParentPath := utils.PathParent(to)
 	toName := utils.PathBase(to)
-	resp, e := o.c.Request("PATCH",
-		idURL(from.(*oneDriveEntry).id), nil,
+	resp, e := o.c.Request(ctx, "PATCH", idURL(from.(*oneDriveEntry).id), nil,
 		req.NewJsonBody(types.M{
 			"parentReference": types.M{"path": itemPath(toParentPath)},
 			"name":            toName,
@@ -218,13 +233,13 @@ func (o *OneDrive) Move(from types.IEntry, to string, _ bool, ctx types.TaskCtx)
 	return o.toEntry(resp)
 }
 
-func (o *OneDrive) List(path string) ([]types.IEntry, error) {
+func (o *OneDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := o.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
 	reqPath := pathURL(path) + "/children?$expand=thumbnails"
 	res := driveItems{}
-	resp, e := o.c.Get(reqPath, nil)
+	resp, e := o.c.Get(ctx, reqPath, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -242,12 +257,12 @@ func (o *OneDrive) List(path string) ([]types.IEntry, error) {
 	return entries, nil
 }
 
-func (o *OneDrive) Delete(path string, _ types.TaskCtx) error {
-	entry, e := o.Get(path)
+func (o *OneDrive) Delete(ctx types.TaskCtx, path string) error {
+	entry, e := o.Get(ctx, path)
 	if e != nil {
 		return e
 	}
-	resp, e := o.c.Request("DELETE", idURL(entry.(*oneDriveEntry).id), nil, nil)
+	resp, e := o.c.Request(ctx, "DELETE", idURL(entry.(*oneDriveEntry).id), nil, nil)
 	if e != nil {
 		return e
 	}
@@ -257,7 +272,13 @@ func (o *OneDrive) Delete(path string, _ types.TaskCtx) error {
 	return nil
 }
 
-func (o *OneDrive) Upload(path string, size int64, override bool, config types.SM) (*types.DriveUploadConfig, error) {
+func (o *OneDrive) Upload(ctx context.Context, path string, size int64,
+	override bool, config types.SM) (*types.DriveUploadConfig, error) {
+	if !override {
+		if _, e := drive_util.RequireFileNotExists(ctx, o, path); e != nil {
+			return nil, e
+		}
+	}
 	if o.uploadProxy {
 		return types.UseLocalProvider(size), nil
 	}
@@ -268,12 +289,12 @@ func (o *OneDrive) Upload(path string, size int64, override bool, config types.S
 		_ = o.cache.Evict(utils.PathParent(path), false)
 		return nil, nil
 	default:
-		parent, e := o.Get(utils.PathParent(path))
+		parent, e := o.Get(ctx, utils.PathParent(path))
 		if e != nil {
 			return nil, e
 		}
 		filename := utils.PathBase(path)
-		sessionUrl, e := o.createUploadSession(parent.(*oneDriveEntry).id, filename, override)
+		sessionUrl, e := o.createUploadSession(ctx, parent.(*oneDriveEntry).id, filename, override)
 		if e != nil {
 			return nil, e
 		}
@@ -353,21 +374,21 @@ func (o *oneDriveEntry) Name() string {
 	return utils.PathBase(o.path)
 }
 
-func (o *oneDriveEntry) GetReader() (io.ReadCloser, error) {
-	u, e := o.GetURL()
+func (o *oneDriveEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
+	u, e := o.GetURL(ctx)
 	if e != nil {
 		return nil, e
 	}
-	return drive_util.GetURL(u.URL, nil)
+	return drive_util.GetURL(ctx, u.URL, nil)
 }
 
-func (o *oneDriveEntry) GetURL() (*types.ContentURL, error) {
+func (o *oneDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 	if o.isDir {
 		return nil, err.NewNotAllowedError()
 	}
 	u := o.downloadUrl
 	if o.downloadUrlExpiresAt <= time.Now().Unix() {
-		resp, e := o.d.c.Get(pathURL(o.path)+"/content", nil)
+		resp, e := o.d.c.Get(ctx, pathURL(o.path)+"/content", nil)
 		if e != nil {
 			return nil, e
 		}

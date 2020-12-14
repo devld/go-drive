@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/xml"
 	"errors"
@@ -33,7 +34,8 @@ func init() {
 }
 
 // NewWebDAVDrive creates a webdav drive
-func NewWebDAVDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (types.IDrive, error) {
+func NewWebDAVDrive(ctx context.Context, config drive_util.DriveConfig,
+	utils drive_util.DriveUtils) (types.IDrive, error) {
 	u := config["url"]
 	username := config["username"]
 	password := config["password"]
@@ -49,7 +51,10 @@ func NewWebDAVDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) 
 	}
 	pathPrefix := uu.Path
 
-	w := &WebDAVDrive{url: u, username: username, password: password, cacheTTL: cacheTtl, pathPrefix: pathPrefix}
+	w := &WebDAVDrive{
+		url: u, username: username, password: password,
+		cacheTTL: cacheTtl, pathPrefix: pathPrefix,
+	}
 
 	if cacheTtl <= 0 {
 		w.cache = drive_util.DummyCache()
@@ -64,7 +69,7 @@ func NewWebDAVDrive(config drive_util.DriveConfig, utils drive_util.DriveUtils) 
 	w.c = client
 
 	// check
-	_, e = w.Get("/")
+	_, e = w.Get(ctx, "/")
 	if e != nil {
 		return nil, e
 	}
@@ -83,15 +88,15 @@ type WebDAVDrive struct {
 	c *req.Client
 }
 
-func (w *WebDAVDrive) Meta() types.DriveMeta {
+func (w *WebDAVDrive) Meta(context.Context) types.DriveMeta {
 	return types.DriveMeta{CanWrite: true}
 }
 
-func (w *WebDAVDrive) Get(path string) (types.IEntry, error) {
+func (w *WebDAVDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	if cached, _ := w.cache.GetEntry(path); cached != nil {
 		return cached, nil
 	}
-	resp, e := w.c.Request("PROPFIND", utils.BuildURL(path), types.SM{"Depth": "0"}, nil)
+	resp, e := w.c.Request(ctx, "PROPFIND", utils.BuildURL(path), types.SM{"Depth": "0"}, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -104,35 +109,38 @@ func (w *WebDAVDrive) Get(path string) (types.IEntry, error) {
 	return entry, nil
 }
 
-func (w *WebDAVDrive) Save(path string, size int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
+func (w *WebDAVDrive) Save(ctx types.TaskCtx, path string, size int64,
+	override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
-		_, e := w.Get(path)
-		if e != nil && !err.IsNotFoundError(e) {
+		if _, e := drive_util.RequireFileNotExists(ctx, w, path); e != nil {
 			return nil, e
 		}
-		if e == nil {
-			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
-		}
 	}
-	resp, e := w.c.RequestWithContext("PUT", path, nil,
-		req.NewReaderBody(drive_util.ProgressReader(reader, ctx), size), ctx)
+	resp, e := w.c.Request(ctx, "PUT", path, nil,
+		req.NewReaderBody(drive_util.ProgressReader(reader, ctx), size))
 	if e != nil {
 		return nil, e
 	}
 	_ = resp.Dispose()
 	_ = w.cache.Evict(utils.PathParent(path), false)
 	_ = w.cache.Evict(path, false)
-	return w.Get(path)
+	return w.Get(ctx, path)
 }
 
-func (w *WebDAVDrive) MakeDir(path string) (types.IEntry, error) {
-	resp, e := w.c.Request("MKCOL", path, nil, nil)
+func (w *WebDAVDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
+	if dir, e := w.Get(ctx, path); e == nil {
+		if !dir.Type().IsDir() {
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
+		}
+		return dir, nil
+	}
+	resp, e := w.c.Request(ctx, "MKCOL", path, nil, nil)
 	if e != nil {
 		return nil, e
 	}
 	_ = resp.Dispose()
 	_ = w.cache.Evict(utils.PathParent(path), false)
-	return w.Get(path)
+	return w.Get(ctx, path)
 }
 
 func (w *WebDAVDrive) isSelf(e types.IEntry) bool {
@@ -142,7 +150,8 @@ func (w *WebDAVDrive) isSelf(e types.IEntry) bool {
 	return false
 }
 
-func (w *WebDAVDrive) copyOrMove(method string, from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (w *WebDAVDrive) copyOrMove(method string, from types.IEntry, to string,
+	override bool, ctx types.TaskCtx) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, w.isSelf)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
@@ -156,7 +165,7 @@ func (w *WebDAVDrive) copyOrMove(method string, from types.IEntry, to string, ov
 	if !override {
 		header["Overwrite"] = "F"
 	}
-	resp, e := w.c.RequestWithContext(method, wEntry.path, header, nil, ctx)
+	resp, e := w.c.Request(ctx, method, wEntry.path, header, nil)
 	if e != nil && !(!override && e == errorPreconditionFailed) {
 		return nil, e
 	}
@@ -169,22 +178,22 @@ func (w *WebDAVDrive) copyOrMove(method string, from types.IEntry, to string, ov
 		_ = w.cache.Evict(from.Path(), true)
 		_ = w.cache.Evict(utils.PathParent(from.Path()), false)
 	}
-	return w.Get(to)
+	return w.Get(ctx, to)
 }
 
-func (w *WebDAVDrive) Copy(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (w *WebDAVDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	return w.copyOrMove("COPY", from, to, override, ctx)
 }
 
-func (w *WebDAVDrive) Move(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (w *WebDAVDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	return w.copyOrMove("MOVE", from, to, override, ctx)
 }
 
-func (w *WebDAVDrive) List(path string) ([]types.IEntry, error) {
+func (w *WebDAVDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := w.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
-	resp, e := w.c.Request("PROPFIND", utils.BuildURL(path), types.SM{"Depth": "1"}, nil)
+	resp, e := w.c.Request(ctx, "PROPFIND", utils.BuildURL(path), types.SM{"Depth": "1"}, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -204,8 +213,8 @@ func (w *WebDAVDrive) List(path string) ([]types.IEntry, error) {
 	return entries, nil
 }
 
-func (w *WebDAVDrive) Delete(path string, _ types.TaskCtx) error {
-	resp, e := w.c.Request("DELETE", path, nil, nil)
+func (w *WebDAVDrive) Delete(ctx types.TaskCtx, path string) error {
+	resp, e := w.c.Request(ctx, "DELETE", path, nil, nil)
 	if e != nil {
 		return e
 	}
@@ -215,7 +224,13 @@ func (w *WebDAVDrive) Delete(path string, _ types.TaskCtx) error {
 	return nil
 }
 
-func (w *WebDAVDrive) Upload(_ string, size int64, _ bool, _ types.SM) (*types.DriveUploadConfig, error) {
+func (w *WebDAVDrive) Upload(ctx context.Context, path string, size int64,
+	override bool, _ types.SM) (*types.DriveUploadConfig, error) {
+	if !override {
+		if _, e := drive_util.RequireFileNotExists(ctx, w, path); e != nil {
+			return nil, e
+		}
+	}
 	return types.UseLocalProvider(size), nil
 }
 
@@ -311,15 +326,15 @@ func (w *webDavEntry) Name() string {
 	return utils.PathBase(w.path)
 }
 
-func (w *webDavEntry) GetReader() (io.ReadCloser, error) {
-	resp, e := w.d.c.Get(w.path, nil)
+func (w *webDavEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
+	resp, e := w.d.c.Get(ctx, w.path, nil)
 	if e != nil {
 		return nil, e
 	}
 	return resp.Response().Body, nil
 }
 
-func (w *webDavEntry) GetURL() (*types.ContentURL, error) {
+func (w *webDavEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	if !w.Type().IsFile() {
 		return nil, err.NewNotAllowedError()
 	}

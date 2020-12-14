@@ -1,6 +1,9 @@
 package types
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 const (
 	TypeFile = "file"
@@ -35,8 +38,8 @@ type IContent interface {
 	Size() int64
 	ModTime() int64
 
-	GetReader() (io.ReadCloser, error)
-	GetURL() (*ContentURL, error)
+	GetReader(context.Context) (io.ReadCloser, error)
+	GetURL(context.Context) (*ContentURL, error)
 }
 
 type IEntry interface {
@@ -59,17 +62,17 @@ type DriveMeta struct {
 }
 
 type IDrive interface {
-	Meta() DriveMeta
-	Get(path string) (IEntry, error)
-	Save(path string, size int64, override bool, reader io.Reader, ctx TaskCtx) (IEntry, error)
-	MakeDir(path string) (IEntry, error)
-	Copy(from IEntry, to string, override bool, ctx TaskCtx) (IEntry, error)
-	Move(from IEntry, to string, override bool, ctx TaskCtx) (IEntry, error)
-	List(path string) ([]IEntry, error)
-	Delete(path string, ctx TaskCtx) error
+	Meta(ctx context.Context) DriveMeta
+	Get(ctx context.Context, path string) (IEntry, error)
+	Save(ctx TaskCtx, path string, size int64, override bool, reader io.Reader) (IEntry, error)
+	MakeDir(ctx context.Context, path string) (IEntry, error)
+	Copy(ctx TaskCtx, from IEntry, to string, override bool) (IEntry, error)
+	Move(ctx TaskCtx, from IEntry, to string, override bool) (IEntry, error)
+	List(ctx context.Context, path string) ([]IEntry, error)
+	Delete(ctx TaskCtx, path string) error
 
 	// Upload returns the upload config of the path
-	Upload(path string, size int64, override bool, config SM) (*DriveUploadConfig, error)
+	Upload(ctx context.Context, path string, size int64, override bool, config SM) (*DriveUploadConfig, error)
 }
 
 const (
