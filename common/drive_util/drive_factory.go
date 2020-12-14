@@ -1,6 +1,7 @@
 package drive_util
 
 import (
+	"context"
 	"go-drive/common"
 	"go-drive/common/types"
 )
@@ -46,9 +47,9 @@ type DriveUtils struct {
 
 type DriveFactory struct {
 	// InitConfig gets the initialization information.
-	InitConfig func(DriveConfig, DriveUtils) (*DriveInitConfig, error)
+	InitConfig func(context.Context, DriveConfig, DriveUtils) (*DriveInitConfig, error)
 	// Init configures a drive's initial data.
-	Init func(types.SM, DriveConfig, DriveUtils) error
+	Init func(context.Context, types.SM, DriveConfig, DriveUtils) error
 	// Create creates a drive instance by config map
-	Create func(DriveConfig, DriveUtils) (types.IDrive, error)
+	Create func(context.Context, DriveConfig, DriveUtils) (types.IDrive, error)
 }

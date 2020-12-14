@@ -32,12 +32,12 @@ func init() {
 	})
 }
 
-func NewGDrive(config types.SM, utils drive_util.DriveUtils) (types.IDrive, error) {
+func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils) (types.IDrive, error) {
 	resp, e := drive_util.OAuthGet(*oauthReq(utils.Config), config, utils.Data)
 	if e != nil {
 		return nil, e
 	}
-	service, e := drive.NewService(context.Background(), option.WithHTTPClient(resp.Client(nil)))
+	service, e := drive.NewService(ctx, option.WithHTTPClient(resp.Client(nil)))
 	if e != nil {
 		return nil, e
 	}
@@ -69,24 +69,22 @@ type GDrive struct {
 	ts oauth2.TokenSource
 }
 
-func (g *GDrive) Meta() types.DriveMeta {
+func (g *GDrive) Meta(context.Context) types.DriveMeta {
 	return types.DriveMeta{CanWrite: true}
 }
 
-func (g *GDrive) Get(path string) (types.IEntry, error) {
-	return g.getByPath(path)
+func (g *GDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
+	return g.getByPath(path, ctx)
 }
 
-func (g *GDrive) Save(path string, size int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
-	_, e := g.getByPath(path)
-	if e != nil && !err.IsNotFoundError(e) {
-		return nil, e
+func (g *GDrive) Save(ctx types.TaskCtx, path string, size int64,
+	override bool, reader io.Reader) (types.IEntry, error) {
+	if !override {
+		if _, e := drive_util.RequireFileNotExists(ctx, g, path); e != nil {
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
+		}
 	}
-	exists := e == nil
-	if !override && exists {
-		return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
-	}
-	parent, filename, e := g.getParentTarget(path)
+	parent, filename, e := g.getParentTarget(path, ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -111,15 +109,21 @@ func (g *GDrive) Save(path string, size int64, override bool, reader io.Reader, 
 	return g.newEntry(parent.path, resp), nil
 }
 
-func (g *GDrive) MakeDir(path string) (types.IEntry, error) {
-	parent, dirName, e := g.getParentTarget(path)
+func (g *GDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
+	if dir, e := g.Get(ctx, path); e == nil {
+		if !dir.Type().IsDir() {
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
+		}
+		return dir, nil
+	}
+	parent, dirName, e := g.getParentTarget(path, ctx)
 	if e != nil {
 		return nil, e
 	}
 	resp, e := g.s.Files.Create(&drive.File{
 		Name: dirName, Parents: []string{parent.fileId()},
 		MimeType: typeFolder,
-	}).Do()
+	}).Context(ctx).Do()
 	if e != nil {
 		return nil, e
 	}
@@ -134,14 +138,19 @@ func (g *GDrive) isSelf(e types.IEntry) bool {
 	return false
 }
 
-func (g *GDrive) Copy(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (g *GDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, g.isSelf)
 	if from == nil || from.Type().IsDir() {
 		// google drive api does not support to copy folder
 		return nil, err.NewUnsupportedError()
 	}
+	if !override {
+		if _, e := drive_util.RequireFileNotExists(ctx, g, to); e != nil {
+			return nil, e
+		}
+	}
 	ctx.Total(from.Size(), false)
-	parent, filename, e := g.getParentTarget(to)
+	parent, filename, e := g.getParentTarget(to, ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -158,21 +167,26 @@ func (g *GDrive) Copy(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (
 	return g.newEntry(parent.path, resp), nil
 }
 
-func (g *GDrive) Move(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (g *GDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, g.isSelf)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
+	if !override {
+		if _, e := drive_util.RequireFileNotExists(ctx, g, to); e != nil {
+			return nil, e
+		}
+	}
 	ctx.Total(from.Size(), false)
-	parent, filename, e := g.getParentTarget(to)
+	parent, filename, e := g.getParentTarget(to, ctx)
 	if e != nil {
 		return nil, e
 	}
-	fromParent, e := g.getByPath(utils.PathParent(from.Path()))
+	fromParent, e := g.getByPath(utils.PathParent(from.Path()), ctx)
 	if e != nil {
 		return nil, e
 	}
-	resp, e := g.s.Files.Update(from.(*gdriveEntry).id, &drive.File{Name: filename}).
+	resp, e := g.s.Files.Update(from.(*gdriveEntry).id, &drive.File{Name: filename}).Context(ctx).
 		AddParents(parent.fileId()).RemoveParents(fromParent.fileId()).Do()
 	if e != nil {
 		return nil, e
@@ -186,26 +200,26 @@ func (g *GDrive) Move(from types.IEntry, to string, _ bool, ctx types.TaskCtx) (
 	return g.newEntry(parent.path, resp), nil
 }
 
-func (g *GDrive) getParentTarget(path string) (*gdriveEntry, string, error) {
+func (g *GDrive) getParentTarget(path string, ctx context.Context) (*gdriveEntry, string, error) {
 	name := utils.PathBase(path)
 	if name == "" {
 		return nil, "", err.NewBadRequestError(i18n.T("drive.invalid_path"))
 	}
-	parent, e := g.getByPath(utils.PathParent(path))
+	parent, e := g.getByPath(utils.PathParent(path), ctx)
 	if e != nil {
 		return nil, "", e
 	}
 	return parent, name, nil
 }
 
-func (g *GDrive) getByPath(path string) (*gdriveEntry, error) {
+func (g *GDrive) getByPath(path string, ctx context.Context) (*gdriveEntry, error) {
 	if utils.IsRootPath(path) {
 		return &gdriveEntry{id: "root", isDir: true, modTime: -1, d: g}, nil
 	}
 	if cached, _ := g.cache.GetEntry(path); cached != nil {
 		return cached.(*gdriveEntry), nil
 	}
-	siblings, e := g.List(utils.PathParent(path))
+	siblings, e := g.List(ctx, utils.PathParent(path))
 	if e != nil {
 		return nil, e
 	}
@@ -224,19 +238,19 @@ func (g *GDrive) getByPath(path string) (*gdriveEntry, error) {
 	return found, nil
 }
 
-func (g *GDrive) List(path string) ([]types.IEntry, error) {
+func (g *GDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := g.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
 	id := "root"
 	if !utils.IsRootPath(path) {
-		ge, e := g.getByPath(path)
+		ge, e := g.getByPath(path, ctx)
 		if e != nil {
 			return nil, e
 		}
 		id = ge.fileId()
 	}
-	resp, e := g.s.Files.List().
+	resp, e := g.s.Files.List().Context(ctx).
 		Q(fmt.Sprintf("'%s' in parents and trashed = false", id)).
 		Fields("files(id,name,mimeType,parents,hasThumbnail,thumbnailLink,modifiedTime,driveId,size," +
 			"shortcutDetails,capabilities(canDownload,canEdit,canDelete,canCopy))").
@@ -249,12 +263,12 @@ func (g *GDrive) List(path string) ([]types.IEntry, error) {
 	return entries, nil
 }
 
-func (g *GDrive) Delete(path string, _ types.TaskCtx) error {
-	ge, e := g.getByPath(path)
+func (g *GDrive) Delete(ctx types.TaskCtx, path string) error {
+	ge, e := g.getByPath(path, ctx)
 	if e != nil {
 		return e
 	}
-	e = g.s.Files.Delete(ge.id).Do()
+	e = g.s.Files.Delete(ge.id).Context(ctx).Do()
 	if e == nil {
 		_ = g.cache.Evict(path, true)
 		_ = g.cache.Evict(utils.PathParent(path), false)
@@ -262,7 +276,12 @@ func (g *GDrive) Delete(path string, _ types.TaskCtx) error {
 	return e
 }
 
-func (g *GDrive) Upload(_ string, size int64, _ bool, _ types.SM) (*types.DriveUploadConfig, error) {
+func (g *GDrive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
+	if !override {
+		if _, e := drive_util.RequireFileNotExists(ctx, g, path); e != nil {
+			return nil, e
+		}
+	}
 	return types.UseLocalProvider(size), nil
 }
 
@@ -394,15 +413,15 @@ func (g *gdriveEntry) Name() string {
 	return utils.PathBase(g.path)
 }
 
-func (g *gdriveEntry) GetReader() (io.ReadCloser, error) {
-	u, e := g.GetURL()
+func (g *gdriveEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
+	u, e := g.GetURL(ctx)
 	if e != nil {
 		return nil, e
 	}
-	return drive_util.GetURL(u.URL, u.Header)
+	return drive_util.GetURL(ctx, u.URL, u.Header)
 }
 
-func (g *gdriveEntry) GetURL() (*types.ContentURL, error) {
+func (g *gdriveEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	downloadUrl := ""
 
 	fileId := g.fileId()

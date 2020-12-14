@@ -149,16 +149,8 @@ func (h *Client) request(req *http.Request) (Response, error) {
 	return resp, nil
 }
 
-func (h *Client) Request(method, requestUrl string, headers types.SM, body RequestBody) (Response, error) {
-	req, e := h.newRequest(method, requestUrl, headers, body, nil)
-	if e != nil {
-		return nil, e
-	}
-	return h.request(req)
-}
-
-func (h *Client) RequestWithContext(method, requestUrl string, headers types.SM,
-	body RequestBody, ctx context.Context) (Response, error) {
+func (h *Client) Request(ctx context.Context, method, requestUrl string,
+	headers types.SM, body RequestBody) (Response, error) {
 	req, e := h.newRequest(method, requestUrl, headers, body, ctx)
 	if e != nil {
 		return nil, e
@@ -166,12 +158,13 @@ func (h *Client) RequestWithContext(method, requestUrl string, headers types.SM,
 	return h.request(req)
 }
 
-func (h *Client) Get(requestUrl string, headers types.SM) (Response, error) {
-	return h.Request("GET", requestUrl, headers, nil)
+func (h *Client) Get(ctx context.Context, requestUrl string, headers types.SM) (Response, error) {
+	return h.Request(ctx, "GET", requestUrl, headers, nil)
 }
 
-func (h *Client) Post(requestUrl string, headers types.SM, body RequestBody) (Response, error) {
-	return h.Request("POST", requestUrl, headers, body)
+func (h *Client) Post(ctx context.Context, requestUrl string,
+	headers types.SM, body RequestBody) (Response, error) {
+	return h.Request(ctx, "POST", requestUrl, headers, body)
 }
 
 type httpResp struct {

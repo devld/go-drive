@@ -112,7 +112,7 @@ func (t *Thumbnail) createThumbnail(content types.IContent, filePath string) err
 	if content.Size() > t.maxSize {
 		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.file_too_large"))
 	}
-	tempFile, e := drive_util.CopyIContentToTempFile(content, task.DummyContext(), t.cacheDir)
+	tempFile, e := drive_util.CopyIContentToTempFile(task.DummyContext(), content, t.cacheDir)
 	if e != nil {
 		return e
 	}

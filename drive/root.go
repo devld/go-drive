@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"context"
 	"encoding/json"
 	"go-drive/common"
 	"go-drive/common/drive_util"
@@ -27,6 +28,7 @@ type RootDrive struct {
 }
 
 func NewRootDrive(
+	ctx context.Context,
 	config common.Config,
 	driveStorage *storage.DriveDAO,
 	mountStorage *storage.PathMountDAO,
@@ -45,7 +47,7 @@ func NewRootDrive(
 	if e := r.ReloadMounts(); e != nil {
 		return nil, e
 	}
-	if e := r.ReloadDrive(true); e != nil {
+	if e := r.ReloadDrive(ctx, true); e != nil {
 		return nil, e
 	}
 	return r, nil
@@ -68,7 +70,7 @@ func checkAndParseConfig(dc types.Drive) (*drive_util.DriveFactory, types.SM, er
 	return &f.Factory, config, nil
 }
 
-func (d *RootDrive) ReloadDrive(ignoreFailure bool) error {
+func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
@@ -99,7 +101,7 @@ func (d *RootDrive) ReloadDrive(ignoreFailure bool) error {
 			}
 			return e
 		}
-		iDrive, e := factory.Create(config, d.createDriveUtils(dc.Name))
+		iDrive, e := factory.Create(ctx, config, d.createDriveUtils(dc.Name))
 		if e != nil {
 			if ignoreFailure {
 				log.Printf("[%s]: %v", dc.Name, e)
@@ -118,7 +120,7 @@ func (d *RootDrive) ReloadMounts() error {
 	return d.root.reloadMounts()
 }
 
-func (d *RootDrive) DriveInitConfig(name string) (*drive_util.DriveInitConfig, error) {
+func (d *RootDrive) DriveInitConfig(ctx context.Context, name string) (*drive_util.DriveInitConfig, error) {
 	dc, e := d.driveStorage.GetDrive(name)
 	if e != nil {
 		return nil, e
@@ -130,11 +132,11 @@ func (d *RootDrive) DriveInitConfig(name string) (*drive_util.DriveInitConfig, e
 	if factory.InitConfig == nil {
 		return nil, nil
 	}
-	initConfig, e := factory.InitConfig(config, d.createDriveUtils(name))
+	initConfig, e := factory.InitConfig(ctx, config, d.createDriveUtils(name))
 	return initConfig, e
 }
 
-func (d *RootDrive) DriveInit(name string, data types.SM) error {
+func (d *RootDrive) DriveInit(ctx context.Context, name string, data types.SM) error {
 	dc, e := d.driveStorage.GetDrive(name)
 	if e != nil {
 		return e
@@ -146,7 +148,7 @@ func (d *RootDrive) DriveInit(name string, data types.SM) error {
 	if factory.Init == nil {
 		return nil
 	}
-	return factory.Init(data, config, d.createDriveUtils(name))
+	return factory.Init(ctx, data, config, d.createDriveUtils(name))
 }
 
 func (d *RootDrive) createDriveUtils(name string) drive_util.DriveUtils {

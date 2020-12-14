@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
@@ -54,7 +55,8 @@ type S3Drive struct {
 }
 
 // NewS3Drive creates a S3 compatible storage
-func NewS3Drive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (types.IDrive, error) {
+func NewS3Drive(ctx context.Context, config drive_util.DriveConfig,
+	utils drive_util.DriveUtils) (types.IDrive, error) {
 	id := config["id"]
 	secret := config["secret"]
 	bucket := config["bucket"]
@@ -91,11 +93,11 @@ func NewS3Drive(config drive_util.DriveConfig, utils drive_util.DriveUtils) (typ
 	} else {
 		d.cache = utils.CreateCache(d.deserializeEntry, nil)
 	}
-	return d, d.check()
+	return d, d.check(ctx)
 }
 
-func (s *S3Drive) check() error {
-	_, e := s.c.HeadBucket(&s3.HeadBucketInput{
+func (s *S3Drive) check(ctx context.Context) error {
+	_, e := s.c.HeadBucketWithContext(ctx, &s3.HeadBucketInput{
 		Bucket: s.bucket,
 	})
 	if e != nil {
@@ -117,12 +119,12 @@ func (s *S3Drive) deserializeEntry(dat string) (types.IEntry, error) {
 	return &s3Entry{key: ec.Path, c: s, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 
-func (s *S3Drive) Meta() types.DriveMeta {
+func (s *S3Drive) Meta(context.Context) types.DriveMeta {
 	return types.DriveMeta{CanWrite: true}
 }
 
-func (s *S3Drive) get(path string) (*s3Entry, error) {
-	obj, e := s.c.HeadObject(&s3.HeadObjectInput{
+func (s *S3Drive) get(path string, ctx context.Context) (*s3Entry, error) {
+	obj, e := s.c.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
 	})
@@ -131,7 +133,7 @@ func (s *S3Drive) get(path string) (*s3Entry, error) {
 			if strings.HasSuffix(path, "/") {
 				return nil, err.NewNotFoundError()
 			}
-			return s.get(path + "/")
+			return s.get(path+"/", ctx)
 		}
 		return nil, e
 	}
@@ -141,14 +143,14 @@ func (s *S3Drive) get(path string) (*s3Entry, error) {
 	return s.newS3ObjectEntry(path, obj.ContentLength, obj.LastModified), nil
 }
 
-func (s *S3Drive) Get(path string) (types.IEntry, error) {
+func (s *S3Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	if utils.IsRootPath(path) {
 		return s.newS3DirEntry(path, nil), nil
 	}
 	if cached, _ := s.cache.GetEntry(path); cached != nil {
 		return cached, nil
 	}
-	entry, e := s.get(path)
+	entry, e := s.get(path, ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -156,21 +158,18 @@ func (s *S3Drive) Get(path string) (types.IEntry, error) {
 	return entry, nil
 }
 
-func (s *S3Drive) Save(path string, _ int64, override bool, reader io.Reader, ctx types.TaskCtx) (types.IEntry, error) {
+func (s *S3Drive) Save(ctx types.TaskCtx, path string, _ int64,
+	override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
-		_, e := s.Get(path)
-		if e != nil && !err.IsNotFoundError(e) {
+		if _, e := drive_util.RequireFileNotExists(ctx, s, path); e != nil {
 			return nil, e
-		}
-		if e == nil {
-			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 		}
 	}
 	var readSeeker io.ReadSeeker
 	if rs, ok := reader.(io.ReadSeeker); ok {
 		readSeeker = rs
 	} else {
-		file, e := drive_util.CopyReaderToTempFile(reader, ctx, s.tempDir)
+		file, e := drive_util.CopyReaderToTempFile(ctx, reader, s.tempDir)
 		if e != nil {
 			return nil, e
 		}
@@ -180,7 +179,7 @@ func (s *S3Drive) Save(path string, _ int64, override bool, reader io.Reader, ct
 		}()
 		readSeeker = file
 	}
-	_, e := s.c.PutObject(&s3.PutObjectInput{
+	_, e := s.c.PutObjectWithContext(ctx, &s3.PutObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
 		Body:   readSeeker,
@@ -190,7 +189,7 @@ func (s *S3Drive) Save(path string, _ int64, override bool, reader io.Reader, ct
 	}
 	_ = s.cache.Evict(path, false)
 	_ = s.cache.Evict(utils.PathParent(path), false)
-	get, e := s.Get(path)
+	get, e := s.Get(ctx, path)
 	if e != nil {
 		return nil, e
 	}
@@ -198,16 +197,15 @@ func (s *S3Drive) Save(path string, _ int64, override bool, reader io.Reader, ct
 	return get, nil
 }
 
-func (s *S3Drive) MakeDir(path string) (types.IEntry, error) {
+func (s *S3Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
 	path = path + "/"
-	_, e := s.Get(path)
-	if e == nil {
-		return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
+	if dir, e := s.Get(ctx, path); e == nil {
+		if !dir.Type().IsDir() {
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
+		}
+		return dir, nil
 	}
-	if !err.IsNotFoundError(e) {
-		return nil, e
-	}
-	_, e = s.c.PutObject(&s3.PutObjectInput{
+	_, e := s.c.PutObjectWithContext(ctx, &s3.PutObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
 	})
@@ -225,7 +223,7 @@ func (s *S3Drive) isSelf(e types.IEntry) bool {
 	return false
 }
 
-func (s *S3Drive) Copy(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (s *S3Drive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, s.isSelf)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
@@ -236,7 +234,7 @@ func (s *S3Drive) Copy(from types.IEntry, to string, override bool, ctx types.Ta
 
 func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCtx) (*s3Entry, bool, error) {
 	if !override {
-		_, e := s.Get(to)
+		_, e := s.Get(ctx, to)
 		if e == nil {
 			modTime := utils.Time(from.modTime)
 			// skip
@@ -247,7 +245,7 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCt
 		}
 	}
 	ctx.Total(from.size, false)
-	obj, e := s.c.CopyObject(&s3.CopyObjectInput{
+	obj, e := s.c.CopyObjectWithContext(ctx, &s3.CopyObjectInput{
 		Bucket:     s.bucket,
 		Key:        aws.String(to),
 		CopySource: aws.String(url.QueryEscape(*s.bucket + "/" + from.key)),
@@ -261,7 +259,7 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCt
 	return s.newS3ObjectEntry(to, &from.size, obj.CopyObjectResult.LastModified), false, nil
 }
 
-func (s *S3Drive) Move(from types.IEntry, to string, override bool, ctx types.TaskCtx) (types.IEntry, error) {
+func (s *S3Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetIEntry(from, s.isSelf)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
@@ -279,7 +277,7 @@ func (s *S3Drive) Move(from types.IEntry, to string, override bool, ctx types.Ta
 	return entry, e
 }
 
-func (s *S3Drive) List(path string) ([]types.IEntry, error) {
+func (s *S3Drive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := s.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
@@ -287,7 +285,7 @@ func (s *S3Drive) List(path string) ([]types.IEntry, error) {
 	if !utils.IsRootPath(s3Path) {
 		s3Path = s3Path + "/"
 	}
-	objs, e := s.c.ListObjects(&s3.ListObjectsInput{
+	objs, e := s.c.ListObjectsWithContext(ctx, &s3.ListObjectsInput{
 		Bucket:    s.bucket,
 		Prefix:    aws.String(s3Path),
 		Delimiter: aws.String("/"),
@@ -317,11 +315,11 @@ func (s *S3Drive) List(path string) ([]types.IEntry, error) {
 }
 
 func (s *S3Drive) delete(path string, ctx types.TaskCtx) error {
-	entry, e := s.Get(path)
+	entry, e := s.Get(ctx, path)
 	if e != nil {
 		return e
 	}
-	tree, e := drive_util.BuildEntriesTree(entry, ctx, false)
+	tree, e := drive_util.BuildEntriesTree(ctx, entry, false)
 	if e != nil {
 		return e
 	}
@@ -339,7 +337,7 @@ func (s *S3Drive) delete(path string, ctx types.TaskCtx) error {
 				Key: aws.String(key),
 			}
 		}
-		r, e := s.c.DeleteObjects(&s3.DeleteObjectsInput{
+		r, e := s.c.DeleteObjectsWithContext(ctx, &s3.DeleteObjectsInput{
 			Bucket: s.bucket,
 			Delete: &s3.Delete{
 				Objects: deletes,
@@ -357,19 +355,25 @@ func (s *S3Drive) delete(path string, ctx types.TaskCtx) error {
 	return nil
 }
 
-func (s *S3Drive) Delete(path string, ctx types.TaskCtx) error {
+func (s *S3Drive) Delete(ctx types.TaskCtx, path string) error {
 	e := s.delete(path, ctx)
 	_ = s.cache.Evict(utils.PathParent(path), false)
 	_ = s.cache.Evict(path, true)
 	return e
 }
 
-func (s *S3Drive) Upload(path string, size int64, _ bool,
-	config types.SM) (*types.DriveUploadConfig, error) {
+func (s *S3Drive) Upload(ctx context.Context, path string, size int64,
+	override bool, config types.SM) (*types.DriveUploadConfig, error) {
 	action := config["action"]
 	uploadId := config["uploadId"]
 	partsEtag := config["parts"]
 	seq := utils.ToInt64(config["seq"], -1)
+
+	if !override {
+		if _, e := drive_util.RequireFileNotExists(ctx, s, path); e != nil {
+			return nil, e
+		}
+	}
 
 	r := types.DriveUploadConfig{
 		Provider: types.S3Provider,
@@ -389,7 +393,7 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 		preSigned, e = req.Presign(2 * time.Hour)
 		break
 	case "CompleteMultipartUpload":
-		_, e := s.c.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+		_, e := s.c.CompleteMultipartUploadWithContext(ctx, &s3.CompleteMultipartUploadInput{
 			Bucket:   s.bucket,
 			Key:      aws.String(path),
 			UploadId: aws.String(uploadId),
@@ -401,7 +405,7 @@ func (s *S3Drive) Upload(path string, size int64, _ bool,
 		_ = s.cache.Evict(utils.PathParent(path), false)
 		return nil, e
 	case "AbortMultipartUpload":
-		_, e := s.c.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+		_, e := s.c.AbortMultipartUploadWithContext(ctx, &s3.AbortMultipartUploadInput{
 			Bucket:   s.bucket,
 			Key:      aws.String(path),
 			UploadId: aws.String(uploadId),
@@ -528,8 +532,8 @@ func (s *s3Entry) Name() string {
 	return utils.PathBase(s.key)
 }
 
-func (s *s3Entry) GetReader() (io.ReadCloser, error) {
-	obj, e := s.c.c.GetObject(&s3.GetObjectInput{
+func (s *s3Entry) GetReader(ctx context.Context) (io.ReadCloser, error) {
+	obj, e := s.c.c.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: s.c.bucket,
 		Key:    aws.String(s.key),
 	})
@@ -539,7 +543,7 @@ func (s *s3Entry) GetReader() (io.ReadCloser, error) {
 	return obj.Body, nil
 }
 
-func (s *s3Entry) GetURL() (*types.ContentURL, error) {
+func (s *s3Entry) GetURL(context.Context) (*types.ContentURL, error) {
 	req, _ := s.c.c.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: s.c.bucket,
 		Key:    aws.String(s.key),
