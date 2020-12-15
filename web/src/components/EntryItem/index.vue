@@ -21,6 +21,7 @@
         class="entry-item__icon"
         :entry="entry"
         :icon="icon"
+        :show-thumbnail="viewMode === 'thumbnail'"
         @click="$emit('icon-click', $event)"
       />
     </span>
@@ -29,12 +30,14 @@
         <i v-if="entry.meta.is_mount">@</i>{{ entry.name
         }}<template v-if="entry.meta.ext">.{{ entry.meta.ext }}</template>
       </span>
-      <span class="entry-item__modified-time" v-if="viewMode === 'line'">{{
-        entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : ""
-      }}</span>
-      <span class="entry-item__size" v-if="viewMode === 'line'">{{
-        entry.size >= 0 ? $.formatBytes(entry.size) : ""
-      }}</span>
+      <template v-if="viewMode === 'list'">
+        <span class="entry-item__modified-time">{{
+          entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : ""
+        }}</span>
+        <span class="entry-item__size">{{
+          entry.size >= 0 ? $.formatBytes(entry.size) : ""
+        }}</span>
+      </template>
     </span>
   </div>
 </template>
@@ -53,8 +56,8 @@ export default {
     },
     viewMode: {
       type: String,
-      default: 'line',
-      validator: val => val === 'line' || val === 'block'
+      default: 'list',
+      validator: val => val === 'list' || val === 'thumbnail'
     }
   },
   computed: {
@@ -71,7 +74,7 @@ export default {
   }
 }
 
-.entry-item--view-line {
+.entry-item--view-list {
   display: flex;
   cursor: pointer;
   padding: 4px 16px;
@@ -105,7 +108,7 @@ export default {
   }
 }
 
-.entry-item--view-block {
+.entry-item--view-thumbnail {
   width: 100%;
   height: 100%;
   box-sizing: border-box;

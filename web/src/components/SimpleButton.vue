@@ -48,6 +48,11 @@ export default {
   cursor: pointer;
   transition: 0.3s;
   user-select: none;
+  line-height: 20px;
+
+  & + .simple-button {
+    margin-left: 0.5em;
+  }
 
   &:hover {
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);

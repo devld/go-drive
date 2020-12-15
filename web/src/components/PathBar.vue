@@ -22,7 +22,6 @@ export default {
   },
   computed: {
     segments () {
-      if (!this.path) return []
       const ss = this.path.replace(/\/+/g, '/').split('/').filter(Boolean)
       const pathSegments = [{ name: this.$t('app.root_path'), path: '' }]
       ss.forEach((s, i) => {
@@ -41,7 +40,7 @@ export default {
 <style lang="scss">
 .path-bar {
   margin: 0;
-  padding: 0 16px;
+  padding: 0;
   list-style-type: none;
 }
 

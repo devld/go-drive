@@ -10,7 +10,18 @@ export default {
     folder: 'Folder',
     empty_list: 'Nothing here',
     go_back: 'Go back',
-    root_path: 'Root'
+    root_path: 'Root',
+    toggle_to_list: 'Toggle to list mode',
+    toggle_to_thumbnail: 'Toggle to thumbnail mode',
+    toggle_sort: 'Toggle sort mode',
+    sort: {
+      name_asc: 'Name Asc',
+      name_desc: 'Name Desc',
+      mod_time_asc: 'Modified Asc',
+      mod_time_desc: 'Modified Desc',
+      size_asc: 'Size Asc',
+      size_desc: 'Size Desc'
+    }
   },
   error: {
     not_allowed: 'Operation not allowed',
