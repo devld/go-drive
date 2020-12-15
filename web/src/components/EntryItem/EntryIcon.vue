@@ -3,7 +3,7 @@
     <i-icon :svg="icon || entryIcon" />
     <img
       class="entry-icon__thumbnail"
-      v-if="thumbnail && !err"
+      v-if="showThumbnail && thumbnail && !err"
       v-lazy="thumbnail"
       :alt="entry.name"
     />
@@ -23,6 +23,10 @@ export default {
     },
     icon: {
       type: String
+    },
+    showThumbnail: {
+      type: Boolean,
+      default: true
     }
   },
   data () {

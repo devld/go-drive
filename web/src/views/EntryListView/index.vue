@@ -8,10 +8,14 @@
       @entry-click="$emit('entry-click', $event)"
       @entry-menu="$emit('entry-menu', $event)"
       @path-change="$emit('path-change', $event)"
+      :sort="sort"
+      @update:sort="$emit('update:sort', $event)"
       :selection="selection"
       @update:selection="$emit('update:selection', $event)"
       :selectable="selectable"
       :view-mode="viewMode"
+      @update:viewMode="$emit('update:viewMode', $event)"
+      :show-toggles="showToggles"
     />
     <error-view v-else :status="error.status" :message="error.message" />
   </div>
@@ -32,6 +36,9 @@ export default {
     filter: {
       type: Function
     },
+    sort: {
+      type: String
+    },
     selection: {
       type: Array
     },
@@ -41,6 +48,9 @@ export default {
     },
     viewMode: {
       type: String
+    },
+    showToggles: {
+      type: Boolean
     }
   },
   data () {

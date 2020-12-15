@@ -394,6 +394,26 @@
   animation: bottom-fade-in 0.3s ease-out reverse;
 }
 
+@keyframes top-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.top-fade-enter-active {
+  animation: top-fade-in 0.3s ease-in;
+}
+
+.top-fade-leave-active {
+  animation: top-fade-in 0.3s ease-out reverse;
+}
+
 @keyframes scale-fade-in {
   from {
     opacity: 0;

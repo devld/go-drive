@@ -10,7 +10,9 @@
         @entry-menu="showEntryMenu"
         :selection.sync="selectedEntries"
         @loading="progressBar($event)"
-        :view-mode="viewMode"
+        :sort.sync="sortBy"
+        :view-mode.sync="viewMode"
+        show-toggles
       />
     </div>
     <!-- file list main area -->
@@ -41,7 +43,7 @@
       v-model="entryMenuShowing"
       overlay-close
       esc-close
-      transition="flip-fade"
+      transition="top-fade"
     >
       <entry-menu
         v-if="entryMenu"
@@ -110,7 +112,8 @@ export default {
 
       currentDirEntry: null,
 
-      viewMode: 'line'
+      viewMode: 'list',
+      sortBy: undefined
     }
   },
   computed: {
@@ -207,7 +210,7 @@ export default {
     entriesLoaded ({ entries, path }) {
       this.viewMode = entries.reduce((n, e) =>
         n + +supportThumbnail(e), 0) / entries.length > 0.5
-        ? 'block' : 'line'
+        ? 'thumbnail' : 'list'
 
       setTitle(path)
 
@@ -348,10 +351,6 @@ export default {
         e.stopPropagation()
         e.preventDefault()
       }
-    },
-    toggleViewMode () {
-      if (this.viewMode === 'line') this.viewMode = 'block'
-      else this.viewMode = 'line'
     },
     ...mapMutations(['progressBar'])
   }

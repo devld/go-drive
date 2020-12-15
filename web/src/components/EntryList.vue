@@ -3,11 +3,40 @@
     class="entry-list"
     :class="[viewMode ? `entry-list--view-${viewMode}` : '']"
   >
-    <path-bar
-      v-if="!isRootPath"
-      :path="path"
-      @path-change="$emit('path-change', $event)"
-    />
+    <div class="entry-list__head">
+      <path-bar :path="path" @path-change="$emit('path-change', $event)" />
+      <div class="entry-list__toggles" v-if="showToggles">
+        <button
+          class="plain-button view-model-toggle"
+          :title="
+            viewMode === 'list'
+              ? $t('app.toggle_to_thumbnail')
+              : $t('app.toggle_to_list')
+          "
+          @click="
+            $emit('update:viewMode', viewMode === 'list' ? 'thumbnail' : 'list')
+          "
+        >
+          <i-icon :svg="viewMode === 'list' ? '#icon-gallery' : '#icon-list'" />
+        </button>
+        <simple-dropdown v-model="sortDropdownShowing">
+          <span :title="$t('app.toggle_sort')">
+            <i-icon svg="#icon-sort" />
+          </span>
+          <ul slot="dropdown" class="sort-modes">
+            <li
+              class="sort-mode"
+              :class="{ active: sort === s.key }"
+              v-for="s in sortModes"
+              :key="s.key"
+              @click="setSortBy(s.key)"
+            >
+              {{ $t(s.name) }}
+            </li>
+          </ul>
+        </simple-dropdown>
+      </div>
+    </div>
     <ul class="entry-list__entries">
       <li class="entry-list__item" v-if="!isRootPath">
         <entry-link
@@ -50,18 +79,19 @@
 </template>
 <script>
 import { pathJoin, pathClean, isRootPath, mapOf } from '@/utils'
+import IIcon from './IIcon.vue'
 
 const SORTS_METHOD = {
-  default: (a, b) => {
-    if (a.type === 'dir' && b.type !== 'dir') return -1
-    if (a.type !== 'dir' && b.type === 'dir') return 1
-    if (a.name > b.name) return 1
-    else if (a.name < b.name) return -1
-    return 0
-  }
+  name_asc: (a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name),
+  name_desc: (a, b) => -a.type.localeCompare(b.type) || -a.name.localeCompare(b.name),
+  mod_time_asc: (a, b) => a.type.localeCompare(b.type) || a.mod_time - b.mod_time || a.name.localeCompare(b.name),
+  mod_time_desc: (a, b) => -a.type.localeCompare(b.type) || b.mod_time - a.mod_time || a.name.localeCompare(b.name),
+  size_asc: (a, b) => a.type.localeCompare(b.type) || a.size - b.size || a.name.localeCompare(b.name),
+  size_desc: (a, b) => -a.type.localeCompare(b.type) || b.size - a.size || a.name.localeCompare(b.name)
 }
 
 export default {
+  components: { IIcon },
   name: 'EntryList',
   props: {
     path: {
@@ -74,7 +104,7 @@ export default {
     },
     sort: {
       type: String,
-      default: 'default'
+      default: 'name_asc'
     },
     selectable: {
       type: [Boolean, Function]
@@ -84,7 +114,10 @@ export default {
     },
     viewMode: {
       type: String,
-      default: 'block'
+      default: 'list'
+    },
+    showToggles: {
+      type: Boolean
     }
   },
   watch: {
@@ -98,7 +131,17 @@ export default {
   },
   data () {
     return {
-      selected: []
+      selected: [],
+
+      sortDropdownShowing: false,
+      sortModes: [
+        { key: 'name_asc', name: 'app.sort.name_asc' },
+        { key: 'name_desc', name: 'app.sort.name_desc' },
+        { key: 'mod_time_asc', name: 'app.sort.mod_time_asc' },
+        { key: 'mod_time_desc', name: 'app.sort.mod_time_desc' },
+        { key: 'size_asc', name: 'app.sort.size_asc' },
+        { key: 'size_desc', name: 'app.sort.size_desc' }
+      ]
     }
   },
   computed: {
@@ -113,8 +156,8 @@ export default {
       }
     },
     sortedEntries () {
-      const sortMethod = SORTS_METHOD[this.sort]
-      return sortMethod ? [...this.entries].sort(sortMethod) : this.entries
+      const sortMethod = SORTS_METHOD[this.sort] || SORTS_METHOD.name_asc
+      return [...this.entries].sort(sortMethod)
     },
     isRootPath () {
       return isRootPath(this.path)
@@ -131,14 +174,14 @@ export default {
       this.$emit('entry-menu', e)
     },
     iconClicked (entry, e) {
-      if (this.viewMode !== 'line') return
+      if (this.viewMode !== 'list') return
       if (!this.selectable) return
       e.stopPropagation()
       e.preventDefault()
       this.toggleSelect(entry)
     },
     parentIconClicked (e) {
-      if (this.viewMode !== 'line') return
+      if (this.viewMode !== 'list') return
       if (!this.selectable) return
       e.stopPropagation()
       e.preventDefault()
@@ -167,6 +210,10 @@ export default {
       }
       this.$emit('update:selection', this.selected)
     },
+    setSortBy (sort) {
+      this.$emit('update:sort', sort)
+      this.sortDropdownShowing = false
+    },
     focusOnEntry (name) {
       let dom
       if (name === '..') dom = this.$refs.parentEntry
@@ -184,16 +231,58 @@ export default {
 </script>
 <style lang="scss">
 .entry-list {
-  .path-bar {
-    margin-bottom: 16px;
-  }
-
   .entry-link {
     @include var(color, primary-text-color);
   }
 }
 
-.entry-list--view-block {
+.entry-list__head {
+  display: flex;
+  margin-bottom: 16px;
+  padding: 0 16px;
+
+  .path-bar {
+    flex: 1;
+  }
+}
+
+.entry-list__toggles {
+  margin-left: auto;
+
+  .icon {
+    @include var(color, secondary-text-color);
+  }
+
+  .view-model-toggle {
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  .sort-modes {
+    margin: 0;
+    padding: 0;
+  }
+
+  .sort-mode {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    white-space: nowrap;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+
+    &:hover {
+      @include var(background-color, hover-bg-color);
+    }
+
+    &.active {
+      @include var(background-color, select-bg-color);
+    }
+  }
+}
+
+.entry-list--view-thumbnail {
   .entry-list__entries {
     display: flex;
     flex-wrap: wrap;

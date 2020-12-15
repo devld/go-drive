@@ -8,7 +8,7 @@
       @entries-load="entriesLoaded"
       :selection.sync="selection"
       :selectable="dirMode ? false : isEntrySelectable"
-      view-mode="line"
+      view-mode="list"
     />
     <div class="open-dialog__selected-count" v-if="!dirMode">
       <span v-if="max > 0">{{ $t("dialog.open.max_items", { n: max }) }}</span>
@@ -179,7 +179,7 @@ export default {
     overflow-y: auto;
     text-align: left;
 
-    .path-bar {
+    .entry-list__head {
       padding-top: 16px;
       padding-bottom: 10px;
       margin-bottom: 0;

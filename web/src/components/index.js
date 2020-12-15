@@ -10,10 +10,11 @@ import FloatButton from './FloatButton.vue'
 import SimpleButton from './SimpleButton.vue'
 import SimpleFormItem from './Form/FormItem.vue'
 import SimpleForm from './Form'
+import SimpleDropdown from './SimpleDropdown'
 import ProgressBar from './ProgressBar.vue'
 
 const components = {
-  IIcon, SimpleButton, SimpleForm, SimpleFormItem,
+  IIcon, SimpleButton, SimpleForm, SimpleFormItem, SimpleDropdown,
   EntryIcon, EntryLink, EntryList, EntryItem,
   PathBar, ErrorView, DialogView, FloatButton, ProgressBar
 }

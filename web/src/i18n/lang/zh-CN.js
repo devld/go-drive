@@ -10,7 +10,18 @@ export default {
     folder: '文件夹',
     empty_list: '这里空空的',
     go_back: '返回',
-    root_path: 'Root'
+    root_path: 'Root',
+    toggle_to_list: '切换到列表模式',
+    toggle_to_thumbnail: '切换到缩略图模式',
+    toggle_sort: '切换排序方式',
+    sort: {
+      name_asc: '文件名升序',
+      name_desc: '文件名降序',
+      mod_time_asc: '修改时间升序',
+      mod_time_desc: '修改时间降序',
+      size_asc: '文件大小升序',
+      size_desc: '文件大小降序'
+    }
   },
   error: {
     not_allowed: '不允许的操作',
