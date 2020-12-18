@@ -274,14 +274,6 @@ func (o *OneDrive) Delete(ctx types.TaskCtx, path string) error {
 
 func (o *OneDrive) Upload(ctx context.Context, path string, size int64,
 	override bool, config types.SM) (*types.DriveUploadConfig, error) {
-	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, o, path); e != nil {
-			return nil, e
-		}
-	}
-	if o.uploadProxy {
-		return types.UseLocalProvider(size), nil
-	}
 	action := config["action"]
 	switch action {
 	case "CompleteUpload":
@@ -289,6 +281,14 @@ func (o *OneDrive) Upload(ctx context.Context, path string, size int64,
 		_ = o.cache.Evict(utils.PathParent(path), false)
 		return nil, nil
 	default:
+		if !override {
+			if _, e := drive_util.RequireFileNotExists(ctx, o, path); e != nil {
+				return nil, e
+			}
+		}
+		if o.uploadProxy {
+			return types.UseLocalProvider(size), nil
+		}
 		parent, e := o.Get(ctx, utils.PathParent(path))
 		if e != nil {
 			return nil, e
