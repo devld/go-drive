@@ -2,7 +2,6 @@ package onedrive
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"go-drive/common/drive_util"
 	"go-drive/common/errors"
@@ -11,6 +10,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -393,7 +393,14 @@ func (o *oneDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 			return nil, e
 		}
 		if resp.Status() != http.StatusFound {
-			return nil, errors.New(fmt.Sprintf("%d", resp.Status()))
+			_ = resp.Dispose()
+			hs := resp.Response().Header
+			log.Printf("[onedrive] unexpected status code: %d. Content-Length is: %s, Content-Type is :%s",
+				resp.Status(),
+				hs.Get("Content-Length"),
+				hs.Get("Content-Type"),
+			)
+			return nil, err.NewUnsupportedMessageError(fmt.Sprintf("%d", resp.Status()))
 		}
 		u = resp.Response().Header.Get("Location")
 		o.downloadUrl = u
