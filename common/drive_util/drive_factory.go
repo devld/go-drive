@@ -29,8 +29,6 @@ type OAuthConfig struct {
 	Principal string `json:"principal"`
 }
 
-type DriveConfig = types.SM
-
 type DriveCacheFactory = func(EntryDeserialize, EntrySerialize) DriveCache
 
 // DriveDataStore is a place to store drive's runtime data, such as token, refresh token.
@@ -47,9 +45,9 @@ type DriveUtils struct {
 
 type DriveFactory struct {
 	// InitConfig gets the initialization information.
-	InitConfig func(context.Context, DriveConfig, DriveUtils) (*DriveInitConfig, error)
+	InitConfig func(ctx context.Context, config types.SM, driveUtils DriveUtils) (*DriveInitConfig, error)
 	// Init configures a drive's initial data.
-	Init func(context.Context, types.SM, DriveConfig, DriveUtils) error
+	Init func(ctx context.Context, data types.SM, config types.SM, driveUtils DriveUtils) error
 	// Create creates a drive instance by config map
-	Create func(context.Context, DriveConfig, DriveUtils) (types.IDrive, error)
+	Create func(ctx context.Context, config types.SM, driveUtils DriveUtils) (types.IDrive, error)
 }

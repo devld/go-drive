@@ -128,14 +128,6 @@ func ToInt64(s string, def int64) int64 {
 	return v
 }
 
-func ToInt(s string, def int) int {
-	v, e := strconv.Atoi(s)
-	if e != nil {
-		return def
-	}
-	return v
-}
-
 func FlattenStringMap(m map[string]interface{}, separator string) map[string]string {
 	r := make(map[string]string)
 	for k, v := range m {

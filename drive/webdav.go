@@ -34,16 +34,13 @@ func init() {
 }
 
 // NewWebDAVDrive creates a webdav drive
-func NewWebDAVDrive(ctx context.Context, config drive_util.DriveConfig,
+func NewWebDAVDrive(ctx context.Context, config types.SM,
 	utils drive_util.DriveUtils) (types.IDrive, error) {
 	u := config["url"]
 	username := config["username"]
 	password := config["password"]
 
-	cacheTtl, e := time.ParseDuration(config["cache_ttl"])
-	if e != nil {
-		cacheTtl = -1
-	}
+	cacheTtl := config.GetDuration("cache_ttl", -1)
 
 	uu, e := url.Parse(u)
 	if e != nil {

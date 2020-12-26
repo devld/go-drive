@@ -42,10 +42,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils
 		return nil, e
 	}
 
-	cacheTtl, e := time.ParseDuration(config["cache_ttl"])
-	if e != nil {
-		cacheTtl = -1
-	}
+	cacheTtl := config.GetDuration("cache_ttl", -1)
 
 	g := &GDrive{
 		s:        service,

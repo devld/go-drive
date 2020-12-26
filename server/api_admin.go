@@ -164,7 +164,9 @@ func InitAdminRoutes(r gin.IRouter,
 
 	// get drive factories
 	r.GET("/drive-factories", func(c *gin.Context) {
-		SetResult(c, drive_util.GetRegisteredDrives())
+		ds := drive_util.GetRegisteredDrives()
+		sort.Slice(ds, func(i, j int) bool { return ds[i].Type < ds[j].Type })
+		SetResult(c, ds)
 	})
 
 	// get drives

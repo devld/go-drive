@@ -47,7 +47,7 @@ func oauthReq(c common.Config) *drive_util.OAuthRequest {
 	}
 }
 
-func InitConfig(ctx context.Context, config drive_util.DriveConfig,
+func InitConfig(ctx context.Context, config types.SM,
 	utils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
 	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(utils.Config), config, utils.Data)
 	if e != nil {
@@ -72,7 +72,8 @@ func InitConfig(ctx context.Context, config drive_util.DriveConfig,
 	return initConfig, nil
 }
 
-func Init(ctx context.Context, data types.SM, config drive_util.DriveConfig, utils drive_util.DriveUtils) error {
+func Init(ctx context.Context, data types.SM,
+	config types.SM, utils drive_util.DriveUtils) error {
 	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config), data, config, utils.Data)
 	return e
 }

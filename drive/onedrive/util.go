@@ -66,7 +66,7 @@ func itemPath(path string) string {
 	return "/drive/root:/" + path
 }
 
-func InitConfig(ctx context.Context, config drive_util.DriveConfig,
+func InitConfig(ctx context.Context, config types.SM,
 	driveUtils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
 	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(driveUtils.Config), config, driveUtils.Data)
 	if e != nil {
@@ -126,7 +126,7 @@ func InitConfig(ctx context.Context, config drive_util.DriveConfig,
 	return initConfig, nil
 }
 
-func Init(ctx context.Context, data types.SM, config drive_util.DriveConfig, utils drive_util.DriveUtils) error {
+func Init(ctx context.Context, data types.SM, config types.SM, utils drive_util.DriveUtils) error {
 	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config), data, config, utils.Data)
 	if e != nil {
 		return e
@@ -294,7 +294,7 @@ func (o *OneDrive) deserializeEntry(dat string) (types.IEntry, error) {
 		d: o, id: ed["id"],
 		path: ec.Path, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir(),
 		downloadUrl:          ed["du"],
-		downloadUrlExpiresAt: utils.ToInt64(ed["de"], -1),
+		downloadUrlExpiresAt: ed.GetInt64("de", -1),
 		thumbnail:            ed["th"],
 	}, nil
 }

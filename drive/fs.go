@@ -42,7 +42,7 @@ type fsFile struct {
 }
 
 // NewFsDrive creates a file system drive
-func NewFsDrive(_ context.Context, config drive_util.DriveConfig,
+func NewFsDrive(_ context.Context, config types.SM,
 	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	path := config["path"]
 	if utils.CleanPath(path) == "" {

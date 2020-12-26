@@ -39,7 +39,7 @@ func (o *OAuthResponse) TokenSource(ctx context.Context) oauth2.TokenSource {
 	return o.Config.TokenSource(ctx, o.Token)
 }
 
-func getOAuthConfig(o OAuthRequest, config DriveConfig) *oauth2.Config {
+func getOAuthConfig(o OAuthRequest, config types.SM) *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     config["client_id"],
 		ClientSecret: config["client_secret"],
@@ -49,12 +49,12 @@ func getOAuthConfig(o OAuthRequest, config DriveConfig) *oauth2.Config {
 	}
 }
 
-func oauthGet(o OAuthRequest, config DriveConfig, ds DriveDataStore) (*OAuthResponse, error) {
+func oauthGet(o OAuthRequest, config types.SM, ds DriveDataStore) (*OAuthResponse, error) {
 	params, e := ds.Load("token", "token_type", "expires_at", "refresh_token")
 	if e != nil {
 		return nil, e
 	}
-	expiresAt := time.Unix(utils.ToInt64(params["expires_at"], -1), 0)
+	expiresAt := params.GetUnixTime("expires_at", nil)
 	t := &oauth2.Token{
 		AccessToken:  params["token"],
 		TokenType:    params["token_type"],
@@ -70,7 +70,7 @@ func oauthGet(o OAuthRequest, config DriveConfig, ds DriveDataStore) (*OAuthResp
 	return &OAuthResponse{Config: getOAuthConfig(o, config), Token: t}, nil
 }
 
-func OAuthInitConfig(o OAuthRequest, config DriveConfig,
+func OAuthInitConfig(o OAuthRequest, config types.SM,
 	ds DriveDataStore) (*DriveInitConfig, *OAuthResponse, error) {
 	resp, e := oauthGet(o, config, ds)
 	if e != nil {
@@ -96,7 +96,7 @@ func OAuthInitConfig(o OAuthRequest, config DriveConfig,
 }
 
 func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
-	config DriveConfig, ds DriveDataStore) (*OAuthResponse, error) {
+	config types.SM, ds DriveDataStore) (*OAuthResponse, error) {
 	code := data["code"]
 	state := data["state"]
 
@@ -127,7 +127,7 @@ func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
 		})
 }
 
-func OAuthGet(o OAuthRequest, config DriveConfig, ds DriveDataStore) (*OAuthResponse, error) {
+func OAuthGet(o OAuthRequest, config types.SM, ds DriveDataStore) (*OAuthResponse, error) {
 	resp, e := oauthGet(o, config, ds)
 	if e != nil {
 		return nil, e
