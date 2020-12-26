@@ -364,12 +364,6 @@ func (s *S3Drive) Upload(ctx context.Context, path string, size int64,
 	partsEtag := config["parts"]
 	seq := config.GetInt64("seq", -1)
 
-	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, s, path); e != nil {
-			return nil, e
-		}
-	}
-
 	r := types.DriveUploadConfig{
 		Provider: types.S3Provider,
 		Config:   types.SM{},
@@ -411,6 +405,11 @@ func (s *S3Drive) Upload(ctx context.Context, path string, size int64,
 		_ = s.cache.Evict(utils.PathParent(path), false)
 		return nil, nil
 	default:
+		if !override {
+			if _, e := drive_util.RequireFileNotExists(ctx, s, path); e != nil {
+				return nil, e
+			}
+		}
 		if s.uploadProxy {
 			return types.UseLocalProvider(size), nil
 		}
