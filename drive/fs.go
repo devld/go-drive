@@ -149,15 +149,8 @@ func (f *FsDrive) Copy(types.TaskCtx, types.IEntry, string, bool) (types.IEntry,
 	return nil, err.NewUnsupportedError()
 }
 
-func (f *FsDrive) isSelf(entry types.IEntry) bool {
-	if fe, ok := entry.(*fsFile); ok {
-		return fe.drive == f
-	}
-	return false
-}
-
 func (f *FsDrive) Move(_ types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetIEntry(from, f.isSelf)
+	from = drive_util.GetSelfEntry(f, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}

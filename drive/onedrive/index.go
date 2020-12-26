@@ -157,15 +157,8 @@ func (o *OneDrive) MakeDir(ctx context.Context, path string) (types.IEntry, erro
 	return o.toEntry(resp)
 }
 
-func (o *OneDrive) isSelf(e types.IEntry) bool {
-	if fe, ok := e.(*oneDriveEntry); ok {
-		return fe.d == o
-	}
-	return false
-}
-
 func (o *OneDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetIEntry(from, o.isSelf)
+	from = drive_util.GetSelfEntry(o, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
@@ -199,7 +192,7 @@ func (o *OneDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, overrid
 }
 
 func (o *OneDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetIEntry(from, o.isSelf)
+	from = drive_util.GetSelfEntry(o, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
