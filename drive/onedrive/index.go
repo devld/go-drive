@@ -44,26 +44,20 @@ type OneDrive struct {
 	downloadProxy bool
 }
 
-func NewOneDrive(_ context.Context, config drive_util.DriveConfig,
+func NewOneDrive(_ context.Context, config types.SM,
 	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	resp, e := drive_util.OAuthGet(*oauthReq(driveUtils.Config), config, driveUtils.Data)
 	if e != nil {
 		return nil, e
 	}
 
-	proxyUpload := config["proxy_upload"]
-	proxyDownload := config["proxy_download"]
-	cacheTtl, e := time.ParseDuration(config["cache_ttl"])
-	if e != nil {
-		cacheTtl = -1
-	}
-
+	cacheTtl := config.GetDuration("cache_ttl", -1)
 	params, e := driveUtils.Data.Load("drive_id")
 	od := &OneDrive{
 		driveId:       params["drive_id"],
 		cacheTTL:      cacheTtl,
-		uploadProxy:   proxyUpload != "",
-		downloadProxy: proxyDownload != "",
+		uploadProxy:   config.GetBool("proxy_upload"),
+		downloadProxy: config.GetBool("proxy_download"),
 	}
 	if cacheTtl <= 0 {
 		od.cache = drive_util.DummyCache()

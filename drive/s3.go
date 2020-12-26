@@ -55,7 +55,7 @@ type S3Drive struct {
 }
 
 // NewS3Drive creates a S3 compatible storage
-func NewS3Drive(ctx context.Context, config drive_util.DriveConfig,
+func NewS3Drive(ctx context.Context, config types.SM,
 	utils drive_util.DriveUtils) (types.IDrive, error) {
 	id := config["id"]
 	secret := config["secret"]
@@ -63,12 +63,7 @@ func NewS3Drive(ctx context.Context, config drive_util.DriveConfig,
 	pathStyle := config["path_style"]
 	region := config["region"]
 	endpoint := config["endpoint"]
-	proxyUpload := config["proxy_upload"]
-	proxyDownload := config["proxy_download"]
-	cacheTtl, e := time.ParseDuration(config["cache_ttl"])
-	if e != nil {
-		cacheTtl = -1
-	}
+	cacheTtl := config.GetDuration("cache_ttl", -1)
 
 	sess, e := session.NewSession(&aws.Config{
 		Credentials:      credentials.NewStaticCredentials(id, secret, ""),
@@ -83,8 +78,8 @@ func NewS3Drive(ctx context.Context, config drive_util.DriveConfig,
 	d := &S3Drive{
 		c:             client,
 		bucket:        aws.String(bucket),
-		uploadProxy:   proxyUpload != "",
-		downloadProxy: proxyDownload != "",
+		uploadProxy:   config.GetBool("proxy_upload"),
+		downloadProxy: config.GetBool("proxy_download"),
 		cacheTTL:      cacheTtl,
 		tempDir:       utils.Config.TempDir,
 	}
@@ -367,7 +362,7 @@ func (s *S3Drive) Upload(ctx context.Context, path string, size int64,
 	action := config["action"]
 	uploadId := config["uploadId"]
 	partsEtag := config["parts"]
-	seq := utils.ToInt64(config["seq"], -1)
+	seq := config.GetInt64("seq", -1)
 
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, s, path); e != nil {

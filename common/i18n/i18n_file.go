@@ -71,7 +71,10 @@ func (f *FileMessageSource) getMessage(key, lang string) string {
 	}
 	msg, ok := f.msgMap[tag][key]
 	if !ok {
-		msg = key
+		msg, ok = f.msgMap[f.defaultLang][key]
+		if !ok {
+			msg = key
+		}
 	}
 	return msg
 }

@@ -1,6 +1,10 @@
 package types
 
-import "context"
+import (
+	"context"
+	"strconv"
+	"time"
+)
 
 type M map[string]interface{}
 type SM map[string]string
@@ -37,4 +41,43 @@ type FormItem struct {
 	Disabled     bool             `json:"disabled"`
 	Options      []FormItemOption `json:"options"`
 	DefaultValue string           `json:"default_value"`
+}
+
+func (c SM) GetInt(key string, defVal int) int {
+	v, e := strconv.Atoi(c[key])
+	if e != nil {
+		return defVal
+	}
+	return v
+}
+
+func (c SM) GetInt64(key string, defVal int64) int64 {
+	v, e := strconv.ParseInt(c[key], 10, 64)
+	if e != nil {
+		return defVal
+	}
+	return v
+}
+
+func (c SM) GetDuration(key string, defVal time.Duration) time.Duration {
+	dur, e := time.ParseDuration(c[key])
+	if e != nil {
+		dur = defVal
+	}
+	return dur
+}
+
+func (c SM) GetUnixTime(key string, defVal *time.Time) time.Time {
+	if defVal == nil {
+		defVal = &time.Time{}
+	}
+	t := c.GetInt64(key, -1)
+	if t == -1 {
+		return *defVal
+	}
+	return time.Unix(t, 0)
+}
+
+func (c SM) GetBool(key string) bool {
+	return c[key] != ""
 }
