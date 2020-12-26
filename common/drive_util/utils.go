@@ -37,6 +37,10 @@ func GetIEntry(entry types.IEntry, test func(iEntry types.IEntry) bool) types.IE
 	return entry
 }
 
+func GetSelfEntry(d types.IDrive, entry types.IEntry) types.IEntry {
+	return GetIEntry(entry, func(ee types.IEntry) bool { return ee.Drive() == d })
+}
+
 func Copy(ctx types.TaskCtx, dst io.Writer, src io.Reader) (written int64, err error) {
 	buf := make([]byte, 32*1024)
 	for {

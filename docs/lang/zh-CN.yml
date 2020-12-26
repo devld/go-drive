@@ -149,6 +149,31 @@ drive:
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
     wrong_user_or_password: 用户名或密码不正确
     remote_error: "远程服务错误: {{ 1 }}"
+  ftp:
+    name: FTP
+    readme: FTP drive
+    form:
+      host:
+        label: 主机
+        description: ""
+      port:
+        label: 端口号
+        description: ""
+      user:
+        label: 用户
+        description: 用户名，默认为 'anonymous'
+      password:
+        label: 密码
+        description: 密码， 默认为 'anonymous'
+      concurrent:
+        label: 并发连接数
+        description: 最大并发连接数，默认 5 个
+      timeout:
+        label: 超时时间
+        description: 默认 5 秒， 有效单位为 'ms', 's', 'm', 'h'
+      cache_ttl:
+        label: 缓存生命周期
+        description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
 stat:
   task:
     total: 总计

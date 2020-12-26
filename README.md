@@ -15,6 +15,7 @@
 ## 目前支持的 Drives
 
 - 本地文件
+- FTP
 - WebDAV 协议
 - S3 兼容的云存储
 - OneDrive
@@ -42,7 +43,9 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 ```
 - Windows
 
-直接运行 `go-drive.exe` 即可，默认用户为 `admin`，密码 `123456`
+直接运行 `go-drive.exe` 即可
+
+默认用户为 `admin`，密码 `123456`
 
 ## Features
 
@@ -57,6 +60,7 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 ## Currently supported drives
 
 - Local
+- FTP
 - WebDAV
 - S3
 - OneDrive
@@ -84,5 +88,7 @@ Download binary file from the [Release](https://github.com/devld/go-drive/releas
 ```
 - Windows
 
-Just run `go-drive.exe`. Default user is `admin`, its password is `123456`
+Just run `go-drive.exe`
+
+Default user is `admin`, its password is `123456`
 

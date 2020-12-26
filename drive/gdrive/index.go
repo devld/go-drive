@@ -128,15 +128,8 @@ func (g *GDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error)
 	return g.newEntry(parent.path, resp), nil
 }
 
-func (g *GDrive) isSelf(e types.IEntry) bool {
-	if fe, ok := e.(*gdriveEntry); ok {
-		return fe.d == g
-	}
-	return false
-}
-
 func (g *GDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetIEntry(from, g.isSelf)
+	from = drive_util.GetSelfEntry(g, from)
 	if from == nil || from.Type().IsDir() {
 		// google drive api does not support to copy folder
 		return nil, err.NewUnsupportedError()
@@ -165,7 +158,7 @@ func (g *GDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override 
 }
 
 func (g *GDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetIEntry(from, g.isSelf)
+	from = drive_util.GetSelfEntry(g, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}

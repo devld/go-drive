@@ -140,16 +140,9 @@ func (w *WebDAVDrive) MakeDir(ctx context.Context, path string) (types.IEntry, e
 	return w.Get(ctx, path)
 }
 
-func (w *WebDAVDrive) isSelf(e types.IEntry) bool {
-	if we, ok := e.(*webDavEntry); ok {
-		return we.d == w
-	}
-	return false
-}
-
 func (w *WebDAVDrive) copyOrMove(method string, from types.IEntry, to string,
 	override bool, ctx types.TaskCtx) (types.IEntry, error) {
-	from = drive_util.GetIEntry(from, w.isSelf)
+	from = drive_util.GetSelfEntry(w, from)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
 	}

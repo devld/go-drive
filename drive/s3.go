@@ -211,15 +211,8 @@ func (s *S3Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error
 	return s.newS3DirEntry(path, nil), nil
 }
 
-func (s *S3Drive) isSelf(e types.IEntry) bool {
-	if fe, ok := e.(*s3Entry); ok {
-		return fe.c == s
-	}
-	return false
-}
-
 func (s *S3Drive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetIEntry(from, s.isSelf)
+	from = drive_util.GetSelfEntry(s, from)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
 	}
@@ -255,7 +248,7 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCt
 }
 
 func (s *S3Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetIEntry(from, s.isSelf)
+	from = drive_util.GetSelfEntry(s, from)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
 	}

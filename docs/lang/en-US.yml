@@ -149,6 +149,31 @@ drive:
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
     wrong_user_or_password: Maybe the username or password is not correct
     remote_error: "Remote service error: {{ 1 }}"
+  ftp:
+    name: FTP
+    readme: FTP drive
+    form:
+      host:
+        label: Host
+        description: ""
+      port:
+        label: Port
+        description: ""
+      user:
+        label: User
+        description: User name. Defaults to 'anonymous'
+      password:
+        label: Password
+        description: User password. Defaults to 'anonymous' if required
+      concurrent:
+        label: Concurrent
+        description: Maximum number of concurrent FTP connections, Defaults to 5
+      timeout:
+        label: Timeout
+        description: Defaults to 5s. Valid time units are 'ms', 's', 'm', 'h'
+      cache_ttl:
+        label: CacheTTL
+        description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
 stat:
   task:
     total: Total

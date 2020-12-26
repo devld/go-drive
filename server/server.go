@@ -89,6 +89,9 @@ func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {
 }
 
 func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v interface{}) {
+	if c.Writer.Written() {
+		return
+	}
 	result := TranslateV(c, ms, v)
 	rv := reflect.ValueOf(v)
 	if (rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface) && rv.IsNil() {
