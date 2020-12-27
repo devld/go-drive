@@ -42,10 +42,8 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 
 	flag.Int64Var(&config.ProxyMaxSize, "proxy-max-size", 1*1024*1024, "maximum file size that can be proxied")
 
-	flag.Int64Var(&config.ThumbnailMaxSize, "thumbnail-max-size", 16*1024*1024, "maximum file size to create thumbnail")
-	flag.IntVar(&config.ThumbnailMaxPixels, "thumbnail-max-pixels", 22369621, "maximum pixels(W*H) of original image to thumbnails")
 	flag.IntVar(&config.ThumbnailConcurrent, "thumbnail-concurrent", 16, "maximum number of concurrent creation of thumbnails")
-	flag.DurationVar(&config.ThumbnailCacheTTl, "thumbnail-cache-ttl", 48*time.Hour, "thumbnail cache validity")
+	flag.DurationVar(&config.ThumbnailTTL, "thumbnail-ttl", 30*24*time.Hour, "thumbnail validity")
 
 	flag.IntVar(&config.MaxConcurrentTask, "max-concurrent-task", 100, "maximum concurrent task(copy, move, upload, delete files)")
 
@@ -95,11 +93,8 @@ type Config struct {
 	// The size is unlimited when maxProxySize is <= 0
 	ProxyMaxSize int64
 
-	// ThumbnailMaxSize is the maximum file size(MB) to create thumbnail
-	ThumbnailMaxSize    int64
-	ThumbnailCacheTTl   time.Duration
+	ThumbnailTTL        time.Duration
 	ThumbnailConcurrent int
-	ThumbnailMaxPixels  int
 
 	MaxConcurrentTask int
 

@@ -15,6 +15,7 @@ import (
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server"
+	"go-drive/server/thumbnail"
 	"go-drive/storage"
 )
 
@@ -41,7 +42,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	thumbnail, err := server.NewThumbnail(config, ch)
+	maker, err := thumbnail.NewMaker(config, ch)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +59,6 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	engine := server.InitServer(config, ch, rootDrive, fileTokenStore, thumbnail, signer, chunkUploader, tunnyRunner, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, fileMessageSource)
+	engine := server.InitServer(config, ch, rootDrive, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, fileMessageSource)
 	return engine, nil
 }

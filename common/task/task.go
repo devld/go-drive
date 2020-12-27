@@ -1,6 +1,7 @@
 package task
 
 import (
+	"context"
 	"errors"
 	"go-drive/common/types"
 	"time"
@@ -55,34 +56,62 @@ func DummyContext() types.TaskCtx {
 	return dummyCtx
 }
 
-var dummyCtx = &dummyContext{}
-
-type dummyContext struct {
+func ContextWrapper(ctx context.Context) types.TaskCtx {
+	c := ctx.Done()
+	t := &taskContextWrapper{}
+	if c != nil {
+		go func() {
+			select {
+			case <-c:
+				t.canceled = true
+			}
+		}()
+	}
+	return t
 }
 
-func (d *dummyContext) Progress(int64, bool) {
+var dummyCtx = &taskContextWrapper{}
+
+type taskContextWrapper struct {
+	ctx      context.Context
+	canceled bool
 }
 
-func (d *dummyContext) Total(int64, bool) {
+func (d *taskContextWrapper) Progress(int64, bool) {
 }
 
-func (d *dummyContext) Canceled() bool {
-	return false
+func (d *taskContextWrapper) Total(int64, bool) {
 }
 
-func (d *dummyContext) Deadline() (deadline time.Time, ok bool) {
+func (d *taskContextWrapper) Canceled() bool {
+	return d.canceled
+}
+
+func (d *taskContextWrapper) Deadline() (deadline time.Time, ok bool) {
+	if d.ctx != nil {
+		deadline, ok = d.ctx.Deadline()
+	}
 	return
 }
 
-func (d *dummyContext) Done() <-chan struct{} {
+func (d *taskContextWrapper) Done() <-chan struct{} {
+	if d.ctx != nil {
+		return d.ctx.Done()
+	}
 	return nil
 }
 
-func (d *dummyContext) Err() error {
+func (d *taskContextWrapper) Err() error {
+	if d.ctx != nil {
+		return d.ctx.Err()
+	}
 	return nil
 }
 
-func (d *dummyContext) Value(interface{}) interface{} {
+func (d *taskContextWrapper) Value(v interface{}) interface{} {
+	if d.ctx != nil {
+		return d.ctx.Value(v)
+	}
 	return nil
 }
 

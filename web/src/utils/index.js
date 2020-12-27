@@ -194,9 +194,8 @@ export function isAdmin (user) {
   return !!(user && user.groups && user.groups.findIndex(g => g.name === 'admin') !== -1)
 }
 
-const thumbnailExts = { png: true, jpg: true, jpeg: true, gif: true }
 export function supportThumbnail (entry) {
-  return !!(entry.meta.thumbnail || (entry.type === 'file' && thumbnailExts[filenameExt(entry.name)]))
+  return !!(entry.meta.thumbnail || entry.type === 'file')
 }
 
 export function wait (ms) {
@@ -258,6 +257,9 @@ export default {
     })
 
     Vue.use(UiUtils)
-    Vue.use(LazyLoad)
+    Vue.use(LazyLoad, {
+      dispatchEvent: true,
+      attempt: 1
+    })
   }
 }

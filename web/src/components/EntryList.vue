@@ -49,6 +49,7 @@
             :entry="parentDirEntry"
             :icon="selected.length > 0 ? '#icon-duigou' : undefined"
             @icon-click="parentIconClicked($event)"
+            :show-thumbnail="false"
           />
         </entry-link>
       </li>
@@ -68,6 +69,7 @@
             :view-mode="viewMode"
             :entry="entry"
             @icon-click="iconClicked(entry, $event)"
+            show-thumbnail
           />
         </entry-link>
       </li>
