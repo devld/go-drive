@@ -21,7 +21,7 @@
         class="entry-item__icon"
         :entry="entry"
         :icon="icon"
-        :show-thumbnail="viewMode === 'thumbnail'"
+        :show-thumbnail="showThumbnail && viewMode === 'thumbnail'"
         @click="$emit('icon-click', $event)"
       />
     </span>
@@ -58,6 +58,9 @@ export default {
       type: String,
       default: 'list',
       validator: val => val === 'list' || val === 'thumbnail'
+    },
+    showThumbnail: {
+      type: Boolean
     }
   },
   computed: {

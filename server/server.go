@@ -11,6 +11,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
+	"go-drive/server/thumbnail"
 	"go-drive/storage"
 	"net/http"
 	"reflect"
@@ -22,7 +23,7 @@ func InitServer(config common.Config,
 	ch *registry.ComponentsHolder,
 	rootDrive *drive.RootDrive,
 	tokenStore types.TokenStore,
-	thumbnail *Thumbnail,
+	thumbnail *thumbnail.Maker,
 	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
 	runner task.Runner,

@@ -6,6 +6,7 @@
       v-if="showThumbnail && thumbnail && !err"
       v-lazy="thumbnail"
       :alt="entry.name"
+      @error="onError"
     />
   </span>
 </template>
@@ -41,6 +42,11 @@ export default {
     thumbnail () {
       return this.entry.meta.thumbnail ||
         (supportThumbnail(this.entry) && fileThumbnail(this.entry.path, this.entry.meta.access_key))
+    }
+  },
+  methods: {
+    onError (e) {
+      this.err = e
     }
   }
 }

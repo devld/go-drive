@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
@@ -11,6 +12,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
+	"go-drive/server/thumbnail"
 	"go-drive/storage"
 	"net/http"
 	"os"
@@ -23,7 +25,7 @@ func InitDriveRoutes(router gin.IRouter,
 	config common.Config,
 	rootDrive *drive.RootDrive,
 	permissionDAO *storage.PathPermissionDAO,
-	thumbnail *Thumbnail,
+	thumbnail *thumbnail.Maker,
 	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
 	runner task.Runner,
@@ -100,7 +102,7 @@ type driveRoute struct {
 	rootDrive     *drive.RootDrive
 	permissionDAO *storage.PathPermissionDAO
 	chunkUploader *ChunkUploader
-	thumbnail     *Thumbnail
+	thumbnail     *thumbnail.Maker
 	runner        task.Runner
 	signer        *utils.Signer
 }
@@ -284,19 +286,17 @@ func (dr *driveRoute) getThumbnail(c *gin.Context) {
 		c.Redirect(http.StatusFound, entry.Meta().Thumbnail)
 		return
 	}
-	file, e := dr.thumbnail.Create(entry)
+	makeCtx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+	file, e := dr.thumbnail.Make(makeCtx, entry)
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
 	defer func() { _ = file.Close() }()
-	stat, e := file.Stat()
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
-	c.Header("Cache-Control", fmt.Sprintf("max-age=%d", int(dr.config.ThumbnailCacheTTl.Seconds())))
-	http.ServeContent(c.Writer, c.Request, "thumbnail.jpg", stat.ModTime(), file)
+	c.Header("Cache-Control", fmt.Sprintf("max-age=%d", int(dr.config.ThumbnailTTL.Seconds())))
+	c.Header("Content-Type", file.MimeType())
+	http.ServeContent(c.Writer, c.Request, file.Name(), file.ModTime(), file)
 }
 
 func (dr *driveRoute) writeContent(c *gin.Context) {

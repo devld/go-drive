@@ -14,6 +14,7 @@ import (
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server"
+	"go-drive/server/thumbnail"
 	"go-drive/storage"
 )
 
@@ -34,7 +35,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 		wire.Bind(new(types.TokenStore), new(*server.FileTokenStore)),
 		server.NewFileTokenStore,
 		server.NewChunkUploader,
-		server.NewThumbnail,
+		thumbnail.NewMaker,
 		drive.NewRootDrive,
 		wire.Bind(new(i18n.MessageSource), new(*i18n.FileMessageSource)),
 		i18n.NewFileMessageSource,

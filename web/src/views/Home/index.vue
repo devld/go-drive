@@ -71,7 +71,7 @@ import EntryMenu from './EntryMenu'
 import NewEntryArea from './NewEntryArea'
 
 import { getEntry, getContent } from '@/api'
-import { filename, dir, debounce, supportThumbnail, setTitle } from '@/utils'
+import { filename, dir, debounce, setTitle } from '@/utils'
 
 import { resolveEntryHandler, HANDLER_COMPONENTS, getHandler } from '@/utils/handlers'
 import { makeEntryHandlerLink, getBaseLink } from '@/utils/routes'
@@ -208,10 +208,6 @@ export default {
       this.entryMenuShowing = true
     },
     entriesLoaded ({ entries, path }) {
-      this.viewMode = entries.reduce((n, e) =>
-        n + +supportThumbnail(e), 0) / entries.length > 0.5
-        ? 'thumbnail' : 'list'
-
       setTitle(path)
 
       if (path !== this.path) {
