@@ -2,6 +2,7 @@ package onedrive
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go-drive/common/drive_util"
 	"go-drive/common/errors"
@@ -10,7 +11,6 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -362,39 +362,56 @@ func (o *oneDriveEntry) Name() string {
 }
 
 func (o *oneDriveEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	u, e := o.GetURL(ctx)
+	u, resp, e := o.get(ctx)
 	if e != nil {
 		return nil, e
 	}
-	return drive_util.GetURL(ctx, u.URL, nil)
+	if resp != nil {
+		return resp.Response().Body, nil
+	}
+	return drive_util.GetURL(ctx, u, nil)
 }
 
 func (o *oneDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 	if o.isDir {
 		return nil, err.NewNotAllowedError()
 	}
-	u := o.downloadUrl
 	if o.downloadUrlExpiresAt <= time.Now().Unix() {
-		resp, e := o.d.c.Get(ctx, pathURL(o.path)+"/content", nil)
+		u, resp, e := o.get(ctx)
 		if e != nil {
 			return nil, e
 		}
-		if resp.Status() != http.StatusFound {
+		if resp != nil {
 			_ = resp.Dispose()
-			hs := resp.Response().Header
-			log.Printf("[onedrive] unexpected status code: %d. Content-Length is: %s, Content-Type is :%s",
-				resp.Status(),
-				hs.Get("Content-Length"),
-				hs.Get("Content-Type"),
-			)
-			return nil, err.NewUnsupportedMessageError(fmt.Sprintf("%d", resp.Status()))
+			// fallback to GetReader
+			return nil, err.NewUnsupportedError()
 		}
-		u = resp.Response().Header.Get("Location")
 		o.downloadUrl = u
 		o.downloadUrlExpiresAt = time.Now().Add(downloadUrlTTL).Unix()
 		_ = o.d.cache.PutEntry(o, o.d.cacheTTL)
 	}
 	return &types.ContentURL{URL: o.downloadUrl, Proxy: o.d.downloadProxy}, nil
+}
+
+func (o *oneDriveEntry) get(ctx context.Context) (string, req.Response, error) {
+	resp, e := o.d.c.Get(ctx, pathURL(o.path)+"/content", nil)
+	if e != nil {
+		return "", nil, e
+	}
+	if resp.Status() == http.StatusOK {
+		// OneDrive API returns 200 sometimes
+		return "", resp, nil
+	}
+	if resp.Status() != http.StatusFound {
+		_ = resp.Dispose()
+		return "", nil, err.NewUnsupportedMessageError(fmt.Sprintf("%d", resp.Status()))
+	}
+	_ = resp.Dispose()
+	u := resp.Response().Header.Get("Location")
+	if u == "" {
+		return "", nil, errors.New("invalid Location header")
+	}
+	return u, nil, nil
 }
 
 func (o *oneDriveEntry) EntryData() types.SM {
