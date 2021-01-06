@@ -9,7 +9,7 @@
     "build-modern": "vue-cli-service build --modern"
   },
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "codemirror": "^5.53.2",
     "codemirror-github-light": "^0.4.2",
     "core-js": "^3.6.4",
