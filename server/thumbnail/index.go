@@ -33,6 +33,8 @@ const FolderType = "/"
 
 const localSuffix = ".lock"
 
+var errMaking = errors.New("making")
+
 // TypeHandler creates thumbnail for entry, and writes to dest
 type TypeHandler struct {
 	Create   func(ctx context.Context, entry types.IEntry, dest io.Writer) error
@@ -73,7 +75,7 @@ func NewMaker(config common.Config, ch *registry.ComponentsHolder) (*Maker, erro
 
 	_ = filepath.Walk(m.cacheDir, func(path string, info os.FileInfo, e error) error {
 		if e == nil && !info.IsDir() && strings.HasSuffix(info.Name(), localSuffix) {
-			_ = os.Remove(info.Name())
+			_ = os.Remove(filepath.Join(m.cacheDir, info.Name()))
 		}
 		return nil
 	})
@@ -89,7 +91,7 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 	if entry.Type().IsDir() {
 		fType = FolderType
 	} else {
-		fType = filepath.Ext(entry.Path())
+		fType = strings.ToLower(filepath.Ext(entry.Path()))
 	}
 
 	h, ok := handlers[fType]
@@ -119,10 +121,29 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 		}
 	}
 
-	task := &taskWrapper{ctx: ctx, h: h, entry: entry, dest: file}
-	r := m.pool.Process(task)
-	if r != nil {
-		return nil, r.(error)
+	task := &taskWrapper{h: h, entry: entry, dest: file}
+
+	c := make(chan error)
+	go func() {
+		taskErr := m.pool.Process(task)
+		if e == errMaking {
+			c <- waitPendingTask(ctx, task.dest, task.dest+localSuffix)
+			return
+		}
+		if e == nil {
+			c <- nil
+		} else {
+			c <- taskErr.(error)
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("timeout")
+	case e = <-c:
+		if e != nil {
+			return nil, e
+		}
 	}
 
 	return m.openFile(file, h.MimeType, h.Name)
@@ -137,37 +158,26 @@ func (m *Maker) executeTask(v interface{}) interface{} {
 	if exists {
 		return nil
 	}
+
 	lockFile := task.dest + localSuffix
 	exists, e = utils.FileExists(lockFile)
 	if e != nil {
 		return e
 	}
 	if exists {
-		return waitPendingTask(task.ctx, task.dest, lockFile)
+		return errMaking
 	}
 
 	item, e := m.createItem(task.entry, lockFile)
 	if e != nil {
 		return e
 	}
-	c := make(chan error)
 
-	go func() {
-		e := task.h.Create(task.ctx, task.entry, item)
-		_ = item.Close()
-		if e == nil {
-			e = os.Rename(lockFile, task.dest)
-		}
-		c <- e
-	}()
-
-	select {
-	case <-task.ctx.Done():
-		e = task.ctx.Err()
-	case e = <-c:
-	}
-
+	e = task.h.Create(context.Background(), task.entry, item)
 	_ = item.Close()
+	if e == nil {
+		e = os.Rename(lockFile, task.dest)
+	}
 
 	if e != nil {
 		_ = os.Remove(lockFile)
@@ -328,7 +338,6 @@ func (m *Maker) Dispose() error {
 }
 
 type taskWrapper struct {
-	ctx   context.Context
 	h     TypeHandler
 	entry types.IEntry
 	dest  string
