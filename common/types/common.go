@@ -41,6 +41,10 @@ type FormItem struct {
 	Disabled     bool             `json:"disabled"`
 	Options      []FormItemOption `json:"options"`
 	DefaultValue string           `json:"default_value"`
+	// Secret is the replacement text when sending the value to client.
+	// The raw value will be sent if Secret is empty.
+	// FormItem with type 'password' will always be replaced
+	Secret string `json:"-"`
 }
 
 func (c SM) GetInt(key string, defVal int) int {

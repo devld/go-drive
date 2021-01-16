@@ -7,6 +7,16 @@
     <span v-if="item.description" class="description">
       {{ item.description }}
     </span>
+    <textarea
+      v-if="item.type === 'textarea'"
+      class="value"
+      :name="item.field"
+      :value="value"
+      @input="textInput"
+      :required="item.required"
+      :disabled="item.disabled"
+      rows="4"
+    />
     <input
       v-if="item.type === 'text'"
       class="value"
