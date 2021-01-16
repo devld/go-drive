@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"go-drive/common/drive_util"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -18,7 +19,6 @@ import (
 	"io"
 	"math"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -44,6 +44,7 @@ func init() {
 }
 
 type S3Drive struct {
+	s             *session.Session
 	c             *s3.S3
 	bucket        *string
 	uploadProxy   bool
@@ -76,6 +77,7 @@ func NewS3Drive(ctx context.Context, config types.SM,
 	}
 	client := s3.New(sess)
 	d := &S3Drive{
+		s:             sess,
 		c:             client,
 		bucket:        aws.String(bucket),
 		uploadProxy:   config.GetBool("proxy_upload"),
@@ -160,24 +162,11 @@ func (s *S3Drive) Save(ctx types.TaskCtx, path string, _ int64,
 			return nil, e
 		}
 	}
-	var readSeeker io.ReadSeeker
-	if rs, ok := reader.(io.ReadSeeker); ok {
-		readSeeker = rs
-	} else {
-		file, e := drive_util.CopyReaderToTempFile(ctx, reader, s.tempDir)
-		if e != nil {
-			return nil, e
-		}
-		defer func() {
-			_ = file.Close()
-			_ = os.Remove(file.Name())
-		}()
-		readSeeker = file
-	}
-	_, e := s.c.PutObjectWithContext(ctx, &s3.PutObjectInput{
+	uploader := s3manager.NewUploader(s.s)
+	_, e := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
-		Body:   readSeeker,
+		Body:   reader,
 	})
 	if e != nil {
 		return nil, e
