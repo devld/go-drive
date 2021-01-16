@@ -447,8 +447,11 @@ func escapeDriveConfigSecrets(form []types.FormItem, config string) string {
 	val := types.SM{}
 	_ = json.Unmarshal([]byte(config), &val)
 	for _, f := range form {
-		if f.Type == "password" && val[f.Field] != "" {
+		if (f.Type == "password" || f.Secret != "") && val[f.Field] != "" {
 			val[f.Field] = escapedPassword
+			if f.Secret != "" {
+				val[f.Field] = f.Secret
+			}
 		}
 	}
 	s, _ := json.Marshal(val)
@@ -461,7 +464,8 @@ func unescapeDriveConfigSecrets(form []types.FormItem, savedConfig string, confi
 	_ = json.Unmarshal([]byte(savedConfig), &savedVal)
 	_ = json.Unmarshal([]byte(config), &val)
 	for _, f := range form {
-		if f.Type == "password" && val[f.Field] == escapedPassword {
+		if (f.Type == "password" || f.Secret != "") &&
+			(val[f.Field] == escapedPassword || (f.Secret != "" && val[f.Field] == f.Secret)) {
 			val[f.Field] = savedVal[f.Field]
 		}
 	}

@@ -126,7 +126,8 @@
   }
 
   input.value,
-  select.value {
+  select.value,
+  textarea.value {
     @include var(background-color, form-value-bg-color);
     @include var(border, form-value-border);
     @include var(color, primary-text-color);
@@ -137,6 +138,12 @@
     &:disabled {
       @include var(background-color, form-value-bg-color-disabled);
     }
+  }
+
+  textarea.value {
+    resize: none;
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 
