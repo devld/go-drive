@@ -21,12 +21,12 @@ import (
 func init() {
 	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
 		Type:        "gdrive",
-		DisplayName: i18n.T("drive.gdrive.name"),
-		README:      i18n.T("drive.gdrive.readme"),
+		DisplayName: t("name"),
+		README:      t("readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "client_id", Label: i18n.T("drive.gdrive.form.client_id.label"), Type: "text", Required: true},
-			{Field: "client_secret", Label: i18n.T("drive.gdrive.form.client_secret.label"), Type: "password", Required: true},
-			{Field: "cache_ttl", Label: i18n.T("drive.gdrive.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.gdrive.form.cache_ttl.description"), DefaultValue: "4h"},
+			{Field: "client_id", Label: t("form.client_id.label"), Type: "text", Description: t("form.client_id.description"), Required: true},
+			{Field: "client_secret", Label: t("form.client_secret.label"), Type: "password", Description: t("form.client_secret.description"), Required: true},
+			{Field: "cache_ttl", Label: t("form.cache_ttl.label"), Type: "text", Description: t("form.cache_ttl.description"), DefaultValue: "4h"},
 		},
 		Factory: drive_util.DriveFactory{Create: NewGDrive, InitConfig: InitConfig, Init: Init},
 	})

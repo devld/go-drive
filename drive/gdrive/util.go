@@ -14,6 +14,8 @@ import (
 	"google.golang.org/api/option"
 )
 
+var t = i18n.TPrefix("drive.gdrive.")
+
 const (
 	typeFolder = "application/vnd.google-apps.folder"
 
@@ -42,7 +44,7 @@ func oauthReq(c common.Config) *drive_util.OAuthRequest {
 		Endpoint:       google.Endpoint,
 		RedirectURL:    c.OAuthRedirectURI,
 		Scopes:         []string{"https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/userinfo.profile"},
-		Text:           i18n.T("drive.gdrive.oauth_text"),
+		Text:           t("oauth_text"),
 		AutoCodeOption: []oauth2.AuthCodeOption{oauth2.AccessTypeOffline},
 	}
 }

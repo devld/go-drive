@@ -134,6 +134,12 @@ func T(pattern string, args ...string) string {
 	return sb.String()
 }
 
+func TPrefix(prefix string) func(string, ...string) string {
+	return func(pattern string, args ...string) string {
+		return T(prefix+pattern, args...)
+	}
+}
+
 const (
 	stateIdle      = 0
 	stateString    = 1

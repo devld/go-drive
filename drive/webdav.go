@@ -18,16 +18,18 @@ import (
 	"time"
 )
 
+var davT = i18n.TPrefix("drive.webdav.")
+
 func init() {
 	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
 		Type:        "webdav",
-		DisplayName: i18n.T("drive.webdav.name"),
-		README:      i18n.T("drive.webdav.readme"),
+		DisplayName: davT("name"),
+		README:      davT("readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "url", Label: i18n.T("drive.webdav.form.url.label"), Type: "text", Required: true, Description: i18n.T("drive.webdav.form.url.description")},
-			{Field: "username", Label: i18n.T("drive.webdav.form.username.label"), Type: "text", Description: i18n.T("drive.webdav.form.username.description")},
-			{Field: "password", Label: i18n.T("drive.webdav.form.password.label"), Type: "password"},
-			{Field: "cache_ttl", Label: i18n.T("drive.webdav.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.webdav.form.cache_ttl.description")},
+			{Field: "url", Label: davT("form.url.label"), Type: "text", Required: true, Description: davT("form.url.description")},
+			{Field: "username", Label: davT("form.username.label"), Type: "text", Description: davT("form.username.description")},
+			{Field: "password", Label: davT("form.password.label"), Type: "password", Description: davT("form.password.description")},
+			{Field: "cache_ttl", Label: davT("form.cache_ttl.label"), Type: "text", Description: davT("form.cache_ttl.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: NewWebDAVDrive},
 	})
@@ -242,9 +244,9 @@ func (w *WebDAVDrive) afterRequest(resp req.Response) error {
 			return errorPreconditionFailed
 		}
 		if resp.Status() == http.StatusUnauthorized {
-			return err.NewUnauthorizedError(i18n.T("drive.webdav.wrong_user_or_password"))
+			return err.NewUnauthorizedError(davT("wrong_user_or_password"))
 		}
-		return err.NewRemoteApiError(500, i18n.T("drive.webdav.remote_error", strconv.Itoa(resp.Status())))
+		return err.NewRemoteApiError(500, davT("remote_error", strconv.Itoa(resp.Status())))
 	}
 	return nil
 }
