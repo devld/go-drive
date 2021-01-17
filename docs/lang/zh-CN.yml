@@ -64,8 +64,10 @@ drive:
     form:
       client_id:
         label: 客户端 ID
+        description: ""
       client_secret:
         label: 客户端密钥
+        description: ""
       cache_ttl:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
@@ -76,8 +78,10 @@ drive:
     form:
       client_id:
         label: 客户端 ID
+        description: ""
       client_secret:
         label: 客户端密钥
+        description: ""
       proxy_in:
         label: 上传代理
         description: 上传时是否经过服务器代理
@@ -110,15 +114,19 @@ drive:
     form:
       ak:
         label: AccessKey
+        description: ""
       sk:
         label: SecretKey
+        description: ""
       bucket:
         label: Bucket
+        description: ""
       path_style:
         label: PathStyle
         description: 强制使用路径形式的 API
       region:
         label: 区域(Region)
+        description: ""
       endpoint:
         label: Endpoint
         description: API 端点
@@ -144,6 +152,7 @@ drive:
         description: 如果省略，则表示无需认证
       password:
         label: 密码
+        description: ""
       cache_ttl:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存

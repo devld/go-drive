@@ -15,13 +15,15 @@ import (
 	"strings"
 )
 
+var fsT = i18n.TPrefix("drive.fs.")
+
 func init() {
 	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
 		Type:        "fs",
-		DisplayName: i18n.T("drive.fs.name"),
-		README:      i18n.T("drive.fs.readme"),
+		DisplayName: fsT("name"),
+		README:      fsT("readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "path", Label: i18n.T("drive.fs.form.path.label"), Type: "text", Required: true, Description: i18n.T("drive.fs.form.path.description")},
+			{Field: "path", Label: fsT("form.path.label"), Type: "text", Required: true, Description: fsT("form.path.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: NewFsDrive},
 	})
@@ -46,7 +48,7 @@ func NewFsDrive(_ context.Context, config types.SM,
 	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	path := config["path"]
 	if utils.CleanPath(path) == "" {
-		return nil, err.NewNotAllowedMessageError(i18n.T("drive.fs.invalid_root_path"))
+		return nil, err.NewNotAllowedMessageError(fsT("invalid_root_path"))
 	}
 
 	localRoot, e := driveUtils.Config.GetLocalFsDir()
@@ -59,7 +61,7 @@ func NewFsDrive(_ context.Context, config types.SM,
 		return nil, e
 	}
 	if exists, _ := utils.FileExists(path); !exists {
-		return nil, err.NewNotFoundMessageError(i18n.T("drive.fs.root_path_not_exists"))
+		return nil, err.NewNotFoundMessageError(fsT("root_path_not_exists"))
 	}
 	return &FsDrive{path}, nil
 }
@@ -191,7 +193,7 @@ func (f *FsDrive) List(_ context.Context, path string) ([]types.IEntry, error) {
 		return nil, err.NewNotFoundError()
 	}
 	if !isDir {
-		return nil, err.NewNotAllowedMessageError(i18n.T("drive.fs.cannot_list_file"))
+		return nil, err.NewNotAllowedMessageError(fsT("cannot_list_file"))
 	}
 	files, ee := ioutil.ReadDir(path)
 	if ee != nil {
@@ -211,7 +213,7 @@ func (f *FsDrive) List(_ context.Context, path string) ([]types.IEntry, error) {
 func (f *FsDrive) Delete(_ types.TaskCtx, path string) error {
 	path = f.getPath(path)
 	if f.isRootPath(path) {
-		return err.NewNotAllowedMessageError(i18n.T("drive.fs.cannot_delete_root"))
+		return err.NewNotAllowedMessageError(fsT("cannot_delete_root"))
 	}
 	if e := requireFile(path, true); e != nil {
 		return e

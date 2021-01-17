@@ -64,8 +64,10 @@ drive:
     form:
       client_id:
         label: Client Id
+        description: ""
       client_secret:
         label: Client Secret
+        description: ""
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
@@ -76,8 +78,10 @@ drive:
     form:
       client_id:
         label: Client Id
+        description: ""
       client_secret:
         label: Client Secret
+        description: ""
       proxy_in:
         label: Proxy Upload
         description: Upload files through server proxy
@@ -110,15 +114,19 @@ drive:
     form:
       ak:
         label: AccessKey
+        description: ""
       sk:
         label: SecretKey
+        description: ""
       bucket:
         label: Bucket
+        description: ""
       path_style:
         label: PathStyle
         description: Force use path style api
       region:
         label: Region
+        description: ""
       endpoint:
         label: Endpoint
         description: The S3 api endpoint
@@ -144,6 +152,7 @@ drive:
         description: The username, if omitted, no authorization is required
       password:
         label: Password
+        description: ""
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.

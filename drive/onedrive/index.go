@@ -19,14 +19,14 @@ import (
 func init() {
 	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
 		Type:        "onedrive",
-		DisplayName: i18n.T("drive.onedrive.name"),
-		README:      i18n.T("drive.onedrive.readme"),
+		DisplayName: t("name"),
+		README:      t("readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "client_id", Label: i18n.T("drive.onedrive.form.client_id.label"), Type: "text", Required: true},
-			{Field: "client_secret", Label: i18n.T("drive.onedrive.form.client_secret.label"), Type: "password", Required: true},
-			{Field: "proxy_upload", Label: i18n.T("drive.onedrive.form.proxy_in.label"), Type: "checkbox", Description: i18n.T("drive.onedrive.form.proxy_in.description")},
-			{Field: "proxy_download", Label: i18n.T("drive.onedrive.form.proxy_out.label"), Type: "checkbox", Description: i18n.T("drive.onedrive.form.proxy_out.description")},
-			{Field: "cache_ttl", Label: i18n.T("drive.onedrive.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.onedrive.form.cache_ttl.description")},
+			{Field: "client_id", Label: t("form.client_id.label"), Type: "text", Description: t("form.client_id.description"), Required: true},
+			{Field: "client_secret", Label: t("form.client_secret.label"), Type: "password", Description: t("form.client_secret.description"), Required: true},
+			{Field: "proxy_upload", Label: t("form.proxy_in.label"), Type: "checkbox", Description: t("form.proxy_in.description")},
+			{Field: "proxy_download", Label: t("form.proxy_out.label"), Type: "checkbox", Description: t("form.proxy_out.description")},
+			{Field: "cache_ttl", Label: t("form.cache_ttl.label"), Type: "text", Description: t("form.cache_ttl.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: NewOneDrive, InitConfig: InitConfig, Init: Init},
 	})
@@ -66,7 +66,7 @@ func NewOneDrive(_ context.Context, config types.SM,
 	}
 
 	if od.driveId == "" {
-		return nil, err.NewNotAllowedMessageError(i18n.T("drive.onedrive.drive_not_selected"))
+		return nil, err.NewNotAllowedMessageError(t("drive_not_selected"))
 	}
 
 	od.c, e = req.NewClient(

@@ -20,6 +20,8 @@ import (
 	"time"
 )
 
+var t = i18n.TPrefix("drive.onedrive.")
+
 func oauthReq(c common.Config) *drive_util.OAuthRequest {
 	return &drive_util.OAuthRequest{
 		Endpoint: oauth2.Endpoint{

@@ -43,7 +43,8 @@ type FormItem struct {
 	DefaultValue string           `json:"default_value"`
 	// Secret is the replacement text when sending the value to client.
 	// The raw value will be sent if Secret is empty.
-	// FormItem with type 'password' will always be replaced
+	// FormItem with type 'password' will always be replaced.
+	// This value cannot be used with i18n.
 	Secret string `json:"-"`
 }
 

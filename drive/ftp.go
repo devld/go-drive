@@ -17,18 +17,19 @@ import (
 )
 
 func init() {
+	t := i18n.TPrefix("drive.ftp.")
 	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
 		Type:        "ftp",
-		DisplayName: i18n.T("drive.ftp.name"),
-		README:      i18n.T("drive.ftp.readme"),
+		DisplayName: t("name"),
+		README:      t("readme"),
 		ConfigForm: []types.FormItem{
-			{Label: i18n.T("drive.ftp.form.host.label"), Type: "text", Field: "host", Required: true, Description: i18n.T("drive.ftp.form.host.description")},
-			{Label: i18n.T("drive.ftp.form.port.label"), Type: "text", Field: "port", Required: true, Description: i18n.T("drive.ftp.form.port.description"), DefaultValue: "21"},
-			{Label: i18n.T("drive.ftp.form.user.label"), Type: "text", Field: "user", Description: i18n.T("drive.ftp.form.user.description")},
-			{Label: i18n.T("drive.ftp.form.password.label"), Type: "password", Field: "password", Description: i18n.T("drive.ftp.form.password.description")},
-			{Label: i18n.T("drive.ftp.form.concurrent.label"), Type: "text", Field: "concurrent", Description: i18n.T("drive.ftp.form.concurrent.description")},
-			{Label: i18n.T("drive.ftp.form.timeout.label"), Type: "text", Field: "timeout", Description: i18n.T("drive.ftp.form.timeout.description")},
-			{Label: i18n.T("drive.ftp.form.cache_ttl.label"), Type: "text", Field: "cache_ttl", Description: i18n.T("drive.ftp.form.cache_ttl.description")},
+			{Label: t("form.host.label"), Type: "text", Field: "host", Required: true, Description: t("form.host.description")},
+			{Label: t("form.port.label"), Type: "text", Field: "port", Required: true, Description: t("form.port.description"), DefaultValue: "21"},
+			{Label: t("form.user.label"), Type: "text", Field: "user", Description: t("form.user.description")},
+			{Label: t("form.password.label"), Type: "password", Field: "password", Description: t("form.password.description")},
+			{Label: t("form.concurrent.label"), Type: "text", Field: "concurrent", Description: t("form.concurrent.description")},
+			{Label: t("form.timeout.label"), Type: "text", Field: "timeout", Description: t("form.timeout.description")},
+			{Label: t("form.cache_ttl.label"), Type: "text", Field: "cache_ttl", Description: t("form.cache_ttl.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: NewFtpDrive},
 	})

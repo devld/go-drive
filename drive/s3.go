@@ -23,21 +23,23 @@ import (
 	"time"
 )
 
+var s3T = i18n.TPrefix("drive.s3.")
+
 func init() {
 	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
 		Type:        "s3",
-		DisplayName: i18n.T("drive.s3.name"),
-		README:      i18n.T("drive.s3.readme"),
+		DisplayName: s3T("name"),
+		README:      s3T("readme"),
 		ConfigForm: []types.FormItem{
-			{Field: "id", Label: i18n.T("drive.s3.form.ak.label"), Type: "text", Required: true},
-			{Field: "secret", Label: i18n.T("drive.s3.form.sk.label"), Type: "password", Required: true},
-			{Field: "bucket", Label: i18n.T("drive.s3.form.bucket.label"), Type: "text", Required: true},
-			{Field: "path_style", Label: i18n.T("drive.s3.form.path_style.label"), Type: "checkbox", Description: i18n.T("drive.s3.form.path_style.description")},
-			{Field: "region", Label: i18n.T("drive.s3.form.region.label"), Type: "text"},
-			{Field: "endpoint", Label: i18n.T("drive.s3.form.endpoint.label"), Type: "text", Description: i18n.T("drive.s3.form.endpoint.description")},
-			{Field: "proxy_upload", Label: i18n.T("drive.s3.form.proxy_in.label"), Type: "checkbox", Description: i18n.T("drive.s3.form.proxy_in.description")},
-			{Field: "proxy_download", Label: i18n.T("drive.s3.form.proxy_out.label"), Type: "checkbox", Description: i18n.T("drive.s3.form.proxy_out.description")},
-			{Field: "cache_ttl", Label: i18n.T("drive.s3.form.cache_ttl.label"), Type: "text", Description: i18n.T("drive.s3.form.cache_ttl.description")},
+			{Field: "id", Label: s3T("form.ak.label"), Type: "text", Description: s3T("form.ak.description"), Required: true},
+			{Field: "secret", Label: s3T("form.sk.label"), Type: "password", Description: s3T("form.sk.description"), Required: true},
+			{Field: "bucket", Label: s3T("form.bucket.label"), Type: "text", Description: s3T("form.bucket.description"), Required: true},
+			{Field: "path_style", Label: s3T("form.path_style.label"), Type: "checkbox", Description: s3T("form.path_style.description")},
+			{Field: "region", Label: s3T("form.region.label"), Type: "text", Description: s3T("form.region.description")},
+			{Field: "endpoint", Label: s3T("form.endpoint.label"), Type: "text", Description: s3T("form.endpoint.description")},
+			{Field: "proxy_upload", Label: s3T("form.proxy_in.label"), Type: "checkbox", Description: s3T("form.proxy_in.description")},
+			{Field: "proxy_download", Label: s3T("form.proxy_out.label"), Type: "checkbox", Description: s3T("form.proxy_out.description")},
+			{Field: "cache_ttl", Label: s3T("form.cache_ttl.label"), Type: "text", Description: s3T("form.cache_ttl.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: NewS3Drive},
 	})
@@ -101,7 +103,7 @@ func (s *S3Drive) check(ctx context.Context) error {
 		if ae, ok := e.(awserr.Error); ok {
 			switch ae.Code() {
 			case s3.ErrCodeNoSuchBucket:
-				return err.NewNotFoundMessageError(i18n.T("drive.s3.bucket_not_exists", *s.bucket))
+				return err.NewNotFoundMessageError(s3T("bucket_not_exists", *s.bucket))
 			}
 		}
 	}
