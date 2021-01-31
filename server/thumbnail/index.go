@@ -42,7 +42,7 @@ type TypeHandler struct {
 	Name     string
 }
 
-// handlers is a registry for TypeHandler, which the key is like '.jpg'
+// handlers is a registry for TypeHandler, which the key is like 'jpg'
 var handlers = make(map[string]TypeHandler)
 
 func Register(ext string, h TypeHandler) {
@@ -91,7 +91,7 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 	if entry.Type().IsDir() {
 		fType = FolderType
 	} else {
-		fType = strings.ToLower(filepath.Ext(entry.Path()))
+		fType = utils.PathExt(entry.Path())
 	}
 
 	h, ok := handlers[fType]
@@ -335,6 +335,16 @@ func (m *Maker) Dispose() error {
 	m.stopCleaner()
 	m.pool.Close()
 	return nil
+}
+
+func (m *Maker) SysConfig() (string, types.M, error) {
+	ext := make(types.M)
+	for k := range handlers {
+		ext[k] = true
+	}
+	return "thumbnail", types.M{
+		"extensions": ext,
+	}, nil
 }
 
 type taskWrapper struct {

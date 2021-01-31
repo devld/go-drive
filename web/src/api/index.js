@@ -78,3 +78,7 @@ export function logout () {
 export function getUser () {
   return axiosWrapper.get('/auth/user')
 }
+
+export function getConfig () {
+  return axiosWrapper.get('/config')
+}

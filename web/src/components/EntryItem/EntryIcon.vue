@@ -11,9 +11,9 @@
   </span>
 </template>
 <script>
-import { supportThumbnail } from '@/utils'
 import { getIconSVG } from './file-icon'
 import { fileThumbnail } from '@/api'
+import { filenameExt } from '@/utils'
 
 export default {
   name: 'EntryIcon',
@@ -36,12 +36,21 @@ export default {
     }
   },
   computed: {
+    thumbnailConfig () {
+      const config = this.$store.state.config
+      return config && config.thumbnail
+    },
     entryIcon () {
       return getIconSVG(this.entry)
     },
     thumbnail () {
       return this.entry.meta.thumbnail ||
-        (supportThumbnail(this.entry) && fileThumbnail(this.entry.path, this.entry.meta.access_key))
+        (this.supportThumbnail && fileThumbnail(this.entry.path, this.entry.meta.access_key))
+    },
+    supportThumbnail () {
+      const entry = this.entry
+      const ext = entry.type === 'dir' ? '/' : filenameExt(entry.name)
+      return !!(this.thumbnailConfig.extensions && this.thumbnailConfig.extensions[ext])
     }
   },
   methods: {

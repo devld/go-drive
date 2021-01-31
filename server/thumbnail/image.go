@@ -30,10 +30,10 @@ func init() {
 		MimeType: "image/jpeg",
 	}
 
-	Register(".jpg", h)
-	Register(".jpeg", h)
-	Register(".png", h)
-	Register(".gif", h)
+	Register("jpg", h)
+	Register("jpeg", h)
+	Register("png", h)
+	Register("gif", h)
 }
 
 func imageThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {

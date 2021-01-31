@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"go-drive/common/registry"
+	"go-drive/common/types"
 	"os"
 	"path"
 	"path/filepath"
@@ -67,6 +68,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	config.TempDir = tempDir
 
 	ch.Add("config", config)
+	ch.Add("versionSysConfig", versionSysConfig{})
 	return config, nil
 }
 
@@ -131,4 +133,15 @@ func (c Config) GetLocalFsDir() (string, error) {
 		return "", nil
 	}
 	return c.GetDir(LocalFsDir, true)
+}
+
+type versionSysConfig struct {
+}
+
+func (v versionSysConfig) SysConfig() (string, types.M, error) {
+	return "version", types.M{
+		"version": version,
+		"hash":    hash,
+		"build":   build,
+	}, nil
 }

@@ -194,10 +194,6 @@ export function isAdmin (user) {
   return !!(user && user.groups && user.groups.findIndex(g => g.name === 'admin') !== -1)
 }
 
-export function supportThumbnail (entry) {
-  return !!(entry.meta.thumbnail || entry.type === 'file')
-}
-
 export function wait (ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)

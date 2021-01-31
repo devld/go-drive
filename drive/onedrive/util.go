@@ -14,7 +14,6 @@ import (
 	"go-drive/common/utils"
 	"golang.org/x/oauth2"
 	"io"
-	path2 "path"
 	"strconv"
 	"strings"
 	"time"
@@ -42,12 +41,12 @@ var thumbnailExtensions = make(map[string]bool)
 func init() {
 	// https://support.microsoft.com/en-us/office/file-types-supported-for-previewing-files-in-onedrive-sharepoint-and-teams-e054cd0f-8ef2-4ccb-937e-26e37419c5e4
 	for _, ext := range strings.Split("3mf cool glb gltf obj stl movie pages pict sketch ai pdf psb psd 3g2 3gp asf bmp hevc m2ts m4v mov mp3 mp4 mp4v mts ts wmv dwg fbx erf zip z dcm dcm30 dicm dicom ply hcp gif heic heif jpeg jpg jpe mef mrw nef nrw orf pano pef png rw2 spm tif tiff xbm xcf key log csv dic doc docm docx dotm dotx pot potm potx pps ppsm ppsx ppt pptm pptx xd xls xlsb xlsx sltx eml msg vsd vsdx cur ico icon epub odp ods odt arw cr2 crw dng rtf abap ada adp ahk as as3 asc ascx asm asp awk bas bash bash_login bash_logout bash_profile bashrc bat bib bsh build builder c c++ capfile cbk cc cfc cfm cfml cl clj cmake cmd coffee cpp cpt cpy cs cshtml cson csproj css ctp cxx d ddl di.dif diff disco dml dtd dtml el emake erb erl f90 f95 fs fsi fsscript fsx gemfile gemspec gitconfig go groovy gvy h h++ haml handlebars hbs hrl hs htc html hxx idl iim inc inf ini inl ipp irbrc jade jav java js json jsp jsx l less lhs lisp log lst ltx lua m make markdn markdown md mdown mkdn ml mli mll mly mm mud nfo opml osascript out p pas patch php php2 php3 php4 php5 pl plist pm pod pp profile properties ps ps1 pt py pyw r rake rb rbx rc re readme reg rest resw resx rhtml rjs rprofile rpy rss rst rxml s sass scala scm sconscript sconstruct script scss sgml sh shtml sml sql sty tcl tex text textile tld tli tmpl tpl txt vb vi vim wsdl xaml xhtml xoml xml xsd xsl xslt yaml yaws yml zsh htm html markdown md url", " ") {
-		thumbnailExtensions["."+ext] = true
+		thumbnailExtensions[ext] = true
 	}
 }
 
 func supportThumbnail(item driveItem) bool {
-	return item.Folder != nil || thumbnailExtensions[strings.ToLower(path2.Ext(item.Name))]
+	return item.Folder != nil || thumbnailExtensions[utils.PathExt(item.Name)]
 }
 
 func pathURL(path string) string {

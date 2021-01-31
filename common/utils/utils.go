@@ -54,6 +54,14 @@ func CleanPath(path string) string {
 	return path
 }
 
+func PathExt(name string) string {
+	ext := path2.Ext(name)
+	if ext != "" {
+		ext = ext[1:]
+	}
+	return strings.ToLower(ext)
+}
+
 func PathBase(path string) string {
 	base := path2.Base(path)
 	if base == "/" || base == "." {

@@ -28,7 +28,7 @@ func init() {
 		MimeType: "image/svg+xml",
 	}
 	for _, e := range strings.Split(textExt, ",") {
-		Register("."+e, h)
+		Register(e, h)
 	}
 }
 
