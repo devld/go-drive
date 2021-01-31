@@ -13,8 +13,8 @@ import UiUtils from './ui-utils'
 export const IS_DEBUG = process.env.NODE_ENV === 'development'
 
 export function setTitle (title) {
-  if (title) title += ' - ' + process.env.VUE_APP_SITE_TITLE
-  else title = process.env.VUE_APP_SITE_TITLE
+  if (title) title += ' - ' + window.___config___.appName
+  else title = window.___config___.appName
   document.title = title
 }
 

@@ -8,7 +8,16 @@
   <link rel="icon" href="<%= BASE_URL %>static/icon/android-chrome-192x192.png">
   <title><%= htmlWebpackPlugin.options.title %></title>
   <link rel="stylesheet" href="<%= BASE_URL %>static/iconfont/iconfont.css">
-  <script> var __api_path__ = '' </script>
+  <script>
+    var ___config___ = {
+      api: /*$api_path*/'',
+      appName: /*$app_name*/'<%= htmlWebpackPlugin.options.title %>',
+      /* value inject */
+    }
+    if (___config___.appName) {
+      document.title = ___config___.appName
+    }
+  </script>
 </head>
 
 <body>

@@ -6,7 +6,7 @@ const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
 const MAX_RETRY = 1
 
-let apiPath = window.__api_path__ || process.env.VUE_APP_API
+let apiPath = window.___config___.api || process.env.VUE_APP_API
 if (!/^https?:\/\//.test(apiPath)) {
   apiPath = location.origin + apiPath
 }
