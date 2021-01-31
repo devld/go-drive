@@ -51,6 +51,9 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	flag.DurationVar(&config.TokenValidity, "token-validity", 2*time.Hour, "token validity")
 	flag.BoolVar(&config.TokenRefresh, "token-refresh", true, "enable auto refresh token")
 
+	flag.StringVar(&config.APIPath, "api-path", "", "base API path")
+	flag.StringVar(&config.AppName, "app-name", "Drive", "")
+
 	flag.Parse()
 
 	if v {
@@ -73,7 +76,11 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 }
 
 type Config struct {
-	Listen  string
+	Listen string
+
+	APIPath string
+	AppName string
+
 	dataDir string
 	// static files(web) dir
 	resDir string
