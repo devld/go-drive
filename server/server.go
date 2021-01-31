@@ -48,6 +48,8 @@ func InitServer(config common.Config,
 	engine.Use(Logger())
 	engine.Use(apiResultHandler(messageSource))
 
+	InitCommonRoutes(engine, ch)
+
 	InitAuthRoutes(engine, tokenStore, userDAO)
 
 	InitAdminRoutes(engine, ch, rootDrive, tokenStore, userDAO, groupDAO,

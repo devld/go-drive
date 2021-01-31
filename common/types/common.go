@@ -25,6 +25,12 @@ type IStatistics interface {
 	Status() (string, SM, error)
 }
 
+// ISysConfig provides some configuration for the client
+type ISysConfig interface {
+	// SysConfig returns the config name, config map
+	SysConfig() (string, M, error)
+}
+
 type FormItemOption struct {
 	Name     string `json:"name" i18n:""`
 	Title    string `json:"title" i18n:""`

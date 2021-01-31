@@ -1,4 +1,4 @@
-import { getUser } from '@/api'
+import { getConfig, getUser } from '@/api'
 import { isAdmin } from '@/utils'
 import Vue from 'vue'
 import Vuex from 'vuex'
@@ -8,6 +8,7 @@ Vue.use(Vuex)
 export default new Vuex.Store({
   state: {
     user: null,
+    config: null,
 
     showLogin: false,
 
@@ -22,6 +23,9 @@ export default new Vuex.Store({
     setUser (state, user) {
       state.user = user || null
     },
+    setConfig (state, config) {
+      state.config = config
+    },
     showLogin (state, show) {
       state.showLogin = show
     },
@@ -35,12 +39,18 @@ export default new Vuex.Store({
   },
   actions: {
     async init (context) {
+      await context.dispatch('getConfig')
       await context.dispatch('getUser')
     },
     async getUser (context) {
       const user = await getUser()
       context.commit('setUser', user)
       return user
+    },
+    async getConfig (context) {
+      const config = await getConfig()
+      context.commit('setConfig', config)
+      return config
     }
   },
   modules: {
