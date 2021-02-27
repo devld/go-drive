@@ -2,6 +2,10 @@
 
 [English version](#features)
 
+Demo: [https://demo.go-drive.top](https://demo.go-drive.top)
+
+Doc: [https://go-drive.top](https://go-drive.top)
+
 ## 功能
 
 - 基本的文件管理(上传，下载，复制，移动，重命名，删除)
@@ -27,7 +31,7 @@
 
 ```shell
 mkdir go-drive-data
-docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devld/go-drive:0.2.0
+docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devld/go-drive:0.3.0
 ```
 
 其中 `go-drive-data` 是数据目录，为了保证数据在应用升级后保留，最好将其映射至容器外。
@@ -72,7 +76,7 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 
 ```shell
 mkdir go-drive-data
-docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devld/go-drive:0.2.0
+docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devld/go-drive:0.3.0
 ```
 
 `go-drive-data` is the data directory. To ensure that the data is retained after the application is upgraded, it is best to map it outside the container.
