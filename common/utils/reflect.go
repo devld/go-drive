@@ -44,14 +44,20 @@ func visitValueTree(v reflect.Value, sf *reflect.StructField, fn VisitNode) refl
 	case reflect.Struct:
 		r := reflect.New(v.Type())
 		n := v.NumField()
+		failedFields := false
 		for i := 0; i < n; i++ {
 			f := v.Field(i)
 			rf := r.Elem().Field(i)
 			if !rf.CanSet() {
-				continue
+				failedFields = true
+				// if there is any unexported field in this Struct, then just skip...
+				break
 			}
 			sf := v.Type().Field(i)
 			rf.Set(visitValueTree(f, &sf, fn))
+		}
+		if failedFields {
+			return v
 		}
 		re := r.Elem()
 		return re
