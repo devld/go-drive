@@ -195,10 +195,10 @@ drive:
         description: ""
       user:
         label: 用户
-        description: 用户名，默认为 'anonymous'
+        description: 用户名
       password:
         label: 密码
-        description: 密码， 默认为 'anonymous'
+        description: 密码
       cache_ttl:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存  
