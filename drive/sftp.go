@@ -51,7 +51,6 @@ func NewSftpDrive(ctx context.Context, config types.SM, driveUtils drive_util.Dr
 	if e != nil {
 		return nil, e
 	}
-	log.Print("p: %v", p)
 
 	ssh, e := p.GetConn()
 	if ssh == nil || e != nil {
@@ -138,8 +137,9 @@ func (f *SFTPDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool,
 			return nil, e
 		}
 	}
+	log.Println("path: %v", path)
 	f.InitConn()
-	file, e := f.c.Open(path)
+	file, e := f.c.Create(path)
 	if e != nil {
 		return nil, mapError(e)
 	}
