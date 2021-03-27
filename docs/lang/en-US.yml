@@ -183,6 +183,25 @@ drive:
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
+  sftp:
+    name: SFTP
+    readme: SFTP drive
+    form:
+      host:
+        label: Host
+        description: ""
+      port:
+        label: Port
+        description: ""
+      user:
+        label: User
+        description: User name
+      password:
+        label: Password
+        description: User password
+      cache_ttl:
+        label: CacheTTL
+        description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
 stat:
   task:
     total: Total
