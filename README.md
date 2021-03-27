@@ -20,6 +20,7 @@ Doc: [https://go-drive.top](https://go-drive.top)
 
 - 本地文件
 - FTP
+- SFTP
 - WebDAV 协议
 - S3 兼容的云存储
 - OneDrive
@@ -65,6 +66,7 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 
 - Local
 - FTP
+- SFTP
 - WebDAV
 - S3
 - OneDrive
