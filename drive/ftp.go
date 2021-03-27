@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/secsy/goftp"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -14,6 +13,8 @@ import (
 	"os"
 	path2 "path"
 	"time"
+
+	"github.com/secsy/goftp"
 )
 
 func init() {
@@ -285,7 +286,7 @@ func (f *ftpEntry) Name() string {
 }
 
 func (f *ftpEntry) GetReader(context.Context) (io.ReadCloser, error) {
-	return newLazyReader(func() (io.ReadCloser, error) {
+	return utils.NewLazyReader(func() (io.ReadCloser, error) {
 		r, w := io.Pipe()
 		go func() {
 			if e := f.d.c.Retrieve(f.path, w); e != nil {
@@ -307,32 +308,4 @@ func mapError(e error) error {
 		return e
 	}
 	return errors.New(fmt.Sprintf("[%d] %s", fe.Code(), fe.Message()))
-}
-
-func newLazyReader(get func() (io.ReadCloser, error)) io.ReadCloser {
-	return &lazyReader{get: get}
-}
-
-type lazyReader struct {
-	r   io.ReadCloser
-	get func() (io.ReadCloser, error)
-}
-
-func (l *lazyReader) Read(p []byte) (n int, err error) {
-	if l.r == nil {
-		reader, e := l.get()
-		l.get = nil
-		if e != nil {
-			return 0, e
-		}
-		l.r = reader
-	}
-	return l.r.Read(p)
-}
-
-func (l *lazyReader) Close() error {
-	if l.r != nil {
-		return l.r.Close()
-	}
-	return nil
 }
