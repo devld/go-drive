@@ -7,7 +7,7 @@
         :loading="saving"
         :disabled="!canSave"
       >
-        {{ $t("hv.permission.save") }}
+        {{ $t('hv.permission.save') }}
       </simple-button>
       <span :title="filename">{{ filename }}</span>
       <button
@@ -36,36 +36,36 @@ export default {
   props: {
     entry: {
       type: Object,
-      required: true
+      required: true,
     },
-    entries: { type: Array }
+    entries: { type: Array },
   },
-  data () {
+  data() {
     return {
       permissions: [],
 
       saving: false,
-      canSave: true
+      canSave: true,
     }
   },
   watch: {
     permissions: {
       deep: true,
-      handler () {
+      handler() {
         this.canSave = this.$refs.editor.validate()
-      }
-    }
+      },
+    },
   },
   computed: {
-    filename () {
+    filename() {
       return filename(this.path)
     },
-    path () {
+    path() {
       return this.entry.path
-    }
+    },
   },
   methods: {
-    async savePermissions () {
+    async savePermissions() {
       this.saving = true
       try {
         await this.$refs.editor.save()
@@ -75,10 +75,10 @@ export default {
         this.saving = false
       }
     },
-    setSaveState (saved) {
+    setSaveState(saved) {
       this.$emit('save-state', saved)
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

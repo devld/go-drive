@@ -10,7 +10,10 @@ export default {
   },
   view: {
     name: 'PermissionsView',
-    component: () => import(/* webpackChunkName: "admin" */ '@/views/HandlerViews/PermissionsView.vue')
+    component: () =>
+      import(
+        /* webpackChunkName: "admin" */ '@/views/HandlerViews/PermissionsView.vue'
+      )
   },
   supports: (entry, parentEntry, user) => isAdmin(user)
 }

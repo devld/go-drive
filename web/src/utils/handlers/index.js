@@ -10,19 +10,31 @@ import rename from './rename'
 import mount from './mount'
 
 export const HANDLERS = Object.freeze([
-  textEdit, image, media, download, deleteEntry,
-  rename, copy, move, permission, mount
+  textEdit,
+  image,
+  media,
+  download,
+  deleteEntry,
+  rename,
+  copy,
+  move,
+  permission,
+  mount
 ])
 
-export const HANDLER_COMPONENTS = mapOf(HANDLERS.filter(h => h.view), h => h.view.name, h => h.view.component)
+export const HANDLER_COMPONENTS = mapOf(
+  HANDLERS.filter(h => h.view),
+  h => h.view.name,
+  h => h.view.component
+)
 
 const HANDLERS_MAP = mapOf(HANDLERS, h => h.name)
 
-export function getHandler (name) {
+export function getHandler(name) {
   return HANDLERS_MAP[name] && HANDLERS_MAP[name]
 }
 
-export function resolveEntryHandler (entry, parentEntry, user) {
+export function resolveEntryHandler(entry, parentEntry, user) {
   const matches = []
   const isMultiple = Array.isArray(entry)
   for (const h of HANDLERS) {

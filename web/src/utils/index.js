@@ -1,4 +1,3 @@
-
 import { fileUrl, getTask } from '@/api'
 import dayjs from 'dayjs'
 
@@ -12,20 +11,20 @@ import UiUtils from './ui-utils'
 
 export const IS_DEBUG = process.env.NODE_ENV === 'development'
 
-export function setTitle (title) {
+export function setTitle(title) {
   if (title) title += ' - ' + window.___config___.appName
   else title = window.___config___.appName
   document.title = title
 }
 
-export function formatTime (d, toFormat) {
+export function formatTime(d, toFormat) {
   const date = dayjs(d)
   if (!date.isValid()) return ''
   return date.format(toFormat || 'YYYY-MM-DD HH:mm:ss')
 }
 
 // from https://stackoverflow.com/a/18650828/8749466
-export function formatBytes (bytes, decimals = 2) {
+export function formatBytes(bytes, decimals = 2) {
   if (bytes < 0) return '-'
   if (bytes === 0) return '0 B'
 
@@ -39,41 +38,44 @@ export function formatBytes (bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }
 
-export function formatPercent (n, based) {
-  if (typeof (n) !== 'number') return ''
-  if (typeof (based) === 'number') {
+export function formatPercent(n, based) {
+  if (typeof n !== 'number') return ''
+  if (typeof based === 'number') {
     if (based === 0) return ''
     n /= based
   }
   return (n * 100).toFixed(1) + '%'
 }
 
-export function dir (path) {
+export function dir(path) {
   if (!path) return ''
   const i = path.lastIndexOf('/')
   if (i === -1) return ''
   return path.substr(0, i)
 }
 
-export function filename (path) {
+export function filename(path) {
   if (!path) return ''
   const i = path.lastIndexOf('/')
   if (i === -1) return path
   return path.substr(i + 1)
 }
 
-export function filenameExt (filename) {
+export function filenameExt(filename) {
   if (!filename) return ''
   const i = filename.lastIndexOf('.')
   if (i === -1) return ''
   return filename.substr(i + 1).toLowerCase()
 }
 
-export function pathJoin (...segments) {
-  return segments.filter(Boolean).join('/').replace(/\/+/g, '/')
+export function pathJoin(...segments) {
+  return segments
+    .filter(Boolean)
+    .join('/')
+    .replace(/\/+/g, '/')
 }
 
-export function pathClean (path) {
+export function pathClean(path) {
   if (!path) return ''
   const segments = path.split('/').filter(Boolean)
   const paths = []
@@ -82,9 +84,11 @@ export function pathClean (path) {
     if (s === '..') paths.pop()
     else paths.push(s)
   })
-  return (path.charAt(0) === '/' ? '/' : '') +
+  return (
+    (path.charAt(0) === '/' ? '/' : '') +
     paths.join('/') +
     (path.charAt(path.length - 1) === '/' ? '/' : '')
+  )
 }
 
 /**
@@ -92,7 +96,7 @@ export function pathClean (path) {
  * @param {Array} array
  * @param {Function} e
  */
-export function arrayRemove (array, e) {
+export function arrayRemove(array, e) {
   const index = array.findIndex(e)
   let el
   if (index >= 0) {
@@ -104,7 +108,7 @@ export function arrayRemove (array, e) {
 
 export const debounce = (func, wait) => {
   let timeout
-  return function executedFunction () {
+  return function executedFunction() {
     const later = () => {
       timeout = null
       func.call(this, arguments)
@@ -119,18 +123,18 @@ export const debounce = (func, wait) => {
 // as much as it can, without ever going more than once per `wait` duration;
 // but if you'd like to disable the execution on the leading edge, pass
 // `{leading: false}`. To disable execution on the trailing edge, ditto.
-export function throttle (func, wait, options) {
+export function throttle(func, wait, options) {
   let context, args, result
   let timeout = null
   let previous = 0
   if (!options) options = {}
-  const later = function () {
+  const later = function() {
     previous = options.leading === false ? 0 : Date.now()
     timeout = null
     result = func.apply(context, args)
     if (!timeout) context = args = null
   }
-  return function () {
+  return function() {
     const now = Date.now()
     if (!previous && options.leading === false) previous = now
     const remaining = wait - (now - previous)
@@ -151,20 +155,29 @@ export function throttle (func, wait, options) {
   }
 }
 
-export function waitPromise (fn) {
+export function waitPromise(fn) {
   const promises = []
   let waiting = false
-  return function () {
+  return function() {
     if (!waiting) {
       waiting = true
-      fn.apply(this, arguments).then(v => {
-        promises.forEach(p => { p.resolve(v) })
-      }, e => {
-        promises.forEach(p => { p.reject(e) })
-      }).then(() => {
-        promises.splice(0)
-        waiting = false
-      })
+      fn.apply(this, arguments)
+        .then(
+          v => {
+            promises.forEach(p => {
+              p.resolve(v)
+            })
+          },
+          e => {
+            promises.forEach(p => {
+              p.reject(e)
+            })
+          }
+        )
+        .then(() => {
+          promises.splice(0)
+          waiting = false
+        })
     }
     return new Promise((resolve, reject) => {
       promises.push({ resolve, reject })
@@ -173,7 +186,7 @@ export function waitPromise (fn) {
 }
 
 const DEFAULT_VALUE_FN = e => e
-export function mapOf (list, keyFn, valueFn = DEFAULT_VALUE_FN) {
+export function mapOf(list, keyFn, valueFn = DEFAULT_VALUE_FN) {
   const map = {}
   list.forEach(e => {
     map[keyFn(e)] = valueFn(e)
@@ -181,31 +194,35 @@ export function mapOf (list, keyFn, valueFn = DEFAULT_VALUE_FN) {
   return map
 }
 
-export function val (val, defVal) {
+export function val(val, defVal) {
   if (val === undefined) return defVal
   return val
 }
 
-export function isRootPath (path) {
+export function isRootPath(path) {
   return path === ''
 }
 
-export function isAdmin (user) {
-  return !!(user && user.groups && user.groups.findIndex(g => g.name === 'admin') !== -1)
+export function isAdmin(user) {
+  return !!(
+    user &&
+    user.groups &&
+    user.groups.findIndex(g => g.name === 'admin') !== -1
+  )
 }
 
-export function wait (ms) {
-  return new Promise((resolve) => {
+export function wait(ms) {
+  return new Promise(resolve => {
     setTimeout(resolve, ms)
   })
 }
 
 export const TASK_CANCELLED = { message: 'task canceled' }
 
-export async function taskDone (task, cb, interval = 1000) {
+export async function taskDone(task, cb, interval = 1000) {
   task = await task
   while (task.status === 'pending' || task.status === 'running') {
-    if (cb && (await cb(task) === false)) throw TASK_CANCELLED
+    if (cb && (await cb(task)) === false) throw TASK_CANCELLED
     try {
       task = await getTask(task.id)
     } catch (e) {
@@ -217,7 +234,7 @@ export async function taskDone (task, cb, interval = 1000) {
     await wait(interval)
   }
   if (task.status === 'done') {
-    cb && await cb(task)
+    cb && (await cb(task))
     return task.result
   } else if (task.status === 'error') {
     throw task.error
@@ -230,20 +247,29 @@ export async function taskDone (task, cb, interval = 1000) {
 }
 
 const filters = {
-  formatTime, formatBytes
+  formatTime,
+  formatBytes
 }
 
 const directives = {
-  markdown, longPress, focus
+  markdown,
+  longPress,
+  focus
 }
 
 const utils = {
-  formatTime, formatBytes, formatPercent,
-  filenameExt, pathJoin, fileUrl, filename, dir
+  formatTime,
+  formatBytes,
+  formatPercent,
+  filenameExt,
+  pathJoin,
+  fileUrl,
+  filename,
+  dir
 }
 
 export default {
-  install (Vue) {
+  install(Vue) {
     Vue.prototype.$ = utils
     Object.keys(filters).forEach(key => {
       Vue.filter(key, filters[key])

@@ -11,7 +11,7 @@
       @remove="$emit('remove', task)"
     />
     <div v-if="tasks.length === 0" class="no-task">
-      {{ $t("p.task.empty") }}
+      {{ $t('p.task.empty') }}
     </div>
   </div>
 </template>
@@ -24,9 +24,9 @@ export default {
   props: {
     tasks: {
       type: Array,
-      required: true
-    }
-  }
+      required: true,
+    },
+  },
 }
 </script>
 <style lang="scss">

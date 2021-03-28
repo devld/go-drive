@@ -4,9 +4,13 @@
 <script>
 import CodeMirror from './codemirror'
 import { filenameExt } from '@/utils'
-import { addPreferColorListener, isDarkMode, removePreferColorListener } from '@/utils/theme'
+import {
+  addPreferColorListener,
+  isDarkMode,
+  removePreferColorListener,
+} from '@/utils/theme'
 
-function getThemeName () {
+function getThemeName() {
   return isDarkMode() ? 'material-darker' : 'github-light'
 }
 
@@ -14,52 +18,53 @@ export default {
   name: 'TextEditor',
   props: {
     value: {
-      type: String
+      type: String,
     },
     filename: {
-      type: String
+      type: String,
     },
     lineNumbers: {
-      type: Boolean
+      type: Boolean,
     },
     disabled: {
-      type: Boolean
-    }
+      type: Boolean,
+    },
   },
   watch: {
-    filename () {
+    filename() {
       if (this.filename) {
         this.setEditorMode()
       }
     },
     value: {
       immediate: true,
-      handler () {
+      handler() {
         this.setEditorContent(this.value)
-      }
+      },
     },
-    lineNumbers (val) {
+    lineNumbers(val) {
       this.setEditorOption('lineNumbers', val)
     },
-    disabled (val) {
+    disabled(val) {
       this.setEditorOption('readOnly', val ? 'nocursor' : false)
-    }
+    },
   },
-  created () {
+  created() {
     addPreferColorListener(this.prefersColorChanged)
   },
-  beforeDestroy () {
+  beforeDestroy() {
     removePreferColorListener(this.prefersColorChanged)
   },
-  mounted () {
+  mounted() {
     this.initEditor()
   },
   methods: {
-    initEditor () {
+    initEditor() {
       this.editor = CodeMirror(this.$refs.editor, {
-        theme: getThemeName(), value: this.content || '',
+        theme: getThemeName(),
+        value: this.content || '',
         lineNumbers: this.lineNumbers,
-        readOnly: this.disabled ? 'nocursor' : false
+        readOnly: this.disabled ? 'nocursor' : false,
       })
       this.setEditorMode()
       this.editor.on('change', () => {
@@ -67,7 +72,7 @@ export default {
         this.$emit('input', this.content)
       })
     },
-    async setEditorMode () {
+    async setEditorMode() {
       const ext = filenameExt(this.filename)
       const mode = CodeMirror.findModeByExtension(ext)
       if (mode) {
@@ -77,29 +82,29 @@ export default {
         console.warn(`[CodeMirror] language mode of '${ext}' not found`)
       }
     },
-    setEditorContent (content) {
+    setEditorContent(content) {
       if (this.content === content) return
       this.content = content
       if (this.editor) {
         this.editor.setValue(this.content)
       }
     },
-    setEditorOption (name, value) {
+    setEditorOption(name, value) {
       if (this.editor) {
         this.editor.setOption(name, value)
       }
     },
-    prefersColorChanged () {
+    prefersColorChanged() {
       this.setEditorOption('theme', getThemeName())
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">
-@import url("~codemirror/lib/codemirror.css");
+@import url('~codemirror/lib/codemirror.css');
 
-@import url("~codemirror-github-light/lib/codemirror-github-light-theme.css");
-@import "~codemirror/theme/material-darker.css";
+@import url('~codemirror-github-light/lib/codemirror-github-light-theme.css');
+@import '~codemirror/theme/material-darker.css';
 
 .text-editor {
   .CodeMirror {

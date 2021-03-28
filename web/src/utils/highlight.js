@@ -1,4 +1,3 @@
-
 import hljs from 'highlight.js/lib/core'
 import bash from 'highlight.js/lib/languages/bash'
 import c from 'highlight.js/lib/languages/c'
@@ -29,10 +28,33 @@ import xml from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
 
 const languages = {
-  c$like, cpp, xml, bash, c, csharp, css, markdown,
-  diff, dockerfile, go, ini, java, javascript, json,
-  kotlin, makefile, php, plaintext, properties, python,
-  rust, shell, sql, yaml, typescript, vim
+  c$like,
+  cpp,
+  xml,
+  bash,
+  c,
+  csharp,
+  css,
+  markdown,
+  diff,
+  dockerfile,
+  go,
+  ini,
+  java,
+  javascript,
+  json,
+  kotlin,
+  makefile,
+  php,
+  plaintext,
+  properties,
+  python,
+  rust,
+  shell,
+  sql,
+  yaml,
+  typescript,
+  vim
 }
 
 Object.keys(languages).forEach(key => {

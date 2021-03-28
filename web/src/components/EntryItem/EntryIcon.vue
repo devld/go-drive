@@ -20,44 +20,49 @@ export default {
   props: {
     entry: {
       type: Object,
-      required: true
+      required: true,
     },
     icon: {
-      type: String
+      type: String,
     },
     showThumbnail: {
       type: Boolean,
-      default: true
-    }
+      default: true,
+    },
   },
-  data () {
+  data() {
     return {
-      err: null
+      err: null,
     }
   },
   computed: {
-    thumbnailConfig () {
+    thumbnailConfig() {
       const config = this.$store.state.config
       return config && config.thumbnail
     },
-    entryIcon () {
+    entryIcon() {
       return getIconSVG(this.entry)
     },
-    thumbnail () {
-      return this.entry.meta.thumbnail ||
-        (this.supportThumbnail && fileThumbnail(this.entry.path, this.entry.meta.access_key))
+    thumbnail() {
+      return (
+        this.entry.meta.thumbnail ||
+        (this.supportThumbnail &&
+          fileThumbnail(this.entry.path, this.entry.meta.access_key))
+      )
     },
-    supportThumbnail () {
+    supportThumbnail() {
       const entry = this.entry
       const ext = entry.type === 'dir' ? '/' : filenameExt(entry.name)
-      return !!(this.thumbnailConfig.extensions && this.thumbnailConfig.extensions[ext])
-    }
+      return !!(
+        this.thumbnailConfig.extensions && this.thumbnailConfig.extensions[ext]
+      )
+    },
   },
   methods: {
-    onError (e) {
+    onError(e) {
       this.err = e
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

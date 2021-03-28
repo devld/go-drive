@@ -18,24 +18,24 @@ export default {
   name: 'SimpleButton',
   props: {
     loading: {
-      type: Boolean
+      type: Boolean,
     },
     type: {
-      type: String
+      type: String,
     },
     small: {
-      type: Boolean
+      type: Boolean,
     },
     icon: {
-      type: String
+      type: String,
     },
     disabled: {
-      type: Boolean
+      type: Boolean,
     },
     nativeType: {
-      type: String
-    }
-  }
+      type: String,
+    },
+  },
 }
 </script>
 <style lang="scss">
@@ -68,7 +68,7 @@ export default {
     @include var(background-color, btn-bg-color-disabled-default);
   }
 
-  $types: ("info", "success", "warning", "danger");
+  $types: ('info', 'success', 'warning', 'danger');
   @each $type in $types {
     &.#{$type} {
       @include var(background-color, btn-bg-color-#{$type});

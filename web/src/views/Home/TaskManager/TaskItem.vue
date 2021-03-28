@@ -59,8 +59,16 @@
 <script>
 import { filename, dir, formatPercent } from '@/utils'
 import {
-  STATUS_CREATED, STATUS_PAUSED, STATUS_UPLOADING,
-  STATUS_STOPPED, STATUS_ERROR, STATUS_COMPLETED, STATUS_MASK_CAN_START, STATUS_MASK_CAN_PAUSE, STATUS_MASK_CAN_STOP, STATUS_STARTING
+  STATUS_CREATED,
+  STATUS_PAUSED,
+  STATUS_UPLOADING,
+  STATUS_STOPPED,
+  STATUS_ERROR,
+  STATUS_COMPLETED,
+  STATUS_MASK_CAN_START,
+  STATUS_MASK_CAN_PAUSE,
+  STATUS_MASK_CAN_STOP,
+  STATUS_STARTING,
 } from '@/api/upload-manager/task'
 
 export default {
@@ -68,25 +76,25 @@ export default {
   props: {
     task: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
   computed: {
-    entry () {
+    entry() {
       return {
         type: 'file',
         name: filename(this.task.task.path),
         path: this.task.task.path,
-        meta: {}
+        meta: {},
       }
     },
-    dir () {
+    dir() {
       return dir(this.entry.path)
     },
-    filename () {
+    filename() {
       return this.entry.name
     },
-    statusText () {
+    statusText() {
       switch (this.task.status) {
         case STATUS_CREATED:
           return this.$t('p.task.s_created')
@@ -105,24 +113,24 @@ export default {
       }
       return ''
     },
-    progress () {
+    progress() {
       const p = this.task.progress
       if (!p) return null
-      return (p.loaded / p.total)
+      return p.loaded / p.total
     },
-    showStart () {
+    showStart() {
       return this.task.isStatus(STATUS_MASK_CAN_START)
     },
-    showPause () {
+    showPause() {
       return this.task.isStatus(STATUS_MASK_CAN_PAUSE)
     },
-    showStop () {
+    showStop() {
       return this.task.isStatus(STATUS_MASK_CAN_STOP)
     },
-    showRemove () {
+    showRemove() {
       return !this.showStop
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

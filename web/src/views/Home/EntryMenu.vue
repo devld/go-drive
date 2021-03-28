@@ -27,18 +27,18 @@ export default {
   props: {
     menus: {
       type: Array,
-      required: true
+      required: true,
     },
     entry: {
       type: [Object, Array],
-      required: true
-    }
+      required: true,
+    },
   },
   computed: {
-    multiple () {
+    multiple() {
       return Array.isArray(this.entry)
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

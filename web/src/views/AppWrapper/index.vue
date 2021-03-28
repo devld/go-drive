@@ -7,7 +7,7 @@
           v-if="!isLoggedIn"
           @click="login"
         >
-          {{ $t("app.login") }}
+          {{ $t('app.login') }}
         </button>
 
         <router-link
@@ -22,14 +22,16 @@
         <span class="user-info" v-if="isLoggedIn">
           <span
             class="username"
-            :title="`
-              ${$t('app.username')}: ${user.username}\n`+
+            :title="
+              `
+              ${$t('app.username')}: ${user.username}\n` +
               `${$t('app.groups')}: ${user.groups.map((g) => g.name).join(', ')}
-            `"
+            `
+            "
             >{{ user.username }}</span
           >
           <button class="plain-button small logout-button" @click="logout">
-            {{ $t("app.logout") }}
+            {{ $t('app.logout') }}
           </button>
         </span>
       </div>
@@ -61,31 +63,36 @@ import { mapGetters, mapState } from 'vuex'
 export default {
   name: 'AppWrapper',
   components: { LoginView },
-  data () {
-    return {
-    }
+  data() {
+    return {}
   },
   computed: {
     loginDialogShowing: {
-      get () { return this.$store.state.showLogin },
-      set (v) { this.$store.commit('showLogin', v) }
+      get() {
+        return this.$store.state.showLogin
+      },
+      set(v) {
+        this.$store.commit('showLogin', v)
+      },
     },
     ...mapState(['user', 'progressBar']),
     ...mapGetters(['isAdmin']),
-    isLoggedIn () { return !!this.user },
-    navMenus () {
+    isLoggedIn() {
+      return !!this.user
+    },
+    navMenus() {
       const menus = [{ name: this.$t('app.home'), to: '/' }]
       if (this.isAdmin) {
         menus.push({ name: this.$t('app.admin'), to: '/admin' })
       }
       return menus
-    }
+    },
   },
   methods: {
-    login () {
+    login() {
       this.$store.commit('showLogin', true)
     },
-    async logout () {
+    async logout() {
       this.$loading(true)
       try {
         await logout()
@@ -97,11 +104,11 @@ export default {
         this.$loading(false)
       }
     },
-    afterLogin () {
+    afterLogin() {
       this.loginDialogShowing = false
       location.reload()
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">
@@ -122,7 +129,7 @@ export default {
       }
 
       &::before {
-        content: "|";
+        content: '|';
         margin: 0 1em;
       }
     }

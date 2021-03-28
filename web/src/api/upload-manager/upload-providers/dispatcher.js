@@ -21,26 +21,26 @@ class DispatcherUploadTask extends UploadTask {
    */
   _targetTask
 
-  start () {
+  start() {
     if (this._targetTask) return this._targetTask.start()
     if (this._started) return false
     this._initTask()
   }
 
-  pause () {
+  pause() {
     if (this._status === STATUS_STARTING) return false
     if (!this._targetTask) return false
     this._targetTask.pause()
   }
 
-  stop () {
+  stop() {
     if (!this._targetTask) return false
     this._targetTask.stop()
     this._targetTask = null
     this._started = false
   }
 
-  async _initTask () {
+  async _initTask() {
     this._started = true
     this._onChange(STATUS_STARTING)
     let uploadConfig
@@ -55,18 +55,25 @@ class DispatcherUploadTask extends UploadTask {
     }
     const ConcreteUploadTask = TASK_PROVIDERS[uploadConfig.provider]
     if (!ConcreteUploadTask) {
-      this._onChange(STATUS_ERROR, new Error(`provider '${uploadConfig.provider}' not supported`))
+      this._onChange(
+        STATUS_ERROR,
+        new Error(`provider '${uploadConfig.provider}' not supported`)
+      )
       return
     }
-    this._targetTask = new ConcreteUploadTask(this._id,
-      this._dispatcherOnTaskChanged.bind(this), this._task, uploadConfig.config)
+    this._targetTask = new ConcreteUploadTask(
+      this._id,
+      this._dispatcherOnTaskChanged.bind(this),
+      this._task,
+      uploadConfig.config
+    )
     this._targetTask.start()
   }
 
   /**
    * @param {import('../task').TaskChangeEvent} e
    */
-  _dispatcherOnTaskChanged (e) {
+  _dispatcherOnTaskChanged(e) {
     this._onChange(this._targetTask._status, e.data)
   }
 }

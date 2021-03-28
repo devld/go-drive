@@ -32,10 +32,10 @@
       </span>
       <template v-if="viewMode === 'list'">
         <span class="entry-item__modified-time">{{
-          entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : ""
+          entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : ''
         }}</span>
         <span class="entry-item__size">{{
-          entry.size >= 0 ? $.formatBytes(entry.size) : ""
+          entry.size >= 0 ? $.formatBytes(entry.size) : ''
         }}</span>
       </template>
     </span>
@@ -49,25 +49,25 @@ export default {
   props: {
     entry: {
       type: Object,
-      required: true
+      required: true,
     },
     icon: {
-      type: String
+      type: String,
     },
     viewMode: {
       type: String,
       default: 'list',
-      validator: val => val === 'list' || val === 'thumbnail'
+      validator: (val) => val === 'list' || val === 'thumbnail',
     },
     showThumbnail: {
-      type: Boolean
-    }
+      type: Boolean,
+    },
   },
   computed: {
-    ext () {
+    ext() {
       return filenameExt(this.entry.name)
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

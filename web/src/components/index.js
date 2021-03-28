@@ -14,13 +14,24 @@ import SimpleDropdown from './SimpleDropdown'
 import ProgressBar from './ProgressBar.vue'
 
 const components = {
-  IIcon, SimpleButton, SimpleForm, SimpleFormItem, SimpleDropdown,
-  EntryIcon, EntryLink, EntryList, EntryItem,
-  PathBar, ErrorView, DialogView, FloatButton, ProgressBar
+  IIcon,
+  SimpleButton,
+  SimpleForm,
+  SimpleFormItem,
+  SimpleDropdown,
+  EntryIcon,
+  EntryLink,
+  EntryList,
+  EntryItem,
+  PathBar,
+  ErrorView,
+  DialogView,
+  FloatButton,
+  ProgressBar
 }
 
 export default {
-  install (Vue) {
+  install(Vue) {
     Object.keys(components).forEach(key => {
       Vue.component(key, components[key])
     })

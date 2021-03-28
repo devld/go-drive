@@ -18,21 +18,21 @@
 <script>
 export default {
   name: 'Admin',
-  data () {
+  data() {
     return {
       menus: [
         { name: this.$t('p.admin.t_users'), path: '/admin/users' },
         { name: this.$t('p.admin.t_groups'), path: '/admin/groups' },
         { name: this.$t('p.admin.t_drives'), path: '/admin/drives' },
-        { name: this.$t('p.admin.t_misc'), path: '/admin/misc' }
-      ]
+        { name: this.$t('p.admin.t_misc'), path: '/admin/misc' },
+      ],
     }
   },
   computed: {
-    currentMenu () {
+    currentMenu() {
       return this.$route.path
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

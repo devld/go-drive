@@ -19,10 +19,10 @@ export default {
   props: {
     entry: {
       type: Object,
-      required: true
+      required: true,
     },
-    entries: { type: Array }
-  }
+    entries: { type: Array },
+  },
 }
 </script>
 <style lang="scss">

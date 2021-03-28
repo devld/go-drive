@@ -23,7 +23,7 @@
       </span>
       <span class="form-item submit">
         <simple-button native-type="submit" class="submit" :loading="loading">
-          {{ $t("p.login.login") }}
+          {{ $t('p.login.login') }}
         </simple-button>
       </span>
     </form>
@@ -34,16 +34,16 @@ import { login } from '@/api'
 
 export default {
   name: 'LoginView',
-  data () {
+  data() {
     return {
       username: '',
       password: '',
 
-      loading: false
+      loading: false,
     }
   },
   methods: {
-    async onSubmit (e) {
+    async onSubmit(e) {
       e.preventDefault()
       if (this.loading) return
       this.loading = true
@@ -56,8 +56,8 @@ export default {
       } finally {
         this.loading = false
       }
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

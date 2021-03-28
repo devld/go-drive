@@ -19,45 +19,41 @@ export default {
   name: 'SimpleDropdown',
   props: {
     value: {
-      type: Boolean
-    }
+      type: Boolean,
+    },
   },
   watch: {
     value: {
       immediate: true,
-      handler (val) {
+      handler(val) {
         this.active = !!val
-      }
+      },
     },
     transition: {
       type: String,
-      default: 'top-fade'
-    }
+      default: 'top-fade',
+    },
   },
-  mounted () {
-
-  },
-  beforeDestroy () {
-
-  },
-  data () {
+  mounted() {},
+  beforeDestroy() {},
+  data() {
     return {
-      active: false
+      active: false,
     }
   },
   methods: {
-    triggerClicked () {
+    triggerClicked() {
       this.active = !this.active
       this.emitInput()
     },
-    onBlur () {
+    onBlur() {
       this.active = false
       this.emitInput()
     },
-    emitInput () {
+    emitInput() {
       this.$emit('input', this.active)
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

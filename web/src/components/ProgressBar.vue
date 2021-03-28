@@ -16,38 +16,38 @@ export default {
   props: {
     value: {
       type: [Number, Boolean],
-      required: true
-    }
+      required: true,
+    },
   },
-  data () {
+  data() {
     return {
-      progress: 0
+      progress: 0,
     }
   },
   watch: {
     value: {
       immediate: true,
-      handler (v) {
-        if (typeof (v) === 'number') {
+      handler(v) {
+        if (typeof v === 'number') {
           this.clearTimer()
           this.progress = v
         }
-        if (typeof (v) === 'boolean') {
+        if (typeof v === 'boolean') {
           if (v) {
             this.startFakeProgress()
           } else {
             this.completeFakeProgress()
           }
         }
-      }
-    }
+      },
+    },
   },
   methods: {
-    startFakeProgress () {
+    startFakeProgress() {
       this.progress = FAKE_START
       this.setTimer()
     },
-    completeFakeProgress () {
+    completeFakeProgress() {
       this.clearTimer()
       this.progress = 100
       this._tt = setTimeout(() => {
@@ -55,7 +55,7 @@ export default {
       }, 400)
     },
 
-    setTimer () {
+    setTimer() {
       this.clearTimer()
       this._t = setInterval(() => {
         if (this.progress <= FAKE_FREEZE) {
@@ -63,11 +63,11 @@ export default {
         }
       }, 100)
     },
-    clearTimer () {
+    clearTimer() {
       clearTimeout(this._tt)
       clearInterval(this._t)
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

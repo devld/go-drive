@@ -3,9 +3,9 @@
     <table class="simple-table">
       <thead>
         <tr>
-          <th>{{ $t("p.admin.p_edit.subject") }}</th>
-          <th>{{ $t("p.admin.p_edit.rw") }}</th>
-          <th>{{ $t("p.admin.p_edit.policy") }}</th>
+          <th>{{ $t('p.admin.p_edit.subject') }}</th>
+          <th>{{ $t('p.admin.p_edit.rw') }}</th>
+          <th>{{ $t('p.admin.p_edit.policy') }}</th>
           <th></th>
         </tr>
       </thead>
@@ -20,8 +20,8 @@
                 :disabled="selectedSubjects[s.subject]"
               >
                 {{
-                  s.type === "any"
-                    ? $t("p.admin.p_edit.any")
+                  s.type === 'any'
+                    ? $t('p.admin.p_edit.any')
                     : `${s.type}: ${s.name}`
                 }}
               </option>
@@ -66,7 +66,12 @@
   </div>
 </template>
 <script>
-import { getGroups, getPermissions, getUsers, savePermissions } from '@/api/admin'
+import {
+  getGroups,
+  getPermissions,
+  getUsers,
+  savePermissions,
+} from '@/api/admin'
 import { mapOf } from '@/utils'
 
 const PERMISSION_EMPTY = 0
@@ -78,45 +83,49 @@ export default {
   props: {
     path: {
       type: String,
-      required: true
+      required: true,
     },
     value: {
-      type: Array
-    }
+      type: Array,
+    },
   },
-  data () {
+  data() {
     return {
       permissions: [],
-      subjects: []
+      subjects: [],
     }
   },
-  created () {
+  created() {
     this.loadSubjects()
     this.loadPermissions()
   },
   computed: {
-    selectedSubjects () {
-      return mapOf(this.permissions, p => p.subject, () => true)
-    }
+    selectedSubjects() {
+      return mapOf(
+        this.permissions,
+        (p) => p.subject,
+        () => true
+      )
+    },
   },
   watch: {
     value: {
       immediate: true,
-      handler (val) {
+      handler(val) {
         if (val === this.permissions) return
         this.permissions = [...(val || [])]
-      }
+      },
     },
-    path () {
+    path() {
       this.loadPermissions()
     },
-    permissions () {
+    permissions() {
       this.setSaveState(false)
       this.$emit('input', this.permissions)
-    }
+    },
   },
   methods: {
-    validate () {
+    validate() {
       for (const p of this.permissions) {
         if (p.subject === null) {
           return false
@@ -124,24 +133,26 @@ export default {
       }
       return true
     },
-    addPermission () {
+    addPermission() {
       this.permissions.push({
-        subject: null, permission: { read: true, write: false }, policy: 0
+        subject: null,
+        permission: { read: true, write: false },
+        policy: 0,
       })
     },
-    removePermission (i) {
+    removePermission(i) {
       this.permissions.splice(i, 1)
     },
-    async loadPermissions () {
+    async loadPermissions() {
       try {
         const data = await getPermissions(this.path)
-        this.permissions = data.map(p => ({
+        this.permissions = data.map((p) => ({
           subject: p.subject,
           permission: {
             read: (p.permission & PERMISSION_READ) === PERMISSION_READ,
-            write: (p.permission & PERMISSION_WRITE) === PERMISSION_WRITE
+            write: (p.permission & PERMISSION_WRITE) === PERMISSION_WRITE,
           },
-          policy: p.policy
+          policy: p.policy,
         }))
         this.$nextTick(() => {
           this.setSaveState(true)
@@ -150,30 +161,42 @@ export default {
         this.$alert(e.message)
       }
     },
-    async save () {
-      await savePermissions(this.path, this.permissions.map(p => ({
-        subject: p.subject,
-        permission: (p.permission.read ? PERMISSION_READ : PERMISSION_EMPTY) |
-          (p.permission.write ? PERMISSION_WRITE : PERMISSION_EMPTY),
-        policy: p.policy
-      })))
+    async save() {
+      await savePermissions(
+        this.path,
+        this.permissions.map((p) => ({
+          subject: p.subject,
+          permission:
+            (p.permission.read ? PERMISSION_READ : PERMISSION_EMPTY) |
+            (p.permission.write ? PERMISSION_WRITE : PERMISSION_EMPTY),
+          policy: p.policy,
+        }))
+      )
       this.setSaveState(true)
     },
-    async loadSubjects () {
+    async loadSubjects() {
       try {
         const res = await Promise.all([getUsers(), getGroups()])
         this.subjects = [
           { type: 'any', name: '*', subject: 'ANY' },
-          ...res[0].map(u => ({ type: 'user', name: u.username, subject: `u:${u.username}` })),
-          ...res[1].map(g => ({ type: 'group', name: g.name, subject: `g:${g.name}` }))
+          ...res[0].map((u) => ({
+            type: 'user',
+            name: u.username,
+            subject: `u:${u.username}`,
+          })),
+          ...res[1].map((g) => ({
+            type: 'group',
+            name: g.name,
+            subject: `g:${g.name}`,
+          })),
         ]
       } catch (e) {
         this.$alert(e.message)
       }
     },
-    setSaveState (saved) {
+    setSaveState(saved) {
       this.$emit('save-state', saved)
-    }
-  }
+    },
+  },
 }
 </script>

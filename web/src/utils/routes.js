@@ -5,15 +5,15 @@ export const BASE_PATH = '/files'
 export const QUERY_HANDLER = 'handler'
 export const QUERY_ENTRY = 'entry'
 
-export function getBaseLink (path) {
+export function getBaseLink(path) {
   return `${BASE_PATH}/${path}`
 }
 
-export function getDirEntryLink (path) {
+export function getDirEntryLink(path) {
   return `${BASE_PATH}/${path}`
 }
 
-export function makeEntryLink (entry) {
+export function makeEntryLink(entry) {
   if (entry.type === 'dir') return getDirEntryLink(entry.path)
   if (entry.type === 'file') {
     const handler = resolveEntryHandler(entry)[0]
@@ -23,7 +23,9 @@ export function makeEntryLink (entry) {
   }
 }
 
-export function makeEntryHandlerLink (handlerName, entryName, dirPath) {
-  return `${BASE_PATH}/${dirPath}?${QUERY_HANDLER}=${handlerName}&` +
+export function makeEntryHandlerLink(handlerName, entryName, dirPath) {
+  return (
+    `${BASE_PATH}/${dirPath}?${QUERY_HANDLER}=${handlerName}&` +
     `${QUERY_ENTRY}=${encodeURIComponent(entryName)}`
+  )
 }

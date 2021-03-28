@@ -24,31 +24,36 @@ const routes = [
       {
         name: 'Admin',
         path: '/admin',
-        component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin'),
+        component: () =>
+          import(/* webpackChunkName: "admin" */ '@/views/Admin'),
         redirect: '/admin/users',
         children: [
           {
             name: 'UsersManager',
             path: '/admin/users',
-            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Users'),
+            component: () =>
+              import(/* webpackChunkName: "admin" */ '@/views/Admin/Users'),
             meta: { title: T('routes.title.users') }
           },
           {
             name: 'GroupsManager',
             path: '/admin/groups',
-            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Groups'),
+            component: () =>
+              import(/* webpackChunkName: "admin" */ '@/views/Admin/Groups'),
             meta: { title: T('routes.title.groups') }
           },
           {
             name: 'DrivesManager',
             path: '/admin/drives',
-            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Drives'),
+            component: () =>
+              import(/* webpackChunkName: "admin" */ '@/views/Admin/Drives'),
             meta: { title: T('routes.title.drives') }
           },
           {
             name: 'MiscSettings',
             path: '/admin/misc',
-            component: () => import(/* webpackChunkName: "admin" */ '@/views/Admin/Misc'),
+            component: () =>
+              import(/* webpackChunkName: "admin" */ '@/views/Admin/Misc'),
             meta: { title: T('routes.title.misc') }
           }
         ]
@@ -63,16 +68,23 @@ const router = new VueRouter({
 
 // see https://github.com/vuejs/vue-router/issues/1849#issuecomment-340767577
 // detect it's IE11
-if ('-ms-scroll-limit' in document.documentElement.style && '-ms-ime-align' in document.documentElement.style) {
-  window.addEventListener('hashchange', function (event) {
-    const currentPath = window.location.hash.slice(1)
-    if (router.currentRoute !== currentPath) {
-      router.push(currentPath)
-    }
-  }, false)
+if (
+  '-ms-scroll-limit' in document.documentElement.style &&
+  '-ms-ime-align' in document.documentElement.style
+) {
+  window.addEventListener(
+    'hashchange',
+    function(event) {
+      const currentPath = window.location.hash.slice(1)
+      if (router.currentRoute !== currentPath) {
+        router.push(currentPath)
+      }
+    },
+    false
+  )
 }
 
-router.afterEach((to) => {
+router.afterEach(to => {
   if (to.meta && to.meta.title) {
     setTitle(to.meta.title)
   }

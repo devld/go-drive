@@ -6,11 +6,11 @@
 <script>
 export default {
   name: 'App',
-  created () {
-    this.$store.dispatch('init').catch(e => {
+  created() {
+    this.$store.dispatch('init').catch((e) => {
       this.$alert(e.message)
     })
-  }
+  },
 }
 </script>
 

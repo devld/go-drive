@@ -43,11 +43,11 @@
       @click="showTaskManager"
     >
       {{
-        $t("p.new_entry.tasks_status", {
+        $t('p.new_entry.tasks_status', {
           p:
             uploadStatus && uploadStatus.total > 0
               ? `: ${uploadStatus.completed}/${uploadStatus.total}`
-              : "",
+              : '',
         })
       }}
     </button>
@@ -60,7 +60,7 @@
     />
 
     <div v-if="dropZoneActive" class="drop-zone-indicator">
-      {{ $t("p.new_entry.drop_tip") }}
+      {{ $t('p.new_entry.drop_tip') }}
     </div>
   </div>
 </template>
@@ -78,11 +78,11 @@ const FileExistsDialog = createDialog('FileExistsDialog', FileExistsDialogInner)
 
 const uploadManager = new UploadManager({ concurrent: 3 })
 
-function getFiles (dataTransfer) {
+function getFiles(dataTransfer) {
   if (!dataTransfer || !dataTransfer.items) return
   const files = []
   for (const f of dataTransfer.items) {
-    if (typeof (f.webkitGetAsEntry) === 'function') {
+    if (typeof f.webkitGetAsEntry === 'function') {
       const entry = f.webkitGetAsEntry()
       if (!entry || !entry.isFile) continue
     }
@@ -97,17 +97,17 @@ export default {
   props: {
     path: {
       type: String,
-      required: true
+      required: true,
     },
     entries: {
       type: null,
-      required: true
+      required: true,
     },
     readonly: {
-      type: Boolean
-    }
+      type: Boolean,
+    },
   },
-  data () {
+  data() {
     return {
       floatMenuShowing: false,
 
@@ -121,10 +121,10 @@ export default {
        */
       tasks: [],
 
-      dropZoneActive: false
+      dropZoneActive: false,
     }
   },
-  created () {
+  created() {
     this.tasks = uploadManager.getTasks()
     this.updateTasksSummary()
     uploadManager.on('taskChanged', this.onTasksChanged)
@@ -135,7 +135,7 @@ export default {
     window.addEventListener('dragleave', this.onDragLeave)
     window.addEventListener('drop', this.onItemsDropped)
   },
-  beforeDestroy () {
+  beforeDestroy() {
     uploadManager.off('taskChanged', this.onTasksChanged)
     window.removeEventListener('beforeunload', this.onWindowUnload)
 
@@ -144,7 +144,7 @@ export default {
     window.removeEventListener('drop', this.onItemsDropped)
   },
   methods: {
-    onItemsDropped (e) {
+    onItemsDropped(e) {
       this.toggleDropZoneActive(false)
       e.preventDefault()
       const files = getFiles(e.dataTransfer)
@@ -152,18 +152,20 @@ export default {
         this.submitUploadTasks(files)
       }
     },
-    onFilesChosen () {
+    onFilesChosen() {
       const files = [...this.$refs.file.files]
       this.$refs.file.value = null
       this.submitUploadTasks(files)
     },
-    async submitUploadTasks (files) {
+    async submitUploadTasks(files) {
       if (!files.length) return
       let applyAll, override
       for (const file of files) {
-        if (this.entries && this.entries.find(e => e.name === file.name)) {
+        if (this.entries && this.entries.find((e) => e.name === file.name)) {
           if (!applyAll) {
-            const { override: override_, all } = await this.confirmFileExists(file)
+            const { override: override_, all } = await this.confirmFileExists(
+              file
+            )
             applyAll = all
             override = override_
           }
@@ -171,33 +173,35 @@ export default {
         if (override === false) continue
         uploadManager.submitTask({
           path: pathClean(pathJoin(this.path, file.name)),
-          file, override
+          file,
+          override,
         })
       }
       this.showTaskManager()
     },
-    uploadFile () {
+    uploadFile() {
       this.$refs.file.click()
     },
-    createDir () {
+    createDir() {
       this.$input({
         title: this.$t('p.new_entry.create_folder'),
         validator: {
           pattern: /^[^/]+$/,
-          message: this.$t('p.new_entry.invalid_folder_name')
+          message: this.$t('p.new_entry.invalid_folder_name'),
         },
-        onOk: text => {
+        onOk: (text) => {
           return makeDir(pathClean(pathJoin(this.path, text)))
             .then(() => {
               this.$emit('update')
-            }).catch(e => {
-              this.$alert(e.message).catch(() => { })
+            })
+            .catch((e) => {
+              this.$alert(e.message).catch(() => {})
               return Promise.reject(e)
             })
-        }
+        },
       })
     },
-    onTasksChanged ({ tasks, task }) {
+    onTasksChanged({ tasks, task }) {
       this.tasks = tasks
       this.updateTasksSummary()
       if (task && task.status === STATUS_COMPLETED) {
@@ -206,82 +210,94 @@ export default {
         }
       }
     },
-    startTask (task) {
+    startTask(task) {
       uploadManager.startTask(task.id)
     },
-    pauseTask (task) {
+    pauseTask(task) {
       uploadManager.pauseTask(task.id)
     },
-    async stopTask (task) {
-      try { await this.$confirm(this.$t('p.new_entry.confirm_stop_task')) } catch { return }
+    async stopTask(task) {
+      try {
+        await this.$confirm(this.$t('p.new_entry.confirm_stop_task'))
+      } catch {
+        return
+      }
       uploadManager.stopTask(task.id)
     },
-    async removeTask (task) {
+    async removeTask(task) {
       try {
         await this.$confirm({
           message: this.$t('p.new_entry.confirm_remove_task'),
-          confirmType: 'danger'
+          confirmType: 'danger',
         })
-      } catch { return }
+      } catch {
+        return
+      }
       uploadManager.stopTask(task.id)
       uploadManager.removeTask(task.id)
     },
-    updateTasksSummary () {
-      const completed = this.tasks.filter(t => t.status === STATUS_COMPLETED).length
+    updateTasksSummary() {
+      const completed = this.tasks.filter((t) => t.status === STATUS_COMPLETED)
+        .length
       this.uploadStatus = { completed, total: this.tasks.length }
     },
-    async confirmFileExists (file) {
+    async confirmFileExists(file) {
       try {
-        const all = (await this.$dialog(FileExistsDialog, {
-          title: this.$t('p.new_entry.file_exists'),
-          message: this.$t('p.new_entry.file_exists_confirm', { m: file.name }),
-          confirmText: this.$t('p.new_entry.skip'),
-          cancelText: this.$t('p.new_entry.override'), cancelType: 'danger',
-          filename: file.name
-        })).all
+        const all = (
+          await this.$dialog(FileExistsDialog, {
+            title: this.$t('p.new_entry.file_exists'),
+            message: this.$t('p.new_entry.file_exists_confirm', {
+              m: file.name,
+            }),
+            confirmText: this.$t('p.new_entry.skip'),
+            cancelText: this.$t('p.new_entry.override'),
+            cancelType: 'danger',
+            filename: file.name,
+          })
+        ).all
         return { all, override: false }
       } catch (e) {
         if (!e) return { all: false, override: false }
         return { all: e.all, override: true }
       }
     },
-    newButtonClicked ({ button, index }) {
+    newButtonClicked({ button, index }) {
       if (index === 0) this.uploadFile()
       if (index === 1) this.createDir()
     },
-    showTaskManager () {
+    showTaskManager() {
       this.taskManagerButtonShowing = false
       this.taskManagerShowing = true
     },
-    taskManagerClosed () {
+    taskManagerClosed() {
       this.taskManagerButtonShowing = true
     },
-    hideTaskManager () {
+    hideTaskManager() {
       this.taskManagerShowing = false
     },
-    onWindowUnload (e) {
+    onWindowUnload(e) {
       if (this.uploadStatus.completed < this.uploadStatus.total) {
         e.preventDefault()
         e.returnValue = ''
       }
     },
-    onDragEnter (e) {
+    onDragEnter(e) {
       if (this.readonly) return
       e.preventDefault()
       clearTimeout(this._dragLeaveTimeout)
       this.toggleDropZoneActive(true)
     },
-    onDragLeave (e) {
+    onDragLeave(e) {
       e.preventDefault()
       clearTimeout(this._dragLeaveTimeout)
       this._dragLeaveTimeout = setTimeout(() => {
         this.toggleDropZoneActive(false)
       }, 100)
     },
-    toggleDropZoneActive (active) {
+    toggleDropZoneActive(active) {
       this.dropZoneActive = active
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

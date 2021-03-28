@@ -14,16 +14,22 @@ export default {
     (Array.isArray(entry)
       ? !entry.some(e => !e.meta.can_write)
       : entry.meta.can_write) &&
-    parentEntry && parentEntry.meta.can_write,
+    parentEntry &&
+    parentEntry.meta.can_write,
   multiple: true,
   handler: async (entries, { confirm, alert, loading }) => {
     if (!Array.isArray(entries)) entries = [entries]
     try {
       await confirm({
-        message: entries.length > 1 ? T('handler.delete.confirm_n', { n: entries.length }) : T('handler.delete.confirm'),
+        message:
+          entries.length > 1
+            ? T('handler.delete.confirm_n', { n: entries.length })
+            : T('handler.delete.confirm'),
         confirmType: 'danger'
       })
-    } catch { return }
+    } catch {
+      return
+    }
     loading(true)
     let task
     let canceled = false
@@ -35,17 +41,17 @@ export default {
       for (const entry of entries) {
         if (canceled) break
         loading({ text: T('handler.delete.deleting', { n: entry.name }) })
-        await taskDone(
-          deleteEntry(entry.path),
-          t => {
-            if (canceled) return false
-            task = t
-            loading({
-              text: T('handler.delete.deleting', { n: entry.name, p: `${task.progress.loaded}/${task.progress.total}` }),
-              onCancel
-            })
-          }
-        )
+        await taskDone(deleteEntry(entry.path), t => {
+          if (canceled) return false
+          task = t
+          loading({
+            text: T('handler.delete.deleting', {
+              n: entry.name,
+              p: `${task.progress.loaded}/${task.progress.total}`
+            }),
+            onCancel
+          })
+        })
       }
       return { update: true }
     } catch (e) {

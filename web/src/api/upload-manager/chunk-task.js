@@ -2,9 +2,16 @@
 import { arrayRemove } from '@/utils'
 import Axios from 'axios'
 import { ApiError } from '../axios'
-import UploadTask, { STATUS_COMPLETED, STATUS_CREATED, STATUS_ERROR, STATUS_PAUSED, STATUS_STOPPED, STATUS_UPLOADING } from './task'
+import UploadTask, {
+  STATUS_COMPLETED,
+  STATUS_CREATED,
+  STATUS_ERROR,
+  STATUS_PAUSED,
+  STATUS_STOPPED,
+  STATUS_UPLOADING
+} from './task'
 
-function insertSeq (arr, seq) {
+function insertSeq(arr, seq) {
   let i = 0
   for (; i < arr.length; i++) {
     if ((i === 0 || arr[i - 1] < seq) && arr[i] > seq) break
@@ -48,7 +55,7 @@ export default class ChunkUploadTask extends UploadTask {
    * @param {TaskDef} task task definition
    * @param {any} [config] task specified config
    */
-  constructor (id, changeListener, task, config) {
+  constructor(id, changeListener, task, config) {
     super(id, changeListener, task, config)
     if (new.target === ChunkUploadTask) {
       throw new Error('Cannot construct abstract ChunkUploadTask')
@@ -56,9 +63,13 @@ export default class ChunkUploadTask extends UploadTask {
     this._totalProgress.total = this._task.size
   }
 
-  start () {
+  start() {
     if (super.start() === false) return false
-    if (this.isStatus(STATUS_CREATED) || this.isStatus(STATUS_STOPPED) || this._prepareFailed) {
+    if (
+      this.isStatus(STATUS_CREATED) ||
+      this.isStatus(STATUS_STOPPED) ||
+      this._prepareFailed
+    ) {
       this._prepareFailed = false
       this._start()
     } else {
@@ -67,19 +78,19 @@ export default class ChunkUploadTask extends UploadTask {
     }
   }
 
-  pause () {
+  pause() {
     if (super.pause() === false) return false
     this._pause()
   }
 
-  stop () {
+  stop() {
     if (super.stop() === false) return false
     this._onChange(STATUS_STOPPED)
     this._abort()
     this._cleanup()
   }
 
-  async _start () {
+  async _start() {
     this._onChange(STATUS_UPLOADING, this._sumProgress())
     try {
       this._chunks = await this._prepare()
@@ -88,7 +99,9 @@ export default class ChunkUploadTask extends UploadTask {
       this._abort(e)
       return
     }
-    if (typeof (this._chunks) !== 'number' || this._chunks <= 0) throw new Error('invalid chunk size')
+    if (typeof this._chunks !== 'number' || this._chunks <= 0) {
+      throw new Error('invalid chunk size')
+    }
     this._queue.splice(0)
     for (let i = 0; i < this._chunks; i++) {
       this._queue.push(i)
@@ -96,28 +109,39 @@ export default class ChunkUploadTask extends UploadTask {
     this._chunkUploadLoop()
   }
 
-  _pause () {
-    this._axiosSources.forEach(t => { t.cancel() })
+  _pause() {
+    this._axiosSources.forEach(t => {
+      t.cancel()
+    })
     this._onChange(STATUS_PAUSED)
   }
 
-  _abort (e) {
-    this._axiosSources.forEach(t => { t.cancel() })
-    if (this.isStatus(STATUS_PAUSED) || this.isStatus(STATUS_STOPPED | STATUS_ERROR)) return
+  _abort(e) {
+    this._axiosSources.forEach(t => {
+      t.cancel()
+    })
+    if (
+      this.isStatus(STATUS_PAUSED) ||
+      this.isStatus(STATUS_STOPPED | STATUS_ERROR)
+    ) {
+      return
+    }
     this._onChange(STATUS_STOPPED)
     if (e) {
       this._onChange(STATUS_ERROR, ApiError.from(e))
     }
   }
 
-  _sumProgress () {
+  _sumProgress() {
     const total = this._totalProgress.total
     let loaded = this._totalProgress.loaded
-    Object.values(this._uploadingChunkProgress).forEach(l => { loaded += l })
+    Object.values(this._uploadingChunkProgress).forEach(l => {
+      loaded += l
+    })
     return { loaded, total }
   }
 
-  _chunkUploadLoop () {
+  _chunkUploadLoop() {
     while (true) {
       if (!this.isStatus(STATUS_UPLOADING)) return
       const uploadingChunks = Object.keys(this._uploadingChunkProgress).length
@@ -129,18 +153,19 @@ export default class ChunkUploadTask extends UploadTask {
       }
       if (uploadingChunks >= this._maxConcurrent) return
       const seq = this._queue.shift()
-      this._doChunkUpload(seq)
-        .then(
-          () => { this._chunkUploadLoop() },
-          e => {
-            insertSeq(this._queue, seq)
-            this._abort(e)
-          }
-        )
+      this._doChunkUpload(seq).then(
+        () => {
+          this._chunkUploadLoop()
+        },
+        e => {
+          insertSeq(this._queue, seq)
+          this._abort(e)
+        }
+      )
     }
   }
 
-  async _doChunkUpload (seq) {
+  async _doChunkUpload(seq) {
     const chunk = this._getChunk(seq)
     this._uploadingChunkProgress[seq] = 0
     try {
@@ -154,7 +179,7 @@ export default class ChunkUploadTask extends UploadTask {
     }
   }
 
-  async _doCompleteUpload () {
+  async _doCompleteUpload() {
     let data
     try {
       data = await this._completeUpload()
@@ -172,7 +197,7 @@ export default class ChunkUploadTask extends UploadTask {
    * @param {import('axios').AxiosInstance} [axios]
    * @returns {Promise.<import('axios').AxiosResponse<any>>}
    */
-  async _request (config, axios) {
+  async _request(config, axios) {
     if (!axios) axios = Axios
     const cancelToken = Axios.CancelToken.source()
     this._axiosSources.push(cancelToken)
@@ -188,9 +213,9 @@ export default class ChunkUploadTask extends UploadTask {
 
   /**
    * prepare upload
-   * @returns {Promise.<number} chunks count
+   * @returns {Promise.<number>} chunks count
    */
-  async _prepare () {
+  async _prepare() {
     throw new Error('not implemented')
   }
 
@@ -199,14 +224,14 @@ export default class ChunkUploadTask extends UploadTask {
    * @param {Blob} blob  chunk
    * @param {Function} onProgress progress
    */
-  async _chunkUpload (seq, blob, onProgress) {
+  async _chunkUpload(seq, blob, onProgress) {
     throw new Error('not implemented')
   }
 
   /**
    * @returns {Promise.<any>} upload result
    */
-  async _completeUpload () {
+  async _completeUpload() {
     throw new Error('not implemented')
   }
 
@@ -214,11 +239,11 @@ export default class ChunkUploadTask extends UploadTask {
    * @param {number} seq chunk seq
    * @returns {Blob} chunk
    */
-  _getChunk (seq) {
+  _getChunk(seq) {
     throw new Error('not implemented')
   }
 
-  _cleanup () {
+  _cleanup() {
     this._totalProgress.loaded = 0
     this._uploadingChunkProgress = {}
     this._chunks = undefined

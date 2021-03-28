@@ -13,27 +13,29 @@ const i18n = new VueI18N({
   messages: { [DEFAULT_LANG]: enUS }
 })
 
-function loadLanguage (lang) {
+function loadLanguage(lang) {
   if (i18n.locale === lang) return lang
   if (loadedLanguages.includes(lang)) return _setLang(lang)
-  import(/* webpackChunkName: "lang-[request]" */ `./lang/${lang}`).then(msgs => {
-    i18n.setLocaleMessage(lang, msgs.default)
-    loadedLanguages.push(lang)
-    return _setLang(lang)
-  })
+  import(/* webpackChunkName: "lang-[request]" */ `./lang/${lang}`).then(
+    msgs => {
+      i18n.setLocaleMessage(lang, msgs.default)
+      loadedLanguages.push(lang)
+      return _setLang(lang)
+    }
+  )
 }
 
-function _setLang (lang) {
+function _setLang(lang) {
   i18n.locale = lang
   document.querySelector('html').setAttribute('lang', lang)
   return lang
 }
 
-export function getLang () {
+export function getLang() {
   return i18n.locale
 }
 
-export async function setLang (lang) {
+export async function setLang(lang) {
   try {
     return await loadLanguage(lang)
   } catch {
@@ -41,17 +43,21 @@ export async function setLang (lang) {
   }
 }
 
+function _tFn() {
+  return i18n.t(this.key, this.args)
+}
+
 /**
  * @param {string} key i18n text key
- * @param {*} args
+ * @param {any} [args]
  */
-export function T (key, args) {
+export function T(key, args) {
   const o = { key, args, t: '', i18n: true }
-  o.toString = function () { return i18n.t(this.key, this.args) }
+  o.toString = _tFn
   return o
 }
 
-export function isT (o) {
+export function isT(o) {
   return o && o.i18n === true
 }
 
