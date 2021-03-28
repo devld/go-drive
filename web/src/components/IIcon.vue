@@ -3,10 +3,7 @@
     class="icon"
     aria-hidden
     @click="listeners.click && listeners.click($event)"
-    :class="[
-      data.class,
-      data.staticClass
-    ]"
+    :class="[data.class, data.staticClass]"
   >
     <use :xlink:href="props.svg" />
   </svg>
@@ -17,8 +14,8 @@ export default {
   props: {
     svg: {
       type: String,
-      required: true
-    }
-  }
+      required: true,
+    },
+  },
 }
 </script>

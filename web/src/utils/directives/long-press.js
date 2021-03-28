@@ -9,7 +9,7 @@ const emitEvent = (vnode, el) => {
 }
 
 export default {
-  bind (el, binding, vnode) {
+  bind(el, binding, vnode) {
     const timeout = +binding.value || 300
     const h = new Hammer(el)
     h.get('press').set({ time: timeout })
@@ -18,7 +18,7 @@ export default {
     })
     el._hammer = h
   },
-  unbind (el) {
+  unbind(el) {
     if (el._hammer) {
       el._hammer.destroy()
     }

@@ -3,7 +3,12 @@
 import axios, { ApiError } from '@/api/axios'
 import { taskDone } from '@/utils'
 import Axios from 'axios'
-import UploadTask, { STATUS_COMPLETED, STATUS_ERROR, STATUS_STOPPED, STATUS_UPLOADING } from '../task'
+import UploadTask, {
+  STATUS_COMPLETED,
+  STATUS_ERROR,
+  STATUS_STOPPED,
+  STATUS_UPLOADING
+} from '../task'
 
 /**
  * local upload task provider
@@ -14,7 +19,7 @@ export default class LocalUploadTask extends UploadTask {
    */
   _axiosSource
 
-  start () {
+  start() {
     if (super.start() === false) return false
 
     this._axiosSource = Axios.CancelToken.source()
@@ -28,20 +33,23 @@ export default class LocalUploadTask extends UploadTask {
           this._onChange(STATUS_UPLOADING, { loaded, total })
         }
       }),
-      task => { }
-    ).then(() => {
-      this._onChange(STATUS_COMPLETED)
-    }, e => {
-      if (this._status === STATUS_STOPPED) return
-      this._onChange(STATUS_ERROR, ApiError.from(e))
-    })
+      task => {}
+    ).then(
+      () => {
+        this._onChange(STATUS_COMPLETED)
+      },
+      e => {
+        if (this._status === STATUS_STOPPED) return
+        this._onChange(STATUS_ERROR, ApiError.from(e))
+      }
+    )
   }
 
-  pause () {
+  pause() {
     console.warn('[LocalUploadTask] cannot pause task')
   }
 
-  stop () {
+  stop() {
     if (this._axiosSource) {
       this._onChange(STATUS_STOPPED)
       this._axiosSource.cancel()

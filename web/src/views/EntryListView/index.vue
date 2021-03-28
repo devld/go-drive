@@ -27,70 +27,70 @@ export default {
   name: 'EntryListView',
   model: {
     prop: 'path',
-    event: 'path-change'
+    event: 'path-change',
   },
   props: {
     path: {
-      type: String
+      type: String,
     },
     filter: {
-      type: Function
+      type: Function,
     },
     sort: {
-      type: String
+      type: String,
     },
     selection: {
-      type: Array
+      type: Array,
     },
     selectable: {
       type: [Boolean, Function],
-      default: true
+      default: true,
     },
     viewMode: {
-      type: String
+      type: String,
     },
     showToggles: {
-      type: Boolean
-    }
+      type: Boolean,
+    },
   },
-  data () {
+  data() {
     return {
       currentPath: null,
       loadedPath: '',
       entries: [],
 
-      error: null
+      error: null,
     }
   },
   computed: {
-    filteredEntries () {
+    filteredEntries() {
       return this.filter ? this.entries.filter(this.filter) : this.entries
-    }
+    },
   },
   watch: {
-    path (path, oldPath) {
+    path(path, oldPath) {
       this.tryRecoverState(path, oldPath)
       this.commitPathChange(path)
-    }
+    },
   },
-  created () {
+  created() {
     this.commitPathChange(this.path)
   },
   methods: {
-    commitPathChange (path = '') {
+    commitPathChange(path = '') {
       if (this.currentPath === path) return
       this.currentPath = path
       this.loadEntries()
     },
-    tryRecoverState (newPath, oldPath) {
+    tryRecoverState(newPath, oldPath) {
       if (!oldPath.startsWith(newPath)) return
-      const path = oldPath.substr(newPath ? (newPath.length + 1) : newPath.length)
+      const path = oldPath.substr(newPath ? newPath.length + 1 : newPath.length)
       this._lastEntry = path
     },
-    focusOnEntry (name) {
+    focusOnEntry(name) {
       this.$refs.entryList.focusOnEntry(name)
     },
-    async loadEntries () {
+    async loadEntries() {
       if (this._task) this._task.cancel()
       this.error = null
       this.$emit('loading', true)
@@ -99,7 +99,10 @@ export default {
         this._task = listEntries(path)
         this.entries = await this._task
         this.loadedPath = path
-        this.$emit('entries-load', { entries: this.entries, path: this.loadedPath })
+        this.$emit('entries-load', {
+          entries: this.entries,
+          path: this.loadedPath,
+        })
 
         await this.$nextTick()
         if (this._lastEntry) {
@@ -114,9 +117,9 @@ export default {
         this.$emit('loading', false)
       }
     },
-    reload () {
+    reload() {
       this.loadEntries()
-    }
-  }
+    },
+  },
 }
 </script>

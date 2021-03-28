@@ -23,46 +23,46 @@ export default {
   props: {
     form: {
       type: Array,
-      required: true
+      required: true,
     },
     value: {
-      type: Object
+      type: Object,
     },
     noAutoComplete: {
-      type: Boolean
-    }
+      type: Boolean,
+    },
   },
   watch: {
     value: {
       immediate: true,
       deep: true,
-      handler (val) {
+      handler(val) {
         if (val === this.data) return
         this.data = val || {}
-      }
-    }
+      },
+    },
   },
-  data () {
+  data() {
     return {
-      data: {}
+      data: {},
     }
   },
-  created () {
+  created() {
     this.fillDefaultValue()
   },
   methods: {
-    async validate () {
-      await Promise.all(this.$refs.fields.map(f => f.validate()))
+    async validate() {
+      await Promise.all(this.$refs.fields.map((f) => f.validate()))
     },
-    clearError () {
-      this.$refs.fields.forEach(f => {
+    clearError() {
+      this.$refs.fields.forEach((f) => {
         f.clearError()
       })
     },
-    onSubmit (e) {
+    onSubmit(e) {
       e.preventDefault()
     },
-    fillDefaultValue () {
+    fillDefaultValue() {
       if (this.value) return
       const dat = {}
       for (const f of this.form) {
@@ -71,10 +71,10 @@ export default {
       this.data = dat
       this.emitInput()
     },
-    emitInput () {
+    emitInput() {
       this.$emit('input', this.data)
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

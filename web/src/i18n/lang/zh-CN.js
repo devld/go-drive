@@ -155,7 +155,7 @@ export default {
       s_completed: '已完成'
     },
     home: {
-      file_exists: '\'{n}\' 已存在，覆盖还是跳过？',
+      file_exists: "'{n}' 已存在，覆盖还是跳过？",
       apply_all: '记住选择',
       readme_loading: '加载 README...',
       readme_failed: '加载 README 失败',
@@ -172,7 +172,7 @@ export default {
       confirm_stop_task: '确认停止该任务？',
       confirm_remove_task: '确认移除该任务，不可恢复？',
       file_exists: '文件已存在',
-      file_exists_confirm: '\'{n}\' 已存在，覆盖还是跳过？',
+      file_exists_confirm: "'{n}' 已存在，覆盖还是跳过？",
       skip: '跳过',
       override: '覆盖'
     },

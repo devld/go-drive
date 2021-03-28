@@ -23,12 +23,12 @@ import { IS_DEBUG } from '@/utils'
  * @param {TaskDef} task
  * @returns {TaskDef}
  */
-function processTaskDef (task) {
+function processTaskDef(task) {
   let file = task.file
-  if (typeof (file) !== 'string' && !(file instanceof Blob)) {
+  if (typeof file !== 'string' && !(file instanceof Blob)) {
     throw new Error('invalid file')
   }
-  if (typeof (file) === 'string') {
+  if (typeof file === 'string') {
     file = new Blob([file], { type: 'text/plain' })
   }
   return { ...task, file, size: file.size }
@@ -65,12 +65,16 @@ export const STATUS_STOPPED = 1 << 5
  */
 export const STATUS_ERROR = 1 << 6
 
-export const STATUS_MASK_PENDING = STATUS_CREATED | STATUS_STARTING | STATUS_PAUSED | STATUS_UPLOADING
-export const STATUS_MASK_FREEZED = STATUS_COMPLETED | STATUS_ERROR | STATUS_STOPPED
+export const STATUS_MASK_PENDING =
+  STATUS_CREATED | STATUS_STARTING | STATUS_PAUSED | STATUS_UPLOADING
+export const STATUS_MASK_FREEZED =
+  STATUS_COMPLETED | STATUS_ERROR | STATUS_STOPPED
 
-export const STATUS_MASK_CAN_START = STATUS_CREATED | STATUS_PAUSED | STATUS_ERROR | STATUS_STOPPED
+export const STATUS_MASK_CAN_START =
+  STATUS_CREATED | STATUS_PAUSED | STATUS_ERROR | STATUS_STOPPED
 export const STATUS_MASK_CAN_PAUSE = STATUS_STARTING | STATUS_UPLOADING
-export const STATUS_MASK_CAN_STOP = STATUS_STARTING | STATUS_UPLOADING | STATUS_PAUSED
+export const STATUS_MASK_CAN_STOP =
+  STATUS_STARTING | STATUS_UPLOADING | STATUS_PAUSED
 
 export default class UploadTask {
   /**
@@ -109,7 +113,7 @@ export default class UploadTask {
    * @param {TaskDef} task task definition
    * @param {any} [config] task specified config
    */
-  constructor (id, changeListener, task, config) {
+  constructor(id, changeListener, task, config) {
     if (new.target === UploadTask) {
       throw new Error('Cannot construct abstract UploadTask')
     }
@@ -124,7 +128,7 @@ export default class UploadTask {
    * start or resume this task
    * @returns {boolean}
    */
-  start () {
+  start() {
     if (!this.isStatus(STATUS_MASK_CAN_START)) return false
   }
 
@@ -132,31 +136,42 @@ export default class UploadTask {
    * pause this task
    * @returns {boolean}
    */
-  pause () {
+  pause() {
     if (!this.isStatus(STATUS_MASK_CAN_PAUSE)) return false
   }
 
   /**
    * stop (cancel) this task
    */
-  stop () {
+  stop() {
     if (!this.isStatus(STATUS_MASK_CAN_STOP)) return false
   }
 
-  get id () { return this._id }
-  get status () { return this._status }
-  get progress () { return this._progress }
-  get task () { return this._task }
+  get id() {
+    return this._id
+  }
 
-  isStatus (mask) {
+  get status() {
+    return this._status
+  }
+
+  get progress() {
+    return this._progress
+  }
+
+  get task() {
+    return this._task
+  }
+
+  isStatus(mask) {
     return matchStatus(mask, this._status)
   }
 
   /**
-   * @param {string} status
-   * @param {any} data
+   * @param {number} status
+   * @param {any} [data]
    */
-  _onChange (status, data) {
+  _onChange(status, data) {
     if (IS_DEBUG) {
       console.debug('update status change:', status, data)
     }
@@ -192,7 +207,7 @@ export class UploadTaskItem {
   /**
    * @param {UploadTask} task
    */
-  constructor (task) {
+  constructor(task) {
     this.id = task.id
     this.task = task.task
     this.status = task.status
@@ -200,7 +215,7 @@ export class UploadTaskItem {
     Object.freeze(this)
   }
 
-  isStatus (mask) {
+  isStatus(mask) {
     return matchStatus(mask, this.status)
   }
 }

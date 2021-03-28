@@ -1,8 +1,5 @@
-
 export default {
-
-  inserted (el, binding) {
+  inserted(el) {
     el.focus()
   }
-
 }

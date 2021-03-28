@@ -21,34 +21,36 @@ export default {
   name: 'EntryLink',
   props: {
     entry: {
-      type: Object
+      type: Object,
     },
     path: {
-      type: String
-    }
+      type: String,
+    },
   },
   computed: {
-    link () {
+    link() {
       if (this.entry) return routePathPrefix + makeEntryLink(this.entry)
-      if (typeof (this.path) === 'string') return routePathPrefix + getDirEntryLink(this.path)
+      if (typeof this.path === 'string') {
+        return routePathPrefix + getDirEntryLink(this.path)
+      }
       return 'javascript:;'
-    }
+    },
   },
   methods: {
-    entryClicked (event) {
+    entryClicked(event) {
       this.$emit('click', {
         entry: this.entry,
         path: this.path,
-        event
+        event,
       })
     },
-    entryContextMenu (event) {
+    entryContextMenu(event) {
       this.$emit('menu', {
         entry: this.entry,
         path: this.path,
-        event
+        event,
       })
-    }
-  }
+    },
+  },
 }
 </script>

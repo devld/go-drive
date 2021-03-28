@@ -1,8 +1,14 @@
 import { arrayRemove } from '@/utils'
 // eslint-disable-next-line no-unused-vars
 import UploadTask, {
-  UploadTaskItem, STATUS_UPLOADING, STATUS_CREATED,
-  STATUS_ERROR, STATUS_COMPLETED, STATUS_MASK_PENDING, STATUS_MASK_FREEZED, STATUS_STARTING
+  UploadTaskItem,
+  STATUS_UPLOADING,
+  STATUS_CREATED,
+  STATUS_ERROR,
+  STATUS_COMPLETED,
+  STATUS_MASK_PENDING,
+  STATUS_MASK_FREEZED,
+  STATUS_STARTING
 } from './task'
 import DispatcherUploadTask from './upload-providers/dispatcher'
 
@@ -56,7 +62,7 @@ export class UploadManager {
   /**
    * @param {UploadManagerConfig} config
    */
-  constructor (config) {
+  constructor(config) {
     this._tasks = []
     this._taskMap = {}
     this._events = {}
@@ -69,9 +75,9 @@ export class UploadManager {
   /**
    * submit an upload task
    * @param {import('./task').TaskDef} taskDef
-   * @returns {Promise.<number>} task id if successfully added
+   * @returns {number} task id if successfully added
    */
-  submitTask (taskDef) {
+  submitTask(taskDef) {
     const id = this._idSeq++
     const task = new DispatcherUploadTask(id, this._taskChanged, taskDef)
     this._putTask(task)
@@ -84,7 +90,7 @@ export class UploadManager {
    * @param {boolean} [removeIfFinished]
    * @returns {Promise.<void>}
    */
-  upload (taskDef, removeIfFinished) {
+  upload(taskDef, removeIfFinished) {
     return new Promise((resolve, reject) => {
       const id = this.submitTask(taskDef)
       this._taskFinishedCallbacks[id] = (task, e) => {
@@ -92,8 +98,11 @@ export class UploadManager {
           resolve()
         } else {
           // eslint-disable-next-line prefer-promise-reject-errors
-          reject(task.status === STATUS_ERROR ? e.data
-            : { status: task.status, message: 'task stopped' })
+          reject(
+            task.status === STATUS_ERROR
+              ? e.data
+              : { status: task.status, message: 'task stopped' }
+          )
         }
         if (removeIfFinished) {
           this.removeTask(id)
@@ -107,7 +116,7 @@ export class UploadManager {
    * start a task
    * @param {number} id task id
    */
-  startTask (id) {
+  startTask(id) {
     this._taskMap[id] && this._taskMap[id].start()
   }
 
@@ -115,7 +124,7 @@ export class UploadManager {
    * pause a task
    * @param {number} id task id
    */
-  pauseTask (id) {
+  pauseTask(id) {
     this._taskMap[id] && this._taskMap[id].pause()
   }
 
@@ -123,7 +132,7 @@ export class UploadManager {
    * stop a task
    * @param {number} id task id
    */
-  stopTask (id) {
+  stopTask(id) {
     this._taskMap[id] && this._taskMap[id].stop()
   }
 
@@ -133,25 +142,28 @@ export class UploadManager {
    * @param {boolean} [force] force remove (will stop the task)
    * @returns {boolean}
    */
-  removeTask (id, force) {
+  removeTask(id, force) {
     const task = this._taskMap[id]
     if (!task) return false
     return this._removeTask(task, force)
   }
 
-  rescheduleTasks () {
-    const uploading = this._tasks.filter(t =>
-      t.status === STATUS_UPLOADING || t.status === STATUS_STARTING).length
+  rescheduleTasks() {
+    const uploading = this._tasks.filter(
+      t => t.status === STATUS_UPLOADING || t.status === STATUS_STARTING
+    ).length
     const needStart = this._config.concurrent - uploading
     if (needStart <= 0) return
-    this._tasks.filter(t => t.status === STATUS_CREATED)
-      .slice(0, needStart).forEach(t => t.start())
+    this._tasks
+      .filter(t => t.status === STATUS_CREATED)
+      .slice(0, needStart)
+      .forEach(t => t.start())
   }
 
   /**
-   * @returns {UploadTaskItem}
+   * @returns {Array.<UploadTaskItem>}
    */
-  getTasks () {
+  getTasks() {
     return this._tasks.map(t => new UploadTaskItem(t))
   }
 
@@ -159,24 +171,24 @@ export class UploadManager {
    * @param {string} event event name
    * @param {UploadManagerEventCallback} fn event handler
    */
-  on (event, fn) {
+  on(event, fn) {
     const events = this._events[event] || []
     events.push(fn)
     this._events[event] = events
   }
 
   /**
- * @param {string} event event name
- * @param {UploadManagerEventCallback} fn event handler
- */
-  off (event, fn) {
+   * @param {string} event event name
+   * @param {UploadManagerEventCallback} fn event handler
+   */
+  off(event, fn) {
     const events = this._events[event]
     if (events) {
       arrayRemove(events, e => e === fn)
     }
   }
 
-  _emitEvent (event, argsArray) {
+  _emitEvent(event, argsArray) {
     const events = this._events[event]
     if (events) {
       events.forEach(fn => {
@@ -188,7 +200,7 @@ export class UploadManager {
   /**
    * @param {import('./task').TaskChangeEvent} e
    */
-  _taskChanged (e) {
+  _taskChanged(e) {
     const task = e.task
     if (!this._taskMap[task.id]) return
 
@@ -196,7 +208,7 @@ export class UploadManager {
 
     if (task.isStatus(STATUS_MASK_FREEZED)) {
       const cb = this._taskFinishedCallbacks[task.id]
-      if (typeof (cb) === 'function') {
+      if (typeof cb === 'function') {
         cb.call(this, task, e)
         delete this._taskFinishedCallbacks[task.id]
       }
@@ -206,7 +218,7 @@ export class UploadManager {
   /**
    * @param {UploadTask} task
    */
-  _putTask (task) {
+  _putTask(task) {
     this._tasks.push(task)
     this._taskMap[task.id] = task
     this._emitTaskChanged(task)
@@ -217,7 +229,7 @@ export class UploadManager {
    * @param {boolean} force
    * @returns {boolean}
    */
-  _removeTask (task, force) {
+  _removeTask(task, force) {
     if (task.isStatus(STATUS_MASK_PENDING)) {
       if (force) task.stop()
       else return false
@@ -231,14 +243,16 @@ export class UploadManager {
   }
 
   /**
-   * @param {UploadTask} task
+   * @param {UploadTask} [task]
    */
-  _emitTaskChanged (task) {
+  _emitTaskChanged(task) {
     const tasks = this.getTasks()
     this._emitEvent('taskChanged', [{ task, tasks }])
 
     if (task && task.status !== STATUS_UPLOADING) {
-      setTimeout(() => { this.rescheduleTasks() }, 0)
+      setTimeout(() => {
+        this.rescheduleTasks()
+      }, 0)
     }
   }
 }

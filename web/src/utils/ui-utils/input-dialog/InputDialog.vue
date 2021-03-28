@@ -36,31 +36,31 @@ export default {
   props: {
     loading: {
       type: String,
-      required: true
+      required: true,
     },
     opts: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
-  data () {
+  data() {
     return {
       text: '',
       placeholder: '',
       multipleLine: false,
 
-      validationError: ''
+      validationError: '',
     }
   },
   watch: {
-    text () {
+    text() {
       this.clearValidationResult()
       if (this._validator && this._validator.trigger !== 'confirm') {
         this.doValidate()
       }
-    }
+    },
   },
-  created () {
+  created() {
     this.text = this.opts.text || ''
     this.placeholder = this.opts.placeholder || ''
     this.multipleLine = val(this.opts.multipleLine, false)
@@ -68,14 +68,14 @@ export default {
     this._validator = this.opts.validator
   },
   methods: {
-    async beforeConfirm () {
+    async beforeConfirm() {
       // eslint-disable-next-line prefer-promise-reject-errors
-      return await this.doValidate() ? this.text : Promise.reject()
+      return (await this.doValidate()) ? this.text : Promise.reject()
     },
-    doValidate () {
+    doValidate() {
       const v = this._validator
       if (!v) return true
-      if (typeof (v.validate) === 'function') {
+      if (typeof v.validate === 'function') {
         return this.doValidateCallback(v.validate)
       }
       if (v.pattern instanceof RegExp) {
@@ -86,9 +86,9 @@ export default {
       }
       return true
     },
-    doValidateCallback (validate) {
+    doValidateCallback(validate) {
       const r = validate(this.text)
-      if (r && typeof (r.then) === 'function') {
+      if (r && typeof r.then === 'function') {
         this.$emit('loading', true)
         if (!this._t) this._t = 0
         const token = ++this._t
@@ -109,21 +109,21 @@ export default {
         return !!r
       }
     },
-    validationResult (message, token) {
+    validationResult(message, token) {
       if (token !== undefined && token !== this._t) return
       if (!message) {
         this.clearValidationResult()
         return
       }
-      if (typeof (message) === 'string') this.validationError = message
-      if (typeof (message) === 'object' && typeof (message.message) === 'string') {
+      if (typeof message === 'string') this.validationError = message
+      if (typeof message === 'object' && typeof message.message === 'string') {
         this.validationError = message.message
       }
     },
-    clearValidationResult () {
+    clearValidationResult() {
       this.validationError = null
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

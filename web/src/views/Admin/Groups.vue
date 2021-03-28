@@ -11,8 +11,8 @@
       <table class="simple-table">
         <thead>
           <tr>
-            <th>{{ $t("p.admin.group.name") }}</th>
-            <th>{{ $t("p.admin.group.operation") }}</th>
+            <th>{{ $t('p.admin.group.name') }}</th>
+            <th>{{ $t('p.admin.group.operation') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -41,14 +41,14 @@
       <div class="small-title">
         {{
           edit
-            ? $t("p.admin.group.edit_group", { n: group.name })
-            : $t("p.admin.group.add_group")
+            ? $t('p.admin.group.edit_group', { n: group.name })
+            : $t('p.admin.group.add_group')
         }}
       </div>
       <div class="group-form">
         <simple-form ref="form" :form="groupForm" v-model="group" />
         <div class="form-item">
-          <span class="label">{{ $t("p.admin.group.users") }}</span>
+          <span class="label">{{ $t('p.admin.group.users') }}</span>
           <div class="value">
             <span class="user-item" v-for="u in users" :key="u.username">
               <input
@@ -62,10 +62,10 @@
         </div>
         <div class="form-item save-button">
           <simple-button small @click="saveGroup" :loading="saving">
-            {{ $t("p.admin.group.save") }}
+            {{ $t('p.admin.group.save') }}
           </simple-button>
           <simple-button small type="info" @click="group = null">
-            {{ $t("p.admin.group.cancel") }}
+            {{ $t('p.admin.group.cancel') }}
           </simple-button>
         </div>
       </div>
@@ -77,91 +77,110 @@
         @click="addGroup"
         small
       >
-        {{ $t("p.admin.group.add") }}
+        {{ $t('p.admin.group.add') }}
       </simple-button>
-      {{ $t("p.admin.group.or_edit") }}
+      {{ $t('p.admin.group.or_edit') }}
     </div>
   </div>
 </template>
 <script>
-import { createGroup, deleteGroup, getGroup, getGroups, getUsers, updateGroup } from '@/api/admin'
+import {
+  createGroup,
+  deleteGroup,
+  getGroup,
+  getGroups,
+  getUsers,
+  updateGroup,
+} from '@/api/admin'
 
 export default {
   name: 'GroupsManager',
-  data () {
+  data() {
     return {
       users: [],
       groups: [],
 
       group: null,
       edit: false,
-      saving: false
+      saving: false,
     }
   },
   computed: {
-    groupForm () {
+    groupForm() {
       return [
-        { field: 'name', label: this.$t('p.admin.group.f_name'), type: 'text', required: true, disabled: this.edit }
+        {
+          field: 'name',
+          label: this.$t('p.admin.group.f_name'),
+          type: 'text',
+          required: true,
+          disabled: this.edit,
+        },
       ]
-    }
+    },
   },
-  created () {
+  created() {
     this.loadGroups()
     this.loadUsers()
   },
   methods: {
-    async loadUsers () {
+    async loadUsers() {
       try {
         this.users = await getUsers()
       } catch (e) {
         this.$alert(e.message)
       }
     },
-    async loadGroups () {
+    async loadGroups() {
       try {
         this.groups = await getGroups()
       } catch (e) {
         this.$alert(e.message)
       }
     },
-    addGroup () {
+    addGroup() {
       this.group = {
         name: '',
-        users: []
+        users: [],
       }
       this.edit = false
     },
-    async editGroup (group) {
+    async editGroup(group) {
       try {
         const g = await getGroup(group.name)
-        g.users = g.users.map(g => g.username)
+        g.users = g.users.map((g) => g.username)
         this.group = g
         this.edit = true
       } catch (e) {
         this.$alert(e.message)
       }
     },
-    async deleteGroup (group) {
+    async deleteGroup(group) {
       this.$confirm({
         title: this.$t('p.admin.group.delete_group'),
         message: this.$t('p.admin.group.delete_group', { n: group.name }),
         confirmType: 'danger',
         onOk: () => {
-          return deleteGroup(group.name)
-            .then(() => {
+          return deleteGroup(group.name).then(
+            () => {
               this.loadGroups()
-            }, e => {
+            },
+            (e) => {
               this.$alert(e.message)
               return Promise.reject(e)
-            })
-        }
+            }
+          )
+        },
       })
     },
-    async saveGroup () {
-      try { await this.$refs.form.validate() } catch { return }
+    async saveGroup() {
+      try {
+        await this.$refs.form.validate()
+      } catch {
+        return
+      }
       const group = {
         name: this.group.name,
-        users: this.group.users.map(username => ({ username }))
+        users: this.group.users.map((username) => ({ username })),
       }
       this.saving = true
       try {
@@ -176,8 +195,8 @@ export default {
       } finally {
         this.saving = false
       }
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

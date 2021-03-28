@@ -75,7 +75,7 @@
       </li>
     </ul>
     <div class="entry-list__empty" v-if="sortedEntries.length === 0">
-      {{ $t("app.empty_list") }}
+      {{ $t('app.empty_list') }}
     </div>
   </div>
 </template>
@@ -84,12 +84,26 @@ import { pathJoin, pathClean, isRootPath, mapOf } from '@/utils'
 import IIcon from './IIcon.vue'
 
 const SORTS_METHOD = {
-  name_asc: (a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name),
-  name_desc: (a, b) => -a.type.localeCompare(b.type) || -a.name.localeCompare(b.name),
-  mod_time_asc: (a, b) => a.type.localeCompare(b.type) || a.mod_time - b.mod_time || a.name.localeCompare(b.name),
-  mod_time_desc: (a, b) => -a.type.localeCompare(b.type) || b.mod_time - a.mod_time || a.name.localeCompare(b.name),
-  size_asc: (a, b) => a.type.localeCompare(b.type) || a.size - b.size || a.name.localeCompare(b.name),
-  size_desc: (a, b) => -a.type.localeCompare(b.type) || b.size - a.size || a.name.localeCompare(b.name)
+  name_asc: (a, b) =>
+    a.type.localeCompare(b.type) || a.name.localeCompare(b.name),
+  name_desc: (a, b) =>
+    -a.type.localeCompare(b.type) || -a.name.localeCompare(b.name),
+  mod_time_asc: (a, b) =>
+    a.type.localeCompare(b.type) ||
+    a.mod_time - b.mod_time ||
+    a.name.localeCompare(b.name),
+  mod_time_desc: (a, b) =>
+    -a.type.localeCompare(b.type) ||
+    b.mod_time - a.mod_time ||
+    a.name.localeCompare(b.name),
+  size_asc: (a, b) =>
+    a.type.localeCompare(b.type) ||
+    a.size - b.size ||
+    a.name.localeCompare(b.name),
+  size_desc: (a, b) =>
+    -a.type.localeCompare(b.type) ||
+    b.size - a.size ||
+    a.name.localeCompare(b.name),
 }
 
 export default {
@@ -98,40 +112,40 @@ export default {
   props: {
     path: {
       type: String,
-      required: true
+      required: true,
     },
     entries: {
       type: Array,
-      required: true
+      required: true,
     },
     sort: {
       type: String,
-      default: 'name_asc'
+      default: 'name_asc',
     },
     selectable: {
-      type: [Boolean, Function]
+      type: [Boolean, Function],
     },
     selection: {
-      type: Array
+      type: Array,
     },
     viewMode: {
       type: String,
-      default: 'list'
+      default: 'list',
     },
     showToggles: {
-      type: Boolean
-    }
+      type: Boolean,
+    },
   },
   watch: {
     selection: {
       immediate: true,
-      handler (val) {
+      handler(val) {
         if (val === this.selection) return
         this.selection = [...(val || [])]
-      }
-    }
+      },
+    },
   },
-  data () {
+  data() {
     return {
       selected: [],
 
@@ -142,93 +156,96 @@ export default {
         { key: 'mod_time_asc', name: 'app.sort.mod_time_asc' },
         { key: 'mod_time_desc', name: 'app.sort.mod_time_desc' },
         { key: 'size_asc', name: 'app.sort.size_asc' },
-        { key: 'size_desc', name: 'app.sort.size_desc' }
-      ]
+        { key: 'size_desc', name: 'app.sort.size_desc' },
+      ],
     }
   },
   computed: {
-    parentDirEntry () {
+    parentDirEntry() {
       return {
         path: pathClean(pathJoin(this.path, '..')),
         name: '..',
         meta: {},
         size: -1,
         type: 'dir',
-        mod_time: -1
+        mod_time: -1,
       }
     },
-    sortedEntries () {
+    sortedEntries() {
       const sortMethod = SORTS_METHOD[this.sort] || SORTS_METHOD.name_asc
       return [...this.entries].sort(sortMethod)
     },
-    isRootPath () {
+    isRootPath() {
       return isRootPath(this.path)
     },
-    selectionMap () {
-      return mapOf(this.selected, e => e.path)
-    }
+    selectionMap() {
+      return mapOf(this.selected, (e) => e.path)
+    },
   },
   methods: {
-    entryClicked (e) {
+    entryClicked(e) {
       this.$emit('entry-click', e)
     },
-    entryContextMenu (e) {
+    entryContextMenu(e) {
       this.$emit('entry-menu', e)
     },
-    iconClicked (entry, e) {
+    iconClicked(entry, e) {
       if (this.viewMode !== 'list') return
       if (!this.selectable) return
       e.stopPropagation()
       e.preventDefault()
       this.toggleSelect(entry)
     },
-    parentIconClicked (e) {
+    parentIconClicked(e) {
       if (this.viewMode !== 'list') return
       if (!this.selectable) return
       e.stopPropagation()
       e.preventDefault()
       this.toggleSelectAll()
     },
-    toggleSelect (entry) {
+    toggleSelect(entry) {
       if (this.selectionMap[entry.path]) {
-        this.selected.splice(this.selected.findIndex(e => e.path === entry.path), 1)
+        this.selected.splice(
+          this.selected.findIndex((e) => e.path === entry.path),
+          1
+        )
       } else {
-        if (typeof (this.selectable) === 'function') {
+        if (typeof this.selectable === 'function') {
           if (!this.selectable(entry)) return
         }
         this.selected.push(entry)
       }
       this.$emit('update:selection', this.selected)
     },
-    toggleSelectAll () {
+    toggleSelectAll() {
       if (this.selected.length === this.entries.length) {
         this.selected.splice(0)
       } else {
         let entries = this.entries
-        if (typeof (this.selectable) === 'function') {
+        if (typeof this.selectable === 'function') {
           entries = entries.filter(this.selectable)
         }
         this.selected = [...entries]
       }
       this.$emit('update:selection', this.selected)
     },
-    setSortBy (sort) {
+    setSortBy(sort) {
       this.$emit('update:sort', sort)
       this.sortDropdownShowing = false
     },
-    focusOnEntry (name) {
+    focusOnEntry(name) {
       let dom
       if (name === '..') dom = this.$refs.parentEntry
       else {
-        const index = this.sortedEntries.findIndex(e => e.name === name)
+        const index = this.sortedEntries.findIndex((e) => e.name === name)
         if (index >= 0) dom = this.$refs.entries[index]
       }
       dom = (dom && dom.$el) || dom
       this.$nextTick(() => {
         dom && dom.focus()
       })
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">
@@ -267,7 +284,6 @@ export default {
 
   .sort-mode {
     margin: 0;
-    padding: 0;
     list-style-type: none;
     white-space: nowrap;
     padding: 6px 12px;

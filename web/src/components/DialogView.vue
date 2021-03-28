@@ -34,34 +34,34 @@ export default {
   name: 'DialogView',
   model: {
     prop: 'show',
-    event: 'input'
+    event: 'input',
   },
   props: {
     show: {
-      type: Boolean
+      type: Boolean,
     },
     title: {
-      type: [String, Object]
+      type: [String, Object],
     },
     transition: {
       type: String,
-      default: 'fade'
+      default: 'fade',
     },
     overlayClose: {
-      type: Boolean
+      type: Boolean,
     },
     escClose: {
-      type: Boolean
+      type: Boolean,
     },
     closeable: {
       type: Boolean,
-      default: true
-    }
+      default: true,
+    },
   },
   watch: {
     show: {
       immediate: true,
-      handler (val) {
+      handler(val) {
         if (val) {
           this.overlayShowing = val
           this.$nextTick(() => {
@@ -75,49 +75,49 @@ export default {
           }
           this.removeEvents()
         }
-      }
-    }
+      },
+    },
   },
-  data () {
+  data() {
     return {
       overlayShowing: false,
-      contentShowing: false
+      contentShowing: false,
     }
   },
-  beforeDestroy () {
+  beforeDestroy() {
     this.removeEvents()
   },
   methods: {
-    overlayClicked (e) {
+    overlayClicked(e) {
       if (!this.overlayClose) return
       if (this.closeable && e.target === this.$refs.overlay) {
         this.close()
       }
     },
-    closeButtonClicked () {
+    closeButtonClicked() {
       this.close()
     },
-    onKeyDown (e) {
+    onKeyDown(e) {
       if (!this.escClose) return
       if (this.closeable && e.key === 'Escape' && this.show) {
         this.close()
         e.preventDefault()
       }
     },
-    close () {
+    close() {
       this.$emit('input', false)
     },
-    onDialogClosed () {
+    onDialogClosed() {
       this.overlayShowing = false
       this.$emit('closed')
     },
-    setupEvents () {
+    setupEvents() {
       window.addEventListener('keydown', this.onKeyDown)
     },
-    removeEvents () {
+    removeEvents() {
       window.removeEventListener('keydown', this.onKeyDown)
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

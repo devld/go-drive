@@ -27,7 +27,7 @@ export class RequestTask {
    * @param {any} v
    * @param {import('axios').CancelTokenSource} [source]
    */
-  static from (v, source) {
+  static from(v, source) {
     const t = new RequestTask(source)
     t._setPromise(v)
     return t
@@ -36,7 +36,7 @@ export class RequestTask {
   /**
    * @param {RequestTaskWrapCallback} fn
    */
-  static wrap (fn) {
+  static wrap(fn) {
     const task = new RequestTask()
     task._setPromise(fn(task))
     return task
@@ -55,45 +55,48 @@ export class RequestTask {
   /**
    * @param {import('axios').CancelTokenSource} [axiosSource]
    */
-  constructor (axiosSource) {
+  constructor(axiosSource) {
     this._axiosSource = axiosSource || Axios.CancelToken.source()
     this.then = this.then.bind(this)
     this.catch = this.catch.bind(this)
     this.finally = this.finally.bind(this)
   }
 
-  _setPromise (v) {
+  _setPromise(v) {
     if (this._promise) throw new Error('_setPromise already called')
-    if (!v || typeof (v.then) !== 'function') {
+    if (!v || typeof v.then !== 'function') {
       v = Promise.resolve(v)
     }
     this._promise = v
   }
 
-  get promise () {
+  get promise() {
     return this._promise
   }
 
-  get token () {
+  get token() {
     return this._axiosSource.token
   }
 
-  then (resolve, reject) {
-    return RequestTask.from(this._promise.then(resolve, reject), this._axiosSource)
+  then(resolve, reject) {
+    return RequestTask.from(
+      this._promise.then(resolve, reject),
+      this._axiosSource
+    )
   }
 
-  catch (handler) {
+  catch(handler) {
     return RequestTask.from(this._promise.catch(handler), this._axiosSource)
   }
 
-  finally (handler) {
+  finally(handler) {
     return RequestTask.from(this._promise.finally(handler), this._axiosSource)
   }
 
   /**
    * @param {string} [message]
    */
-  cancel (message) {
+  cancel(message) {
     this._axiosSource.cancel(message)
   }
 }
@@ -102,7 +105,7 @@ export class RequestTask {
  * @param {RequestTask} task
  * @param {import('axios').AxiosRequestConfig} [config]
  */
-function wrapConfig (task, config, axios) {
+function wrapConfig(task, config, axios) {
   if (!config) config = {}
   config.cancelToken = task.token
   config._axios = axios
@@ -112,104 +115,122 @@ function wrapConfig (task, config, axios) {
 /**
  * @param {import('axios').AxiosInstance} axios
  */
-function wrapAxios (axios) {
+function wrapAxios(axios) {
   /**
    * @param {import('axios').AxiosRequestConfig} config
    */
-  const axiosWrapper = function (config) {
+  const axiosWrapper = function(config) {
     return RequestTask.wrap(t => axios(wrapConfig(t, config, axiosWrapper)))
   }
 
   /**
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.getUri = function (config) { return axios.getUri(config) }
+  axiosWrapper.getUri = function(config) {
+    return axios.getUri(config)
+  }
   /**
    * @param {import('axios').AxiosRequestConfig} config
    */
-  axiosWrapper.request = function (config) {
-    return RequestTask.wrap(t => axios.request(wrapConfig(t, config, axiosWrapper)))
+  axiosWrapper.request = function(config) {
+    return RequestTask.wrap(t =>
+      axios.request(wrapConfig(t, config, axiosWrapper))
+    )
   }
   /**
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.head = function (url, config) {
-    return RequestTask.wrap(t => axios.head(url, wrapConfig(t, config, axiosWrapper)))
+  axiosWrapper.head = function(url, config) {
+    return RequestTask.wrap(t =>
+      axios.head(url, wrapConfig(t, config, axiosWrapper))
+    )
   }
   /**
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.get = function (url, config) {
-    return RequestTask.wrap(t => axios.get(url, wrapConfig(t, config, axiosWrapper)))
-  }
-  /**
-   * @param {string} url
-   * @param {any} [data]
-   * @param {import('axios').AxiosRequestConfig} [config]
-   */
-  axiosWrapper.post = function (url, data, config) {
-    return RequestTask.wrap(t => axios.post(url, data, wrapConfig(t, config, axiosWrapper)))
-  }
-  /**
-   * @param {string} url
-   * @param {import('axios').AxiosRequestConfig} [config]
-   */
-  axiosWrapper.delete = function (url, config) {
-    return RequestTask.wrap(t => axios.delete(url, wrapConfig(t, config, axiosWrapper)))
-  }
-  /**
-   * @param {string} url
-   * @param {import('axios').AxiosRequestConfig} [config]
-   */
-  axiosWrapper.options = function (url, config) {
-    return RequestTask.wrap(t => axios.options(url, wrapConfig(t, config, axiosWrapper)))
+  axiosWrapper.get = function(url, config) {
+    return RequestTask.wrap(t =>
+      axios.get(url, wrapConfig(t, config, axiosWrapper))
+    )
   }
   /**
    * @param {string} url
    * @param {any} [data]
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.put = function (url, data, config) {
-    return RequestTask.wrap(t => axios.put(url, data, wrapConfig(t, config, axiosWrapper)))
+  axiosWrapper.post = function(url, data, config) {
+    return RequestTask.wrap(t =>
+      axios.post(url, data, wrapConfig(t, config, axiosWrapper))
+    )
+  }
+  /**
+   * @param {string} url
+   * @param {import('axios').AxiosRequestConfig} [config]
+   */
+  axiosWrapper.delete = function(url, config) {
+    return RequestTask.wrap(t =>
+      axios.delete(url, wrapConfig(t, config, axiosWrapper))
+    )
+  }
+  /**
+   * @param {string} url
+   * @param {import('axios').AxiosRequestConfig} [config]
+   */
+  axiosWrapper.options = function(url, config) {
+    return RequestTask.wrap(t =>
+      axios.options(url, wrapConfig(t, config, axiosWrapper))
+    )
   }
   /**
    * @param {string} url
    * @param {any} [data]
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.patch = function (url, data, config) {
-    return RequestTask.wrap(t => axios.patch(url, data, wrapConfig(t, config, axiosWrapper)))
+  axiosWrapper.put = function(url, data, config) {
+    return RequestTask.wrap(t =>
+      axios.put(url, data, wrapConfig(t, config, axiosWrapper))
+    )
+  }
+  /**
+   * @param {string} url
+   * @param {any} [data]
+   * @param {import('axios').AxiosRequestConfig} [config]
+   */
+  axiosWrapper.patch = function(url, data, config) {
+    return RequestTask.wrap(t =>
+      axios.patch(url, data, wrapConfig(t, config, axiosWrapper))
+    )
   }
   return axiosWrapper
 }
 
 export class ApiError extends Error {
-  static from (e) {
+  static from(e) {
     if (!e.response) return e
     const status = e.response.status
     const res = e.response.data
     return new ApiError(status, res.message, res.data)
   }
 
-  constructor (status, message, data, isCancel) {
+  constructor(status, message, data, isCancel) {
     super(message)
     this.status = status
     this.data = data
     this._isCancel = isCancel
   }
 
-  get isCancel () {
+  get isCancel() {
     return this._isCancel
   }
 }
 
-function setToken (token) {
+function setToken(token) {
   return localStorage.setItem(TOKEN_KEY, token)
 }
 
-function getToken () {
+function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
 
@@ -222,7 +243,7 @@ const doAuth = waitPromise(async () => {
 
 const axios = Axios.create(BASE_CONFIG)
 
-async function processConfig (config) {
+async function processConfig(config) {
   if (config._t === undefined) config._t = -1
   config._t++
   if (config._t > MAX_RETRY) throw new ApiError(-1, 'max retry reached')
@@ -239,7 +260,7 @@ async function processConfig (config) {
   return config
 }
 
-async function handlerError (e) {
+async function handlerError(e) {
   if (Axios.isCancel(e)) {
     throw new ApiError(-1, e.message || 'canceled', null, true)
   }

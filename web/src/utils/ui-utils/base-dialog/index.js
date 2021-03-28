@@ -10,10 +10,10 @@ import i18n, { T } from '@/i18n'
  * @property {Function} onCancel called when user canceled
  */
 
-export function createDialog (name, component) {
+export function createDialog(name, component) {
   return {
     name,
-    data () {
+    data() {
       return {
         loading: '',
         opts: {},
@@ -29,49 +29,66 @@ export function createDialog (name, component) {
         transition: '',
         escClose: false,
         overlayClose: false
-
       }
     },
-    render (h) {
-      return h(BaseDialog, {
-        ref: 'bd',
-        props: {
-          showing: this.showing,
-          loading: this.loading,
-          title: this.title,
-          confirmText: this.confirmText,
-          confirmType: this.confirmType,
-          confirmDisabled: this.confirmDisabled,
-          cancelText: this.cancelText,
-          cancelType: this.cancelType,
-          transition: this.transition,
-          escClose: this.escClose,
-          overlayClose: this.overlayClose
-        },
-        on: {
-          close: () => this.close(),
-          closed: () => { this.$emit('closed') },
-          confirm: () => { this.onConfirmOrCancel(true) },
-          cancel: () => { this.onConfirmOrCancel(false) }
-        }
-      }, [
-        h(component, {
-          ref: 'inner',
+    render(h) {
+      return h(
+        BaseDialog,
+        {
+          ref: 'bd',
           props: {
+            showing: this.showing,
             loading: this.loading,
-            opts: this.opts
+            title: this.title,
+            confirmText: this.confirmText,
+            confirmType: this.confirmType,
+            confirmDisabled: this.confirmDisabled,
+            cancelText: this.cancelText,
+            cancelType: this.cancelType,
+            transition: this.transition,
+            escClose: this.escClose,
+            overlayClose: this.overlayClose
           },
           on: {
-            loading: v => { this.toggleLoading(v) },
-            confirm: () => { this.onConfirmOrCancel(true) },
-            cancel: () => { this.onConfirmOrCancel(false) },
-            'confirm-disabled': (disabled) => { this.confirmDisabled = !!disabled }
+            close: () => this.close(),
+            closed: () => {
+              this.$emit('closed')
+            },
+            confirm: () => {
+              this.onConfirmOrCancel(true)
+            },
+            cancel: () => {
+              this.onConfirmOrCancel(false)
+            }
           }
-        })
-      ])
+        },
+        [
+          h(component, {
+            ref: 'inner',
+            props: {
+              loading: this.loading,
+              opts: this.opts
+            },
+            on: {
+              loading: v => {
+                this.toggleLoading(v)
+              },
+              confirm: () => {
+                this.onConfirmOrCancel(true)
+              },
+              cancel: () => {
+                this.onConfirmOrCancel(false)
+              },
+              'confirm-disabled': disabled => {
+                this.confirmDisabled = !!disabled
+              }
+            }
+          })
+        ]
+      )
     },
     methods: {
-      show (opts) {
+      show(opts) {
         this.opts = opts
 
         this.title = opts.title || ''
@@ -83,7 +100,10 @@ export function createDialog (name, component) {
         this.escClose = !!opts.escClose
         this.overlayClose = !!opts.overlayClose
 
-        if (typeof opts.onOk === 'function' || typeof opts.onCancel === 'function') {
+        if (
+          typeof opts.onOk === 'function' ||
+          typeof opts.onCancel === 'function'
+        ) {
           this._callback = { onOk: opts.onOk, onCancel: opts.onCancel }
         }
 
@@ -95,14 +115,14 @@ export function createDialog (name, component) {
           })
         }
       },
-      beforeConfirmOrCancel (confirm) {
+      beforeConfirmOrCancel(confirm) {
         const inner = this.$refs.inner
         if (!inner) return
         let cb
         if (confirm && (cb = inner.beforeConfirm)) return cb && cb()
         if (!confirm && (cb = inner.beforeCancel)) return cb && cb()
       },
-      async onConfirmOrCancel (confirm) {
+      async onConfirmOrCancel(confirm) {
         let val
         this.toggleLoading(confirm)
         try {
@@ -139,8 +159,8 @@ export function createDialog (name, component) {
           this.close()
         }
       },
-      toggleLoading (loading) {
-        if (typeof (loading) !== 'string' && typeof (loading) !== 'boolean') {
+      toggleLoading(loading) {
+        if (typeof loading !== 'string' && typeof loading !== 'boolean') {
           this.loading = ''
           return
         }
@@ -150,7 +170,7 @@ export function createDialog (name, component) {
         }
         this.loading = loading ? 'confirm' : 'cancel'
       },
-      close () {
+      close() {
         this.toggleLoading()
         this._callback && this._callback.onCancel && this._callback.onCancel()
         this._callback = null
@@ -165,7 +185,7 @@ export function createDialog (name, component) {
   }
 }
 
-export default function showBaseDialog (Vue, component, opts) {
+export default function showBaseDialog(Vue, component, opts) {
   if (!component._base_dialog) throw new Error()
 
   const div = document.createElement('div')

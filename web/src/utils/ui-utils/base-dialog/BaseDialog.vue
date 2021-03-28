@@ -42,49 +42,48 @@
   </dialog-view>
 </template>
 <script>
-
 export default {
   name: 'BaseDialog',
   props: {
     showing: {
       type: Boolean,
-      required: true
+      required: true,
     },
     loading: {
       type: String,
-      required: true
+      required: true,
     },
     title: {
       type: [String, Object],
-      required: true
+      required: true,
     },
     confirmText: {
       type: [String, Object],
-      required: true
+      required: true,
     },
     confirmType: {
-      type: String
+      type: String,
     },
     confirmDisabled: {
-      type: Boolean
+      type: Boolean,
     },
     cancelText: {
-      type: [String, Object]
+      type: [String, Object],
     },
     cancelType: {
       type: String,
-      default: 'info'
+      default: 'info',
     },
     transition: {
-      type: String
+      type: String,
     },
     escClose: {
-      type: Boolean
+      type: Boolean,
     },
     overlayClose: {
-      type: Boolean
-    }
-  }
+      type: Boolean,
+    },
+  },
 }
 </script>
 <style lang="scss">

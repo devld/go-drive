@@ -1,4 +1,3 @@
-
 import { T } from '@/i18n'
 import DownloadView from '@/views/HandlerViews/DownloadView.vue'
 
@@ -14,5 +13,8 @@ export default {
     component: DownloadView
   },
   multiple: true,
-  supports: (entry) => Array.isArray(entry) ? !entry.some(e => e.type !== 'file') : entry.type === 'file'
+  supports: entry =>
+    Array.isArray(entry)
+      ? !entry.some(e => e.type !== 'file')
+      : entry.type === 'file'
 }

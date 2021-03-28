@@ -13,9 +13,9 @@ import './registerServiceWorker'
 Vue.config.productionTip = false
 
 Vue.use(Components)
-Vue.use(Utils);
+Vue.use(Utils)
 
-(async () => {
+;(async () => {
   await setLang(navigator.language)
 
   new Vue({

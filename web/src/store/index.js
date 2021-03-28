@@ -15,22 +15,22 @@ export default new Vuex.Store({
     progressBar: false
   },
   getters: {
-    isAdmin (state) {
+    isAdmin(state) {
       return isAdmin(state.user)
     }
   },
   mutations: {
-    setUser (state, user) {
+    setUser(state, user) {
       state.user = user || null
     },
-    setConfig (state, config) {
+    setConfig(state, config) {
       state.config = config
     },
-    showLogin (state, show) {
+    showLogin(state, show) {
       state.showLogin = show
     },
-    progressBar (state, val) {
-      if (typeof (val) === 'boolean' || typeof (val) === 'number') {
+    progressBar(state, val) {
+      if (typeof val === 'boolean' || typeof val === 'number') {
         state.progressBar = val
       } else {
         state.progressBar = false
@@ -38,21 +38,20 @@ export default new Vuex.Store({
     }
   },
   actions: {
-    async init (context) {
+    async init(context) {
       await context.dispatch('getConfig')
       await context.dispatch('getUser')
     },
-    async getUser (context) {
+    async getUser(context) {
       const user = await getUser()
       context.commit('setUser', user)
       return user
     },
-    async getConfig (context) {
+    async getConfig(context) {
       const config = await getConfig()
       context.commit('setConfig', config)
       return config
     }
   },
-  modules: {
-  }
+  modules: {}
 })

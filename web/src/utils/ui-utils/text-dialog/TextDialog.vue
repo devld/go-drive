@@ -7,9 +7,9 @@ export default {
   props: {
     opts: {
       type: Object,
-      required: true
-    }
-  }
+      required: true,
+    },
+  },
 }
 </script>
 <style lang="scss">

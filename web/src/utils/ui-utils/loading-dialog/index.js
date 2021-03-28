@@ -3,7 +3,7 @@ import LoadingDialog from './LoadingDialog.vue'
 
 let vm
 
-export default function toggleLoadingDialog (Vue, opts) {
+export default function toggleLoadingDialog(Vue, opts) {
   if (!vm) {
     const div = document.createElement('div')
     document.body.appendChild(div)
@@ -12,7 +12,7 @@ export default function toggleLoadingDialog (Vue, opts) {
   }
 
   if (opts) {
-    vm.show(typeof (opts) === 'object' && !isT(opts) ? opts : {})
+    vm.show(typeof opts === 'object' && !isT(opts) ? opts : {})
   } else {
     vm.hide()
   }

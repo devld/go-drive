@@ -11,10 +11,10 @@
       view-mode="list"
     />
     <div class="open-dialog__selected-count" v-if="!dirMode">
-      <span v-if="max > 0">{{ $t("dialog.open.max_items", { n: max }) }}</span>
-      <span>{{ $t("dialog.open.n_selected", { n: selection.length }) }}</span>
+      <span v-if="max > 0">{{ $t('dialog.open.max_items', { n: max }) }}</span>
+      <span>{{ $t('dialog.open.n_selected', { n: selection.length }) }}</span>
       <a href="javascript:;" @click="clearSelection">
-        {{ $t("dialog.open.clear") }}
+        {{ $t('dialog.open.clear') }}
       </a>
     </div>
   </div>
@@ -25,15 +25,18 @@ import { getEntry } from '@/api'
 import { filenameExt } from '@/utils'
 
 /// file,dir,<1024,.js,write
-function createFilter (filter) {
-  if (typeof (filter) !== 'string') return () => true
-  const filters = filter.split(',').map(f => f.trim()).filter(Boolean)
+function createFilter(filter) {
+  if (typeof filter !== 'string') return () => true
+  const filters = filter
+    .split(',')
+    .map((f) => f.trim())
+    .filter(Boolean)
   if (!filters.length) return () => true
   let allowFile, allowDir
   let maxSize = Number.POSITIVE_INFINITY
   let allowedExt = {}
   let writable
-  filters.forEach(f => {
+  filters.forEach((f) => {
     if (f === 'file') allowFile = true
     if (f === 'dir') allowDir = true
     if (f === 'write') writable = true
@@ -61,14 +64,14 @@ export default {
   props: {
     loading: {
       type: String,
-      required: true
+      required: true,
     },
     opts: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
-  data () {
+  data() {
     return {
       dirMode: false,
 
@@ -77,21 +80,21 @@ export default {
       message: '',
 
       selection: [],
-      max: 0
+      max: 0,
     }
   },
   watch: {
-    selection () {
+    selection() {
       this.selectionChanged()
-    }
+    },
   },
-  created () {
+  created() {
     if (this.opts.type === 'dir') {
       this.dirMode = true
     }
 
     // filter selectable entries
-    if (typeof (this.opts.filter) === 'function') {
+    if (typeof this.opts.filter === 'function') {
       this._filter = this.opts.filter
     } else {
       this._filter = createFilter(this.opts.filter)
@@ -106,29 +109,32 @@ export default {
     this.confirmDisabled(true)
   },
   methods: {
-    beforeConfirm () {
+    beforeConfirm() {
       if (this.dirMode) return this.path
       return [...this.selection]
     },
-    selectionChanged () {
+    selectionChanged() {
       this.confirmDisabled(!this.selection.length)
     },
-    isEntrySelectable (entry) {
+    isEntrySelectable(entry) {
       if (this.max > 0 && this.selection.length >= this.max) return false
       return this._filter(entry)
     },
-    entriesLoaded (entries) {
+    entriesLoaded(entries) {
       if (!this.dirMode) return
       this.cancelGetEntry()
-      this._getEntryTask = getEntry(this.path).then(entry => {
-        this.confirmDisabled(!this._filter(entry))
-      }, () => { })
+      this._getEntryTask = getEntry(this.path).then(
+        (entry) => {
+          this.confirmDisabled(!this._filter(entry))
+        },
+        () => {}
+      )
     },
-    entryClicked ({ entry, event }) {
+    entryClicked({ entry, event }) {
       event.preventDefault()
       if (!this.dirMode) {
         if (entry.type === 'file') {
-          if (this.selection.findIndex(e => e.path === entry.path) === -1) {
+          if (this.selection.findIndex((e) => e.path === entry.path) === -1) {
             this.selection.push(entry)
           }
           return
@@ -138,30 +144,30 @@ export default {
       this.confirmDisabled(true)
       this.cancelGetEntry()
     },
-    pathChanged ({ path, event }) {
+    pathChanged({ path, event }) {
       event.preventDefault()
       this.path = path
       this.confirmDisabled(true)
       this.cancelGetEntry()
     },
-    filterEntries (entry) {
+    filterEntries(entry) {
       if (entry.type === 'dir') return true
       if (this.dirMode) return false
       return this._filter(entry)
     },
-    cancelGetEntry () {
+    cancelGetEntry() {
       if (this._getEntryTask) {
         this._getEntryTask.cancel()
         this._getEntryTask = null
       }
     },
-    clearSelection () {
+    clearSelection() {
       this.selection.splice(0)
     },
-    confirmDisabled (disabled) {
+    confirmDisabled(disabled) {
       this.$emit('confirm-disabled', disabled)
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

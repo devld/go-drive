@@ -17,31 +17,33 @@
 <script>
 export default {
   name: 'LoadingDialog',
-  data () {
+  data() {
     return {
       showing: false,
       text: '',
       cancelText: '',
       cancelType: '',
 
-      cancelLoading: false
+      cancelLoading: false,
     }
   },
   methods: {
-    show (opts = {}) {
+    show(opts = {}) {
       this.text = opts.text || ''
 
       this._cancelCallback = opts.onCancel
 
-      this.cancelText = this._cancelCallback ? (opts.cancelText || this.$t('dialog.loading.cancel')) : ''
+      this.cancelText = this._cancelCallback
+        ? opts.cancelText || this.$t('dialog.loading.cancel')
+        : ''
       this.cancelType = opts.cancelType || 'info'
 
       this.showing = true
     },
-    hide () {
+    hide() {
       this.showing = false
     },
-    async cancel () {
+    async cancel() {
       this.cancelLoading = true
       try {
         await this._cancelCallback()
@@ -51,8 +53,8 @@ export default {
       } finally {
         this.cancelLoading = false
       }
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

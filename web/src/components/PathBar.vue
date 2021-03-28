@@ -12,29 +12,29 @@ export default {
   name: 'PathBar',
   model: {
     prop: 'path',
-    event: 'path-change'
+    event: 'path-change',
   },
   props: {
     path: {
       type: String,
-      required: true
-    }
+      required: true,
+    },
   },
   computed: {
-    segments () {
+    segments() {
       const ss = this.path.replace(/\/+/g, '/').split('/').filter(Boolean)
       const pathSegments = [{ name: this.$t('app.root_path'), path: '' }]
       ss.forEach((s, i) => {
         pathSegments.push({ name: s, path: ss.slice(0, i + 1).join('/') })
       })
       return pathSegments
-    }
+    },
   },
   methods: {
-    pathChange (e) {
+    pathChange(e) {
       this.$emit('path-change', e)
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">
@@ -51,7 +51,7 @@ export default {
 
   &:not(:last-child) {
     &::after {
-      content: ">";
+      content: '>';
       margin: 0 0.5em;
       color: #888;
     }

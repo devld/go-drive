@@ -12,14 +12,14 @@ if (!CodeMirror.modeURL) CodeMirror.modeURL = 'static/codemirror/mode/%N/%N.js'
 
 var loading = {}
 
-function splitCallback (cont, n) {
+function splitCallback(cont, n) {
   var countDown = n
-  return function () {
+  return function() {
     if (--countDown === 0) cont()
   }
 }
 
-function ensureDeps (mode, cont) {
+function ensureDeps(mode, cont) {
   var deps = CodeMirror.modes[mode].dependencies
   if (!deps) return cont()
   var missing = []
@@ -31,7 +31,7 @@ function ensureDeps (mode, cont) {
   for (i = 0; i < missing.length; ++i) CodeMirror.requireMode(missing[i], split)
 }
 
-CodeMirror.requireMode = function (mode, cont) {
+CodeMirror.requireMode = function(mode, cont) {
   if (typeof mode !== 'string') mode = mode.name
   if (mode in CodeMirror.modes) return ensureDeps(mode, cont)
   if (mode in loading) return loading[mode].push(cont)
@@ -41,10 +41,10 @@ CodeMirror.requireMode = function (mode, cont) {
   var script = document.createElement('script')
   script.src = file
   var others = document.getElementsByTagName('script')[0]
-  var list = loading[mode] = [cont]
+  var list = (loading[mode] = [cont])
 
-  CodeMirror.on(script, 'load', function () {
-    ensureDeps(mode, function () {
+  CodeMirror.on(script, 'load', function() {
+    ensureDeps(mode, function() {
       for (var i = 0; i < list.length; ++i) list[i]()
     })
   })
@@ -52,10 +52,10 @@ CodeMirror.requireMode = function (mode, cont) {
   others.parentNode.insertBefore(script, others)
 }
 
-CodeMirror.autoLoadMode = function (instance, mode) {
+CodeMirror.autoLoadMode = function(instance, mode) {
   if (mode in CodeMirror.modes) return
 
-  CodeMirror.requireMode(mode, function () {
+  CodeMirror.requireMode(mode, function() {
     instance.setOption('mode', instance.getOption('mode'))
   })
 }

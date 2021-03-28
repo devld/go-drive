@@ -1,7 +1,7 @@
 <template>
   <div class="download-view-page">
     <h1 class="page-title">
-      <span>{{ $t("hv.download.download") }}</span>
+      <span>{{ $t('hv.download.download') }}</span>
       <button class="plain-button close-button" @click="$emit('close')">
         <i-icon svg="#icon-close" />
       </button>
@@ -15,7 +15,7 @@
           target="_blank"
           :href="$.fileUrl(singleEntry.path, singleEntry.meta.access_key)"
         >
-          {{ $t("hv.download.download") }}
+          {{ $t('hv.download.download') }}
           <span class="file-size" v-if="singleEntry.size >= 0">{{
             $.formatBytes(singleEntry.size)
           }}</span>
@@ -40,12 +40,12 @@ export default {
   props: {
     entry: {
       type: [Array, Object],
-      required: true
+      required: true,
     },
-    entries: { type: Array }
+    entries: { type: Array },
   },
   computed: {
-    singleEntry () {
+    singleEntry() {
       if (Array.isArray(this.entry)) {
         if (this.entry.length === 1) return this.entry[0]
         return null
@@ -53,18 +53,20 @@ export default {
         return this.entry
       }
     },
-    downloadLinks () {
+    downloadLinks() {
       if (this.singleEntry) return ''
-      return this.entry.map(e => this.$.fileUrl(e.path, e.meta.access_key)).join('\n')
-    }
+      return this.entry
+        .map((e) => this.$.fileUrl(e.path, e.meta.access_key))
+        .join('\n')
+    },
   },
   methods: {
-    downloadLinksFocus () {
+    downloadLinksFocus() {
       this.$refs.links.select()
       this.$refs.links.scrollTop = 0
       this.$refs.links.scrollLeft = 0
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

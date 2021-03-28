@@ -2,7 +2,7 @@
   <div class="oauth-configure">
     <simple-button @click="doOauth">{{ data.text }}</simple-button>
     <div class="oauth-principal" v-if="data.principal">
-      {{ $t("p.admin.oauth_connected", { p: data.principal }) }}
+      {{ $t('p.admin.oauth_connected', { p: data.principal }) }}
     </div>
   </div>
 </template>
@@ -13,27 +13,27 @@ export default {
   props: {
     configured: {
       type: Boolean,
-      required: true
+      required: true,
     },
     data: {
-      required: true
+      required: true,
     },
     drive: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
-  created () {
+  created() {
     window.addEventListener('message', this.authorized)
   },
-  beforeDestroy () {
+  beforeDestroy() {
     window.removeEventListener('message', this.authorized)
     if (this._w) {
       this._w.close()
     }
   },
   methods: {
-    doOauth () {
+    doOauth() {
       if (this._w) this._w.close()
 
       const win = window.open(
@@ -43,7 +43,7 @@ export default {
       )
       this._w = win
     },
-    async authorized ({ data }) {
+    async authorized({ data }) {
       this._w.close()
       if (!data.oauth) return
 
@@ -62,8 +62,8 @@ export default {
         this.$loading()
       }
       this.$emit('refresh')
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

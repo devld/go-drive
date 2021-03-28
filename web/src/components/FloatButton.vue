@@ -36,33 +36,35 @@ export default {
   props: {
     value: {
       type: Boolean,
-      default: true
+      default: true,
     },
     title: {
-      type: String
+      type: String,
     },
     buttons: {
       type: Array,
-      default () { return [] }
+      default() {
+        return []
+      },
     },
     position: {
       type: String,
-      default: 'top'
+      default: 'top',
     },
     autoClose: {
-      type: Boolean
-    }
+      type: Boolean,
+    },
   },
   methods: {
-    triggerClicked () {
+    triggerClicked() {
       const show = !this.value
       this.$emit('input', show)
     },
-    buttonClicked (button, index) {
+    buttonClicked(button, index) {
       this.$emit('input', false)
       this.$emit('click', { button, index })
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

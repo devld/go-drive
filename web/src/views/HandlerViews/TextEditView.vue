@@ -7,7 +7,7 @@
         @click="saveFile"
         :loading="saving"
       >
-        {{ $t("hv.text_edit.save") }}
+        {{ $t('hv.text_edit.save') }}
       </simple-button>
       <span :title="filename">{{ filename }}</span>
       <button
@@ -41,48 +41,48 @@ export default {
   props: {
     entry: {
       type: Object,
-      required: true
+      required: true,
     },
-    entries: { type: Array }
+    entries: { type: Array },
   },
-  data () {
+  data() {
     return {
       error: null,
       inited: false,
 
       content: '',
 
-      saving: false
+      saving: false,
     }
   },
   computed: {
-    filename () {
+    filename() {
       return filename(this.path)
     },
-    path () {
+    path() {
       return this.entry.path
     },
-    readonly () {
+    readonly() {
       return !this.entry.meta.can_write
-    }
+    },
   },
-  created () {
+  created() {
     this.loadFile()
     window.addEventListener('resize', this.onWindowResize)
   },
-  mounted () {
+  mounted() {
     this.onWindowResize()
   },
-  beforeDestroy () {
+  beforeDestroy() {
     window.removeEventListener('resize', this.onWindowResize)
   },
   watch: {
-    content () {
+    content() {
       this.changeSaveState(false)
-    }
+    },
   },
   methods: {
-    async loadFile () {
+    async loadFile() {
       this.inited = false
       try {
         return await this.loadFileContent()
@@ -92,24 +92,31 @@ export default {
         this.inited = true
       }
     },
-    async loadFileContent () {
-      this.content = await getContent(this.path, this.entry.meta.access_key, true)
+    async loadFileContent() {
+      this.content = await getContent(
+        this.path,
+        this.entry.meta.access_key,
+        true
+      )
       this.$nextTick(() => {
         this.changeSaveState(true)
       })
       return this.content
     },
-    async saveFile () {
+    async saveFile() {
       if (this.saving) {
         return
       }
       this.saving = true
       try {
-        await uploadManager.upload({
-          path: this.path,
-          file: this.content,
-          override: true
-        }, true)
+        await uploadManager.upload(
+          {
+            path: this.path,
+            file: this.content,
+            override: true,
+          },
+          true
+        )
         this.changeSaveState(true)
       } catch (e) {
         this.$alert(e.message)
@@ -117,22 +124,22 @@ export default {
         this.saving = false
       }
     },
-    changeSaveState (saved) {
+    changeSaveState(saved) {
       this.$emit('save-state', saved)
     },
-    onKeyDown (e) {
+    onKeyDown(e) {
       if (e.key === 's' && e.ctrlKey && !this.readonly) {
         e.preventDefault()
         this.saveFile()
       }
     },
-    onWindowResize () {
+    onWindowResize() {
       const el = this.$el
       if (window.innerWidth <= 800) {
         el.style.height = `${window.innerHeight}px`
       }
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

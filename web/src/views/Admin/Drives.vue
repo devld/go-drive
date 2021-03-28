@@ -14,15 +14,15 @@
           :loading="reloading"
           @click="reloadDrives"
         >
-          {{ $t("p.admin.drive.reload_drives") }}
+          {{ $t('p.admin.drive.reload_drives') }}
         </simple-button>
       </div>
       <table class="simple-table">
         <thead>
           <tr>
-            <th>{{ $t("p.admin.drive.name") }}</th>
-            <th>{{ $t("p.admin.drive.type") }}</th>
-            <th>{{ $t("p.admin.drive.operation") }}</th>
+            <th>{{ $t('p.admin.drive.name') }}</th>
+            <th>{{ $t('p.admin.drive.type') }}</th>
+            <th>{{ $t('p.admin.drive.operation') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -56,8 +56,8 @@
       <div class="small-title">
         {{
           edit
-            ? $t("p.admin.drive.edit_drive", { n: drive.name })
-            : $t("p.admin.drive.add_drive")
+            ? $t('p.admin.drive.edit_drive', { n: drive.name })
+            : $t('p.admin.drive.add_drive')
         }}
       </div>
 
@@ -94,23 +94,23 @@
 
         <div class="form-item save-button">
           <simple-button small @click="saveDrive" :loading="saving">
-            {{ $t("p.admin.drive.save") }}
+            {{ $t('p.admin.drive.save') }}
           </simple-button>
           <simple-button small type="info" @click="cancelEdit">
-            {{ $t("p.admin.drive.cancel") }}
+            {{ $t('p.admin.drive.cancel') }}
           </simple-button>
         </div>
       </div>
       <div v-if="drive && driveInit" class="drive-init">
         <div class="small-title">
-          {{ $t("p.admin.drive.configure") }}
+          {{ $t('p.admin.drive.configure') }}
           <span
             class="drive-init-state"
             :class="{ 'drive-configured': driveInit.configured }"
             >{{
               driveInit.configured
-                ? $t("p.admin.drive.configured")
-                : $t("p.admin.drive.not_configured")
+                ? $t('p.admin.drive.configured')
+                : $t('p.admin.drive.not_configured')
             }}</span
           >
         </div>
@@ -129,21 +129,30 @@
             v-model="driveInitForm"
           />
           <simple-button small @click="saveDriveConfig">
-            {{ $t("p.admin.drive.save") }}
+            {{ $t('p.admin.drive.save') }}
           </simple-button>
         </div>
       </div>
     </div>
     <div class="edit-tips" v-else>
       <simple-button icon="#icon-add" title="Add drive" @click="addDrive" small>
-        {{ $t("p.admin.drive.add") }}
+        {{ $t('p.admin.drive.add') }}
       </simple-button>
-      {{ $t("p.admin.drive.or_edit") }}
+      {{ $t('p.admin.drive.or_edit') }}
     </div>
   </div>
 </template>
 <script>
-import { createDrive, deleteDrive, getDrives, reloadDrives, updateDrive, getDriveInitConfig, initDrive, getDriveFactories } from '@/api/admin'
+import {
+  createDrive,
+  deleteDrive,
+  getDrives,
+  reloadDrives,
+  updateDrive,
+  getDriveInitConfig,
+  initDrive,
+  getDriveFactories,
+} from '@/api/admin'
 
 import OAuthConfigure from './drive-configure/OAuth'
 import { mapOf } from '@/utils'
@@ -151,7 +160,7 @@ import { mapOf } from '@/utils'
 export default {
   name: 'DrivesManager',
   components: { OAuthConfigure },
-  data () {
+  data() {
     return {
       drives: [],
 
@@ -164,32 +173,46 @@ export default {
 
       reloading: false,
 
-      driveFactories: []
+      driveFactories: [],
     }
   },
   computed: {
-    driveFactoriesMap () {
-      return mapOf(this.driveFactories, f => f.type)
+    driveFactoriesMap() {
+      return mapOf(this.driveFactories, (f) => f.type)
     },
-    baseForm () {
+    baseForm() {
       return [
-        { field: 'name', label: this.$t('p.admin.drive.f_name'), type: 'text', required: true, disabled: this.edit },
-        { field: 'enabled', label: this.$t('p.admin.drive.f_enabled'), type: 'checkbox' },
         {
-          field: 'type', label: this.$t('p.admin.drive.f_type'), type: 'select', required: true, disabled: this.edit,
-          options: this.driveFactories.map(f => ({
+          field: 'name',
+          label: this.$t('p.admin.drive.f_name'),
+          type: 'text',
+          required: true,
+          disabled: this.edit,
+        },
+        {
+          field: 'enabled',
+          label: this.$t('p.admin.drive.f_enabled'),
+          type: 'checkbox',
+        },
+        {
+          field: 'type',
+          label: this.$t('p.admin.drive.f_type'),
+          type: 'select',
+          required: true,
+          disabled: this.edit,
+          options: this.driveFactories.map((f) => ({
             name: f.display_name,
-            value: f.type
-          }))
-        }
+            value: f.type,
+          })),
+        },
       ]
-    }
+    },
   },
-  created () {
+  created() {
     this.loadDrives()
   },
   methods: {
-    async loadDrives () {
+    async loadDrives() {
       try {
         this.driveFactories = await getDriveFactories()
         this.drives = await getDrives()
@@ -197,57 +220,61 @@ export default {
         this.$alert(e.message)
       }
     },
-    addDrive () {
+    addDrive() {
       this.drive = {
         name: '',
         enabled: '1',
         type: '',
-        config: null
+        config: null,
       }
       this.edit = false
     },
-    editDrive (drive) {
+    editDrive(drive) {
       this.drive = {
         name: drive.name,
         enabled: drive.enabled ? '1' : '',
         type: drive.type,
-        config: JSON.parse(drive.config)
+        config: JSON.parse(drive.config),
       }
       this.edit = true
       this.getDriveInitConfigInfo()
     },
-    async deleteDrive (drive) {
+    async deleteDrive(drive) {
       this.$confirm({
         title: this.$t('p.admin.drive.delete_drive'),
         message: this.$t('p.admin.drive.confirm_delete', { n: drive.name }),
         confirmType: 'danger',
         onOk: () => {
-          return deleteDrive(drive.name)
-            .then(() => {
+          return deleteDrive(drive.name).then(
+            () => {
               if (this.drive && drive.name === this.drive.name) {
                 this.drive = null
               }
               this.loadDrives()
-            }, e => {
+            },
+            (e) => {
               this.$alert(e.message)
               return Promise.reject(e)
-            })
-        }
+            }
+          )
+        },
       })
     },
-    async saveDrive () {
+    async saveDrive() {
       try {
         await Promise.all([
           this.$refs.baseForm.validate(),
-          this.$refs.configForm && this.$refs.configForm.validate()
+          this.$refs.configForm && this.$refs.configForm.validate(),
         ])
-      } catch { return }
+      } catch {
+        return
+      }
 
       const drive = {
         name: this.drive.name,
         enabled: !!this.drive.enabled,
         type: this.drive.type,
-        config: JSON.stringify(this.drive.config)
+        config: JSON.stringify(this.drive.config),
       }
       this.saving = true
       try {
@@ -266,12 +293,12 @@ export default {
       this.getDriveInitConfigInfo()
       this.loadDrives()
     },
-    cancelEdit () {
+    cancelEdit() {
       this.drive = null
       this.driveInit = null
       this.driveInitForm = {}
     },
-    async getDriveInitConfigInfo () {
+    async getDriveInitConfigInfo() {
       this.$loading(true)
       try {
         this.driveInit = await getDriveInitConfig(this.drive.name)
@@ -282,8 +309,12 @@ export default {
         this.$loading()
       }
     },
-    async saveDriveConfig () {
-      try { await this.$refs.initForm.validate() } catch { return }
+    async saveDriveConfig() {
+      try {
+        await this.$refs.initForm.validate()
+      } catch {
+        return
+      }
       this.$loading(true)
       try {
         await initDrive(this.drive.name, this.driveInitForm)
@@ -295,7 +326,7 @@ export default {
       }
       this.getDriveInitConfigInfo()
     },
-    async reloadDrives () {
+    async reloadDrives() {
       this.reloading = true
       try {
         await reloadDrives()
@@ -304,8 +335,8 @@ export default {
       } finally {
         this.reloading = false
       }
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

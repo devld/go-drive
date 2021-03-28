@@ -74,42 +74,42 @@ export default {
   name: 'FormItem',
   props: {
     value: {
-      type: [String, Number]
+      type: [String, Number],
     },
     item: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
-  data () {
+  data() {
     return {
-      error: null
+      error: null,
     }
   },
   methods: {
-    async validate () {
+    async validate() {
       if (this.item.required && !this.value) {
         this.error = this.$t('form.required_msg', { f: this.item.label })
         throw new Error(this.error)
       }
       return this.value
     },
-    clearError () {
+    clearError() {
       this.error = null
     },
-    textInput (e) {
+    textInput(e) {
       this.$emit('input', e.target.value)
       this.clearError()
     },
-    checkboxInput (e) {
+    checkboxInput(e) {
       this.$emit('input', e.target.checked ? '1' : '')
       this.clearError()
     },
-    selectInput (e) {
+    selectInput(e) {
       this.$emit('input', e.target.value)
       this.clearError()
-    }
-  }
+    },
+  },
 }
 </script>
 <style lang="scss">

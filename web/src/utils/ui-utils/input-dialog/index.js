@@ -3,6 +3,6 @@ import showBaseDialog, { createDialog } from '../base-dialog'
 
 const InputDialog = createDialog('InputDialog', InputDialogInner)
 
-export default function showInputDialog (Vue, opts) {
+export default function showInputDialog(Vue, opts) {
   return showBaseDialog(Vue, InputDialog, { ...opts })
 }

@@ -33,12 +33,12 @@ export default class S3UploadTask extends ChunkUploadTask {
    * @param {TaskDef} task task definition
    * @param {any} [config] task specified config
    */
-  constructor (id, changeListener, task, config) {
+  constructor(id, changeListener, task, config) {
     super(id, changeListener, task, config)
     this._config = config
   }
 
-  async _prepare () {
+  async _prepare() {
     if (!this._config.multipart) return 1 // PutObject directly
 
     // CreateMultipartUpload
@@ -66,34 +66,43 @@ export default class S3UploadTask extends ChunkUploadTask {
    * @param {Blob} blob  chunk
    * @param {Function} onProgress progress
    */
-  async _chunkUpload (seq, blob, onProgress) {
+  async _chunkUpload(seq, blob, onProgress) {
     if (!this._uploadId) {
       // PutObject
       return this._request({
         method: 'PUT',
         url: this._config.url,
         data: blob,
-        headers: { 'Content-Type': 'application/octet-stream', ...UNSIGNED_PAYLOAD },
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          ...UNSIGNED_PAYLOAD
+        },
         transformRequest: null,
-        onUploadProgress: (e) => onProgress({ loaded: e.loaded, total: e.total })
+        onUploadProgress: e => onProgress({ loaded: e.loaded, total: e.total })
       })
     }
 
     // request for presigned UploadPart url
-    const r = await this._request({
-      method: 'POST',
-      url: `/upload/${this._task.path}`,
-      data: { action: 'UploadPart', uploadId: this._uploadId, seq: `${seq}` }
-    }, axios)
+    const r = await this._request(
+      {
+        method: 'POST',
+        url: `/upload/${this._task.path}`,
+        data: { action: 'UploadPart', uploadId: this._uploadId, seq: `${seq}` }
+      },
+      axios
+    )
     const url = r.config.url
 
     const resp = await this._request({
       method: 'PUT',
       url,
       data: blob,
-      headers: { 'Content-Type': 'application/octet-stream', ...UNSIGNED_PAYLOAD },
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        ...UNSIGNED_PAYLOAD
+      },
       transformRequest: null,
-      onUploadProgress: (e) => onProgress({ loaded: e.loaded, total: e.total })
+      onUploadProgress: e => onProgress({ loaded: e.loaded, total: e.total })
     })
 
     const etag = resp.headers.etag
@@ -103,9 +112,11 @@ export default class S3UploadTask extends ChunkUploadTask {
   /**
    * @returns {Promise.<any>} upload result
    */
-  async _completeUpload () {
+  async _completeUpload() {
     if (!this._uploadId) {
-      return axios.post(`/upload/${this._task.path}`, { action: 'CompletePutObject' })
+      return axios.post(`/upload/${this._task.path}`, {
+        action: 'CompletePutObject'
+      })
     }
     return axios.post(`/upload/${this._task.path}`, {
       action: 'CompleteMultipartUpload',
@@ -118,17 +129,22 @@ export default class S3UploadTask extends ChunkUploadTask {
    * @param {number} seq chunk seq
    * @returns {Blob} chunk
    */
-  _getChunk (seq) {
-    return this._task.file.slice(seq * this._partSize, (seq + 1) * this._partSize)
+  _getChunk(seq) {
+    return this._task.file.slice(
+      seq * this._partSize,
+      (seq + 1) * this._partSize
+    )
   }
 
-  _cleanup () {
+  _cleanup() {
     super._cleanup()
     if (!this.isStatus(STATUS_COMPLETED)) {
-      axios.post(`/upload/${this._task.path}`, {
-        action: 'AbortMultipartUpload',
-        uploadId: this._uploadId
-      }).catch(() => { })
+      axios
+        .post(`/upload/${this._task.path}`, {
+          action: 'AbortMultipartUpload',
+          uploadId: this._uploadId
+        })
+        .catch(() => {})
     }
     this._uploadedParts = undefined
   }
