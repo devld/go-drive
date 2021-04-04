@@ -1,6 +1,6 @@
 
 work_dir = build
-target_name = go-drive_$(GOOS)_$(GOARCH)
+target_name ?= go-drive
 build_dir = $(work_dir)/$(target_name)
 
 all: $(build_dir)/$(target_name).tar.gz
@@ -27,19 +27,11 @@ $(build_dir)/lang: $(build_dir)
 web/dist:
 	cd web; npm install && npm run build
 
-$(build_dir): check-env
+$(build_dir):
 	mkdir -p $(build_dir)
 
-.PHONY: clean check-env
+.PHONY: clean
 
 clean:
 	-rm -r $(work_dir)
 	-rm -r web/dist
-
-check-env:
-ifndef GOOS
-	$(error GOOS is undefined)
-endif
-ifndef GOARCH
-	$(error GOARCH is undefined)
-endif
