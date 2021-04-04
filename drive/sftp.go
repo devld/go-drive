@@ -9,7 +9,6 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"log"
 	"net"
 	"os"
 	path2 "path"
@@ -36,7 +35,7 @@ func init() {
 	})
 }
 
-func NewSftpDrive(ctx context.Context, config types.SM, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
+func NewSftpDrive(_ context.Context, config types.SM, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	cacheTTL := config.GetDuration("cache_ttl", -1)
 
 	sshConfig := &ssh.ClientConfig{
@@ -52,28 +51,28 @@ func NewSftpDrive(ctx context.Context, config types.SM, driveUtils drive_util.Dr
 		return nil, e
 	}
 
-	ssh, e := p.GetConn()
-	if ssh == nil || e != nil {
+	conn, e := p.GetConn()
+	if conn == nil || e != nil {
 		return nil, e
 	}
 
-	client, e := sftp.NewClient(ssh)
+	client, e := sftp.NewClient(conn)
 	if e != nil {
 		return nil, e
 	}
 
-	sftp := &SFTPDrive{
+	s := &SFTPDrive{
 		c:        client,
 		p:        p,
 		cacheTTL: cacheTTL,
 	}
 	if cacheTTL <= 0 {
-		sftp.cache = drive_util.DummyCache()
+		s.cache = drive_util.DummyCache()
 	} else {
-		sftp.cache = driveUtils.CreateCache(sftp.deserializeEntry, nil)
+		s.cache = driveUtils.CreateCache(s.deserializeEntry, nil)
 	}
 
-	return sftp, nil
+	return s, nil
 }
 
 func isSftpRootPath(path string) bool {
@@ -89,11 +88,11 @@ type SFTPDrive struct {
 
 func (f *SFTPDrive) InitConn() {
 	if f.p.IsClosed() {
-		ssh, e := f.p.GetConn()
-		if ssh == nil || e != nil {
+		conn, e := f.p.GetConn()
+		if conn == nil || e != nil {
 			panic(e)
 		}
-		client, e := sftp.NewClient(ssh)
+		client, e := sftp.NewClient(conn)
 		if e != nil {
 			panic(e)
 		}
@@ -137,7 +136,6 @@ func (f *SFTPDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool,
 			return nil, e
 		}
 	}
-	log.Println("path: %v", path)
 	f.InitConn()
 	file, e := f.c.Create(path)
 	if e != nil {
@@ -352,7 +350,7 @@ func (f *sftpEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return nil, err.NewUnsupportedError()
 }
 
-var connetionTimeOut time.Duration = time.Minute * 10
+var connectionTimeout = time.Minute * 10
 
 type Pool interface {
 	GetConn() (*ssh.Client, error)
@@ -373,7 +371,7 @@ func ConcurrentPool(protocol, addr string, config *ssh.ClientConfig) (Pool, erro
 		client:   sshClient,
 		isClosed: false,
 	}
-	pool.timeout = utils.TimeTick(pool.Clean, connetionTimeOut)
+	pool.timeout = utils.TimeTick(pool.Clean, connectionTimeout)
 	return pool, nil
 }
 
@@ -400,7 +398,7 @@ func (p *concurPool) GetConn() (*ssh.Client, error) {
 
 func (p *concurPool) Clean() {
 	p.isClosed = true
-	p.client.Close()
+	_ = p.client.Close()
 }
 
 func (p *concurPool) IsClosed() bool {
