@@ -62,11 +62,11 @@ func InitServer(config common.Config,
 	InitDriveRoutes(engine, config, rootDrive, permissionDAO, thumbnail,
 		signer, chunkUploader, runner, tokenStore)
 
-	if config.GetResDir() != "" {
+	if config.WebDir != "" {
 		preprocess := func(name string, file http.File) (string, error) {
 			return processWebFiles(name, file, config)
 		}
-		s := http.StripPrefix("/", http.FileServer(NewRootFileSystem(config.GetResDir(), preprocess)))
+		s := http.StripPrefix("/", http.FileServer(NewRootFileSystem(config.WebDir, preprocess)))
 		engine.NoRoute(func(c *gin.Context) { s.ServeHTTP(c.Writer, c.Request) })
 	}
 

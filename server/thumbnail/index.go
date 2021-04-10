@@ -70,7 +70,7 @@ func NewMaker(config common.Config, ch *registry.ComponentsHolder) (*Maker, erro
 
 	m := &Maker{
 		cacheDir: dir,
-		validity: config.ThumbnailTTL,
+		validity: config.Thumbnail.TTL,
 	}
 
 	_ = filepath.Walk(m.cacheDir, func(path string, info os.FileInfo, e error) error {
@@ -81,7 +81,7 @@ func NewMaker(config common.Config, ch *registry.ComponentsHolder) (*Maker, erro
 	})
 
 	m.stopCleaner = utils.TimeTick(m.clean, 12*time.Hour)
-	m.pool = tunny.NewFunc(config.ThumbnailConcurrent, m.executeTask)
+	m.pool = tunny.NewFunc(config.Thumbnail.Concurrent, m.executeTask)
 	ch.Add("thumbnail", m)
 	return m, nil
 }
