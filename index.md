@@ -1,5 +1,6 @@
 ---
 title: Go-drive
+
 ---
 
 - [开始使用](#开始使用)
@@ -10,6 +11,7 @@ title: Go-drive
   - [权限相关](#权限相关)
   - [挂载](#挂载)
   - [启动参数](#启动参数)
+  - [配置文件](#配置文件)
 
 ## 开始使用
 
@@ -128,73 +130,82 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 
 ### 启动参数
 
+- `-c` 指定配置文件，如果未指定，默认会尝试 `config.yml`
 - `-v` 显示版本信息
-
 - `-h` 显示帮助信息
-
-- `-l` 监听地址及端口
-
-  默认为 `:8089`，即在所有接口(`0.0.0.0`)上监听 `8089` 端口。如果要监听某个特定的接口，则可传入 `<接口 ip>:<端口号>`
-
-- `-d` 数据目录
-
-  Go-drive 所有的数据均在该目录下，如果使用 Docker 等容器运行，则需将该路径映射至容器外，否则会导致数据丢失。
-
-  - `lang` 国际化文本
-  - `local` 当 `-f` 参数未启用时，`本地文件` 的映射将始终被限制在该目录中
-  - `sessions` 用户会话
-  - `temp` 临时目录
-  - `thumbnails` 文件的缩略图缓存
-  - `upload_temp` 分片上传的临时文件
-  - `data.db` SQLite 数据库文件
-
-- `-s` 静态文件路径
-
-  通常为前端资源文件位置，默认为 `./web`
-
-- `-f` 禁用`本地文件` 映射的路径限制
-
-- `-lang-dir` 国际化文件位置
-
-  默认为 `./lang`
-
-- `-lang` 默认语言
-
-  默认为 `en-US`，当用户浏览器的语言不受支持时，将回退到该语言
-
-- `-oauth-redirect-uri` OAuth 认证时的重定向 URL
-
-  默认为 `https://go-drive.top/oauth_callback`，该网页是一个静态网页，没有与任何后端交互，源码在 [https://github.com/devld/go-drive/blob/gh-pages/oauth_callback.html](https://github.com/devld/go-drive/blob/gh-pages/oauth_callback.html)
-
-- `-proxy-max-size` 当前端要求代理某文件的下载时，所支持的最大的文件大小
-
-  默认为 `1048576` ，即 1MB
-
-- `-thumbnail-concurrent` 生成缩略图的并发数
-
-  默认为 `16`，目前图片的缩略图生成比较耗性能和内存。
-
-- `-thumbnail-ttl` 缩略图缓存有效期
-
-  默认为 `720h`，即 30 天。当文件发生变化时（通过文件的上次修改时间和大小决定），缓存也会失效
-
-- `-max-concurrent-task` 并发任务数
-
-  默认为 `100`，为复制、移动、删除等异步任务的并发数
-
-- `-token-validity` 用户 Session Token 有效时间
-
-  默认为 `2h`，两小时
-
-- `-token-refresh` 当用户与系统交互时，自动刷新 Token 有效期
-
-- `-api-path` API base 路径
-
-  传递给前端的参数，通常情况下，不需要指定
-
-- `app-name` 系统名称/标题
-
-  默认为 "Drive"，请注意，由于前端的 PWA 缓存问题，此参数可能不会立即生效，需要手动清除 PWA 的缓存
+- `-show-config` 显示解析到的配置文件
 
 
+
+### 配置文件
+
+```yaml
+# 监听地址及端口
+# 默认为 `:8089`，即在所有接口(`0.0.0.0`)上监听 `8089` 端口。如果要监听某个特定的接口，则可传入 `<接口 ip>:<端口号>`
+listen: :8089
+
+# 系统名称/标题，默认为 "Drive"
+# 请注意：由于前端的 PWA 缓存问题，此参数可能不会立即生效
+app-name: Drive
+
+# 数据目录
+# Go-drive 所有的数据均在该目录下，如果使用 Docker 等容器运行，则需将该路径映射至容器外，否则会导致数据丢失。
+# - `lang` 国际化文本
+# - `local` 当 `-f` 参数未启用时，`本地文件` 的映射将始终被限制在该目录中
+# - `sessions` 用户会话
+#- `temp` 临时目录
+# - `thumbnails` 文件的缩略图缓存
+# - `upload_temp` 分片上传的临时文件
+# - `data.db` SQLite 数据库文件
+data-dir: ./
+
+# 静态文件路径
+# 通常为前端资源文件位置，默认为 `./web`
+web-dir: ./web
+
+# 国际化文件位置
+# 默认为 `./lang`
+lang-dir: ./lang
+# 默认语言
+# 默认为 `en-US`，当用户浏览器的语言不受支持时，将回退到该语言
+default-lang: en-US
+
+# 当前端要求代理某文件的下载时，所支持的最大的文件大小
+# 默认为 `1048576` ，即 1MB
+proxy-max-size: 1048576 # 1M
+
+# 并发任务数
+# 默认为 `100`，为复制、移动、删除等异步任务的并发数
+max-concurrent-task: 100
+
+# 禁用`本地文件` 映射的路径限制
+free-fs: false
+
+thumbnail:
+  # 缩略图缓存有效期
+  # 默认为 `720h`，即 30 天。当文件发生变化时（通过文件的上次修改时间和大小决定），缓存也会失效
+  ttl: 720h
+  #生成缩略图的并发数
+  # 默认为 (CPU 数量 / 2)，目前图片的缩略图生成比较耗性能和内存。
+  #concurrent: 4
+auth:
+  # 用户 Session Token 有效时间
+  # 默认为 `2h`，两小时
+  validity: 2h
+  # 当用户与系统交互时，自动刷新 Token 有效期
+  auto-refresh: true
+
+# API base 路径
+# 传递给前端的参数，通常情况下，不需要指定
+# 当 go-drive 在反向代理(如 Nginx)后面且在子路径下时，需要指定
+# 请注意：由于前端的 PWA 缓存问题，此参数可能不会立即生效
+api-path: ""
+
+# OAuth 认证时的重定向 URL
+oauth-redirect-uri: https://go-drive.top/oauth_callback
+```
+
+
+
+> `https://go-drive.top/oauth_callback`，该网页是一个静态网页，没有与任何后端交互，源码在 [https://github.com/devld/go-drive/blob/gh-pages/oauth_callback.html](https://github.com/devld/go-drive/blob/gh-pages/oauth_callback.html)
 
