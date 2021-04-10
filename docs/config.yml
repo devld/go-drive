@@ -1,0 +1,56 @@
+# The application will listen at this address
+listen: :8089
+
+# The application name
+# Note: This change may not take effect immediately because of the PWA cache
+app-name: Drive
+
+# Data dir. All application data will be stored in this dir
+# There may be these files here:
+# - lang: i18n language dir
+# - local: The files of type 'Local Drive' will be placed here
+# - sessions: The user sessions
+# - temp: Temp dir
+# - thumbnails: Thumbnail cache dir
+# - upload_temp: Temp dir for file uploading
+# - data.db: SQLite database file
+data-dir: ./
+
+# Web static files dir.
+web-dir: ./web
+
+# i18n languages
+lang-dir: ./lang
+# If the client's language is not supported, then this language will be used
+default-lang: en-US
+
+# The maximum file size can be proxied when
+# the API call explicitly specifies that it needs to be proxied.
+# The size is unlimited when maxProxySize is <= 0
+proxy-max-size: 1048576 # 1M
+
+# Concurrent task. eg. copy, move, delete
+max-concurrent-task: 100
+
+# Disable 'Local Drive' file path limitation.
+# Set to false if you want 'Local Drive' path is always relative to DATA-DIR/local
+# Set to true if you want 'Local Drive' path is absolute
+# WARNING: The user who has admin permission can view all files in your system if you set this true
+free-fs: false
+
+thumbnail:
+  # Thumbnails cache validity period
+  ttl: 720h
+  # Concurrent task for generating thumbnails, defaults to (number of CPU / 2)
+  # Generating thumbnails has bad performance currently
+  #concurrent: 4
+auth:
+  # User session validity
+  validity: 2h
+  # Auto refresh the token when the user is active
+  auto-refresh: true
+
+# API path. If go-drive is running behind reverse proxy(eg. Nginx) and it's in subpath,
+# then you need to specify the API path
+# Note: This change may not take effect immediately because of the PWA cache
+api-path: ""

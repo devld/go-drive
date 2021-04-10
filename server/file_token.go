@@ -28,16 +28,17 @@ type FileTokenStore struct {
 
 // NewFileTokenStore creates a FileTokenStore
 func NewFileTokenStore(config common.Config, ch *registry.ComponentsHolder) (*FileTokenStore, error) {
+	authConfig := config.Auth
 	root, e := config.GetDir("sessions", true)
 	if e != nil {
 		return nil, e
 	}
 	ft := &FileTokenStore{
 		root:        root,
-		autoRefresh: config.TokenRefresh,
-		validity:    config.TokenValidity,
+		autoRefresh: authConfig.AutoRefresh,
+		validity:    authConfig.Validity,
 	}
-	ft.stopCleaner = utils.TimeTick(ft.clean, 2*config.TokenValidity)
+	ft.stopCleaner = utils.TimeTick(ft.clean, 2*authConfig.Validity)
 	ch.Add("tokenStore", ft)
 	return ft, nil
 }
