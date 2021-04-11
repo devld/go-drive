@@ -7,8 +7,12 @@ import (
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"gopkg.in/yaml.v2"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 	"io/ioutil"
 	"math"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,7 +27,6 @@ var (
 )
 
 const (
-	DbType     = "sqlite3"
 	DbFilename = "data.db"
 	LocalFsDir = "local"
 
@@ -49,6 +52,8 @@ const (
 
 type Config struct {
 	Listen string `yaml:"listen"`
+
+	Db DbConfig `yaml:"db"`
 
 	APIPath string `yaml:"api-path"`
 	AppName string `yaml:"app-name"`
@@ -78,6 +83,16 @@ type Config struct {
 
 	Thumbnail ThumbnailConfig `yaml:"thumbnail"`
 	Auth      AuthConfig      `yaml:"auth"`
+}
+
+type DbConfig struct {
+	Type     string            `yaml:"type"`
+	Host     string            `yaml:"host"`
+	Port     int               `yaml:"port"`
+	User     string            `yaml:"user"`
+	Password string            `yaml:"password"`
+	Name     string            `yaml:"name"`
+	Config   map[string]string `yaml:"config"`
 }
 
 type ThumbnailConfig struct {
@@ -148,6 +163,11 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		config.Thumbnail.Concurrent = int(math.Max(float64(runtime.NumCPU()/2), 1))
 	}
 
+	e := parseDbConfig(&config.Db)
+	if e != nil {
+		return config, e
+	}
+
 	if *showConfig {
 		resolvedConf, _ := yaml.Marshal(config)
 		fmt.Println(string(resolvedConf))
@@ -167,8 +187,52 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	return config, nil
 }
 
-func (c Config) GetDB() (string, string) {
-	return DbType, path.Join(c.DataDir, DbFilename)
+func parseDbConfig(c *DbConfig) error {
+	if c.Type == "" {
+		c.Type = "sqlite"
+	}
+	switch c.Type {
+	case "sqlite":
+		if c.Name == "" {
+			c.Name = DbFilename
+		}
+	case "mysql":
+		if c.Port <= 0 {
+			c.Port = 3306
+		}
+		if c.Host == "" {
+			return errors.New("mysql host is required")
+		}
+		if c.Name == "" {
+			return errors.New("mysql database name is required")
+		}
+	default:
+		return errors.New("unsupported db type: " + c.Type)
+	}
+	return nil
+}
+
+func (c Config) GetDB() gorm.Dialector {
+	db := c.Db
+	var d gorm.Dialector = nil
+	switch db.Type {
+	case "sqlite":
+		d = sqlite.Open(path.Join(c.DataDir, db.Name))
+	case "mysql":
+		params, _ := url.ParseQuery("charset=utf8mb4&parseTime=True&loc=Local")
+		if db.Config != nil {
+			for k, v := range db.Config {
+				params.Set(k, v)
+			}
+		}
+		d = mysql.Open(fmt.Sprintf(
+			"%s:%s@tcp(%s:%d)/%s?%s",
+			db.User, db.Password, db.Host, db.Port, db.Name, params.Encode(),
+		))
+	default:
+		panic("invalid db type: " + db.Type)
+	}
+	return d
 }
 
 func (c Config) GetDir(name string, create bool) (string, error) {

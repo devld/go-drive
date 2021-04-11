@@ -1,10 +1,11 @@
 package storage
 
 import (
-	"github.com/jinzhu/gorm"
+	"errors"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
+	"gorm.io/gorm"
 )
 
 type GroupDAO struct {
@@ -30,7 +31,7 @@ func (g *GroupDAO) GetGroup(name string) (GroupWithUsers, error) {
 	gus := GroupWithUsers{}
 	group := types.Group{}
 	e := g.db.C().First(&group, "name = ?", name).Error
-	if gorm.IsRecordNotFoundError(e) {
+	if errors.Is(e, gorm.ErrRecordNotFound) {
 		return gus, err.NewNotFoundMessageError(i18n.T("storage.groups.group_not_exists", name))
 	}
 	if e != nil {
@@ -67,12 +68,12 @@ func saveUserGroup(users []types.User, name string, db *gorm.DB) error {
 }
 
 func (g *GroupDAO) AddGroup(group GroupWithUsers) (GroupWithUsers, error) {
-	e := g.db.C().Where("name = ?", group.Name).Find(&types.Group{}).Error
+	e := g.db.C().Where("name = ?", group.Name).Take(&types.Group{}).Error
 	if e == nil {
 		return GroupWithUsers{},
 			err.NewNotAllowedMessageError(i18n.T("storage.groups.group_exists", group.Name))
 	}
-	if !gorm.IsRecordNotFoundError(e) {
+	if !errors.Is(e, gorm.ErrRecordNotFound) {
 		return GroupWithUsers{}, e
 	}
 	e = g.db.C().Transaction(func(tx *gorm.DB) error {
@@ -91,7 +92,7 @@ func (g *GroupDAO) UpdateGroup(name string, gus GroupWithUsers) error {
 	return g.db.C().Transaction(func(tx *gorm.DB) error {
 		group := types.Group{}
 		e := tx.First(&group, "name = ?", name).Error
-		if gorm.IsRecordNotFoundError(e) {
+		if errors.Is(e, gorm.ErrRecordNotFound) {
 			return err.NewNotFoundMessageError(i18n.T("storage.groups.group_not_exists", name))
 		}
 		if e != nil {

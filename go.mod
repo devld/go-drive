@@ -10,8 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/google/wire v0.4.0
-	github.com/jinzhu/gorm v1.9.15
-	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/orcaman/concurrent-map v0.0.0-20190826125027-8c72a8bb44f6
 	github.com/pkg/sftp v1.12.0
@@ -24,4 +23,7 @@ require (
 	google.golang.org/api v0.30.0
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/yaml.v2 v2.2.8
+	gorm.io/driver/mysql v1.0.5
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.21.7
 )

@@ -2,11 +2,11 @@ package storage
 
 import (
 	"encoding/json"
-	"github.com/jinzhu/gorm"
 	"go-drive/common/drive_util"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"gorm.io/gorm"
 	"log"
 	"time"
 )
@@ -58,7 +58,7 @@ func (d *dbDriveNamespacedCacheStore) put(db *gorm.DB, path string, cacheType ui
 	}
 	depth := uint8(utils.PathDepth(path))
 	path = path + "/"
-	c := 0
+	var c int64 = 0
 	e := db.Model(&types.DriveCache{}).Where(
 		"drive = ? AND path = ? AND depth = ? AND type = ?",
 		d.ns, path, depth, cacheType,
@@ -80,7 +80,7 @@ func (d *dbDriveNamespacedCacheStore) get(path string, cacheType uint8) (string,
 	depth := utils.PathDepth(path)
 	path = path + "/"
 	c := types.DriveCache{}
-	e := d.db.C().Find(&c,
+	e := d.db.C().Take(&c,
 		"drive = ? AND path = ? AND depth = ? AND type = ?",
 		d.ns, path, depth, cacheType,
 	).Error

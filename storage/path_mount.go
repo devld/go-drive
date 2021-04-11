@@ -1,8 +1,9 @@
 package storage
 
 import (
-	"github.com/jinzhu/gorm"
+	"errors"
 	"go-drive/common/types"
+	"gorm.io/gorm"
 )
 
 type PathMountDAO struct {
@@ -20,7 +21,7 @@ func (p *PathMountDAO) GetMounts() ([]types.PathMount, error) {
 }
 
 func saveMount(db *gorm.DB, mount types.PathMount, override bool) error {
-	e := db.Where("path = ? AND name = ?", mount.Path, mount.Name).Find(&types.PathMount{}).Error
+	e := db.Where("path = ? AND name = ?", mount.Path, mount.Name).Take(&types.PathMount{}).Error
 	if e == nil {
 		if override {
 			// update
@@ -28,7 +29,7 @@ func saveMount(db *gorm.DB, mount types.PathMount, override bool) error {
 		}
 		return nil
 	}
-	if !gorm.IsRecordNotFoundError(e) {
+	if !errors.Is(e, gorm.ErrRecordNotFound) {
 		return e
 	}
 	return db.Create(&mount).Error

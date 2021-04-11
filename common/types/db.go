@@ -3,31 +3,32 @@ package types
 import "strings"
 
 type User struct {
-	Username string  `gorm:"COLUMN:username;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:32" json:"username" binding:"required"`
-	Password string  `gorm:"COLUMN:password;NOT NULL;TYPE:VARCHAR;SIZE:64" json:"password"`
-	Groups   []Group `gorm:"MANY2MANY:user_groups;ASSOCIATION_JOINTABLE_FOREIGNKEY:group_name;JOINTABLE_FOREIGNKEY:username" json:"groups"`
+	Username string  `gorm:"column:username;primaryKey;not null;type:string;size:32" json:"username" binding:"required"`
+	Password string  `gorm:"column:password;not null;type:string;size:64" json:"password"`
+	Groups   []Group `gorm:"many2many:user_groups;joinForeignKey:group_name;foreignKey:username" json:"groups"`
 }
 
 type Group struct {
-	Name string `gorm:"COLUMN:name;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:32" json:"name" binding:"required"`
+	Name string `gorm:"column:name;primaryKey;not null;type:string;size:32" json:"name" binding:"required"`
 }
 
 type UserGroup struct {
-	Username  string `gorm:"COLUMN:username;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:32" binding:"required"`
-	GroupName string `gorm:"COLUMN:group_name;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:32" binding:"required"`
+	Username  string `gorm:"column:username;primaryKey;not null;type:string;size:32" binding:"required"`
+	GroupName string `gorm:"column:group_name;primaryKey;not null;type:string;size:32" binding:"required"`
 }
 
 type Drive struct {
-	Name    string `gorm:"COLUMN:name;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:255" json:"name" binding:"required"`
-	Enabled bool   `gorm:"COLUMN:enabled;NOT NULL;TYPE:INTEGER" json:"enabled"`
-	Type    string `gorm:"COLUMN:type;NOT NULL;TYPE:VARCHAR;SIZE:32" json:"type" binding:"required"`
-	Config  string `gorm:"COLUMN:config;NOT NULL;TYPE:VARCHAR;SIZE:4096" json:"config"`
+	Name    string `gorm:"column:name;primaryKey;not null;type:string;size:255" json:"name" binding:"required"`
+	Enabled bool   `gorm:"column:enabled;not null;type:bool" json:"enabled"`
+	Type    string `gorm:"column:type;not null;type:string;size:32" json:"type" binding:"required"`
+	Config  string `gorm:"column:config;not null;type:string;size:4096" json:"config"`
 }
 
 type PathMount struct {
-	Path    *string `gorm:"COLUMN:path;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:4096" json:"path"`
-	Name    string  `gorm:"COLUMN:name;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:255" json:"name"`
-	MountAt string  `gorm:"COLUMN:mount_at;NOT NULL;TYPE:VARCHAR;SIZE:4096" json:"mount_at"`
+	ID      uint    `gorm:"column:id;primaryKey;autoIncrement"`
+	Path    *string `gorm:"column:path;not null;type:string;size:4096" json:"path"`
+	Name    string  `gorm:"column:name;not null;type:string;size:255" json:"name"`
+	MountAt string  `gorm:"column:mount_at;not null;type:string;size:4096" json:"mount_at"`
 }
 
 func (PathMount) TableName() string {
@@ -35,9 +36,9 @@ func (PathMount) TableName() string {
 }
 
 type DriveData struct {
-	Drive string `gorm:"COLUMN:drive;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:255"`
-	Key   string `gorm:"COLUMN:data_key;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:255"`
-	Value string `gorm:"COLUMN:data_value;NOT NULL;TYPE:VARCHAR;SIZE:4096"`
+	Drive string `gorm:"column:drive;primaryKey;not null;type:string;size:255"`
+	Key   string `gorm:"column:data_key;primaryKey;not null;type:string;size:255"`
+	Value string `gorm:"column:data_value;not null;type:string;size:4096"`
 }
 
 func (DriveData) TableName() string {
@@ -50,12 +51,12 @@ const (
 )
 
 type DriveCache struct {
-	Drive     string `gorm:"COLUMN:drive;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:255"`
-	Path      string `gorm:"COLUMN:path;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:255"`
-	Depth     *uint8 `gorm:"COLUMN:depth;PRIMARY_KEY;NOT NULL;TYPE:INTEGER"`
-	Type      uint8  `gorm:"COLUMN:type;PRIMARY_KEY;NOT NULL;TYPE:INTEGER"`
-	Value     string `gorm:"COLUMN:cache_value;NOT NULL;TYPE:TEXT;"`
-	ExpiresAt int64  `gorm:"COLUMN:expires_at;NOT NULL;TYPE:INTEGER"`
+	Drive     string `gorm:"column:drive;primaryKey;not null;type:string;size:255"`
+	Path      string `gorm:"column:path;primaryKey;not null;type:string;size:255"`
+	Depth     *uint8 `gorm:"column:depth;primaryKey;not null"`
+	Type      uint8  `gorm:"column:type;primaryKey;not null"`
+	Value     string `gorm:"column:cache_value;not null;type:text"`
+	ExpiresAt int64  `gorm:"column:expires_at;not null"`
 }
 
 func (DriveCache) TableName() string {
@@ -85,13 +86,14 @@ const (
 )
 
 type PathPermission struct {
-	Path    *string `gorm:"COLUMN:path;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:4096" json:"path"`
-	Subject string  `gorm:"COLUMN:subject;PRIMARY_KEY;NOT NULL;TYPE:VARCHAR;SIZE:34" json:"subject"`
+	ID      uint    `gorm:"column:id;primaryKey;autoIncrement"`
+	Path    *string `gorm:"column:path;not null;type:string;size:4096" json:"path"`
+	Subject string  `gorm:"column:subject;not null;type:string;size:34" json:"subject"`
 	// Permission bits for the path which subject accessed: 1: read, 2: write
-	Permission Permission `gorm:"COLUMN:permission;NOT NULL;TYPE:INTEGER" json:"permission"`
+	Permission Permission `gorm:"column:permission;not null" json:"permission"`
 	// Policy to apply to the permission when subject access this path: 0: REJECT, 1: ACCEPT
-	Policy uint8 `gorm:"COLUMN:policy;NOT NULL;TYPE:INTEGER" json:"policy"`
-	Depth  uint8 `gorm:"COLUMN:depth;NOT NULL;TYPE:INTEGER" json:"-"`
+	Policy uint8 `gorm:"column:policy;not null" json:"policy"`
+	Depth  uint8 `gorm:"column:depth;not null" json:"-"`
 }
 
 func UserSubject(username string) string {

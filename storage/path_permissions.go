@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"github.com/jinzhu/gorm"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"gorm.io/gorm"
 	"sort"
 )
 
