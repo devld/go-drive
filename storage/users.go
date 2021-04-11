@@ -1,11 +1,12 @@
 package storage
 
 import (
-	"github.com/jinzhu/gorm"
+	"errors"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type UserDAO struct {
@@ -18,20 +19,23 @@ func NewUserDAO(db *DB) *UserDAO {
 
 func (u *UserDAO) GetUser(username string) (types.User, error) {
 	user := types.User{}
-	e := u.db.C().First(&user, "username = ?", username).Related(&user.Groups, "groups").Error
-	if gorm.IsRecordNotFoundError(e) {
+	e := u.db.C().First(&user, "username = ?", username).Error
+	if errors.Is(e, gorm.ErrRecordNotFound) {
 		return user, err.NewNotFoundMessageError(i18n.T("storage.users.user_not_exists", username))
+	}
+	if e = u.db.C().Model(&user).Association("Groups").Find(&user.Groups); e != nil {
+		return user, e
 	}
 	return user, e
 }
 
 func (u *UserDAO) AddUser(user types.User) (types.User, error) {
-	e := u.db.C().Where("username = ?", user.Username).Find(&types.User{}).Error
+	e := u.db.C().Where("username = ?", user.Username).Take(&types.User{}).Error
 	if e == nil {
 		return types.User{},
 			err.NewNotAllowedMessageError(i18n.T("storage.users.user_exists", user.Username))
 	}
-	if !gorm.IsRecordNotFoundError(e) {
+	if !errors.Is(e, gorm.ErrRecordNotFound) {
 		return types.User{}, e
 	}
 	encoded, e := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -44,7 +48,7 @@ func (u *UserDAO) AddUser(user types.User) (types.User, error) {
 }
 
 func (u *UserDAO) UpdateUser(username string, user types.User) error {
-	data := types.M{}
+	data := map[string]interface{}{}
 	if user.Password != "" {
 		encoded, e := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 		if e != nil {

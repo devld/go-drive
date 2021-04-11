@@ -1,9 +1,10 @@
 package storage
 
 import (
-	"github.com/jinzhu/gorm"
+	"errors"
 	"go-drive/common/drive_util"
 	"go-drive/common/types"
+	"gorm.io/gorm"
 )
 
 type DriveDataDAO struct {
@@ -28,14 +29,14 @@ type dbDriveNamespacedDataStore struct {
 }
 
 func (d *dbDriveNamespacedDataStore) save(db *gorm.DB, key string, value string) error {
-	e := db.Where("drive = ? AND data_key = ?", d.ns, key).Find(&types.DriveData{}).Error
+	e := db.Where("drive = ? AND data_key = ?", d.ns, key).Take(&types.DriveData{}).Error
 	if e == nil {
 		if value == "" {
 			return db.Delete(&types.DriveData{}, "drive = ? AND data_key = ?", d.ns, key).Error
 		}
 		return db.Save(&types.DriveData{Drive: d.ns, Key: key, Value: value}).Error
 	}
-	if !gorm.IsRecordNotFoundError(e) {
+	if !errors.Is(e, gorm.ErrRecordNotFound) {
 		return e
 	}
 	if value == "" {

@@ -1,12 +1,15 @@
 package storage
 
 import (
-	"github.com/jinzhu/gorm"
-	_ "github.com/mattn/go-sqlite3"
 	"go-drive/common"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"log"
+	"os"
+	"time"
 )
 
 var initSQL = []string{
@@ -18,15 +21,24 @@ var initSQL = []string{
 }
 
 func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
-	dialect, args := config.GetDB()
-
-	db, e := gorm.Open(dialect, args)
-	if e != nil {
-		return nil, e
-	}
+	dialect := config.GetDB()
+	dbConfig := gorm.Config{}
 
 	if utils.IsDebugOn() {
-		db.LogMode(true)
+		dbConfig.Logger = logger.New(
+			log.New(os.Stdout, "\n", log.LstdFlags),
+			logger.Config{
+				SlowThreshold:             time.Second,
+				LogLevel:                  logger.Info,
+				IgnoreRecordNotFoundError: false,
+				Colorful:                  true,
+			},
+		)
+	}
+
+	db, e := gorm.Open(dialect, &dbConfig)
+	if e != nil {
+		return nil, e
 	}
 
 	if e := db.AutoMigrate(
@@ -38,13 +50,13 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		&types.PathMount{},
 		&types.DriveData{},
 		&types.DriveCache{},
-	).Error; e != nil {
-		_ = db.Close()
+	); e != nil {
+		closeDb(db)
 		return nil, e
 	}
 
 	if e := tryInitDbData(db); e != nil {
-		_ = db.Close()
+		closeDb(db)
 		return nil, e
 	}
 
@@ -54,7 +66,7 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 }
 
 func tryInitDbData(db *gorm.DB) error {
-	n := 0
+	var n int64 = 0
 	if e := db.Model(&types.User{}).Count(&n).Error; e != nil {
 		return e
 	}
@@ -76,7 +88,17 @@ type DB struct {
 }
 
 func (d *DB) Dispose() error {
-	return d.db.Close()
+	closeDb(d.db)
+	return nil
+}
+
+func closeDb(db *gorm.DB) {
+	if db != nil {
+		sqlDb, e := db.DB()
+		if e == nil {
+			_ = sqlDb.Close()
+		}
+	}
 }
 
 func (d *DB) C() *gorm.DB {

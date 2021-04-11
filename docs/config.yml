@@ -5,6 +5,25 @@ listen: :8089
 # Note: This change may not take effect immediately because of the PWA cache
 app-name: Drive
 
+db:
+  # database type: currently supports sqlite, mysql
+  type: sqlite
+  # database name
+  # for sqlite: the filename
+  # for mysql: the database name
+  name: data.db
+  # database host, for mysql only
+  #host: 127.0.0.1
+  # database port, for mysql only
+  #port: 3306
+  # database username, for mysql only
+  #user: user
+  # database password, for mysql only
+  #password: password
+  # some special parameters, see https://gorm.io/docs/connecting_to_the_database.html
+  #config:
+  #  loc: UTC
+
 # Data dir. All application data will be stored in this dir
 # There may be these files here:
 # - lang: i18n language dir
