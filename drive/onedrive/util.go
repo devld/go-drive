@@ -9,7 +9,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/req"
-	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"golang.org/x/oauth2"
@@ -198,9 +197,9 @@ func (o *OneDrive) uploadLargeFile(ctx types.TaskCtx,
 	chunkSize := int64(uploadChunkSize)
 	var finalResp req.Response = nil
 	for s := int64(0); s < size; s += chunkSize {
-		if ctx.Canceled() {
+		if e := ctx.Err(); e != nil {
 			_ = deleteUploadSession(ctx, sessionUrl)
-			return nil, task.ErrorCanceled
+			return nil, e
 		}
 		end := s + chunkSize
 		if end > size {

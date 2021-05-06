@@ -1,12 +1,12 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/uuid"
 	"go-drive/common"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
-	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
@@ -131,8 +131,8 @@ func (c *ChunkUploader) CompleteUpload(id string, ctx types.TaskCtx) (*os.File, 
 	}()
 	ctx.Total(upload.Size, true)
 	for seq := 0; seq < upload.Chunks; seq++ {
-		if ctx.Canceled() {
-			return nil, task.ErrorCanceled
+		if e := ctx.Err(); e != nil {
+			return nil, e
 		}
 		chunk, e := os.Open(c.getChunk(upload, seq))
 		if e != nil {
@@ -141,7 +141,7 @@ func (c *ChunkUploader) CompleteUpload(id string, ctx types.TaskCtx) (*os.File, 
 		w, e := io.Copy(file, chunk)
 		_ = chunk.Close()
 		if c.isMarkedDelete(upload) {
-			return nil, task.ErrorCanceled
+			return nil, context.Canceled
 		}
 		if e != nil {
 			return nil, e
@@ -151,7 +151,7 @@ func (c *ChunkUploader) CompleteUpload(id string, ctx types.TaskCtx) (*os.File, 
 	allSuccess = true
 	_ = file.Close()
 	if !allSuccess {
-		return nil, task.ErrorCanceled
+		return nil, context.Canceled
 	}
 	return os.Open(c.getFile(upload))
 }

@@ -17,7 +17,6 @@ const (
 
 var (
 	ErrorNotFound = errors.New("task not found")
-	ErrorCanceled = errors.New("canceled")
 )
 
 type Status = string
@@ -56,25 +55,15 @@ func DummyContext() types.TaskCtx {
 	return dummyCtx
 }
 
-func ContextWrapper(ctx context.Context) types.TaskCtx {
-	c := ctx.Done()
-	t := &taskContextWrapper{}
-	if c != nil {
-		go func() {
-			select {
-			case <-c:
-				t.canceled = true
-			}
-		}()
-	}
-	return t
+// NewContextWrapper wraps Context as a TaskCtx
+func NewContextWrapper(ctx context.Context) types.TaskCtx {
+	return &taskContextWrapper{ctx}
 }
 
-var dummyCtx = &taskContextWrapper{}
+var dummyCtx = &taskContextWrapper{context.Background()}
 
 type taskContextWrapper struct {
-	ctx      context.Context
-	canceled bool
+	context.Context
 }
 
 func (d *taskContextWrapper) Progress(int64, bool) {
@@ -83,94 +72,28 @@ func (d *taskContextWrapper) Progress(int64, bool) {
 func (d *taskContextWrapper) Total(int64, bool) {
 }
 
-func (d *taskContextWrapper) Canceled() bool {
-	return d.canceled
-}
-
-func (d *taskContextWrapper) Deadline() (deadline time.Time, ok bool) {
-	if d.ctx != nil {
-		deadline, ok = d.ctx.Deadline()
-	}
-	return
-}
-
-func (d *taskContextWrapper) Done() <-chan struct{} {
-	if d.ctx != nil {
-		return d.ctx.Done()
-	}
-	return nil
-}
-
-func (d *taskContextWrapper) Err() error {
-	if d.ctx != nil {
-		return d.ctx.Err()
-	}
-	return nil
-}
-
-func (d *taskContextWrapper) Value(v interface{}) interface{} {
-	if d.ctx != nil {
-		return d.ctx.Value(v)
-	}
-	return nil
-}
-
 func NewCtxWrapper(ctx types.TaskCtx, mutableLoaded, mutableTotal bool) types.TaskCtx {
 	return &ctxWrapper{
+		TaskCtx:       ctx,
 		mutableLoaded: mutableLoaded,
 		mutableTotal:  mutableTotal,
-		cancelable:    true,
-		ctx:           ctx,
-	}
-}
-
-func NewProgressCtxWrapper(ctx types.TaskCtx) types.TaskCtx {
-	return &ctxWrapper{
-		mutableLoaded: true,
-		mutableTotal:  true,
-		cancelable:    false,
-		ctx:           ctx,
 	}
 }
 
 type ctxWrapper struct {
+	types.TaskCtx
 	mutableLoaded bool
 	mutableTotal  bool
-	cancelable    bool
-	ctx           types.TaskCtx
 }
 
 func (c *ctxWrapper) Progress(loaded int64, abs bool) {
 	if c.mutableLoaded {
-		c.ctx.Progress(loaded, abs)
+		c.TaskCtx.Progress(loaded, abs)
 	}
 }
 
 func (c *ctxWrapper) Total(total int64, abs bool) {
 	if c.mutableTotal {
-		c.ctx.Total(total, abs)
+		c.TaskCtx.Total(total, abs)
 	}
-}
-
-func (c *ctxWrapper) Canceled() bool {
-	if !c.cancelable {
-		return false
-	}
-	return c.ctx.Canceled()
-}
-
-func (c *ctxWrapper) Deadline() (deadline time.Time, ok bool) {
-	return c.ctx.Deadline()
-}
-
-func (c *ctxWrapper) Done() <-chan struct{} {
-	return c.ctx.Done()
-}
-
-func (c *ctxWrapper) Err() error {
-	return c.ctx.Err()
-}
-
-func (c *ctxWrapper) Value(key interface{}) interface{} {
-	return c.ctx.Value(key)
 }

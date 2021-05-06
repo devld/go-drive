@@ -126,7 +126,7 @@ func (f *FsDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool, r
 			return nil, e
 		}
 		defer func() { _ = file.Close() }()
-		_, e = drive_util.Copy(task.NewProgressCtxWrapper(ctx), file, reader)
+		_, e = drive_util.Copy(ctx, file, reader)
 		if e != nil {
 			return nil, e
 		}

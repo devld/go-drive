@@ -44,8 +44,8 @@ func GetSelfEntry(d types.IDrive, entry types.IEntry) types.IEntry {
 func Copy(ctx types.TaskCtx, dst io.Writer, src io.Reader) (written int64, err error) {
 	buf := make([]byte, 32*1024)
 	for {
-		if ctx.Canceled() {
-			return written, task.ErrorCanceled
+		if e := ctx.Err(); e != nil {
+			return written, e
 		}
 		w, ee := io.CopyBuffer(dst, src, buf)
 		if ee != nil {
@@ -166,8 +166,8 @@ type DoCopy = func(from types.IEntry, driveTo types.IDrive, to string, ctx types
 type CopyCallback = func(entry types.IEntry, allProcessed bool, ctx types.TaskCtx) error
 
 func buildEntriesTree(ctx types.TaskCtx, entry types.IEntry, bytesProgress bool) (EntryNode, error) {
-	if ctx.Canceled() {
-		return EntryNode{}, task.ErrorCanceled
+	if e := ctx.Err(); e != nil {
+		return EntryNode{}, e
 	}
 	if bytesProgress {
 		if entry.Type().IsFile() {
@@ -220,8 +220,8 @@ func FlattenEntriesTree(root EntryNode) []EntryNode {
 
 func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string,
 	override bool, newParent bool, doCopy DoCopy, after CopyCallback) (bool, error) {
-	if ctx.Canceled() {
-		return false, task.ErrorCanceled
+	if e := ctx.Err(); e != nil {
+		return false, e
 	}
 	var dstType types.EntryType
 	dstExists := false
