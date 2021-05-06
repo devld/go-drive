@@ -327,7 +327,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 			_ = file.Close()
 			_ = os.Remove(file.Name())
 		}()
-		return dr.getDrive(c).Save(ctx, path, size, override != "", file)
+		return dr.getDrive(c).Save(ctx, path, size, override != "", utils.NewTempFile(file))
 	}, 2*time.Second)
 	if e != nil {
 		_ = c.Error(e)
@@ -377,7 +377,7 @@ func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 			return nil, e
 		}
 		ctx.Progress(0, true)
-		entry, e := dr.getDrive(c).Save(ctx, path, stat.Size(), true, file)
+		entry, e := dr.getDrive(c).Save(ctx, path, stat.Size(), true, utils.NewTempFile(file))
 		if e != nil {
 			_ = file.Close()
 			return nil, e
