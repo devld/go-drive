@@ -18,7 +18,10 @@ $(build_dir)/$(target_name): $(build_dir)/go-drive $(build_dir)/web $(build_dir)
 
 $(build_dir)/go-drive: $(build_dir)
 	go build -o $(build_dir) -ldflags \
-		"-X go-drive/common.version=${BUILD_VERSION} -X go-drive/common.hash=$(shell git rev-parse HEAD) -X go-drive/common.build=$(shell date +'%Y%m%d')"
+		"-w -s \
+		-X 'go-drive/common.version=${BUILD_VERSION}' \
+		-X 'go-drive/common.revHash=$(shell git rev-parse HEAD)' \
+		-X 'go-drive/common.buildAt=$(shell date -R)'"
 
 $(build_dir)/web: $(build_dir) web/dist
 	cp -R web/dist $(build_dir)/web
