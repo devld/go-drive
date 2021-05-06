@@ -35,7 +35,7 @@ func NewTunnyRunner(config common.Config, ch *registry.ComponentsHolder) *TunnyR
 	return tr
 }
 
-func (t *TunnyRunner) createTask(runnable Runnable) *wrapper {
+func (t *TunnyRunner) createTask(runnable Runnable) *tunnyTaskCtx {
 	task := &Task{
 		Id:        uuid.New().String(),
 		Status:    Pending,
@@ -43,11 +43,13 @@ func (t *TunnyRunner) createTask(runnable Runnable) *wrapper {
 		CreatedAt: time.Now(),
 	}
 
-	w := &wrapper{
-		done:     make(chan struct{}),
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	w := &tunnyTaskCtx{
+		Context:  ctx,
+		cancelFn: cancelFunc,
 		runnable: runnable,
 		task:     task,
-		mux:      &sync.Mutex{},
+		mux:      &sync.RWMutex{},
 	}
 
 	t.store.Set(task.Id, w)
@@ -84,7 +86,7 @@ func (t *TunnyRunner) GetTask(id string) (Task, error) {
 	if !ok {
 		return Task{}, ErrorNotFound
 	}
-	return *w.(*wrapper).task, nil
+	return *w.(*tunnyTaskCtx).task, nil
 }
 
 func (t *TunnyRunner) StopTask(id string) (Task, error) {
@@ -92,7 +94,7 @@ func (t *TunnyRunner) StopTask(id string) (Task, error) {
 	if !ok {
 		return Task{}, ErrorNotFound
 	}
-	w := temp.(*wrapper)
+	w := temp.(*tunnyTaskCtx)
 	w.cancel()
 	return *w.task, nil
 }
@@ -102,7 +104,7 @@ func (t *TunnyRunner) RemoveTask(id string) error {
 	if !ok {
 		return ErrorNotFound
 	}
-	w := temp.(*wrapper)
+	w := temp.(*tunnyTaskCtx)
 	w.cancel()
 	t.store.Remove(w.task.Id)
 	return nil
@@ -110,7 +112,7 @@ func (t *TunnyRunner) RemoveTask(id string) error {
 
 func (t *TunnyRunner) Dispose() error {
 	t.store.IterCb(func(key string, v interface{}) {
-		v.(*wrapper).cancel()
+		v.(*tunnyTaskCtx).cancel()
 	})
 	t.pool.Close()
 	t.tickerStop()
@@ -120,7 +122,7 @@ func (t *TunnyRunner) Dispose() error {
 func (t *TunnyRunner) clean() {
 	ids := make([]string, 0)
 	t.store.IterCb(func(key string, v interface{}) {
-		t := v.(*wrapper)
+		t := v.(*tunnyTaskCtx)
 		if t.task.Finished() && (time.Now().Unix()-t.task.UpdatedAt.Unix() > int64(cleanThreshold.Seconds())) {
 			ids = append(ids, t.task.Id)
 		}
@@ -142,7 +144,7 @@ func (t *TunnyRunner) Status() (string, types.SM, error) {
 	canceled := 0
 
 	t.store.IterCb(func(key string, v interface{}) {
-		switch v.(*wrapper).task.Status {
+		switch v.(*tunnyTaskCtx).task.Status {
 		case Pending:
 			pending++
 		case Running:
@@ -166,16 +168,17 @@ func (t *TunnyRunner) Status() (string, types.SM, error) {
 	}, nil
 }
 
-type wrapper struct {
+type tunnyTaskCtx struct {
+	context.Context
+
+	cancelFn func()
 	runnable Runnable
 	task     *Task
-	canceled bool
-	mux      *sync.Mutex
-	done     chan struct{}
+	mux      *sync.RWMutex
 }
 
-func (w *wrapper) Progress(loaded int64, abs bool) {
-	if w.canceled {
+func (w *tunnyTaskCtx) Progress(loaded int64, abs bool) {
+	if w.Err() != nil {
 		return
 	}
 	w.mux.Lock()
@@ -188,8 +191,8 @@ func (w *wrapper) Progress(loaded int64, abs bool) {
 	w.task.UpdatedAt = time.Now()
 }
 
-func (w *wrapper) Total(total int64, abs bool) {
-	if w.canceled {
+func (w *tunnyTaskCtx) Total(total int64, abs bool) {
+	if w.Err() != nil {
 		return
 	}
 	w.mux.Lock()
@@ -202,50 +205,26 @@ func (w *wrapper) Total(total int64, abs bool) {
 	w.task.UpdatedAt = time.Now()
 }
 
-func (w *wrapper) Canceled() bool {
-	return w.canceled
-}
-
-func (w *wrapper) Deadline() (deadline time.Time, ok bool) {
-	return
-}
-
-func (w *wrapper) Done() <-chan struct{} {
-	return w.done
-}
-
-func (w *wrapper) Err() error {
-	if w.canceled {
-		return context.Canceled
-	}
-	return nil
-}
-
-func (w *wrapper) Value(interface{}) interface{} {
-	return nil
-}
-
-func (w *wrapper) cancel() {
+func (w *tunnyTaskCtx) cancel() {
 	w.mux.Lock()
 	defer w.mux.Unlock()
-	if w.canceled {
+	if w.Err() != nil {
 		return
 	}
-	close(w.done)
-	w.canceled = true
+	w.cancelFn()
 	w.task.Status = Canceled
 }
 
 func executor(arg interface{}) interface{} {
-	w := arg.(*wrapper)
-	if w.Canceled() {
+	w := arg.(*tunnyTaskCtx)
+	if w.Err() != nil {
 		return nil
 	}
 	w.task.Status = Running
 	w.task.UpdatedAt = time.Now()
 	r, e := w.runnable(w)
 	if e != nil {
-		if e == ErrorCanceled || errors.Is(e, context.Canceled) {
+		if errors.Is(e, context.Canceled) {
 			w.task.Status = Canceled
 		} else {
 			log.Printf("error when executing task: %s", e.Error())

@@ -63,8 +63,7 @@ const createHandler = isMove => {
                       ? 'handler.copy_move.moving'
                       : 'handler.copy_move.copying',
                     { n: entry.name }
-                  ),
-                  onCancel
+                  )
                 })
                 const copyOrMove = isMove ? moveEntry : copyEntry
                 await taskDone(copyOrMove(entry.path, dest, override), t => {
