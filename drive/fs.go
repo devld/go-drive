@@ -116,16 +116,22 @@ func (f *FsDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool, r
 			return nil, e
 		}
 	}
-	file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
-	if e != nil {
-		return nil, e
+	tryToCopy := true
+	if tf, ok := reader.(*utils.TempFile); ok {
+		tryToCopy = tf.TransferTo(path) != nil
 	}
-	defer func() { _ = file.Close() }()
-	_, e = drive_util.Copy(task.NewProgressCtxWrapper(ctx), file, reader)
-	if e != nil {
-		return nil, e
+	if tryToCopy {
+		file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+		if e != nil {
+			return nil, e
+		}
+		defer func() { _ = file.Close() }()
+		_, e = drive_util.Copy(task.NewProgressCtxWrapper(ctx), file, reader)
+		if e != nil {
+			return nil, e
+		}
 	}
-	stat, e := file.Stat()
+	stat, e := os.Stat(path)
 	if e != nil {
 		return nil, e
 	}
