@@ -22,8 +22,8 @@ import (
 
 var (
 	version = "unknown"
-	hash    = "unknown"
-	build   = "unknown"
+	revHash = "unknown"
+	buildAt = "unknown"
 )
 
 const (
@@ -133,7 +133,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	flag.Parse()
 
 	if *v {
-		fmt.Printf("%s %s build-%s\n", version, hash, build)
+		fmt.Printf("%s rev %s build at %s\n", version, revHash, buildAt)
 		os.Exit(0)
 	}
 
@@ -260,7 +260,7 @@ type versionSysConfig struct {
 func (v versionSysConfig) SysConfig() (string, types.M, error) {
 	return "version", types.M{
 		"version": version,
-		"hash":    hash,
-		"build":   build,
+		"rev":     revHash,
+		"buildAt": buildAt,
 	}, nil
 }
