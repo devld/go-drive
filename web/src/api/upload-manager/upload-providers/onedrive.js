@@ -85,7 +85,9 @@ export default class OneDriveUploadTask extends ChunkUploadTask {
         onProgress({ loaded, total })
       }
     })
-    if (resp.status === 201) {
+    // 201: new file created
+    // 200: existing file overridden
+    if (resp.status === 201 || resp.status === 200) {
       this._finishedResponse = resp.data
     }
     return resp
