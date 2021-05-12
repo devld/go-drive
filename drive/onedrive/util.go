@@ -223,7 +223,7 @@ func (o *OneDrive) uploadLargeFile(ctx types.TaskCtx,
 	if finalResp == nil {
 		panic("expect finalResp is not nil")
 	}
-	if finalResp.Status() != 201 {
+	if finalResp.Status() != 201 && finalResp.Status() != 200 {
 		_ = deleteUploadSession(ctx, sessionUrl)
 		return nil, errors.New(i18n.T("drive.onedrive.unexpected_status", strconv.Itoa(finalResp.Status())))
 	}

@@ -76,8 +76,12 @@ func (g *GDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 
 func (g *GDrive) Save(ctx types.TaskCtx, path string, size int64,
 	override bool, reader io.Reader) (types.IEntry, error) {
+	entry, e := g.getByPath(path, ctx)
+	if e != nil && !err.IsNotFoundError(e) {
+		return nil, e
+	}
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, g, path); e != nil {
+		if entry != nil {
 			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 		}
 	}
@@ -89,13 +93,18 @@ func (g *GDrive) Save(ctx types.TaskCtx, path string, size int64,
 	ctx.Total(size, true)
 
 	var lastCurrent int64 = 0
-	resp, e := g.s.Files.Create(&drive.File{Name: filename, Parents: []string{parent.fileId()}}).
-		Media(reader).Context(ctx).ProgressUpdater(
-		func(current, total int64) {
-			ctx.Progress(current-lastCurrent, false)
-			lastCurrent = current
-		},
-	).Do()
+	var onProgress = func(current, total int64) {
+		ctx.Progress(current-lastCurrent, false)
+		lastCurrent = current
+	}
+
+	var resp *drive.File
+	if entry != nil {
+		resp, e = g.s.Files.Update(entry.id, &drive.File{}).Media(reader).Context(ctx).ProgressUpdater(onProgress).Do()
+	} else {
+		resp, e = g.s.Files.Create(&drive.File{Name: filename, Parents: []string{parent.fileId()}}).
+			Media(reader).Context(ctx).ProgressUpdater(onProgress).Do()
+	}
 	if e != nil {
 		return nil, e
 	}
