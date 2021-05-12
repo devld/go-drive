@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
-    "codemirror": "^5.53.2",
+    "codemirror": "^5.58.2",
     "codemirror-github-light": "^0.4.2",
     "core-js": "^3.6.4",
     "dayjs": "^1.8.26",
