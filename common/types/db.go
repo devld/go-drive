@@ -5,7 +5,7 @@ import "strings"
 type User struct {
 	Username string  `gorm:"column:username;primaryKey;not null;type:string;size:32" json:"username" binding:"required"`
 	Password string  `gorm:"column:password;not null;type:string;size:64" json:"password"`
-	Groups   []Group `gorm:"many2many:user_groups;joinForeignKey:group_name;foreignKey:username" json:"groups"`
+	Groups   []Group `gorm:"many2many:user_groups;joinForeignKey:username;foreignKey:username" json:"groups"`
 }
 
 type Group struct {
