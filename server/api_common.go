@@ -6,7 +6,7 @@ import (
 	"go-drive/common/types"
 )
 
-func InitCommonRoutes(r gin.IRouter, ch *registry.ComponentsHolder) {
+func InitCommonRoutes(r gin.IRouter, ch *registry.ComponentsHolder) error {
 
 	// get configuration
 	r.GET("/config", func(c *gin.Context) {
@@ -29,4 +29,5 @@ func InitCommonRoutes(r gin.IRouter, ch *registry.ComponentsHolder) {
 		SetResult(c, configMap)
 	})
 
+	return nil
 }
