@@ -59,6 +59,9 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	engine := server.InitServer(config, ch, rootDrive, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, fileMessageSource)
+	engine, err := server.InitServer(config, ch, rootDrive, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, fileMessageSource)
+	if err != nil {
+		return nil, err
+	}
 	return engine, nil
 }

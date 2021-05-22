@@ -93,7 +93,6 @@ type PathPermission struct {
 	Permission Permission `gorm:"column:permission;not null" json:"permission"`
 	// Policy to apply to the permission when subject access this path: 0: REJECT, 1: ACCEPT
 	Policy uint8 `gorm:"column:policy;not null" json:"policy"`
-	Depth  uint8 `gorm:"column:depth;not null" json:"-"`
 }
 
 func UserSubject(username string) string {

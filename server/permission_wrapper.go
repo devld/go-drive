@@ -2,13 +2,15 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"go-drive/storage"
 	"io"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -23,34 +25,21 @@ const (
 // Permissions for users take precedence over permissions for user groups.
 // REJECT takes precedence over ACCEPT
 type PermissionWrapperDrive struct {
-	drive             types.IDrive
-	subjects          []string
-	request           *http.Request
-	permissionStorage *storage.PathPermissionDAO
-	signer            *utils.Signer
+	drive   types.IDrive
+	request *http.Request
+	pm      permMap
+	signer  *utils.Signer
 }
 
 func NewPermissionWrapperDrive(
 	request *http.Request, session types.Session, drive types.IDrive,
-	permissionStorage *storage.PathPermissionDAO, signer *utils.Signer) *PermissionWrapperDrive {
-
-	subjects := make([]string, 0, 3)
-	subjects = append(subjects, types.AnySubject) // Anonymous
-	if !session.IsAnonymous() {
-		subjects = append(subjects, types.UserSubject(session.User.Username))
-		if session.User.Groups != nil {
-			for _, g := range session.User.Groups {
-				subjects = append(subjects, types.GroupSubject(g.Name))
-			}
-		}
-	}
+	permissions permMap, signer *utils.Signer) *PermissionWrapperDrive {
 
 	return &PermissionWrapperDrive{
-		drive:             drive,
-		subjects:          subjects,
-		request:           request,
-		permissionStorage: permissionStorage,
-		signer:            signer,
+		drive:   drive,
+		request: request,
+		pm:      permissions.filter(makeSubjects(session)),
+		signer:  signer,
 	}
 }
 
@@ -110,9 +99,6 @@ func (p *PermissionWrapperDrive) Copy(ctx types.TaskCtx, from types.IEntry, to s
 	if e != nil {
 		return nil, e
 	}
-	if e := p.requireDescendantPermission(from.Path(), types.PermissionRead); e != nil {
-		return nil, e
-	}
 	if e := p.requireDescendantPermission(to, types.PermissionReadWrite); e != nil {
 		return nil, e
 	}
@@ -145,33 +131,22 @@ func (p *PermissionWrapperDrive) Move(ctx types.TaskCtx, from types.IEntry, to s
 }
 
 func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
-	permission, e := p.permissionStorage.ResolvePathPermission(p.subjects, path)
-	if e != nil {
-		return nil, e
-	}
-	if !utils.IsRootPath(path) {
-		if !permission.CanRead() {
-			return nil, err.NewNotFoundError()
-		}
+	permission := p.pm.resolvePath(path)
+	// root path always can be read, but items cannot be read will be filtered
+	if !utils.IsRootPath(path) && !permission.CanRead() {
+		return nil, err.NewNotFoundError()
 	}
 	entries, e := p.drive.List(ctx, path)
 	if e != nil {
 		return nil, e
 	}
 
-	pMap, e := p.permissionStorage.ResolvePathChildrenPermission(p.subjects, path)
-	if e != nil {
-		return nil, e
-	}
 	result := make([]types.IEntry, 0, len(entries))
 	for _, e := range entries {
 		if !e.Meta().CanRead {
 			continue
 		}
-		per := permission
-		if temp, ok := pMap[e.Path()]; ok {
-			per = temp
-		}
+		per := p.pm.resolvePath(e.Path())
 		if per.CanRead() {
 			accessKey := ""
 			if e.Type().IsFile() {
@@ -218,10 +193,7 @@ func (p *PermissionWrapperDrive) requirePathAndParentWritable(path string) (type
 }
 
 func (p *PermissionWrapperDrive) requirePermission(path string, require types.Permission) (types.Permission, error) {
-	resolved, e := p.permissionStorage.ResolvePathPermission(p.subjects, path)
-	if e != nil {
-		return types.PermissionEmpty, e
-	}
+	resolved := p.pm.resolvePath(path)
 	if resolved&require != require {
 		return resolved, err.NewNotFoundMessageError(i18n.T("error.permission_denied"))
 	}
@@ -229,16 +201,179 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 }
 
 func (p *PermissionWrapperDrive) requireDescendantPermission(path string, require types.Permission) error {
-	permission, e := p.permissionStorage.ResolvePathAndDescendantPermission(p.subjects, path)
-	if e != nil {
-		return e
-	}
-	for _, p := range permission {
-		if p&require != require {
-			return err.NewNotAllowedMessageError(i18n.T("api.permission_wrapper.no_subfolder_permission"))
+	pp := p.pm.resolvePath(path)
+	ok := pp&require == require
+	if ok {
+		permission := p.pm.resolveDescendant(path)
+		for _, p := range permission {
+			if p&require != require {
+				ok = false
+				break
+			}
 		}
 	}
+	if !ok {
+		return err.NewNotAllowedMessageError(i18n.T("api.permission_wrapper.no_subfolder_permission"))
+	}
 	return nil
+}
+
+func makeSubjects(session types.Session) []string {
+	subjects := make([]string, 0, 3)
+	subjects = append(subjects, types.AnySubject) // Anonymous
+	if !session.IsAnonymous() {
+		subjects = append(subjects, types.UserSubject(session.User.Username))
+		if session.User.Groups != nil {
+			for _, g := range session.User.Groups {
+				subjects = append(subjects, types.GroupSubject(g.Name))
+			}
+		}
+	}
+	return subjects
+}
+
+// permMap[subject][path]
+type permMap map[string]map[string]*pathPermItem
+
+func newPermMap(permissions []types.PathPermission) permMap {
+	result := make(permMap)
+	for _, p := range permissions {
+		sp, ok := result[p.Subject]
+		if !ok {
+			sp = make(map[string]*pathPermItem)
+			result[p.Subject] = sp
+		}
+		sp[*p.Path] = &pathPermItem{
+			PathPermission: p,
+			depth:          int8(utils.PathDepth(*p.Path)),
+			descendant:     make([]*pathPermItem, 0),
+		}
+	}
+	for _, pms := range result {
+		added := make(map[string]bool)
+		for p := range pms {
+			paths := utils.PathParentTree(p)
+			for _, pathPart := range paths {
+				if _, ok := pms[pathPart]; !ok {
+					added[pathPart] = true
+				}
+			}
+		}
+		for p := range added {
+			// virtual path node helps finding path descendant
+			pms[p] = &pathPermItem{
+				PathPermission: types.PathPermission{Path: &p},
+				depth:          -1,
+				descendant:     make([]*pathPermItem, 0),
+			}
+		}
+	}
+	for _, sp := range result {
+		for _, p := range sp {
+			for _, c := range sp {
+				if c.depth >= 0 && p.depth < c.depth && strings.HasPrefix(*c.Path, *p.Path) {
+					p.descendant = append(p.descendant, c)
+				}
+			}
+		}
+	}
+	return result
+}
+
+func (pm permMap) filter(subjects []string) permMap {
+	result := make(permMap, len(subjects))
+	for _, s := range subjects {
+		if sp, ok := pm[s]; ok {
+			result[s] = sp
+		}
+	}
+	return result
+}
+
+// resolvePath resolves permission of the path
+func (pm permMap) resolvePath(path string) types.Permission {
+	paths := utils.PathParentTree(path)
+	items := make([]*pathPermItem, 0)
+	for _, p := range pm {
+		for _, pathPart := range paths {
+			if temp, ok := p[pathPart]; ok && temp.depth >= 0 {
+				items = append(items, temp)
+			}
+		}
+	}
+	return resolveAcceptedPermissions(items)
+}
+
+// resolveDescendant resolves permissions of the path's descendant
+func (pm permMap) resolveDescendant(path string) map[string]types.Permission {
+	result := make(map[string]types.Permission)
+	for _, p := range pm {
+		if item, ok := p[path]; ok {
+			for _, t := range item.descendant {
+				result[*item.Path] = resolveAcceptedPermissions(t.descendant)
+			}
+		}
+	}
+	return result
+}
+
+type pathPermItem struct {
+	types.PathPermission
+	// if depth == -1, this node is a virtual node that holds descendant
+	depth      int8
+	descendant []*pathPermItem
+}
+
+func (p pathPermItem) String() string {
+	return fmt.Sprintf("%s,%s,%d,%d (%v)", *p.Path, p.Subject, p.Permission, p.Policy, p.descendant)
+}
+
+func resolveAcceptedPermissions(items []*pathPermItem) types.Permission {
+	sort.Slice(items, func(i, j int) bool { return pathPermissionLess(items[i], items[j]) })
+	acceptedPermission := types.PermissionEmpty
+	rejectedPermission := types.PermissionEmpty
+	for _, item := range items {
+		if item.IsAccept() {
+			acceptedPermission |= item.Permission & ^rejectedPermission
+		}
+		if item.IsReject() {
+			// acceptedPermission - ( item.Permission(reject) - acceptedPermission )
+			acceptedPermission &= ^(item.Permission & (^acceptedPermission))
+			rejectedPermission |= item.Permission
+		}
+	}
+	return acceptedPermission
+}
+
+func pathPermissionLess(a, b *pathPermItem) bool {
+	if a.depth != b.depth {
+		return a.depth > b.depth
+	}
+	if a.IsForAnonymous() {
+		if b.IsForAnonymous() {
+			return a.Policy < b.Policy
+		} else {
+			return false
+		}
+	} else {
+		if b.IsForAnonymous() {
+			return true
+		} else {
+			if a.IsForUser() {
+				if b.IsForUser() {
+					return a.Policy < b.Policy
+				} else {
+					return true
+				}
+			} else {
+				if b.IsForUser() {
+					return false
+				} else {
+					return a.Policy < b.Policy
+				}
+			}
+		}
+	}
 }
 
 type permissionWrapperEntry struct {

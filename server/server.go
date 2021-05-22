@@ -38,7 +38,7 @@ func InitServer(config common.Config,
 	driveDataDAO *storage.DriveDataDAO,
 	permissionDAO *storage.PathPermissionDAO,
 	pathMountDAO *storage.PathMountDAO,
-	messageSource i18n.MessageSource) *gin.Engine {
+	messageSource i18n.MessageSource) (*gin.Engine, error) {
 
 	if utils.IsDebugOn() {
 		gin.SetMode(gin.DebugMode)
@@ -52,15 +52,20 @@ func InitServer(config common.Config,
 	engine.Use(Logger())
 	engine.Use(apiResultHandler(messageSource))
 
-	InitCommonRoutes(engine, ch)
-
-	InitAuthRoutes(engine, tokenStore, userDAO)
-
-	InitAdminRoutes(engine, ch, rootDrive, tokenStore, userDAO, groupDAO,
-		driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO)
-
-	InitDriveRoutes(engine, config, rootDrive, permissionDAO, thumbnail,
-		signer, chunkUploader, runner, tokenStore)
+	if e := InitCommonRoutes(engine, ch); e != nil {
+		return nil, e
+	}
+	if e := InitAuthRoutes(engine, tokenStore, userDAO); e != nil {
+		return nil, e
+	}
+	if e := InitAdminRoutes(engine, ch, rootDrive, tokenStore, userDAO, groupDAO,
+		driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO); e != nil {
+		return nil, e
+	}
+	if e := InitDriveRoutes(engine, ch, config, rootDrive, permissionDAO, thumbnail,
+		signer, chunkUploader, runner, tokenStore); e != nil {
+		return nil, e
+	}
 
 	if config.WebDir != "" {
 		preprocess := func(name string, file http.File) (string, error) {
@@ -71,7 +76,7 @@ func InitServer(config common.Config,
 	}
 
 	ch.Add("runtimeStat", runtimeStat{})
-	return engine
+	return engine, nil
 }
 
 func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {

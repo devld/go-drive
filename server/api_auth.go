@@ -13,7 +13,7 @@ const (
 	headerAuth = "Authorization"
 )
 
-func InitAuthRoutes(r gin.IRouter, tokenStore types.TokenStore, userDAO *storage.UserDAO) {
+func InitAuthRoutes(r gin.IRouter, tokenStore types.TokenStore, userDAO *storage.UserDAO) error {
 	ar := authRoute{
 		userDAO:    userDAO,
 		tokenStore: tokenStore,
@@ -27,6 +27,8 @@ func InitAuthRoutes(r gin.IRouter, tokenStore types.TokenStore, userDAO *storage
 		auth.POST("/logout", ar.logout)
 		auth.GET("/user", ar.getUser)
 	}
+
+	return nil
 }
 
 type authRoute struct {

@@ -8,6 +8,7 @@ import (
 	"go-drive/common/drive_util"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -18,10 +19,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 func InitDriveRoutes(router gin.IRouter,
+	ch *registry.ComponentsHolder,
 	config common.Config,
 	rootDrive *drive.RootDrive,
 	permissionDAO *storage.PathPermissionDAO,
@@ -29,16 +32,23 @@ func InitDriveRoutes(router gin.IRouter,
 	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
 	runner task.Runner,
-	tokenStore types.TokenStore) {
+	tokenStore types.TokenStore) error {
 
 	dr := driveRoute{
-		config:        config,
-		rootDrive:     rootDrive,
+		config:    config,
+		rootDrive: rootDrive,
+
 		permissionDAO: permissionDAO,
+		permMux:       &sync.Mutex{},
+
 		chunkUploader: chunkUploader,
 		thumbnail:     thumbnail,
 		runner:        runner,
 		signer:        signer,
+	}
+
+	if e := dr.reloadPerm(); e != nil {
+		return e
 	}
 
 	// get file content
@@ -95,12 +105,19 @@ func InitDriveRoutes(router gin.IRouter,
 			_ = c.Error(e)
 		}
 	})
+
+	ch.Add("apiDrive", &dr)
+	return nil
 }
 
 type driveRoute struct {
-	config        common.Config
-	rootDrive     *drive.RootDrive
+	config    common.Config
+	rootDrive *drive.RootDrive
+
 	permissionDAO *storage.PathPermissionDAO
+	perms         permMap
+	permMux       *sync.Mutex
+
 	chunkUploader *ChunkUploader
 	thumbnail     *thumbnail.Maker
 	runner        task.Runner
@@ -112,9 +129,20 @@ func (dr *driveRoute) getDrive(c *gin.Context) types.IDrive {
 	return NewPermissionWrapperDrive(
 		c.Request, session,
 		dr.rootDrive.Get(),
-		dr.permissionDAO,
+		dr.perms,
 		dr.signer,
 	)
+}
+
+func (dr *driveRoute) reloadPerm() error {
+	dr.permMux.Lock()
+	defer dr.permMux.Unlock()
+	all, e := dr.permissionDAO.GetAll()
+	if e != nil {
+		return e
+	}
+	dr.perms = newPermMap(all)
+	return nil
 }
 
 func (dr *driveRoute) list(c *gin.Context) {
