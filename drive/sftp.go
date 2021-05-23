@@ -10,7 +10,6 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"log"
 	"net"
 	"os"
 	path2 "path"
@@ -286,7 +285,6 @@ func (f *SFTPDrive) Upload(ctx context.Context, path string, size int64, overrid
 }
 
 func (f *SFTPDrive) newSFTPEntry(path string, stat os.FileInfo) *sftpEntry {
-	log.Print("name: " + stat.Name())
 	return &sftpEntry{
 		d:       f,
 		path:    path2.Join(path, stat.Name()),
@@ -351,11 +349,12 @@ func (f *sftpEntry) GetReader(context.Context) (io.ReadCloser, error) {
 		r, w := io.Pipe()
 		go func() {
 			f.d.InitConn()
-			log.Print("f.path: " + f.path)
-			file, e := f.d.c.Open(f.path)
+			path := strings.Join([]string{"/", f.path}, "")
+			file, e := f.d.c.Open(path)
 			if e != nil {
 				_ = r.CloseWithError(e)
 			}
+			defer file.Close()
 			_, e = file.WriteTo(w)
 			if e != nil {
 				_ = r.CloseWithError(e)
