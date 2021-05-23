@@ -35,25 +35,33 @@ const localSuffix = ".lock"
 
 var errMaking = errors.New("making")
 
-// TypeHandler creates thumbnail for entry, and writes to dest
-type TypeHandler struct {
-	Create   func(ctx context.Context, entry types.IEntry, dest io.Writer) error
-	MimeType string
-	Name     string
+var typeHandlerFactories = make(map[string]TypeHandlerFactory, 0)
+
+func RegisterTypeHandler(name string, thf TypeHandlerFactory) {
+	if _, ok := typeHandlerFactories[name]; ok {
+		panic("TypeHandlerFactory " + name + " already registered")
+	}
+	typeHandlerFactories[name] = thf
 }
 
-// handlers is a registry for TypeHandler, which the key is like 'jpg'
-var handlers = make(map[string]TypeHandler)
+type TypeHandlerFactory = func(config types.SM) (TypeHandler, error)
 
-func Register(ext string, h TypeHandler) {
-	ext = strings.ToLower(ext)
-	if _, ok := handlers[ext]; ok {
-		panic(fmt.Sprintf("handler for %s already registered", ext))
-	}
-	handlers[ext] = h
+type TypeHandler interface {
+	// CreateThumbnail creates thumbnail for entry, and writes to dest
+	CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error
+	// MimeType returns the mime-type of this TypeHandler can generating
+	MimeType() string
+	// Name returns the thumbnail filename of this TypeHandler generated
+	Name() string
+	// Timeout returns the timeout when generating thumbnail,
+	// it wont timeout when negative value returned
+	Timeout() time.Duration
 }
 
 type Maker struct {
+	// handlers is a registry for TypeHandler, which the key is like 'jpg'
+	handlers map[string]TypeHandler
+
 	cacheDir string
 
 	pool *tunny.Pool
@@ -68,7 +76,13 @@ func NewMaker(config common.Config, ch *registry.ComponentsHolder) (*Maker, erro
 		return nil, e
 	}
 
+	handlers, e := createHandlers(config.Thumbnail.Handlers)
+	if e != nil {
+		return nil, e
+	}
+
 	m := &Maker{
+		handlers: handlers,
 		cacheDir: dir,
 		validity: config.Thumbnail.TTL,
 	}
@@ -86,6 +100,33 @@ func NewMaker(config common.Config, ch *registry.ComponentsHolder) (*Maker, erro
 	return m, nil
 }
 
+func createHandlers(items []common.ThumbnailHandlerItem) (map[string]TypeHandler, error) {
+	hs := make(map[string]TypeHandler, len(items))
+	if items != nil {
+		for _, item := range items {
+			factory, ok := typeHandlerFactories[item.Type]
+			if !ok {
+				availableTypes := make([]string, 0, len(typeHandlerFactories))
+				for t := range typeHandlerFactories {
+					availableTypes = append(availableTypes, t)
+				}
+
+				return nil, errors.New(fmt.Sprintf("unknown handler type: %s. Available types are %v",
+					item.Type, availableTypes))
+			}
+			h, e := factory(item.Config)
+			if e != nil {
+				return nil, errors.New("failed to create thumbnail type handler " + item.Type + ": " + e.Error())
+			}
+			for _, ext := range strings.Split(item.FileTypes, ",") {
+				ext = strings.ToLower(strings.TrimSpace(ext))
+				hs[ext] = h
+			}
+		}
+	}
+	return hs, nil
+}
+
 func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error) {
 	fType := ""
 	if entry.Type().IsDir() {
@@ -94,7 +135,7 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 		fType = utils.PathExt(entry.Path())
 	}
 
-	h, ok := handlers[fType]
+	h, ok := m.handlers[fType]
 	if !ok {
 		return nil, err.NewNotFoundError()
 	}
@@ -117,7 +158,7 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 				return nil, e
 			}
 		} else {
-			return m.openFile(file, h.MimeType, h.Name)
+			return m.openFile(file, h.MimeType(), h.Name())
 		}
 	}
 
@@ -126,11 +167,11 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 	c := make(chan error)
 	go func() {
 		taskErr := m.pool.Process(task)
-		if e == errMaking {
+		if taskErr == errMaking {
 			c <- waitPendingTask(ctx, task.dest, task.dest+localSuffix)
 			return
 		}
-		if e == nil {
+		if taskErr == nil {
 			c <- nil
 		} else {
 			c <- taskErr.(error)
@@ -139,14 +180,14 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 
 	select {
 	case <-ctx.Done():
-		return nil, errors.New("timeout")
+		return nil, ctx.Err()
 	case e = <-c:
 		if e != nil {
 			return nil, e
 		}
 	}
 
-	return m.openFile(file, h.MimeType, h.Name)
+	return m.openFile(file, h.MimeType(), h.Name())
 }
 
 func (m *Maker) executeTask(v interface{}) interface{} {
@@ -173,7 +214,16 @@ func (m *Maker) executeTask(v interface{}) interface{} {
 		return e
 	}
 
-	e = task.h.Create(context.Background(), task.entry, item)
+	ctx := context.Background()
+	var ctxCancel context.CancelFunc
+	if task.h.Timeout() > 0 {
+		ctx, ctxCancel = context.WithTimeout(ctx, task.h.Timeout())
+	}
+	if ctxCancel != nil {
+		defer ctxCancel()
+	}
+
+	e = task.h.CreateThumbnail(ctx, task.entry, item)
 	_ = item.Close()
 	if e == nil {
 		e = os.Rename(lockFile, task.dest)
@@ -339,7 +389,7 @@ func (m *Maker) Dispose() error {
 
 func (m *Maker) SysConfig() (string, types.M, error) {
 	ext := make(types.M)
-	for k := range handlers {
+	for k := range m.handlers {
 		ext[k] = true
 	}
 	return "thumbnail", types.M{
