@@ -185,7 +185,7 @@ drive:
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
   sftp:
     name: SFTP
-    readme: SFTP drive
+    readme: SFTP drive <br/> @[Vgbhfive](https://blog.vgbhfive.cn)
     form:
       host:
         label: 主机
@@ -199,6 +199,9 @@ drive:
       password:
         label: 密码
         description: 密码
+      root_path:
+        label: 根路径
+        description: "/"
       cache_ttl:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存  

@@ -185,7 +185,7 @@ drive:
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
   sftp:
     name: SFTP
-    readme: SFTP drive
+    readme: SFTP drive <br/> @[Vgbhfive](https://blog.vgbhfive.cn)
     form:
       host:
         label: Host
@@ -199,6 +199,9 @@ drive:
       password:
         label: Password
         description: User password
+      root_path:
+        label: Path
+        description: "/"
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
