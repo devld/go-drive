@@ -188,6 +188,66 @@ thumbnail:
   #生成缩略图的并发数
   # 默认为 (CPU 数量 / 2)，目前图片的缩略图生成比较耗性能和内存。
   #concurrent: 4
+
+  # 缩略图生成器。 目前支持三种类型: image, text, shell
+  # file-types 指这个生成器支持的文件扩展名
+  handlers:
+    # image: 内嵌的图片缩略图生成(只支持 jpg, png, gif)
+    # 这个目前性能不佳，不推荐使用
+    - type: image
+      file-types: jpg,jpeg,png,gif
+      #config:
+      #  # 最大支持的文件大小
+      #  max-size: 33554432 # 32MB
+      #  # 最大支持的图片大小 (宽 * 高)
+      #  max-pixels: 36000000 # 6000*6000
+      #  # 生成的缩略图宽度(像素)
+      #  size: 220
+      #  # 缩略图图片质量，1 ~ 100，越大质量越好
+      #  quality: 50
+
+    # text: 内嵌的针对文本文件的生成器
+    # 读取文件文件的部分内容来生成一个 svg 图片
+    - type: text
+      file-types: txt,md,xml,html,css,scss,js,json,jsx,properties,yml,yaml,ini,c,h,cpp,go,java,kt,gradle,ps1
+      #config:
+      #  font-size: 12
+      #  # 生成的缩略图宽度(像素)
+      #  size: 220
+      #  # 最多读取的文件长度
+      #  max-read: 8192
+      #  # 生成的图片的 padding
+      #  padding: 10
+
+    # shell: 通过执行外部命令来生成缩略图，比如 ffmpeg
+    # 文件的内容会被写入标准输入(stdin)
+    # 生成的缩略图应该写出到标准输出(stdout)
+    # 如果命令返回非 0 状态，表示生成失败
+    # 一些相关的环境变量会被设置:
+    #
+    # GO_DRIVE_ENTRY_TYPE: file|dir
+    # GO_DRIVE_ENTRY_PATH: 引号括起来的文件路径(不是本地文件系统路径)
+    # GO_DRIVE_ENTRY_NAME: 引号括起来的文件名
+    # GO_DRIVE_ENTRY_SIZE: 文件大小
+    # GO_DRIVE_ENTRY_MOD_TIME: 文件修改时间，毫秒时间戳
+    # GO_DRIVE_ENTRY_READABLE: true|false 这个文件是否可读
+    #- type: shell
+    #  file-types: mp4,avi
+    #  config:
+    #    # 生成缩略图的命令
+    #    # 比如，下面的命令调用 ffmpeg 为视频生成缩略图
+    #    shell: ffmpeg.exe -hide_banner -loglevel error -i - -frames:v 1 -vf scale=220:-1 -f mjpeg -
+    #    # 输出的缩略图的 mime type
+    #    mime-type: image/jpeg
+    #    # 输出的文件名
+    #    filename: image.jpg
+    #    # 如果设置为 false，那么文件内容不会写入到 stdin
+    #    write-content: true
+    #    # 最大支持的文件大小，如果 <= 0，则没有限制
+    #    max-size: -1
+    #    # 生成缩略图的超时时间，如果 <= 0, 则没有限制，默认为永不超时
+    #    timeout: 10m
+
 auth:
   # 用户 Session Token 有效时间
   # 默认为 `2h`，两小时
@@ -208,4 +268,3 @@ oauth-redirect-uri: https://go-drive.top/oauth_callback
 
 
 > `https://go-drive.top/oauth_callback`，该网页是一个静态网页，没有与任何后端交互，源码在 [https://github.com/devld/go-drive/blob/gh-pages/oauth_callback.html](https://github.com/devld/go-drive/blob/gh-pages/oauth_callback.html)
-
