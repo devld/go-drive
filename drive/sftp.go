@@ -10,6 +10,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
+	"log"
 	"net"
 	"os"
 	path2 "path"
@@ -81,8 +82,8 @@ func NewSftpDrive(_ context.Context, config types.SM, driveUtils drive_util.Driv
 	return s, nil
 }
 
-func isSftpRootPath(path string) bool {
-	return path == "/"
+func (f *SFTPDrive) isSftpRootPath(path string) bool {
+	return path == f.rootPath
 }
 
 type SFTPDrive struct {
@@ -108,14 +109,24 @@ func (f *SFTPDrive) InitConn() {
 	}
 }
 
-func (f *SFTPDrive) InitPath(path string) (string, error) {
+func (f *SFTPDrive) InitPath(path string) string {
 	if path == "" { // sftp 根路径
-		return f.rootPath, nil
+		return f.rootPath
 	} else if !strings.HasPrefix(path, "/") {
 		// Linux 路径格式必须 / 开始
 		path = f.rootPath + "/" + path
 	}
-	return path, nil
+	return path
+}
+
+func (f *SFTPDrive) removePath(path string) string {
+	return strings.TrimLeft(path, "/")
+}
+
+func (f *SFTPDrive) removePathName(path string, name string) string {
+	path = strings.TrimLeft(path, "/")
+	path = strings.TrimRight(path, name)
+	return strings.TrimRight(path, "/")
 }
 
 func (f *SFTPDrive) Meta(context.Context) types.DriveMeta {
@@ -123,18 +134,25 @@ func (f *SFTPDrive) Meta(context.Context) types.DriveMeta {
 }
 
 func (f *SFTPDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
-	// Linux 路径格式必须 / 开始
-	path, _ = f.InitPath(path)
-	if isSftpRootPath(path) {
-		return &sftpEntry{d: f, isDir: true, modTime: -1}, nil
-	}
 	if cached, _ := f.cache.GetEntry(path); cached != nil {
 		return cached, nil
+	}
+	// Linux 路径格式必须 / 开始
+	if f.isSftpRootPath(path) {
+		return &sftpEntry{d: f, isDir: true, modTime: -1}, nil
 	}
 	name := utils.PathBase(path)
 	entries, e := f.list(ctx, path)
 	if e != nil {
-		return nil, e
+		path = f.InitPath(path)
+		stat, e := f.c.Stat(path)
+		if e != nil {
+			return nil, err.NewNotFoundError()
+		}
+		path = f.removePathName(path, stat.Name())
+		entry := f.newSFTPEntry(path, stat)
+		_ = f.cache.PutEntry(entry, f.cacheTTL)
+		return entry, nil
 	}
 	for _, found := range entries {
 		if pathBase(found.Path()) == name {
@@ -146,7 +164,7 @@ func (f *SFTPDrive) Get(ctx context.Context, path string) (types.IEntry, error) 
 }
 
 func (f *SFTPDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool, reader io.Reader) (types.IEntry, error) {
-	path, _ = f.InitPath(path)
+	path = f.InitPath(path)
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
@@ -161,18 +179,20 @@ func (f *SFTPDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool,
 	if e != nil {
 		return nil, mapError(e)
 	}
+	path = f.removePath(path)
 	_ = f.cache.Evict(path, false)
 	_ = f.cache.Evict(utils.PathParent(path), false)
 	return f.Get(ctx, path)
 }
 
 func (f *SFTPDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	path, _ = f.InitPath(path)
+	path = f.InitPath(path)
 	f.InitConn()
 	e := f.c.Mkdir(path)
 	if e != nil {
 		return nil, mapError(e)
 	}
+	path = f.removePath(path)
 	_ = f.cache.Evict(utils.PathParent(path), false)
 	return f.Get(ctx, path)
 }
@@ -205,15 +225,16 @@ func (f *SFTPDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, overri
 }
 
 func (f *SFTPDrive) list(_ context.Context, path string) ([]types.IEntry, error) {
-	path, _ = f.InitPath(path)
 	if cached, _ := f.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
+	path = f.InitPath(path)
 	f.InitConn()
 	stats, e := f.c.ReadDir(path)
 	if e != nil {
 		return nil, sftpMapError(e)
 	}
+	path = f.removePath(path)
 	entries := make([]types.IEntry, len(stats))
 	for i, s := range stats {
 		entries[i] = f.newSFTPEntry(path, s)
@@ -223,15 +244,16 @@ func (f *SFTPDrive) list(_ context.Context, path string) ([]types.IEntry, error)
 }
 
 func (f *SFTPDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
-	path, _ = f.InitPath(path)
 	if cached, _ := f.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
+	path = f.InitPath(path)
 	f.InitConn()
 	entries, e := f.list(ctx, path)
 	if e != nil {
 		return nil, e
 	}
+	path = f.removePath(path)
 	if len(entries) == 0 {
 		// we need to check whether the folder exists
 		_, e := f.Get(ctx, path)
@@ -243,37 +265,17 @@ func (f *SFTPDrive) List(ctx context.Context, path string) ([]types.IEntry, erro
 }
 
 func (f *SFTPDrive) Delete(ctx types.TaskCtx, path string) error {
-	path, _ = f.InitPath(path)
-	deleteRoot, e := f.Get(ctx, path)
-	if e != nil {
-		return e
-	}
-	tree, e := drive_util.BuildEntriesTree(ctx, deleteRoot, false)
-	if e != nil {
-		return e
-	}
-	entries := drive_util.FlattenEntriesTree(tree)
+	path = f.InitPath(path)
 
-	for i := len(entries) - 1; i >= 0; i-- {
-		var e error
-		if entries[i].Type().IsDir() {
-			e = f.c.RemoveDirectory(entries[i].Path())
-		} else {
-			e = f.c.Remove(entries[i].Path())
-		}
-		if e != nil {
-			return e
-		}
-		ctx.Progress(1, false)
-	}
+	f.c.RemoveDirectory(path)
 
+	path = f.removePath(path)
 	_ = f.cache.Evict(utils.PathParent(path), false)
 	_ = f.cache.Evict(path, true)
 	return nil
 }
 
 func (f *SFTPDrive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
-	path, _ = f.InitPath(path)
 	f.InitConn()
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
@@ -284,7 +286,7 @@ func (f *SFTPDrive) Upload(ctx context.Context, path string, size int64, overrid
 }
 
 func (f *SFTPDrive) newSFTPEntry(path string, stat os.FileInfo) *sftpEntry {
-	path, _ = f.InitPath(path)
+	log.Print("name: " + stat.Name())
 	return &sftpEntry{
 		d:       f,
 		path:    path2.Join(path, stat.Name()),
@@ -348,6 +350,8 @@ func (f *sftpEntry) GetReader(context.Context) (io.ReadCloser, error) {
 	return utils.NewLazyReader(func() (io.ReadCloser, error) {
 		r, w := io.Pipe()
 		go func() {
+			f.d.InitConn()
+			log.Print("f.path: " + f.path)
 			file, e := f.d.c.Open(f.path)
 			if e != nil {
 				_ = r.CloseWithError(e)
