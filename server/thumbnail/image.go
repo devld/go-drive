@@ -14,34 +14,35 @@ import (
 	_ "image/png"
 	"io"
 	"os"
-)
-
-const (
-	maxSize      = 32 * 1024 * 1024 // 32MB
-	maxPixels    = 6000 * 6000
-	imageSize    = 220
-	imageQuality = 50
+	"time"
 )
 
 func init() {
-	h := TypeHandler{
-		Create:   imageThumbnail,
-		Name:     "image.jpg",
-		MimeType: "image/jpeg",
-	}
-
-	Register("jpg", h)
-	Register("jpeg", h)
-	Register("png", h)
-	Register("gif", h)
+	RegisterTypeHandler("image", newImageTypeHandler)
 }
 
-func imageThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
+type imageTypeHandler struct {
+	maxSize      int64
+	maxPixels    int
+	imageSize    uint
+	imageQuality int
+}
+
+func newImageTypeHandler(c types.SM) (TypeHandler, error) {
+	return &imageTypeHandler{
+		maxSize:      c.GetInt64("max-size", 32*1024*1024), // 32MB
+		maxPixels:    c.GetInt("max-pixels", 6000*6000),
+		imageSize:    uint(c.GetInt64("size", 220)),
+		imageQuality: c.GetInt("quality", 50),
+	}, nil
+}
+
+func (i *imageTypeHandler) CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
 	content, ok := entry.(types.IContent)
 	if !ok {
 		return err.NewNotFoundError()
 	}
-	if content.Size() > maxSize {
+	if content.Size() > i.maxSize {
 		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.file_too_large"))
 	}
 	tempFile, e := drive_util.CopyIContentToTempFile(task.NewContextWrapper(ctx), content, "")
@@ -56,7 +57,7 @@ func imageThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) err
 	if e != nil {
 		return e
 	}
-	if imgConf.Width*imgConf.Height > maxPixels {
+	if imgConf.Width*imgConf.Height > i.maxPixels {
 		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.image_too_large"))
 	}
 	_, e = tempFile.Seek(0, 0)
@@ -67,6 +68,18 @@ func imageThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) err
 	if e != nil {
 		return e
 	}
-	resizedImg := resize.Thumbnail(imageSize, imageSize, img, resize.NearestNeighbor)
-	return jpeg.Encode(dest, resizedImg, &jpeg.Options{Quality: imageQuality})
+	resizedImg := resize.Thumbnail(i.imageSize, i.imageSize, img, resize.NearestNeighbor)
+	return jpeg.Encode(dest, resizedImg, &jpeg.Options{Quality: i.imageQuality})
+}
+
+func (i *imageTypeHandler) MimeType() string {
+	return "image/jpeg"
+}
+
+func (i *imageTypeHandler) Name() string {
+	return "image.jpg"
+}
+
+func (i *imageTypeHandler) Timeout() time.Duration {
+	return -1
 }

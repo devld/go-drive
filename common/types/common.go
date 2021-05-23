@@ -3,6 +3,7 @@ package types
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -89,5 +90,6 @@ func (c SM) GetUnixTime(key string, defVal *time.Time) time.Time {
 }
 
 func (c SM) GetBool(key string) bool {
-	return c[key] != ""
+	v := strings.ToLower(strings.TrimSpace(c[key]))
+	return c[key] != "" && v != "false"
 }

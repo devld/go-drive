@@ -9,30 +9,30 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/types"
 	"io"
-	"strings"
+	"time"
 )
-
-const (
-	fontSize         = 12
-	textImageSize    = 220
-	textMaxRead      = 8 * 1024 * 1024
-	textImagePadding = 10
-)
-
-const textExt = "txt,md,xml,html,css,scss,js,json,jsx,properties,yml,yaml,ini,c,h,cpp,go,java,kt,gradle,ps1"
 
 func init() {
-	h := TypeHandler{
-		Create:   textThumbnail,
-		Name:     "text.svg",
-		MimeType: "image/svg+xml",
-	}
-	for _, e := range strings.Split(textExt, ",") {
-		Register(e, h)
-	}
+	RegisterTypeHandler("text", newTextTypeHandler)
 }
 
-func textThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
+type textTypeHandler struct {
+	fontSize  int
+	imageSize int
+	maxRead   int64
+	padding   int
+}
+
+func newTextTypeHandler(c types.SM) (TypeHandler, error) {
+	return &textTypeHandler{
+		fontSize:  c.GetInt("font-size", 12),
+		imageSize: c.GetInt("size", 220),
+		maxRead:   c.GetInt64("max-read", 8*1024),
+		padding:   c.GetInt("padding", 10),
+	}, nil
+}
+
+func (t *textTypeHandler) CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
 	content, ok := entry.(types.IContent)
 	if !ok {
 		return err.NewNotFoundError()
@@ -45,17 +45,17 @@ func textThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) erro
 		_ = reader.Close()
 	}()
 
-	rows := (textImageSize - 2*textImagePadding) / fontSize
+	rows := (t.imageSize - 2*t.padding) / t.fontSize
 
 	w := bufio.NewWriter(dest)
 	_, e = w.WriteString(fmt.Sprintf("<svg viewBox=\"0 0 %d %d\" xmlns=\"http://www.w3.org/2000/svg\" "+
 		"style=\"background-color:#fff;padding: %dpx;\">"+
-		"<style>text{font-size: 10px;white-space:pre;}</style>", textImageSize, textImageSize, textImagePadding))
+		"<style>text{font-size: 10px;white-space:pre;}</style>", t.imageSize, t.imageSize, t.padding))
 	if e != nil {
 		return e
 	}
 
-	r := bufio.NewReader(io.LimitReader(reader, textMaxRead))
+	r := bufio.NewReader(io.LimitReader(reader, t.maxRead))
 
 	for i := 0; i < rows; i++ {
 		line, e := r.ReadString('\n')
@@ -67,7 +67,7 @@ func textThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) erro
 		}
 
 		_, e = w.WriteString(fmt.Sprintf("<text x=\"%d\" y=\"%d\">",
-			0, (i+1)*fontSize))
+			0, (i+1)*t.fontSize))
 
 		if e != nil {
 			return e
@@ -88,4 +88,16 @@ func textThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) erro
 	}
 
 	return w.Flush()
+}
+
+func (t *textTypeHandler) MimeType() string {
+	return "image/svg+xml"
+}
+
+func (t *textTypeHandler) Name() string {
+	return "text.svg"
+}
+
+func (t *textTypeHandler) Timeout() time.Duration {
+	return -1
 }

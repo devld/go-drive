@@ -96,8 +96,17 @@ type DbConfig struct {
 }
 
 type ThumbnailConfig struct {
-	TTL        time.Duration `yaml:"ttl"`
-	Concurrent int           `yaml:"concurrent"`
+	TTL        time.Duration          `yaml:"ttl"`
+	Concurrent int                    `yaml:"concurrent"`
+	Handlers   []ThumbnailHandlerItem `yaml:"handlers"`
+}
+
+type ThumbnailHandlerItem struct {
+	// Type is handler type, available type are image, text, shell
+	Type string `yaml:"type"`
+	// FileTypes is supported file extensions separate by comm, folder type is /
+	FileTypes string   `yaml:"file-types"`
+	Config    types.SM `yaml:"config"`
 }
 
 type AuthConfig struct {
