@@ -32,7 +32,7 @@ Doc: [https://go-drive.top](https://go-drive.top)
 
 ```shell
 mkdir go-drive-data
-docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devld/go-drive:0.3.0
+docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devld/go-drive:0.4.0
 ```
 
 其中 `go-drive-data` 是数据目录，为了保证数据在应用升级后保留，最好将其映射至容器外。
@@ -78,7 +78,7 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 
 ```shell
 mkdir go-drive-data
-docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devld/go-drive:0.3.0
+docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devld/go-drive:0.4.0
 ```
 
 `go-drive-data` is the data directory. To ensure that the data is retained after the application is upgraded, it is best to map it outside the container.
