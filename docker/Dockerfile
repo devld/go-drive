@@ -1,18 +1,19 @@
 FROM alpine:latest AS builder
 
-ARG BRANCH=master
-
 WORKDIR /work
 
 RUN apk update && \
     apk add git tar go nodejs npm make
+
+ARG BRANCH=master
+ARG BUILD_VERSION
 
 ADD https://api.github.com/repos/devld/go-drive/git/refs/heads/${BRANCH} /tmp/branch-info
 
 RUN git clone https://github.com/devld/go-drive.git && \
     cd go-drive && \
     git checkout ${BRANCH} && \
-    make target_name=go-drive_docker all
+    make target_name=go-drive_docker BUILD_VERSION=${BUILD_VERSION} all
 
 FROM alpine:latest
 
