@@ -116,11 +116,15 @@ func (f *FsDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool, r
 			return nil, e
 		}
 	}
-	tryToCopy := true
+	fileMoved := false
+	var e error
 	if tf, ok := reader.(*utils.TempFile); ok {
-		tryToCopy = tf.TransferTo(path) != nil
+		fileMoved, e = tf.TransferTo(path)
+		if e != nil {
+			return nil, e
+		}
 	}
-	if tryToCopy {
+	if !fileMoved {
 		file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 		if e != nil {
 			return nil, e
