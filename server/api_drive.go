@@ -351,11 +351,12 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 		return
 	}
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+		tempFile := utils.NewTempFile(file)
 		defer func() {
-			_ = file.Close()
-			_ = os.Remove(file.Name())
+			_ = tempFile.Close()
+			_ = os.Remove(tempFile.Name())
 		}()
-		return dr.getDrive(c).Save(ctx, path, size, override != "", utils.NewTempFile(file))
+		return dr.getDrive(c).Save(ctx, path, size, override != "", tempFile)
 	}, 2*time.Second)
 	if e != nil {
 		_ = c.Error(e)
@@ -405,12 +406,13 @@ func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 			return nil, e
 		}
 		ctx.Progress(0, true)
-		entry, e := dr.getDrive(c).Save(ctx, path, stat.Size(), true, utils.NewTempFile(file))
+		tempFile := utils.NewTempFile(file)
+		entry, e := dr.getDrive(c).Save(ctx, path, stat.Size(), true, tempFile)
 		if e != nil {
-			_ = file.Close()
+			_ = tempFile.Close()
 			return nil, e
 		}
-		_ = file.Close()
+		_ = tempFile.Close()
 		e = dr.chunkUploader.DeleteUpload(id)
 		return newEntryJson(entry), nil
 	}, 2*time.Second)
