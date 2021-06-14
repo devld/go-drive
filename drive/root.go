@@ -8,8 +8,6 @@ import (
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
-	_ "go-drive/drive/gdrive"
-	_ "go-drive/drive/onedrive"
 	"go-drive/storage"
 	"log"
 	"sync"
