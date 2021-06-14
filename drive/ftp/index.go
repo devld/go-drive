@@ -1,4 +1,4 @@
-package drive
+package ftp
 
 import (
 	"context"

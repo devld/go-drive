@@ -1,8 +1,10 @@
-package drive
+package sftp
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/secsy/goftp"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -170,7 +172,7 @@ func (f *SFTPDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, overri
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
-	fromEntry := from.(*ftpEntry)
+	fromEntry := from.(*sftpEntry)
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, f, to); e != nil {
 			return nil, e
@@ -403,4 +405,12 @@ func (p *concurPool) Clean() {
 
 func (p *concurPool) IsClosed() bool {
 	return p.isClosed
+}
+
+func mapError(e error) error {
+	fe, ok := e.(goftp.Error)
+	if !ok {
+		return e
+	}
+	return errors.New(fmt.Sprintf("[%d] %s", fe.Code(), fe.Message()))
 }

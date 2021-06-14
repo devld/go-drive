@@ -1,4 +1,4 @@
-package drive
+package fs
 
 import (
 	"context"
