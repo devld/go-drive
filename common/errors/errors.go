@@ -95,7 +95,6 @@ func (n UnsupportedError) Code() int {
 	return http.StatusMethodNotAllowed
 }
 
-// RemoteApiError
 type RemoteApiError struct {
 	code int
 	msg  string
@@ -109,17 +108,9 @@ func (r RemoteApiError) Code() int {
 	return r.code
 }
 
-// RequestTimeoutError
-type TimeoutError struct {
-	msg string
-}
-
-func (t TimeoutError) Code() int {
-	return http.StatusRequestTimeout
-}
-
-func (t TimeoutError) Error() string {
-	return t.msg
+func IsUnauthorizedError(e error) bool {
+	_, ok := e.(UnauthorizedError)
+	return ok
 }
 
 func IsUnsupportedError(e error) bool {
@@ -175,8 +166,4 @@ func NewUnsupportedMessageError(msg string) UnsupportedError {
 
 func NewRemoteApiError(code int, msg string) RemoteApiError {
 	return RemoteApiError{code, msg}
-}
-
-func NewTimeoutError(msg string) TimeoutError {
-	return TimeoutError{msg}
 }

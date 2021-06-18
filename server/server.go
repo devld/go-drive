@@ -52,19 +52,33 @@ func InitServer(config common.Config,
 	engine.Use(Logger())
 	engine.Use(apiResultHandler(messageSource))
 
+	userAuth := NewUserAuth(userDAO)
+
 	if e := InitCommonRoutes(engine, ch); e != nil {
 		return nil, e
 	}
-	if e := InitAuthRoutes(engine, tokenStore, userDAO); e != nil {
+	if e := InitAuthRoutes(engine, userAuth, tokenStore); e != nil {
 		return nil, e
 	}
 	if e := InitAdminRoutes(engine, ch, rootDrive, tokenStore, userDAO, groupDAO,
 		driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO); e != nil {
 		return nil, e
 	}
-	if e := InitDriveRoutes(engine, ch, config, rootDrive, permissionDAO, thumbnail,
+
+	access, e := newDriveAccess(ch, rootDrive, permissionDAO, signer)
+	if e != nil {
+		return nil, e
+	}
+
+	if e := InitDriveRoutes(engine, access, config, thumbnail,
 		signer, chunkUploader, runner, tokenStore); e != nil {
 		return nil, e
+	}
+
+	if config.WebDav.Enabled {
+		if e := InitWebdavAccess(engine, config, access, userAuth); e != nil {
+			return nil, e
+		}
 	}
 
 	if config.WebDir != "" {

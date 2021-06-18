@@ -46,6 +46,7 @@ const (
 	DefaultThumbnailTTL      = 30 * 24 * time.Hour
 	DefaultAuthValidity      = 2 * time.Hour
 	DefaultAuthAutoRefresh   = true
+	DefaultWebDavPrefix      = "/dav"
 
 	DefaultConfigFile = "config.yml"
 )
@@ -83,6 +84,8 @@ type Config struct {
 
 	Thumbnail ThumbnailConfig `yaml:"thumbnail"`
 	Auth      AuthConfig      `yaml:"auth"`
+
+	WebDav WebDavConfig `yaml:"web-dav"`
 }
 
 type DbConfig struct {
@@ -114,6 +117,12 @@ type AuthConfig struct {
 	AutoRefresh bool          `yaml:"auto-refresh"`
 }
 
+type WebDavConfig struct {
+	Enabled        bool   `yaml:"enabled"`
+	Prefix         string `yaml:"prefix"`
+	AllowAnonymous bool   `yaml:"allow-anonymous"`
+}
+
 func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	config := Config{
 		Listen:            DefaultListen,
@@ -133,6 +142,10 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		Auth: AuthConfig{
 			Validity:    DefaultAuthValidity,
 			AutoRefresh: DefaultAuthAutoRefresh,
+		},
+		WebDav: WebDavConfig{
+			Enabled: false,
+			Prefix:  DefaultWebDavPrefix,
 		},
 	}
 

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	cmap "github.com/orcaman/concurrent-map"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -10,14 +11,22 @@ import (
 )
 
 type UserDAO struct {
-	db *DB
+	db    *DB
+	cache cmap.ConcurrentMap
 }
 
 func NewUserDAO(db *DB) *UserDAO {
-	return &UserDAO{db}
+	return &UserDAO{
+		db:    db,
+		cache: cmap.New(),
+	}
 }
 
 func (u *UserDAO) GetUser(username string) (types.User, error) {
+	if cached, ok := u.cache.Get(username); ok {
+		return cached.(types.User), nil
+	}
+
 	user := types.User{}
 	e := u.db.C().First(&user, "username = ?", username).Error
 	if errors.Is(e, gorm.ErrRecordNotFound) {
@@ -26,6 +35,7 @@ func (u *UserDAO) GetUser(username string) (types.User, error) {
 	if e = u.db.C().Model(&user).Association("Groups").Find(&user.Groups); e != nil {
 		return user, e
 	}
+	u.cache.Set(username, user)
 	return user, e
 }
 
@@ -56,7 +66,7 @@ func (u *UserDAO) UpdateUser(username string, user types.User) error {
 		}
 		data["password"] = string(encoded)
 	}
-
+	u.cache.Remove(username)
 	return u.db.C().Transaction(func(tx *gorm.DB) error {
 		if len(data) > 0 {
 			s := tx.Model(&types.User{}).Where("username = ?", username).Updates(data)
@@ -82,6 +92,7 @@ func (u *UserDAO) UpdateUser(username string, user types.User) error {
 }
 
 func (u *UserDAO) DeleteUser(username string) error {
+	u.cache.Remove(username)
 	return u.db.C().Transaction(func(tx *gorm.DB) error {
 		s := tx.Delete(types.User{}, "username = ?", username)
 		if s.Error != nil {

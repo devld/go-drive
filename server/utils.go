@@ -1,7 +1,9 @@
 package server
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -16,7 +18,71 @@ const (
 	keyResult  = "apiResult"
 
 	signatureQueryKey = "_k"
+
+	headerAuth = "Authorization"
 )
+
+func TokenAuth(tokenStore types.TokenStore) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenKey := c.GetHeader(headerAuth)
+		token, e := tokenStore.Validate(tokenKey)
+		if e != nil {
+			_ = c.Error(e)
+			c.Abort()
+			return
+		}
+		session := token.Value
+
+		SetToken(c, token.Token)
+		SetSession(c, session)
+
+		c.Next()
+	}
+}
+
+func BasicAuth(userAuth *UserAuth, realm string, allowAnonymous bool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username, password, ok := c.Request.BasicAuth()
+		session := types.Session{}
+		if ok {
+			user, e := userAuth.AuthByUsernamePassword(username, password)
+			if e != nil {
+				if !err.IsUnauthorizedError(e) {
+					_ = c.Error(e)
+					c.Abort()
+					return
+				}
+			}
+			session.User = user
+		}
+
+		if session.IsAnonymous() && !allowAnonymous {
+			c.Status(http.StatusUnauthorized)
+			c.Header("WWW-Authenticate", fmt.Sprintf("Basic realm=\""+realm+"\""))
+			c.Abort()
+			return
+		}
+
+		SetSession(c, session)
+		c.Next()
+	}
+}
+
+func UserGroupRequired(group string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := GetSession(c)
+		if session.User.Groups != nil {
+			for _, g := range session.User.Groups {
+				if g.Name == group {
+					c.Next()
+					return
+				}
+			}
+		}
+		_ = c.Error(err.NewPermissionDeniedError(i18n.T("api.auth.group_permission_required", group)))
+		c.Abort()
+	}
+}
 
 func SetResult(c *gin.Context, result interface{}) {
 	c.Set(keyResult, result)

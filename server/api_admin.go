@@ -27,7 +27,7 @@ func InitAdminRoutes(r gin.IRouter,
 	permissionDAO *storage.PathPermissionDAO,
 	pathMountDAO *storage.PathMountDAO) error {
 
-	r = r.Group("/admin", Auth(tokenStore), UserGroupRequired("admin"))
+	r = r.Group("/admin", TokenAuth(tokenStore), UserGroupRequired("admin"))
 
 	// region user
 
@@ -307,8 +307,8 @@ func InitAdminRoutes(r gin.IRouter,
 			return
 		}
 		// permissions updated
-		dr := ch.Get("apiDrive").(*driveRoute)
-		if e := dr.reloadPerm(); e != nil {
+		da := ch.Get("driveAccess").(*driveAccess)
+		if e := da.reloadPerm(); e != nil {
 			_ = c.Error(e)
 			return
 		}
