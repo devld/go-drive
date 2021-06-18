@@ -8,26 +8,20 @@ import (
 	"go-drive/common/drive_util"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
-	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"go-drive/drive"
 	"go-drive/server/thumbnail"
-	"go-drive/storage"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
 func InitDriveRoutes(router gin.IRouter,
-	ch *registry.ComponentsHolder,
+	access *driveAccess,
 	config common.Config,
-	rootDrive *drive.RootDrive,
-	permissionDAO *storage.PathPermissionDAO,
 	thumbnail *thumbnail.Maker,
 	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
@@ -35,20 +29,12 @@ func InitDriveRoutes(router gin.IRouter,
 	tokenStore types.TokenStore) error {
 
 	dr := driveRoute{
-		config:    config,
-		rootDrive: rootDrive,
-
-		permissionDAO: permissionDAO,
-		permMux:       &sync.Mutex{},
-
+		config:        config,
+		access:        access,
 		chunkUploader: chunkUploader,
 		thumbnail:     thumbnail,
 		runner:        runner,
 		signer:        signer,
-	}
-
-	if e := dr.reloadPerm(); e != nil {
-		return e
 	}
 
 	// get file content
@@ -56,7 +42,7 @@ func InitDriveRoutes(router gin.IRouter,
 	router.GET("/content/*path", dr.getContent)
 	router.GET("/thumbnail/*path", dr.getThumbnail)
 
-	r := router.Group("/", Auth(tokenStore))
+	r := router.Group("/", TokenAuth(tokenStore))
 
 	// list entries/drives
 	r.GET("/entries/*path", dr.list)
@@ -106,17 +92,13 @@ func InitDriveRoutes(router gin.IRouter,
 		}
 	})
 
-	ch.Add("apiDrive", &dr)
 	return nil
 }
 
 type driveRoute struct {
-	config    common.Config
-	rootDrive *drive.RootDrive
+	config common.Config
 
-	permissionDAO *storage.PathPermissionDAO
-	perms         permMap
-	permMux       *sync.Mutex
+	access *driveAccess
 
 	chunkUploader *ChunkUploader
 	thumbnail     *thumbnail.Maker
@@ -125,24 +107,7 @@ type driveRoute struct {
 }
 
 func (dr *driveRoute) getDrive(c *gin.Context) types.IDrive {
-	session := GetSession(c)
-	return NewPermissionWrapperDrive(
-		c.Request, session,
-		dr.rootDrive.Get(),
-		dr.perms,
-		dr.signer,
-	)
-}
-
-func (dr *driveRoute) reloadPerm() error {
-	dr.permMux.Lock()
-	defer dr.permMux.Unlock()
-	all, e := dr.permissionDAO.GetAll()
-	if e != nil {
-		return e
-	}
-	dr.perms = newPermMap(all)
-	return nil
+	return dr.access.getDrive(c.Request, GetSession(c))
 }
 
 func (dr *driveRoute) list(c *gin.Context) {

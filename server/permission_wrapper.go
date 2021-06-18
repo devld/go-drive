@@ -48,7 +48,10 @@ func (p *PermissionWrapperDrive) Meta(ctx context.Context) types.DriveMeta {
 }
 
 func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
-	canRead := checkSignature(p.signer, p.request, path)
+	canRead := false
+	if p.signer != nil {
+		canRead = checkSignature(p.signer, p.request, path)
+	}
 	var permission = types.PermissionRead
 	if !canRead {
 		var e error
@@ -61,11 +64,15 @@ func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IE
 	if e != nil {
 		return nil, e
 	}
+	ak := ""
+	if p.signer != nil {
+		ak = signPathRequest(p.signer, p.request, path, time.Now().Add(accessKeyValidity))
+	}
 	return &permissionWrapperEntry{
 		p:          p,
 		entry:      entry,
 		permission: permission,
-		accessKey:  signPathRequest(p.signer, p.request, path, time.Now().Add(accessKeyValidity)),
+		accessKey:  ak,
 	}, nil
 }
 
@@ -149,7 +156,7 @@ func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types
 		per := p.pm.resolvePath(e.Path())
 		if per.CanRead() {
 			accessKey := ""
-			if e.Type().IsFile() {
+			if e.Type().IsFile() && p.signer != nil {
 				accessKey = signPathRequest(p.signer, p.request, e.Path(), time.Now().Add(accessKeyValidity))
 			}
 			result = append(

@@ -2,26 +2,15 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
-	"go-drive/common/errors"
-	"go-drive/common/i18n"
 	"go-drive/common/types"
-	"go-drive/storage"
-	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	headerAuth = "Authorization"
-)
-
-func InitAuthRoutes(r gin.IRouter, tokenStore types.TokenStore, userDAO *storage.UserDAO) error {
-	ar := authRoute{
-		userDAO:    userDAO,
-		tokenStore: tokenStore,
-	}
+func InitAuthRoutes(r gin.IRouter, ua *UserAuth, tokenStore types.TokenStore) error {
+	ar := authRoute{userAuth: ua, tokenStore: tokenStore}
 
 	r.POST("/auth/init", ar.init)
 
-	auth := r.Group("/auth", Auth(tokenStore))
+	auth := r.Group("/auth", TokenAuth(tokenStore))
 	{
 		auth.POST("/login", ar.login)
 		auth.POST("/logout", ar.logout)
@@ -32,7 +21,7 @@ func InitAuthRoutes(r gin.IRouter, tokenStore types.TokenStore, userDAO *storage
 }
 
 type authRoute struct {
-	userDAO    *storage.UserDAO
+	userAuth   *UserAuth
 	tokenStore types.TokenStore
 }
 
@@ -51,16 +40,12 @@ func (a *authRoute) login(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	getUser, e := a.userDAO.GetUser(user.Username)
+	user, e := a.userAuth.AuthByUsernamePassword(user.Username, user.Password)
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
-	if e := bcrypt.CompareHashAndPassword([]byte(getUser.Password), []byte(user.Password)); e != nil {
-		_ = c.Error(err.NewBadRequestError(i18n.T("api.auth.invalid_username_or_password")))
-		return
-	}
-	e = UpdateSessionUser(c, a.tokenStore, getUser)
+	e = UpdateSessionUser(c, a.tokenStore, user)
 	if e != nil {
 		_ = c.Error(e)
 	}
@@ -76,39 +61,5 @@ func (a *authRoute) getUser(c *gin.Context) {
 		u := s.User
 		u.Password = ""
 		SetResult(c, u)
-	}
-}
-
-func Auth(tokenStore types.TokenStore) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tokenKey := c.GetHeader(headerAuth)
-		token, e := tokenStore.Validate(tokenKey)
-		if e != nil {
-			_ = c.Error(e)
-			c.Abort()
-			return
-		}
-		session := token.Value
-
-		SetToken(c, token.Token)
-		SetSession(c, session)
-
-		c.Next()
-	}
-}
-
-func UserGroupRequired(group string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		session := GetSession(c)
-		if session.User.Groups != nil {
-			for _, g := range session.User.Groups {
-				if g.Name == group {
-					c.Next()
-					return
-				}
-			}
-		}
-		_ = c.Error(err.NewPermissionDeniedError(i18n.T("api.auth.group_permission_required", group)))
-		c.Abort()
 	}
 }
