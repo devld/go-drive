@@ -88,11 +88,26 @@ func GetIContentReader(ctx context.Context, content types.IContent) (io.ReadClos
 	return content.GetReader(ctx)
 }
 
+func CopyIContent(ctx types.TaskCtx, content types.IContent, dst io.Writer) error {
+	reader, e := GetIContentReader(ctx, content)
+	if e != nil {
+		return e
+	}
+	defer func() {
+		_ = reader.Close()
+	}()
+	_, e = Copy(ctx, dst, reader)
+	return e
+}
+
 func CopyIContentToTempFile(ctx types.TaskCtx, content types.IContent, tempDir string) (*os.File, error) {
 	reader, e := GetIContentReader(ctx, content)
 	if e != nil {
 		return nil, e
 	}
+	defer func() {
+		_ = reader.Close()
+	}()
 	return CopyReaderToTempFile(ctx, reader, tempDir)
 }
 
