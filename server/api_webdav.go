@@ -146,8 +146,9 @@ func (w *webdavFs) newWebDavFile(e types.IEntry, flag int) *webdavFile {
 }
 
 type webdavFile struct {
-	e    types.IEntry
-	file *os.File
+	e         types.IEntry
+	file      *os.File
+	cacheFile *utils.CacheFile
 
 	children []types.IEntry
 	dirPos   int
@@ -162,6 +163,10 @@ type webdavFile struct {
 func (w *webdavFile) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if w.cacheFile != nil {
+		_ = w.cacheFile.Close()
+	}
 
 	if w.file == nil {
 		return nil
@@ -192,7 +197,30 @@ func (w *webdavFile) Close() error {
 }
 
 func (w *webdavFile) getFile() error {
-	if w.file != nil {
+	if w.file != nil || w.cacheFile != nil {
+		return nil
+	}
+
+	if w.openFlag == os.O_RDONLY {
+		content, ok := w.e.(types.IContent)
+		if !ok {
+			return errors.New("file is not readable")
+		}
+		cf, e := utils.NewCacheFile(w.e.Size(), w.tempDir, "webdav-tmp")
+		if e != nil {
+			return e
+		}
+		_, e = cf.Seek(w.seekPos, io.SeekStart)
+		if e != nil {
+			_ = cf.Close()
+			return e
+		}
+		if w.e.Size() > 0 {
+			go func() {
+				_ = drive_util.CopyIContent(task.NewContextWrapper(context.Background()), content, cf)
+			}()
+		}
+		w.cacheFile = cf
 		return nil
 	}
 
@@ -239,13 +267,20 @@ func (w *webdavFile) Read(p []byte) (n int, err error) {
 	if e := w.getFile(); e != nil {
 		return 0, e
 	}
-	n, err = w.file.Read(p)
+	if w.cacheFile != nil {
+		n, err = w.cacheFile.Read(p)
+	} else {
+		n, err = w.file.Read(p)
+	}
 	return
 }
 
 func (w *webdavFile) Seek(offset int64, whence int) (int64, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.cacheFile != nil {
+		return w.cacheFile.Seek(offset, whence)
+	}
 	if w.file == nil {
 		// a fake file opened with flag = 0, used to get file size
 		size := w.e.Size()
@@ -348,11 +383,21 @@ func (e entryFileInfo) Size() int64 {
 }
 
 func (e entryFileInfo) Mode() fs.FileMode {
-	m := fs.ModePerm
-	if e.e.Type().IsDir() {
-		m |= fs.ModeDir
+	var p fs.FileMode = 0
+	meta := e.e.Meta()
+	if meta.CanRead {
+		p |= 04 // r
 	}
-	return m
+	if meta.CanWrite {
+		p |= 02 // w
+	}
+	if e.e.Type().IsDir() {
+		p |= fs.ModeDir
+		if meta.CanRead {
+			p |= 01 // x
+		}
+	}
+	return p
 }
 
 func (e entryFileInfo) ModTime() time.Time {
