@@ -4,7 +4,6 @@ import (
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"net/http"
-	"strconv"
 )
 
 type RequestError interface {
@@ -101,7 +100,7 @@ type RemoteApiError struct {
 }
 
 func (r RemoteApiError) Error() string {
-	return "[" + strconv.Itoa(r.code) + "] " + r.msg
+	return r.msg
 }
 
 func (r RemoteApiError) Code() int {

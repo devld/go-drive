@@ -33,8 +33,9 @@ const (
 	TempDir = "temp"
 
 	DefaultListen            = ":8089"
-	DefaultAPIPATH           = ""
+	DefaultAPIPath           = ""
 	DefaultAppName           = "Drive"
+	DefaultWebPath           = ""
 	DefaultDataDir           = "./"
 	DefaultWebDir            = "./web"
 	DefaultLangDir           = "./lang"
@@ -58,6 +59,7 @@ type Config struct {
 
 	APIPath string `yaml:"api-path"`
 	AppName string `yaml:"app-name"`
+	WebPath string `yaml:"web-path"`
 
 	// all data will be stored in DataDir
 	DataDir string `yaml:"data-dir"`
@@ -126,8 +128,9 @@ type WebDavConfig struct {
 func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	config := Config{
 		Listen:            DefaultListen,
-		APIPath:           DefaultAPIPATH,
+		APIPath:           DefaultAPIPath,
 		AppName:           DefaultAppName,
+		WebPath:           DefaultWebPath,
 		DataDir:           DefaultDataDir,
 		WebDir:            DefaultWebDir,
 		LangDir:           DefaultLangDir,

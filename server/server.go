@@ -54,13 +54,15 @@ func InitServer(config common.Config,
 
 	userAuth := NewUserAuth(userDAO)
 
-	if e := InitCommonRoutes(engine, ch); e != nil {
+	router := engine.Group(config.APIPath)
+
+	if e := InitCommonRoutes(router, ch); e != nil {
 		return nil, e
 	}
-	if e := InitAuthRoutes(engine, userAuth, tokenStore); e != nil {
+	if e := InitAuthRoutes(router, userAuth, tokenStore); e != nil {
 		return nil, e
 	}
-	if e := InitAdminRoutes(engine, ch, rootDrive, tokenStore, userDAO, groupDAO,
+	if e := InitAdminRoutes(router, ch, rootDrive, tokenStore, userDAO, groupDAO,
 		driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO); e != nil {
 		return nil, e
 	}
@@ -70,7 +72,7 @@ func InitServer(config common.Config,
 		return nil, e
 	}
 
-	if e := InitDriveRoutes(engine, access, config, thumbnail,
+	if e := InitDriveRoutes(router, access, config, thumbnail,
 		signer, chunkUploader, runner, tokenStore); e != nil {
 		return nil, e
 	}
@@ -85,7 +87,7 @@ func InitServer(config common.Config,
 		preprocess := func(name string, file http.File) (string, error) {
 			return processWebFiles(name, file, config)
 		}
-		s := http.StripPrefix("/", http.FileServer(NewRootFileSystem(config.WebDir, preprocess)))
+		s := http.StripPrefix(config.WebPath, http.FileServer(NewRootFileSystem(config.WebDir, preprocess)))
 		engine.NoRoute(func(c *gin.Context) { s.ServeHTTP(c.Writer, c.Request) })
 	}
 
