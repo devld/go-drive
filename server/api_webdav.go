@@ -32,9 +32,6 @@ func InitWebdavAccess(router gin.IRouter, config common.Config,
 		config:  config,
 		lockSys: webdav.NewMemLS(),
 	}
-	if config.WebDav.Prefix == "" || config.WebDav.Prefix == "/" {
-		return errors.New("web-dav.prefix cannot be root path")
-	}
 
 	withAuth := router.Group(config.WebDav.Prefix, BasicAuth(userAuth, "webdav", config.WebDav.AllowAnonymous))
 	withoutAuth := router.Group(config.WebDav.Prefix)

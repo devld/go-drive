@@ -138,3 +138,6 @@ auth:
 # then you need to specify the API path
 # Note: This change may not take effect immediately because of the PWA cache
 api-path: ""
+
+# Static files will be served here
+web-path: ""

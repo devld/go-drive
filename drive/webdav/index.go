@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -44,6 +45,8 @@ func NewWebDAVDrive(ctx context.Context, config types.SM,
 
 	cacheTtl := config.GetDuration("cache_ttl", -1)
 
+	u = strings.TrimRight(u, "/")
+
 	uu, e := url.Parse(u)
 	if e != nil {
 		return nil, e
@@ -51,7 +54,7 @@ func NewWebDAVDrive(ctx context.Context, config types.SM,
 	pathPrefix := uu.Path
 
 	w := &WebDAVDrive{
-		url: u, username: username, password: password,
+		username: username, password: password,
 		cacheTTL: cacheTtl, pathPrefix: pathPrefix,
 	}
 
@@ -61,7 +64,7 @@ func NewWebDAVDrive(ctx context.Context, config types.SM,
 		w.cache = utils.CreateCache(w.deserializeEntry, nil)
 	}
 
-	client, e := req.NewClient(u, w.beforeRequest, w.afterRequest, nil)
+	client, e := req.NewClient(u, w.beforeRequest, w.afterRequest, &http.Client{})
 	if e != nil {
 		return nil, e
 	}
@@ -76,7 +79,6 @@ func NewWebDAVDrive(ctx context.Context, config types.SM,
 }
 
 type WebDAVDrive struct {
-	url        string
 	pathPrefix string
 	username   string
 	password   string
@@ -265,7 +267,9 @@ func (w *WebDAVDrive) deserializeEntry(dat string) (types.IEntry, error) {
 func (w *WebDAVDrive) newEntry(res propfindResponse) *webDavEntry {
 	modTime, _ := time.Parse(time.RFC1123, res.LastModified)
 	href, _ := url.PathUnescape(res.Href)
-	href = href[len(w.pathPrefix):]
+	if strings.HasPrefix(href, w.pathPrefix) {
+		href = href[len(w.pathPrefix):]
+	}
 	return &webDavEntry{
 		path:    utils.CleanPath(href),
 		modTime: utils.Millisecond(modTime),
