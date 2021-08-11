@@ -45,7 +45,7 @@ func oauthReq(c common.Config) *drive_util.OAuthRequest {
 		RedirectURL:    c.OAuthRedirectURI,
 		Scopes:         []string{"https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/userinfo.profile"},
 		Text:           t("oauth_text"),
-		AutoCodeOption: []oauth2.AuthCodeOption{oauth2.AccessTypeOffline},
+		AutoCodeOption: []oauth2.AuthCodeOption{oauth2.AccessTypeOffline, oauth2.ApprovalForce},
 	}
 }
 
