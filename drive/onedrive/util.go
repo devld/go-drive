@@ -75,7 +75,7 @@ func InitConfig(ctx context.Context, config types.SM,
 	if resp == nil {
 		return initConfig, nil
 	}
-	reqClient, e := req.NewClient("", nil, ifApiCallError, resp.Client(nil))
+	reqClient, e := req.NewClient("", nil, ifApiCallError, resp.Client())
 	if e != nil {
 		return nil, e
 	}

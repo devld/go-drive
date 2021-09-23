@@ -71,7 +71,7 @@ func NewOneDrive(_ context.Context, config types.SM,
 
 	od.c, e = req.NewClient(
 		utils.BuildURL("https://graph.microsoft.com/v1.0/drives/{}", od.driveId),
-		nil, ifApiCallError, resp.Client(nil))
+		nil, ifApiCallError, resp.Client())
 
 	return od, e
 }

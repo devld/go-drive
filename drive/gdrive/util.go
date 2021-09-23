@@ -58,7 +58,7 @@ func InitConfig(ctx context.Context, config types.SM,
 	if resp == nil {
 		return initConfig, nil
 	}
-	httpClient := resp.Client(nil)
+	httpClient := resp.Client()
 	service, e := gOauth.NewService(ctx, option.WithHTTPClient(httpClient))
 	if e != nil {
 		return nil, e
