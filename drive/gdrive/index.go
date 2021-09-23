@@ -37,7 +37,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils
 	if e != nil {
 		return nil, e
 	}
-	service, e := drive.NewService(ctx, option.WithHTTPClient(resp.Client(nil)))
+	service, e := drive.NewService(ctx, option.WithHTTPClient(resp.Client()))
 	if e != nil {
 		return nil, e
 	}
@@ -47,7 +47,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils
 	g := &GDrive{
 		s:        service,
 		cacheTTL: cacheTtl,
-		ts:       resp.TokenSource(nil),
+		ts:       resp.TokenSource(),
 	}
 	if cacheTtl <= 0 {
 		g.cache = drive_util.DummyCache()
