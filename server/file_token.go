@@ -72,7 +72,7 @@ func (f *FileTokenStore) Revoke(token string) error {
 }
 
 func (f *FileTokenStore) getSessionFile(token string) string {
-	return filepath.Join(f.root, sessionPrefix+token)
+	return filepath.Join(f.root, filepath.Clean(sessionPrefix+token))
 }
 
 func (f *FileTokenStore) readFile(token string, read bool) (*types.Token, error) {

@@ -45,9 +45,13 @@ class DispatcherUploadTask extends UploadTask {
     this._onChange(STATUS_STARTING)
     let uploadConfig
     try {
-      uploadConfig = await axios.post(`/upload/${this._task.path}`, null, {
-        params: { override: this._task.override, size: this._task.size }
-      })
+      uploadConfig = await axios.post(
+        `/upload/${this._task.path}`,
+        {},
+        {
+          params: { override: this._task.override, size: this._task.size }
+        }
+      )
     } catch (e) {
       this._started = false
       this._onChange(STATUS_ERROR, e)

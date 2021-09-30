@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -62,12 +63,28 @@ func (c SM) GetInt(key string, defVal int) int {
 	return v
 }
 
+func (c SM) GetUint(key string, defVal uint) uint {
+	v := c.GetInt(key, -1)
+	if v < 0 || uint(v) > uint(math.MaxUint) {
+		return defVal
+	}
+	return uint(v)
+}
+
 func (c SM) GetInt64(key string, defVal int64) int64 {
 	v, e := strconv.ParseInt(c[key], 10, 64)
 	if e != nil {
 		return defVal
 	}
 	return v
+}
+
+func (c SM) GetUint64(key string, defVal uint64) uint64 {
+	v := c.GetInt64(key, -1)
+	if v < 0 || uint64(v) > uint64(math.MaxUint64) {
+		return defVal
+	}
+	return uint64(v)
 }
 
 func (c SM) GetDuration(key string, defVal time.Duration) time.Duration {

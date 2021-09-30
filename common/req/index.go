@@ -123,7 +123,7 @@ func (h *Client) client() *http.Client {
 
 func (h *Client) request(req *http.Request) (Response, error) {
 	if utils.IsDebugOn() {
-		log.Printf("[HttpClient  req] %s %s %v", req.Method, req.URL.String(), req.Header)
+		log.Printf("[HttpClient  req] %s %s", req.Method, req.URL.String())
 	}
 	r, e := h.client().Do(req)
 	if utils.IsDebugOn() {

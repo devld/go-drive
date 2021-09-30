@@ -14,6 +14,7 @@ import (
 	"math"
 	"os"
 	path2 "path"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -228,7 +229,7 @@ func (c *ChunkUploader) getDeleteMark(upload *ChunkUpload) string {
 }
 
 func (c *ChunkUploader) getDir(id string) string {
-	return path2.Join(c.dir, id)
+	return path2.Join(c.dir, filepath.Clean(id))
 }
 
 type ChunkUpload struct {
