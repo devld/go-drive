@@ -10,6 +10,7 @@ import (
 	"go-drive/common/types"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/drive/v3"
 	gOauth "google.golang.org/api/oauth2/v1"
 	"google.golang.org/api/option"
 )
@@ -69,13 +70,58 @@ func InitConfig(ctx context.Context, config types.SM,
 	initConfig.Configured = e == nil
 	if e == nil {
 		initConfig.OAuth.Principal = fmt.Sprintf("%s", user.Name)
+		if e := buildInitForm(ctx, resp, utils, initConfig); e != nil {
+			return nil, e
+		}
 	}
 
 	return initConfig, nil
 }
 
+func buildInitForm(ctx context.Context, resp *drive_util.OAuthResponse,
+	driveUtils drive_util.DriveUtils, initConfig *drive_util.DriveInitConfig) error {
+	// get shared drives
+	driveSrv, e := drive.NewService(ctx, option.WithHTTPClient(resp.Client()))
+	if e != nil {
+		return e
+	}
+	drivesResp, e := driveSrv.Drives.List().Context(ctx).Do()
+	if e != nil {
+		return e
+	}
+
+	params, e := driveUtils.Data.Load("drive_id")
+	if e != nil {
+		return e
+	}
+
+	opts := make([]types.FormItemOption, 0, len(drivesResp.Drives)+1)
+	opts = append(opts, types.FormItemOption{
+		Name:  t("my_drive_name"),
+		Title: t("my_drive_name"),
+		Value: "",
+	})
+	for _, d := range drivesResp.Drives {
+		opts = append(opts, types.FormItemOption{
+			Name:  d.Name,
+			Title: d.Name,
+			Value: d.Id,
+		})
+	}
+
+	initConfig.Form = []types.FormItem{
+		{Label: t("drive_label"), Type: "select", Field: "drive_id", Options: opts, Required: true, DefaultValue: ""},
+	}
+	initConfig.Value = types.SM{"drive_id": params["drive_id"]}
+
+	return nil
+}
+
 func Init(ctx context.Context, data types.SM,
 	config types.SM, utils drive_util.DriveUtils) error {
+	if e := utils.Data.Save(types.SM{"drive_id": data["drive_id"]}); e != nil {
+		return e
+	}
 	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config), data, config, utils.Data)
 	return e
 }

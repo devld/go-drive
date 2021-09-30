@@ -43,11 +43,16 @@ func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils
 	}
 
 	cacheTtl := config.GetDuration("cache_ttl", -1)
+	params, e := utils.Data.Load("drive_id")
+	if e != nil {
+		return nil, e
+	}
 
 	g := &GDrive{
 		s:        service,
 		cacheTTL: cacheTtl,
 		ts:       resp.TokenSource(),
+		driveId:  params["drive_id"],
 	}
 	if cacheTtl <= 0 {
 		g.cache = drive_util.DummyCache()
@@ -59,6 +64,8 @@ func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils
 
 type GDrive struct {
 	s *drive.Service
+
+	driveId string
 
 	cacheTTL time.Duration
 	cache    drive_util.DriveCache
@@ -249,15 +256,37 @@ func (g *GDrive) List(ctx context.Context, path string) ([]types.IEntry, error) 
 		}
 		id = ge.fileId()
 	}
-	resp, e := g.s.Files.List().Context(ctx).
-		Q(fmt.Sprintf("'%s' in parents and trashed = false", id)).
-		Fields("files(id,name,mimeType,parents,hasThumbnail,thumbnailLink,modifiedTime,driveId,size," +
-			"shortcutDetails,capabilities(canDownload,canEdit,canDelete,canCopy))").
-		Do()
-	if e != nil {
-		return nil, e
+
+	gFiles := make([]*drive.File, 0)
+	nextPageToken := ""
+
+	for {
+		req := g.s.Files.List().Context(ctx)
+		if g.driveId != "" {
+			req.DriveId(g.driveId).
+				IncludeItemsFromAllDrives(true).
+				Corpora("drive").
+				SupportsAllDrives(true)
+		}
+		resp, e := req.
+			Q(fmt.Sprintf("'%s' in parents and trashed = false", id)).
+			Fields("files(id,name,mimeType,parents,hasThumbnail,thumbnailLink,modifiedTime,driveId,size," +
+				"shortcutDetails,capabilities(canDownload,canEdit,canDelete,canCopy)),nextPageToken").
+			PageToken(nextPageToken).
+			PageSize(1000).
+			Do()
+		if e != nil {
+			return nil, e
+		}
+		gFiles = append(gFiles, resp.Files...)
+
+		nextPageToken = resp.NextPageToken
+		if nextPageToken == "" {
+			break
+		}
 	}
-	entries := g.processEntries(path, resp.Files)
+
+	entries := g.processEntries(path, gFiles)
 	_ = g.cache.PutChildren(path, entries, g.cacheTTL)
 	return entries, nil
 }
