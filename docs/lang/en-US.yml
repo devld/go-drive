@@ -72,6 +72,8 @@ drive:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
     oauth_text: Connect to Google Drive
+    drive_label: Drive
+    my_drive_name: My Drive
   onedrive:
     name: OneDrive
     readme: OneDrive, see [Setup OneDrive](https://go-drive.top/drives/onedrive)

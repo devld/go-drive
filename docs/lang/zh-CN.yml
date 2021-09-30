@@ -72,6 +72,8 @@ drive:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
     oauth_text: 连接到 Google Drive
+    drive_label: Drive
+    my_drive_name: My Drive
   onedrive:
     name: OneDrive
     readme: OneDrive, 请参阅 [配置 OneDrive](https://go-drive.top/drives/onedrive)
@@ -201,7 +203,7 @@ drive:
         description: 密码
       cache_ttl:
         label: 缓存生命周期
-        description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存  
+        description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
 stat:
   task:
     total: 总计
