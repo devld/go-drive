@@ -121,7 +121,8 @@ func (d driveItem) Path() string {
 }
 
 type driveItems struct {
-	Items []driveItem `json:"value"`
+	Items    []driveItem `json:"value"`
+	NextPage string      `json:"@odata.nextLink"`
 }
 
 type createUploadSessionResp struct {
