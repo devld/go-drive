@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -35,7 +36,8 @@ func init() {
 type OneDrive struct {
 	driveId string
 
-	c *req.Client
+	c         *req.Client
+	reqPrefix string
 
 	cacheTTL time.Duration
 	cache    drive_util.DriveCache
@@ -69,9 +71,10 @@ func NewOneDrive(_ context.Context, config types.SM,
 		return nil, err.NewNotAllowedMessageError(t("drive_not_selected"))
 	}
 
-	od.c, e = req.NewClient(
-		utils.BuildURL("https://graph.microsoft.com/v1.0/drives/{}", od.driveId),
-		nil, ifApiCallError, resp.Client())
+	reqPrefix := utils.BuildURL("https://graph.microsoft.com/v1.0/drives/{}", od.driveId)
+
+	od.c, e = req.NewClient(reqPrefix, nil, ifApiCallError, resp.Client())
+	od.reqPrefix = reqPrefix
 
 	return od, e
 }
@@ -224,21 +227,29 @@ func (o *OneDrive) List(ctx context.Context, path string) ([]types.IEntry, error
 	if cached, _ := o.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
-	reqPath := pathURL(path) + "/children?$expand=thumbnails"
-	res := driveItems{}
-	resp, e := o.c.Get(ctx, reqPath, nil)
-	if e != nil {
-		return nil, e
-	}
-	if e := resp.Json(&res); e != nil {
-		return nil, e
-	}
 	entries := make([]types.IEntry, 0)
-	for _, v := range res.Items {
-		if v.Deleted != nil {
-			continue
+	reqPath := pathURL(path) + "/children?$expand=thumbnails&$top=5"
+	for {
+		res := driveItems{}
+		resp, e := o.c.Get(ctx, reqPath, nil)
+		if e != nil {
+			return nil, e
 		}
-		entries = append(entries, o.newEntry(v))
+		if e := resp.Json(&res); e != nil {
+			return nil, e
+		}
+		for _, v := range res.Items {
+			if v.Deleted != nil {
+				continue
+			}
+			entries = append(entries, o.newEntry(v))
+		}
+		reqPath = res.NextPage
+		if reqPath == "" {
+			break
+		}
+
+		reqPath = strings.TrimPrefix(reqPath, o.reqPrefix)
 	}
 	_ = o.cache.PutChildren(path, entries, o.cacheTTL)
 	return entries, nil
