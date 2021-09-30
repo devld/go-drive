@@ -32,7 +32,7 @@ func newImageTypeHandler(c types.SM) (TypeHandler, error) {
 	return &imageTypeHandler{
 		maxSize:      c.GetInt64("max-size", 32*1024*1024), // 32MB
 		maxPixels:    c.GetInt("max-pixels", 6000*6000),
-		imageSize:    uint(c.GetInt64("size", 220)),
+		imageSize:    c.GetUint("size", 220),
 		imageQuality: c.GetInt("quality", 50),
 	}, nil
 }
