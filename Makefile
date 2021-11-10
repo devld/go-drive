@@ -17,6 +17,7 @@ $(build_dir)/$(target_name).zip: $(build_dir)/$(target_name)
 $(build_dir)/$(target_name): $(build_dir)/go-drive $(build_dir)/web $(build_dir)/lang $(build_dir)/config.yml
 
 $(build_dir)/go-drive: $(build_dir)
+	CGO_CFLAGS="-Wno-return-local-addr" \
 	go build -o $(build_dir) -ldflags \
 		"-w -s \
 		-X 'go-drive/common.version=${BUILD_VERSION}' \
