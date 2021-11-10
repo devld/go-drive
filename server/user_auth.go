@@ -21,14 +21,14 @@ func (ua *UserAuth) AuthByUsernamePassword(username, password string) (types.Use
 	if e != nil {
 		if err.IsNotFoundError(e) {
 			return types.User{},
-				err.NewUnauthorizedError(i18n.T("api.auth.invalid_username_or_password"))
+				err.NewNotAllowedMessageError(i18n.T("api.auth.invalid_username_or_password"))
 		} else {
 			return types.User{}, e
 		}
 	}
 	if e := bcrypt.CompareHashAndPassword([]byte(getUser.Password), []byte(password)); e != nil {
 		return types.User{},
-			err.NewUnauthorizedError(i18n.T("api.auth.invalid_username_or_password"))
+			err.NewNotAllowedMessageError(i18n.T("api.auth.invalid_username_or_password"))
 	}
 	return getUser, nil
 }
