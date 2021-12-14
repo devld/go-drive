@@ -225,6 +225,10 @@ export default {
       name: 'Gallery',
       desc: 'View images'
     },
+    pdf: {
+      name: 'View',
+      desc: 'View PDF'
+    },
     media: {
       name: 'Play',
       desc: 'Play media'
