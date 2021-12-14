@@ -224,6 +224,10 @@ export default {
       name: '画廊',
       desc: '查看图片'
     },
+    pdf: {
+      name: '预览',
+      desc: '预览 PDF'
+    },
     media: {
       name: '播放',
       desc: '播放媒体'

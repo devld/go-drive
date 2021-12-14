@@ -30,6 +30,8 @@
   </div>
 </template>
 <script>
+let scrollLockedCount = 0
+
 export default {
   name: 'DialogView',
   model: {
@@ -57,6 +59,10 @@ export default {
       type: Boolean,
       default: true,
     },
+    lockScroll: {
+      type: Boolean,
+      default: true,
+    },
   },
   watch: {
     show: {
@@ -77,6 +83,12 @@ export default {
         }
       },
     },
+    overlayShowing: {
+      immediate: true,
+      handler(val) {
+        this.onDialogVisibleChanged(val)
+      },
+    },
   },
   data() {
     return {
@@ -85,6 +97,7 @@ export default {
     }
   },
   beforeDestroy() {
+    this.onDialogVisibleChanged(false)
     this.removeEvents()
   },
   methods: {
@@ -117,10 +130,31 @@ export default {
     removeEvents() {
       window.removeEventListener('keydown', this.onKeyDown)
     },
+    onDialogVisibleChanged(showing) {
+      if (!this.lockScroll) return
+      if (showing) {
+        if (this._scrollLocked) return
+        scrollLockedCount++
+        this._scrollLocked = true
+      } else {
+        if (!this._scrollLocked) return
+        scrollLockedCount--
+        this._scrollLocked = false
+      }
+      if (scrollLockedCount > 0) {
+        document.body.classList.add('dialog-view--scrollable-locked')
+      } else {
+        document.body.classList.remove('dialog-view--scrollable-locked')
+      }
+    },
   },
 }
 </script>
 <style lang="scss">
+.dialog-view--scrollable-locked {
+  overflow: hidden;
+}
+
 .dialog-view__overlay {
   position: fixed;
   top: 0;
