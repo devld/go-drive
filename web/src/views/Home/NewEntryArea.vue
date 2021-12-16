@@ -233,8 +233,7 @@ export default {
       } catch {
         return
       }
-      uploadManager.stopTask(task.id)
-      uploadManager.removeTask(task.id)
+      uploadManager.removeTask(task.id, true)
     },
     updateTasksSummary() {
       const completed = this.tasks.filter((t) => t.status === STATUS_COMPLETED)
