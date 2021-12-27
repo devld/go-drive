@@ -48,7 +48,8 @@ export default {
       if (!data.oauth) return
 
       if (data.error) {
-        this.$alert(data.error)
+        console.error('OAuth error: ', data)
+        this.$alert(data.error + ': ' + data.data.error_description)
         return
       }
 

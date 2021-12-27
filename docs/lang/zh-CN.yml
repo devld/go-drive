@@ -78,6 +78,12 @@ drive:
     name: OneDrive
     readme: OneDrive, 请参阅 [配置 OneDrive](https://go-drive.top/drives/onedrive)
     form:
+      tenant:
+        label: 租户模式
+        description: ""
+        common: 适用于 Microsoft 帐户和工作或学校帐户
+        organizations: 仅适用于工作或学校帐户
+        consumers: 仅适用于 Microsoft 帐户的
       client_id:
         label: 客户端 ID
         description: ""

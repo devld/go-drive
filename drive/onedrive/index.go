@@ -23,6 +23,15 @@ func init() {
 		DisplayName: t("name"),
 		README:      t("readme"),
 		ConfigForm: []types.FormItem{
+			{
+				Field: "tenant", Label: t("form.tenant.label"), Type: "select", Description: t("form.tenant.description"),
+				Options: []types.FormItemOption{
+					{Name: "common", Value: "common", Title: t("form.tenant.common")},
+					{Name: "organizations", Value: "organizations", Title: t("form.tenant.organizations")},
+					{Name: "consumers", Value: "consumers", Title: t("form.tenant.consumers")},
+				},
+				DefaultValue: "consumers", Required: true,
+			},
 			{Field: "client_id", Label: t("form.client_id.label"), Type: "text", Description: t("form.client_id.description"), Required: true},
 			{Field: "client_secret", Label: t("form.client_secret.label"), Type: "password", Description: t("form.client_secret.description"), Required: true},
 			{Field: "proxy_upload", Label: t("form.proxy_in.label"), Type: "checkbox", Description: t("form.proxy_in.description")},
@@ -48,7 +57,7 @@ type OneDrive struct {
 
 func NewOneDrive(_ context.Context, config types.SM,
 	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
-	resp, e := drive_util.OAuthGet(*oauthReq(driveUtils.Config), config, driveUtils.Data)
+	resp, e := drive_util.OAuthGet(*oauthReq(driveUtils.Config, config), config, driveUtils.Data)
 	if e != nil {
 		return nil, e
 	}
