@@ -174,7 +174,6 @@ export default {
       confirm_stop_task: '确认停止该任务？',
       confirm_remove_task: '确认移除该任务，不可恢复？',
       file_exists: '文件已存在',
-      file_exists_confirm: "'{n}' 已存在，覆盖还是跳过？",
       skip: '跳过',
       override: '覆盖',
     },
@@ -187,6 +186,7 @@ export default {
   hv: {
     download: {
       download: '下载',
+      downloads: '下载 {n} 个文件',
     },
     permission: {
       save: '保存',

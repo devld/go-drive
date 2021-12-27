@@ -175,7 +175,6 @@ export default {
       confirm_stop_task: 'Stop this task?',
       confirm_remove_task: 'Remove this task, cannot be undone?',
       file_exists: 'File exists',
-      file_exists_confirm: "'{n}' already exists, override or skip?",
       skip: 'Skip',
       override: 'Override',
     },
@@ -188,6 +187,7 @@ export default {
   hv: {
     download: {
       download: 'Download',
+      downloads: 'Download {n} files',
     },
     permission: {
       save: 'Save',
