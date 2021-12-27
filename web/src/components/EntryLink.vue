@@ -29,8 +29,10 @@ export default {
   },
   computed: {
     link() {
-      if (this.entry) return routePathPrefix + makeEntryLink(this.entry)
-      if (typeof this.path === 'string') {
+      if (this.entry) {
+        const link = makeEntryLink(this.entry)
+        if (link) return routePathPrefix + link
+      } else if (typeof this.path === 'string') {
         return routePathPrefix + getDirEntryLink(this.path)
       }
       return 'javascript:;'

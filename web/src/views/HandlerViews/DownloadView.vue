@@ -13,6 +13,7 @@
         <a
           class="download-button"
           target="_blank"
+          :download="$.filename(singleEntry.path)"
           :href="$.fileUrl(singleEntry.path, singleEntry.meta.access_key)"
         >
           {{ $t('hv.download.download') }}
@@ -30,11 +31,16 @@
           v-focus
           @focus="downloadLinksFocus"
         ></textarea>
+        <a class="download-button" href="javascript:;" @click="downloadFiles">
+          {{ $t('hv.download.downloads', { n: entry.length }) }}
+        </a>
       </template>
     </div>
   </div>
 </template>
 <script>
+import { filename } from '@/utils'
+
 export default {
   name: 'DownloadView',
   props: {
@@ -65,6 +71,14 @@ export default {
       this.$refs.links.select()
       this.$refs.links.scrollTop = 0
       this.$refs.links.scrollLeft = 0
+    },
+    downloadFiles() {
+      this.entry.forEach(f => {
+        const a = document.createElement('a')
+        a.href = this.$.fileUrl(f.path, f.meta.access_key)
+        a.download = filename(f.path)
+        a.click()
+      })
     },
   },
 }

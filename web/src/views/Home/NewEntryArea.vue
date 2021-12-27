@@ -283,9 +283,6 @@ export default {
         const all = (
           await this.$dialog(FileExistsDialog, {
             title: this.$t('p.new_entry.file_exists'),
-            message: this.$t('p.new_entry.file_exists_confirm', {
-              m: file.name,
-            }),
             confirmText: this.$t('p.new_entry.skip'),
             cancelText: this.$t('p.new_entry.override'),
             cancelType: 'danger',
