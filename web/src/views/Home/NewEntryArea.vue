@@ -6,16 +6,30 @@
       v-model="floatMenuShowing"
       :title="$t('p.new_entry.new_item')"
       :buttons="[
-        { slot: 'file', title: $t('p.new_entry.upload_file') },
-        { slot: 'folder', title: $t('p.new_entry.create_folder') },
+        {
+          slot: 'new-file',
+          title: $t('p.new_entry.create_file'),
+          fn: 'createEmptyFile',
+        },
+        {
+          slot: 'upload-file',
+          title: $t('p.new_entry.upload_file'),
+          fn: 'uploadFile',
+        },
+        {
+          slot: 'new-folder',
+          title: $t('p.new_entry.create_folder'),
+          fn: 'createDir',
+        },
       ]"
       @click="newButtonClicked"
     >
       <span class="icon-new-item" :class="{ active: floatMenuShowing }">
         <i-icon svg="#icon-add1" />
       </span>
-      <i-icon slot="file" svg="#icon-file" />
-      <i-icon slot="folder" svg="#icon-folder" />
+      <i-icon slot="new-file" svg="#icon-new-file" />
+      <i-icon slot="upload-file" svg="#icon-upload-file" />
+      <i-icon slot="new-folder" svg="#icon-new-folder" />
     </float-button>
 
     <dialog-view
@@ -182,6 +196,31 @@ export default {
     uploadFile() {
       this.$refs.file.click()
     },
+    createEmptyFile() {
+      this.$input({
+        title: this.$t('p.new_entry.create_file'),
+        validator: {
+          pattern: /^[^/]+$/,
+          message: this.$t('p.new_entry.invalid_filename'),
+        },
+        onOk: async text => {
+          try {
+            await uploadManager.upload(
+              {
+                path: pathClean(pathJoin(this.path, text)),
+                file: '',
+                override: false,
+              },
+              true
+            )
+            this.$emit('update')
+          } catch (e) {
+            this.$alert(e.message).catch(() => {})
+            throw e
+          }
+        },
+      })
+    },
     createDir() {
       this.$input({
         title: this.$t('p.new_entry.create_folder'),
@@ -189,15 +228,14 @@ export default {
           pattern: /^[^/]+$/,
           message: this.$t('p.new_entry.invalid_folder_name'),
         },
-        onOk: text => {
-          return makeDir(pathClean(pathJoin(this.path, text)))
-            .then(() => {
-              this.$emit('update')
-            })
-            .catch(e => {
-              this.$alert(e.message).catch(() => {})
-              return Promise.reject(e)
-            })
+        onOk: async text => {
+          try {
+            await makeDir(pathClean(pathJoin(this.path, text)))
+            this.$emit('update')
+          } catch (e) {
+            this.$alert(e.message).catch(() => {})
+            throw e
+          }
         },
       })
     },
@@ -260,9 +298,8 @@ export default {
         return { all: e.all, override: true }
       }
     },
-    newButtonClicked({ button, index }) {
-      if (index === 0) this.uploadFile()
-      if (index === 1) this.createDir()
+    newButtonClicked({ button }) {
+      this[button.fn]()
     },
     showTaskManager() {
       this.taskManagerButtonShowing = false
