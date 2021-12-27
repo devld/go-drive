@@ -119,7 +119,7 @@ func UpdateSessionUser(c *gin.Context, tokenStore types.TokenStore, user types.U
 }
 
 func getSignPayload(req *http.Request, path string) string {
-	return req.Host + "." + path + "." + utils.GetRealIP(req)
+	return req.Host + "." + path
 }
 
 func checkSignature(signer *utils.Signer, req *http.Request, path string) bool {
