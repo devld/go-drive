@@ -22,7 +22,10 @@ export default {
   },
   computed: {
     segments() {
-      const ss = this.path.replace(/\/+/g, '/').split('/').filter(Boolean)
+      const ss = this.path
+        .replace(/\/+/g, '/')
+        .split('/')
+        .filter(Boolean)
       const pathSegments = [{ name: this.$t('app.root_path'), path: '' }]
       ss.forEach((s, i) => {
         pathSegments.push({ name: s, path: ss.slice(0, i + 1).join('/') })

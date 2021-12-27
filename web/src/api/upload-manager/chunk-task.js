@@ -8,7 +8,7 @@ import UploadTask, {
   STATUS_ERROR,
   STATUS_PAUSED,
   STATUS_STOPPED,
-  STATUS_UPLOADING
+  STATUS_UPLOADING,
 } from './task'
 
 function insertSeq(arr, seq) {
@@ -204,7 +204,7 @@ export default class ChunkUploadTask extends UploadTask {
     try {
       return await axios({
         ...config,
-        cancelToken: cancelToken.token
+        cancelToken: cancelToken.token,
       })
     } finally {
       arrayRemove(this._axiosSources, e => e === cancelToken)

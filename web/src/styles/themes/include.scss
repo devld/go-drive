@@ -1,7 +1,0 @@
-@import './default.scss';
-@import './dark.scss';
-
-@mixin var($property, $varName) {
-  #{$property}: map-get($theme-default, $varName);
-  #{$property}: var(--#{$varName});
-}

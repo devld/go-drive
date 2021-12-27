@@ -12,7 +12,7 @@ const createHandler = isMove => {
       description: T(
         isMove ? 'handler.copy_move.move_desc' : 'handler.copy_move.copy_desc'
       ),
-      icon: isMove ? '#icon-move' : '#icon-copy'
+      icon: isMove ? '#icon-move' : '#icon-copy',
     },
     multiple: true,
     supports: isMove
@@ -41,7 +41,7 @@ const createHandler = isMove => {
                 message: T('handler.copy_move.override_or_skip'),
                 confirmType: 'danger',
                 confirmText: T('handler.copy_move.override'),
-                cancelText: T('handler.copy_move.skip')
+                cancelText: T('handler.copy_move.skip'),
               })
             } catch {
               override = false
@@ -63,7 +63,7 @@ const createHandler = isMove => {
                       ? 'handler.copy_move.moving'
                       : 'handler.copy_move.copying',
                     { n: entry.name }
-                  )
+                  ),
                 })
                 const copyOrMove = isMove ? moveEntry : copyEntry
                 await taskDone(copyOrMove(entry.path, dest, override), t => {
@@ -78,10 +78,10 @@ const createHandler = isMove => {
                         n: entry.name,
                         p: `${formatBytes(task.progress.loaded)}/${formatBytes(
                           task.progress.total
-                        )}`
+                        )}`,
                       }
                     ),
-                    onCancel
+                    onCancel,
                   })
                 })
               }
@@ -93,10 +93,10 @@ const createHandler = isMove => {
             } finally {
               loading()
             }
-          }
+          },
         })
       })
-    }
+    },
   }
 }
 

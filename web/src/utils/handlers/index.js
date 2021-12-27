@@ -21,7 +21,7 @@ export const HANDLERS = Object.freeze([
   copy,
   move,
   permission,
-  mount
+  mount,
 ])
 
 export const HANDLER_COMPONENTS = mapOf(

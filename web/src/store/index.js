@@ -12,12 +12,12 @@ export default new Vuex.Store({
 
     showLogin: false,
 
-    progressBar: false
+    progressBar: false,
   },
   getters: {
     isAdmin(state) {
       return isAdmin(state.user)
-    }
+    },
   },
   mutations: {
     setUser(state, user) {
@@ -35,7 +35,7 @@ export default new Vuex.Store({
       } else {
         state.progressBar = false
       }
-    }
+    },
   },
   actions: {
     async init(context) {
@@ -51,7 +51,7 @@ export default new Vuex.Store({
       const config = await getConfig()
       context.commit('setConfig', config)
       return config
-    }
+    },
   },
-  modules: {}
+  modules: {},
 })

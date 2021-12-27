@@ -103,7 +103,7 @@ export default {
     selectedSubjects() {
       return mapOf(
         this.permissions,
-        (p) => p.subject,
+        p => p.subject,
         () => true
       )
     },
@@ -146,7 +146,7 @@ export default {
     async loadPermissions() {
       try {
         const data = await getPermissions(this.path)
-        this.permissions = data.map((p) => ({
+        this.permissions = data.map(p => ({
           subject: p.subject,
           permission: {
             read: (p.permission & PERMISSION_READ) === PERMISSION_READ,
@@ -164,7 +164,7 @@ export default {
     async save() {
       await savePermissions(
         this.path,
-        this.permissions.map((p) => ({
+        this.permissions.map(p => ({
           subject: p.subject,
           permission:
             (p.permission.read ? PERMISSION_READ : PERMISSION_EMPTY) |
@@ -179,12 +179,12 @@ export default {
         const res = await Promise.all([getUsers(), getGroups()])
         this.subjects = [
           { type: 'any', name: '*', subject: 'ANY' },
-          ...res[0].map((u) => ({
+          ...res[0].map(u => ({
             type: 'user',
             name: u.username,
             subject: `u:${u.username}`,
           })),
-          ...res[1].map((g) => ({
+          ...res[1].map(g => ({
             type: 'group',
             name: g.name,
             subject: `g:${g.name}`,

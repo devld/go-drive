@@ -14,7 +14,6 @@ Vue.config.productionTip = false
 
 Vue.use(Components)
 Vue.use(Utils)
-
 ;(async () => {
   await setLang(navigator.language)
 
@@ -22,6 +21,6 @@ Vue.use(Utils)
     router,
     store,
     i18n,
-    render: h => h(App)
+    render: h => h(App),
   }).$mount('#app')
 })()

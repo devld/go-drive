@@ -198,7 +198,7 @@ export default {
       // execute handler
       if (typeof handler.handler === 'function') {
         handler.handler(entry, this.$uiUtils).then(
-          (r) => {
+          r => {
             if (r && r.update) this.reloadEntryList()
           },
           () => {}
@@ -221,8 +221,8 @@ export default {
       this.entryMenu = {
         entry,
         menus: handlers
-          .filter((h) => h.display)
-          .map((h) => ({
+          .filter(h => h.display)
+          .map(h => ({
             name: h.name,
             display:
               typeof h.display === 'function' ? h.display(entry) : h.display,
@@ -242,7 +242,7 @@ export default {
 
       if (this.entryHandlerView && this.entryHandlerView.entryName) {
         this.entryHandlerView.entry = entries.find(
-          (e) => e.name === this.entryHandlerView.entryName
+          e => e.name === this.entryHandlerView.entryName
         )
 
         setTitle(`${this.entryHandlerView.entryName}`)
@@ -251,7 +251,7 @@ export default {
       // load current path
       if (this._getEntryTask) this._getEntryTask.cancel()
       this._getEntryTask = getEntry(path).then(
-        (entry) => {
+        entry => {
           this.currentDirEntry = entry
         },
         () => {}
@@ -264,8 +264,7 @@ export default {
         return false
       }
       const { handler, entryName } = matched
-      const entry =
-        this.entries && this.entries.find((e) => e.name === entryName)
+      const entry = this.entries && this.entries.find(e => e.name === entryName)
 
       if (handler.view) {
         // handler view dialog
@@ -348,7 +347,7 @@ export default {
       this.$refs.entryList.focusOnEntry(name)
     },
     getHandlerViewEntry(name) {
-      return this.entries.find((e) => e.name === name)
+      return this.entries.find(e => e.name === name)
     },
     async tryLoadReadme(entries) {
       let readmeFound
@@ -407,7 +406,7 @@ export default {
 .files-list {
   max-width: 880px;
   margin: 16px auto 0;
-  @include var(background-color, primary-bg-color);
+  background-color: var(--primary-bg-color);
   padding: 16px 0;
   border-radius: 16px;
 }
@@ -416,7 +415,7 @@ export default {
   box-sizing: border-box;
   max-width: 880px;
   margin: 42px auto;
-  @include var(background-color, primary-bg-color);
+  background-color: var(--primary-bg-color);
   padding: 16px;
   border-radius: 16px;
 }
@@ -430,9 +429,26 @@ export default {
 @media screen and (max-width: 900px) {
   .home {
     margin: 16px;
-  }
-  .entry-item__modified-time {
-    display: none;
+
+    .entry-item--view-list {
+      .entry-item__info {
+        flex-direction: column;
+        justify-content: center;
+        align-items: stretch;
+      }
+
+      .entry-item__name {
+        flex: unset;
+      }
+
+      .entry-item__meta {
+        display: flex;
+        font-size: 12px;
+        color: var(--secondary-text-color);
+        justify-content: space-between;
+        margin-top: 4px;
+      }
+    }
   }
 }
 </style>

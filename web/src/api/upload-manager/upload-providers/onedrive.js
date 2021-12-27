@@ -78,12 +78,12 @@ export default class OneDriveUploadTask extends ChunkUploadTask {
       data: blob,
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Content-Range': `bytes ${startByte}-${endByte}/${this._task.size}`
+        'Content-Range': `bytes ${startByte}-${endByte}/${this._task.size}`,
       },
       transformRequest: null,
       onUploadProgress: ({ loaded, total }) => {
         onProgress({ loaded, total })
-      }
+      },
     })
     // 201: new file created
     // 200: existing file overridden

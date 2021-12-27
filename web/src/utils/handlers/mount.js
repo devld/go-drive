@@ -7,7 +7,7 @@ export default {
   display: {
     name: T('handler.mount.name'),
     description: T('handler.mount.desc'),
-    icon: '#icon-path'
+    icon: '#icon-path',
   },
   supports: (entry, parentEntry, user) =>
     isAdmin(user) &&
@@ -33,7 +33,7 @@ export default {
         } finally {
           loading()
         }
-      }
+      },
     })
-  }
+  },
 }

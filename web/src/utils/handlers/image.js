@@ -6,13 +6,13 @@ export default {
   display: {
     name: T('handler.image.name'),
     description: T('handler.image.desc'),
-    icon: '#icon-image'
+    icon: '#icon-image',
   },
   view: {
     name: 'ImageView',
-    component: () => import('@/views/HandlerViews/ImageView.vue')
+    component: () => import('@/views/HandlerViews/ImageView.vue'),
   },
   supports: entry =>
     entry.type === 'file' &&
-    ['jpg', 'jpeg', 'png', 'gif'].includes(filenameExt(entry.name))
+    ['jpg', 'jpeg', 'png', 'gif'].includes(filenameExt(entry.name)),
 }

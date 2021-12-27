@@ -148,7 +148,7 @@ export default {
   width: 800px;
   height: calc(100vh - 64px);
   padding-top: 60px;
-  @include var(background-color, secondary-bg-color);
+  background-color: var(--secondary-bg-color);
   overflow: hidden;
   box-sizing: border-box;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -161,7 +161,7 @@ export default {
     margin: 0;
     text-align: center;
     border-bottom: 1px solid #eaecef;
-    @include var(border-color, border-color);
+    border-color: var(--border-color);
     padding: 10px 4em;
     font-size: 28px;
     font-weight: normal;

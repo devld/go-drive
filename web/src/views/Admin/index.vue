@@ -39,7 +39,7 @@ export default {
 .admin-page {
   max-width: 900px;
   margin: 16px auto 0;
-  @include var(background-color, primary-bg-color);
+  background-color: var(--primary-bg-color);
   border-radius: 16px;
   display: flex;
   overflow: hidden;
@@ -55,11 +55,11 @@ export default {
     list-style-type: none;
 
     &:hover {
-      @include var(background-color, hover-bg-color);
+      background-color: var(--hover-bg-color);
     }
 
     &.active {
-      @include var(background-color, select-bg-color);
+      background-color: var(--select-bg-color);
     }
   }
 
@@ -69,7 +69,7 @@ export default {
     width: 100%;
     padding: 8px 16px;
     text-decoration: none;
-    @include var(color, primary-text-color);
+    color: var(--primary-text-color);
   }
 
   // pc
@@ -77,13 +77,13 @@ export default {
     width: 100px;
     padding: 16px 0 42px;
     border-right: solid 1px;
-    @include var(border-color, border-color);
+    border-color: var(--border-color);
   }
 
   .menu-item {
     &:not(:last-child) {
       border-bottom: solid 1px;
-      @include var(border-color, border-color);
+      border-color: var(--border-color);
     }
   }
 
@@ -103,7 +103,7 @@ export default {
       overflow-x: auto;
       overflow-y: hidden;
       border-bottom: solid 1px;
-      @include var(border-color, border-color);
+      border-color: var(--border-color);
       border-right: none;
       padding: 0;
     }

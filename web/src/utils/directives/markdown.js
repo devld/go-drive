@@ -6,7 +6,7 @@ async function getRender() {
   return Promise.all([
     import(/* webpackChunkName: "md" */ 'marked'),
     import(/* webpackChunkName: "md" */ '@/utils/highlight'),
-    import(/* webpackChunkName: "md" */ 'dompurify')
+    import(/* webpackChunkName: "md" */ 'dompurify'),
   ]).then(
     ([{ default: marked_ }, { default: hljs }, { default: DOMPurify }]) => {
       marked_.setOptions({
@@ -15,7 +15,7 @@ async function getRender() {
             ? language
             : 'plaintext'
           return hljs.highlight(validLanguage, code).value
-        }
+        },
       })
       marked = s => {
         return DOMPurify.sanitize(marked_(s))

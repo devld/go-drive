@@ -8,7 +8,7 @@ import UploadTask, {
   STATUS_COMPLETED,
   STATUS_MASK_PENDING,
   STATUS_MASK_FREEZED,
-  STATUS_STARTING
+  STATUS_STARTING,
 } from './task'
 import DispatcherUploadTask from './upload-providers/dispatcher'
 

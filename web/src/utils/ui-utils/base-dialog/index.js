@@ -28,7 +28,7 @@ export function createDialog(name, component) {
 
         transition: '',
         escClose: false,
-        overlayClose: false
+        overlayClose: false,
       }
     },
     render(h) {
@@ -47,7 +47,7 @@ export function createDialog(name, component) {
             cancelType: this.cancelType,
             transition: this.transition,
             escClose: this.escClose,
-            overlayClose: this.overlayClose
+            overlayClose: this.overlayClose,
           },
           on: {
             close: () => this.close(),
@@ -59,15 +59,15 @@ export function createDialog(name, component) {
             },
             cancel: () => {
               this.onConfirmOrCancel(false)
-            }
-          }
+            },
+          },
         },
         [
           h(component, {
             ref: 'inner',
             props: {
               loading: this.loading,
-              opts: this.opts
+              opts: this.opts,
             },
             on: {
               loading: v => {
@@ -81,9 +81,9 @@ export function createDialog(name, component) {
               },
               'confirm-disabled': disabled => {
                 this.confirmDisabled = !!disabled
-              }
-            }
-          })
+              },
+            },
+          }),
         ]
       )
     },
@@ -179,9 +179,9 @@ export function createDialog(name, component) {
         this._promise = null
 
         this.showing = false
-      }
+      },
     },
-    _base_dialog: true
+    _base_dialog: true,
   }
 }
 

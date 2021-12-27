@@ -96,7 +96,7 @@ export default {
   computed: {
     images() {
       return this.entries.filter(
-        (e) => e.type === 'file' && isSupportedImageExt(filenameExt(e.name))
+        e => e.type === 'file' && isSupportedImageExt(filenameExt(e.name))
       )
     },
     path() {
@@ -111,12 +111,12 @@ export default {
   },
   methods: {
     initPhotoSwipe() {
-      this.index = this.images.findIndex((f) => f.name === this.filename)
+      this.index = this.images.findIndex(f => f.name === this.filename)
       const basePath = dir(this.path)
       const ps = new PhotoSwipe(
         this.$refs.ps,
         PhotoSwipeUIDefault,
-        this.images.map((i) => ({
+        this.images.map(i => ({
           src: fileUrl(pathJoin(basePath, i.name), i.meta.access_key),
           w: 0,
           h: 0,
@@ -131,7 +131,7 @@ export default {
         // https://github.com/dimsemenov/PhotoSwipe/issues/796
         if (item.w > 0 && item.h > 0) return
         const img = new Image()
-        img.onload = function () {
+        img.onload = function() {
           item.w = this.width
           item.h = this.height
           ps.updateSize(true)
@@ -141,7 +141,7 @@ export default {
       ps.listen('close', () => {
         this.$emit('close')
       })
-      ps.listen('beforeChange', (offset) => {
+      ps.listen('beforeChange', offset => {
         if (!offset) return
         let newIndex = (this.index += offset)
         if (newIndex < 0) newIndex += this.images.length

@@ -10,7 +10,7 @@ const loadedLanguages = [DEFAULT_LANG]
 const i18n = new VueI18N({
   locale: DEFAULT_LANG,
   fallbackLocale: DEFAULT_LANG,
-  messages: { [DEFAULT_LANG]: enUS }
+  messages: { [DEFAULT_LANG]: enUS },
 })
 
 function loadLanguage(lang) {

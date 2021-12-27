@@ -41,7 +41,7 @@ export default {
   align-items: center;
   padding-top: 48px;
   box-sizing: border-box;
-  @include var(background-color, secondary-bg-color);
+  background-color: var(--secondary-bg-color);
 
   .filename {
     position: absolute;
@@ -51,7 +51,7 @@ export default {
     margin: 0;
     text-align: center;
     border-bottom: 1px solid;
-    @include var(border-color, border-color);
+    border-color: var(--border-color);
     padding: 10px 2.5em;
     font-size: 20px;
     font-weight: normal;

@@ -27,7 +27,7 @@ const components = {
   ErrorView,
   DialogView,
   FloatButton,
-  ProgressBar
+  ProgressBar,
 }
 
 export default {
@@ -35,5 +35,5 @@ export default {
     Object.keys(components).forEach(key => {
       Vue.component(key, components[key])
     })
-  }
+  },
 }

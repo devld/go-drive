@@ -12,7 +12,7 @@ const TASK_PROVIDERS = {
   local: LocalUploadTask,
   localChunk: LocalChunkUploadTask,
   s3: S3UploadTask,
-  onedrive: OneDriveUploadTask
+  onedrive: OneDriveUploadTask,
 }
 
 class DispatcherUploadTask extends UploadTask {
@@ -49,7 +49,7 @@ class DispatcherUploadTask extends UploadTask {
         `/upload/${this._task.path}`,
         {},
         {
-          params: { override: this._task.override, size: this._task.size }
+          params: { override: this._task.override, size: this._task.size },
         }
       )
     } catch (e) {

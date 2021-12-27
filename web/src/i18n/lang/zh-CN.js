@@ -20,43 +20,43 @@ export default {
       mod_time_asc: '修改时间升序',
       mod_time_desc: '修改时间降序',
       size_asc: '文件大小升序',
-      size_desc: '文件大小降序'
-    }
+      size_desc: '文件大小降序',
+    },
   },
   error: {
     not_allowed: '不允许的操作',
     not_found: '资源不存在',
-    server_error: '服务器错误'
+    server_error: '服务器错误',
   },
   form: {
-    required_msg: '{f}是必填的'
+    required_msg: '{f}是必填的',
   },
   routes: {
     title: {
       users: '用户',
       groups: '用户组',
       drives: '盘',
-      misc: '其他'
-    }
+      misc: '其他',
+    },
   },
   md: {
-    error: '渲染 Markdown 时出现错误'
+    error: '渲染 Markdown 时出现错误',
   },
   dialog: {
     base: {
-      ok: '确定'
+      ok: '确定',
     },
     open: {
       max_items: '最多可选择 {n} 个',
-      n_selected: '已选 {n} 个'
+      n_selected: '已选 {n} 个',
     },
     text: {
       yes: '是',
-      no: '否'
+      no: '否',
     },
     loading: {
-      cancel: '取消'
-    }
+      cancel: '取消',
+    },
   },
   p: {
     admin: {
@@ -86,7 +86,7 @@ export default {
         f_enabled: '已启用',
         f_type: '类型',
         delete_drive: '删除盘',
-        confirm_delete: '确认删除 {n}？'
+        confirm_delete: '确认删除 {n}？',
       },
       user: {
         username: '用户名',
@@ -103,7 +103,7 @@ export default {
         f_username: '用户名',
         f_password: '密码',
         delete_user: '删除用户',
-        confirm_delete: '确认删除 {n}？'
+        confirm_delete: '确认删除 {n}？',
       },
       group: {
         name: '名称',
@@ -119,7 +119,7 @@ export default {
         or_edit: ' 或编辑组',
         f_name: '名称',
         delete_group: '删除组',
-        confirm_delete: '确认删除 {n}？'
+        confirm_delete: '确认删除 {n}？',
       },
       misc: {
         permission_of_root: '根路径权限',
@@ -129,7 +129,7 @@ export default {
         clean_cache: '清除缓存',
         statistics: '统计信息',
         refresh_in: '{n} 秒后刷新',
-        invalid_path_cleaned: '已清理 {n} 个无效的路径'
+        invalid_path_cleaned: '已清理 {n} 个无效的路径',
       },
       p_edit: {
         subject: '主体',
@@ -137,8 +137,8 @@ export default {
         policy: '策略',
         any: '任何',
         reject: '拒绝',
-        accept: '接受'
-      }
+        accept: '接受',
+      },
     },
     task: {
       empty: '现在没有任务',
@@ -152,14 +152,14 @@ export default {
       s_paused: '已暂停',
       s_stopped: '已停止',
       s_error: '错误',
-      s_completed: '已完成'
+      s_completed: '已完成',
     },
     home: {
       file_exists: "'{n}' 已存在，覆盖还是跳过？",
       apply_all: '记住选择',
       readme_loading: '加载 README...',
       readme_failed: '加载 README 失败',
-      unsaved_confirm: '尚未保存，确认离开？'
+      unsaved_confirm: '尚未保存，确认离开？',
     },
     new_entry: {
       new_item: '新建',
@@ -174,24 +174,24 @@ export default {
       file_exists: '文件已存在',
       file_exists_confirm: "'{n}' 已存在，覆盖还是跳过？",
       skip: '跳过',
-      override: '覆盖'
+      override: '覆盖',
     },
     login: {
       username: '用户名',
       password: '密码',
-      login: '登录'
-    }
+      login: '登录',
+    },
   },
   hv: {
     download: {
-      download: '下载'
+      download: '下载',
     },
     permission: {
-      save: '保存'
+      save: '保存',
     },
     text_edit: {
-      save: '保存'
-    }
+      save: '保存',
+    },
   },
   handler: {
     copy_move: {
@@ -207,51 +207,51 @@ export default {
       move_open_title: '选择移动到',
       override_or_skip: '已存在时覆盖还是跳过？',
       override: '覆盖',
-      skip: '跳过'
+      skip: '跳过',
     },
     delete: {
       name: '删除',
       desc: '删除文件',
       confirm_n: '删除这 {n} 个文件？',
       confirm: '删除这个文件？',
-      deleting: '正在删除 {n} {p}'
+      deleting: '正在删除 {n} {p}',
     },
     download: {
       name: '下载',
-      desc: '下载文件'
+      desc: '下载文件',
     },
     image: {
       name: '画廊',
-      desc: '查看图片'
+      desc: '查看图片',
     },
     pdf: {
       name: '预览',
-      desc: '预览 PDF'
+      desc: '预览 PDF',
     },
     media: {
       name: '播放',
-      desc: '播放媒体'
+      desc: '播放媒体',
     },
     mount: {
       name: '挂载到',
       desc: '将该项目挂载到其他位置',
-      open_title: '选择挂载到'
+      open_title: '选择挂载到',
     },
     permission: {
       name: '权限',
-      desc: '设置该项目的权限'
+      desc: '设置该项目的权限',
     },
     rename: {
       name: '重命名',
       desc: '重命名这个项目',
       input_title: '重命名',
-      invalid_filename: '无效的文件名'
+      invalid_filename: '无效的文件名',
     },
     text_edit: {
       edit_name: '编辑',
       view_name: '查看',
       edit_desc: '编辑这个文件',
-      view_desc: '查看这个文件'
-    }
-  }
+      view_desc: '查看这个文件',
+    },
+  },
 }

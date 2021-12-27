@@ -7,7 +7,7 @@
 export default {
   name: 'App',
   created() {
-    this.$store.dispatch('init').catch((e) => {
+    this.$store.dispatch('init').catch(e => {
       this.$alert(e.message)
     })
   },
@@ -18,8 +18,8 @@ export default {
 body {
   margin: 0;
   padding: 0;
-  @include var(background-color, body-bg-color);
-  @include var(color, primary-text-color);
+  background-color: var(--body-bg-color);
+  color: var(--primary-text-color);
 }
 
 .app {

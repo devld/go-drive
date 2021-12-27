@@ -43,7 +43,7 @@ export default {
 </script>
 <style lang="scss">
 .entry-menu {
-  @include var(background-color, secondary-bg-color);
+  background-color: var(--secondary-bg-color);
   padding: 20px 0;
   width: 280px;
   overflow: hidden;
@@ -93,7 +93,7 @@ export default {
   transition: 0.1s;
 
   &:hover {
-    @include var(background-color, hover-bg-color);
+    background-color: var(--hover-bg-color);
   }
 }
 

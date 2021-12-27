@@ -59,7 +59,7 @@ export default {
 </script>
 <style lang="scss">
 .dialog-view.loading-dialog {
-  @include var(background-color, loading-overlay-bg-color);
+  background-color: var(--loading-overlay-bg-color);
   z-index: 9999;
 
   .dialog-view__content {
