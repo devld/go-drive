@@ -164,11 +164,13 @@ export default {
     },
     new_entry: {
       new_item: 'New item',
+      create_file: 'Create empty file',
       upload_file: 'Upload file',
       create_folder: 'Create folder',
       upload_tasks: 'Upload Tasks',
       tasks_status: 'Tasks {p}',
       drop_tip: 'Drop files here to upload',
+      invalid_filename: 'Invalid filename',
       invalid_folder_name: 'Invalid folder name',
       confirm_stop_task: 'Stop this task?',
       confirm_remove_task: 'Remove this task, cannot be undone?',

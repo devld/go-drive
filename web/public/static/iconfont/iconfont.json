@@ -6,6 +6,27 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "26816949",
+      "name": "upload-file",
+      "font_class": "upload-file",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    },
+    {
+      "icon_id": "26816950",
+      "name": "new-file",
+      "font_class": "new-file",
+      "unicode": "e601",
+      "unicode_decimal": 58881
+    },
+    {
+      "icon_id": "26816951",
+      "name": "new-folder",
+      "font_class": "new-folder",
+      "unicode": "e602",
+      "unicode_decimal": 58882
+    },
+    {
       "icon_id": "705692",
       "name": "文档",
       "font_class": "wendang",

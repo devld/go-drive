@@ -6,7 +6,11 @@
       value ? 'float-button--active' : '',
     ]"
   >
-    <div class="float-button__buttons">
+    <div
+      class="float-button__buttons"
+      @mouseenter="mouseEnter"
+      @mouseleave="mouseLeave"
+    >
       <transition v-for="(b, i) in buttons" :key="i" name="scale-fade">
         <button
           class="float-button__button"
@@ -25,6 +29,8 @@
       class="float-button__trigger"
       :title="title"
       @click.capture.stop="triggerClicked"
+      @mouseenter="mouseEnter"
+      @mouseleave="mouseLeave"
     >
       <slot />
     </button>
@@ -56,7 +62,22 @@ export default {
     },
   },
   methods: {
+    mouseEnter() {
+      clearTimeout(this._leaveTimer)
+      setTimeout(() => {
+        const show = true
+        this.$emit('input', show)
+      }, 0)
+    },
+    mouseLeave() {
+      clearTimeout(this._leaveTimer)
+      this._leaveTimer = setTimeout(() => {
+        const show = false
+        this.$emit('input', show)
+      }, 100)
+    },
     triggerClicked() {
+      clearTimeout(this._leaveTimer)
       const show = !this.value
       this.$emit('input', show)
     },
@@ -72,27 +93,38 @@ export default {
   position: relative;
   width: 60px;
   height: 60px;
+}
 
-  button {
-    display: inline-block;
-    width: 100%;
-    height: 100%;
-    background-color: transparent;
-    border: none;
-    padding: 0;
-    margin: 0;
-    outline: none;
-    font-size: 50px;
-    cursor: pointer;
-  }
+.float-button__button,
+.float-button__trigger {
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  font-size: 50px;
+  cursor: pointer;
 }
 
 .float-button__buttons {
   position: absolute;
   width: 100%;
 
-  & > button {
-    margin-bottom: 20px;
+  &:hover {
+    .float-button__button {
+      transition: 0.4s;
+    }
+  }
+}
+
+.float-button__button {
+  margin-bottom: 20px;
+
+  &:hover {
+    transform: scale(1.2);
   }
 }
 

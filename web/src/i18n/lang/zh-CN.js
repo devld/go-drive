@@ -163,11 +163,13 @@ export default {
     },
     new_entry: {
       new_item: '新建',
+      create_file: '创建空文件',
       upload_file: '上传文件',
       create_folder: '创建文件夹',
       upload_tasks: '上传任务',
       tasks_status: '上传 {p}',
       drop_tip: '拖放到这里以上传',
+      invalid_filename: '无效的文件名',
       invalid_folder_name: '无效的文件夹名称',
       confirm_stop_task: '确认停止该任务？',
       confirm_remove_task: '确认移除该任务，不可恢复？',
