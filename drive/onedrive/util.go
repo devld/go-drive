@@ -20,11 +20,12 @@ import (
 
 var t = i18n.TPrefix("drive.onedrive.")
 
-func oauthReq(c common.Config) *drive_util.OAuthRequest {
+func oauthReq(c common.Config, config types.SM) *drive_util.OAuthRequest {
+	tenant := config["tenant"]
 	return &drive_util.OAuthRequest{
 		Endpoint: oauth2.Endpoint{
-			AuthURL:   "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
-			TokenURL:  "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+			AuthURL:   "https://login.microsoftonline.com/" + tenant + "/oauth2/v2.0/authorize",
+			TokenURL:  "https://login.microsoftonline.com/" + tenant + "/oauth2/v2.0/token",
 			AuthStyle: oauth2.AuthStyleInParams,
 		},
 		RedirectURL: c.OAuthRedirectURI,
@@ -68,7 +69,7 @@ func itemPath(path string) string {
 
 func InitConfig(ctx context.Context, config types.SM,
 	driveUtils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
-	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(driveUtils.Config), config, driveUtils.Data)
+	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(driveUtils.Config, config), config, driveUtils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -127,7 +128,7 @@ func InitConfig(ctx context.Context, config types.SM,
 }
 
 func Init(ctx context.Context, data types.SM, config types.SM, utils drive_util.DriveUtils) error {
-	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config), data, config, utils.Data)
+	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config, config), data, config, utils.Data)
 	if e != nil {
 		return e
 	}
