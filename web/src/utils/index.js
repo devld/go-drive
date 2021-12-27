@@ -248,13 +248,13 @@ export async function taskDone(task, cb, interval = 1000) {
 
 const filters = {
   formatTime,
-  formatBytes
+  formatBytes,
 }
 
 const directives = {
   markdown,
   longPress,
-  focus
+  focus,
 }
 
 const utils = {
@@ -265,7 +265,7 @@ const utils = {
   pathJoin,
   fileUrl,
   filename,
-  dir
+  dir,
 }
 
 export default {
@@ -281,7 +281,7 @@ export default {
     Vue.use(UiUtils)
     Vue.use(LazyLoad, {
       dispatchEvent: true,
-      attempt: 1
+      attempt: 1,
     })
-  }
+  },
 }

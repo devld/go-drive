@@ -89,7 +89,7 @@ export default {
   width: 340px;
   padding-top: 60px;
   height: 300px;
-  @include var(background-color, secondary-bg-color);
+  background-color: var(--secondary-bg-color);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 
   .filename {
@@ -100,7 +100,7 @@ export default {
     margin: 0;
     text-align: center;
     border-bottom: 1px solid #eaecef;
-    @include var(border-color, border-color);
+    border-color: var(--border-color);
     padding: 10px 2.5em;
     font-size: 20px;
     font-weight: normal;

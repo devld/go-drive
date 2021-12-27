@@ -161,7 +161,7 @@ export default {
       if (!files.length) return
       let applyAll, override
       for (const file of files) {
-        if (this.entries && this.entries.find((e) => e.name === file.name)) {
+        if (this.entries && this.entries.find(e => e.name === file.name)) {
           if (!applyAll) {
             const { override: override_, all } = await this.confirmFileExists(
               file
@@ -189,12 +189,12 @@ export default {
           pattern: /^[^/]+$/,
           message: this.$t('p.new_entry.invalid_folder_name'),
         },
-        onOk: (text) => {
+        onOk: text => {
           return makeDir(pathClean(pathJoin(this.path, text)))
             .then(() => {
               this.$emit('update')
             })
-            .catch((e) => {
+            .catch(e => {
               this.$alert(e.message).catch(() => {})
               return Promise.reject(e)
             })
@@ -236,7 +236,7 @@ export default {
       uploadManager.removeTask(task.id, true)
     },
     updateTasksSummary() {
-      const completed = this.tasks.filter((t) => t.status === STATUS_COMPLETED)
+      const completed = this.tasks.filter(t => t.status === STATUS_COMPLETED)
         .length
       this.uploadStatus = { completed, total: this.tasks.length }
     },
@@ -315,7 +315,7 @@ export default {
     border-radius: 50%;
     margin: 5px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    @include var(background-color, secondary-bg-color);
+    background-color: var(--secondary-bg-color);
 
     .icon {
       display: block;
@@ -337,8 +337,8 @@ export default {
 
     outline: none;
     padding: 10px 26px;
-    @include var(background-color, secondary-bg-color);
-    @include var(color, primary-text-color);
+    background-color: var(--secondary-bg-color);
+    color: var(--primary-text-color);
 
     border: none;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);

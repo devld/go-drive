@@ -30,14 +30,14 @@
         <i v-if="entry.meta.is_mount">@</i>{{ entry.name
         }}<template v-if="entry.meta.ext">.{{ entry.meta.ext }}</template>
       </span>
-      <template v-if="viewMode === 'list'">
+      <div v-if="viewMode === 'list'" class="entry-item__meta">
         <span class="entry-item__modified-time">{{
           entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : ''
         }}</span>
         <span class="entry-item__size">{{
           entry.size >= 0 ? $.formatBytes(entry.size) : ''
         }}</span>
-      </template>
+      </div>
     </span>
   </div>
 </template>
@@ -57,7 +57,7 @@ export default {
     viewMode: {
       type: String,
       default: 'list',
-      validator: (val) => val === 'list' || val === 'thumbnail',
+      validator: val => val === 'list' || val === 'thumbnail',
     },
     showThumbnail: {
       type: Boolean,
@@ -100,11 +100,18 @@ export default {
     text-overflow: ellipsis;
   }
 
+  .entry-item__meta {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
   .entry-item__modified-time {
     white-space: nowrap;
   }
 
   .entry-item__size {
+    display: block;
     width: 80px;
     text-align: right;
     white-space: nowrap;

@@ -3,7 +3,7 @@
     <span class="error-code" :title="message">{{ status || 'ERROR' }}</span>
     <span class="error-message">{{
       (ERROR_MESSAGES[status] && $t(ERROR_MESSAGES[status], { status })) ||
-      message
+        message
     }}</span>
     <div class="back-button">
       <simple-button @click="$router.go(-1)">{{

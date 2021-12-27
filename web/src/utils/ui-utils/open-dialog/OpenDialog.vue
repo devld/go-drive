@@ -29,14 +29,14 @@ function createFilter(filter) {
   if (typeof filter !== 'string') return () => true
   const filters = filter
     .split(',')
-    .map((f) => f.trim())
+    .map(f => f.trim())
     .filter(Boolean)
   if (!filters.length) return () => true
   let allowFile, allowDir
   let maxSize = Number.POSITIVE_INFINITY
   let allowedExt = {}
   let writable
-  filters.forEach((f) => {
+  filters.forEach(f => {
     if (f === 'file') allowFile = true
     if (f === 'dir') allowDir = true
     if (f === 'write') writable = true
@@ -48,7 +48,7 @@ function createFilter(filter) {
     allowFile = true
   }
   if (Object.keys(allowedExt).length === 0) allowedExt = null
-  return (entry) => {
+  return entry => {
     if (!allowFile && entry.type === 'file') return false
     if (!allowDir && entry.type === 'dir') return false
     if (allowedExt && !allowedExt[filenameExt(entry.name)]) return false
@@ -124,7 +124,7 @@ export default {
       if (!this.dirMode) return
       this.cancelGetEntry()
       this._getEntryTask = getEntry(this.path).then(
-        (entry) => {
+        entry => {
           this.confirmDisabled(!this._filter(entry))
         },
         () => {}
@@ -134,7 +134,7 @@ export default {
       event.preventDefault()
       if (!this.dirMode) {
         if (entry.type === 'file') {
-          if (this.selection.findIndex((e) => e.path === entry.path) === -1) {
+          if (this.selection.findIndex(e => e.path === entry.path) === -1) {
             this.selection.push(entry)
           }
           return
@@ -191,7 +191,7 @@ export default {
       margin-bottom: 0;
       position: sticky;
       top: 0;
-      @include var(background-color, secondary-bg-color);
+      background-color: var(--secondary-bg-color);
       box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
       z-index: 1;
     }

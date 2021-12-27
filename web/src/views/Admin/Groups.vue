@@ -147,7 +147,7 @@ export default {
     async editGroup(group) {
       try {
         const g = await getGroup(group.name)
-        g.users = g.users.map((g) => g.username)
+        g.users = g.users.map(g => g.username)
         this.group = g
         this.edit = true
       } catch (e) {
@@ -164,7 +164,7 @@ export default {
             () => {
               this.loadGroups()
             },
-            (e) => {
+            e => {
               this.$alert(e.message)
               return Promise.reject(e)
             }
@@ -180,7 +180,7 @@ export default {
       }
       const group = {
         name: this.group.name,
-        users: this.group.users.map((username) => ({ username })),
+        users: this.group.users.map(username => ({ username })),
       }
       this.saving = true
       try {

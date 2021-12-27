@@ -34,10 +34,10 @@ const fileExts = {
     'cpp',
     'h',
     'vue',
-    'gradle'
+    'gradle',
   ],
   zip: ['zip', 'tar', 'gz', 'rar', '7z'],
-  apk: ['apk']
+  apk: ['apk'],
 }
 
 const extMapping = {}

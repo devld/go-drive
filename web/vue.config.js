@@ -5,21 +5,13 @@ module.exports = {
   publicPath: './',
   productionSourceMap: false,
 
-  css: {
-    loaderOptions: {
-      sass: {
-        prependData: '@import "~@/styles/themes/include.scss";'
-      }
-    }
-  },
-
   pages: {
     index: {
       entry: 'src/main.js',
       template: 'public/index.html',
       filename: 'index.html',
-      title: process.env.VUE_APP_SITE_TITLE
-    }
+      title: process.env.VUE_APP_SITE_TITLE,
+    },
   },
 
   devServer: {
@@ -28,20 +20,22 @@ module.exports = {
         target: 'http://localhost:8089',
         changeOrigin: true,
         pathRewrite: {
-          '^/api': ''
-        }
-      }
-    }
+          '^/api': '',
+        },
+      },
+    },
   },
 
   configureWebpack: {
     plugins: [
-      new CopyWebpackPlugin([{
-        from: path.resolve(__dirname, 'node_modules/codemirror/mode/*/*'),
-        to: path.resolve(__dirname, 'dist/static/codemirror/'),
-        context: path.resolve(__dirname, 'node_modules/codemirror/')
-      }])
-    ]
+      new CopyWebpackPlugin([
+        {
+          from: path.resolve(__dirname, 'node_modules/codemirror/mode/*/*'),
+          to: path.resolve(__dirname, 'dist/static/codemirror/'),
+          context: path.resolve(__dirname, 'node_modules/codemirror/'),
+        },
+      ]),
+    ],
   },
   pwa: {
     name: process.env.VUE_APP_SITE_TITLE,
@@ -52,14 +46,22 @@ module.exports = {
       favicon16: 'static/icon/favicon-16x16.png',
       appleTouchIcon: 'static/icon/apple-touch-icon.png',
       maskIcon: 'static/icon/safari-pinned-tab.svg',
-      msTileImage: 'static/icon/android-chrome-512x512.png'
+      msTileImage: 'static/icon/android-chrome-512x512.png',
     },
     manifestOptions: {
       icons: [
-        { src: 'static/icon/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-        { src: 'static/icon/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' }
+        {
+          src: 'static/icon/android-chrome-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+        },
+        {
+          src: 'static/icon/android-chrome-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+        },
       ],
-      background_color: '#fff'
-    }
-  }
+      background_color: '#fff',
+    },
+  },
 }

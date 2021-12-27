@@ -20,44 +20,44 @@ export default {
       mod_time_asc: 'Modified Asc',
       mod_time_desc: 'Modified Desc',
       size_asc: 'Size Asc',
-      size_desc: 'Size Desc'
-    }
+      size_desc: 'Size Desc',
+    },
   },
   error: {
     not_allowed: 'Operation not allowed',
     not_found: 'Resource not found',
-    server_error: 'Server Error'
+    server_error: 'Server Error',
   },
   form: {
-    required_msg: '{f} is required'
+    required_msg: '{f} is required',
   },
   routes: {
     title: {
       users: 'Users',
       groups: 'Groups',
       drives: 'Drives',
-      misc: 'Misc'
-    }
+      misc: 'Misc',
+    },
   },
   md: {
-    error: 'An error occurred while rendering markdown'
+    error: 'An error occurred while rendering markdown',
   },
   dialog: {
     base: {
-      ok: 'OK'
+      ok: 'OK',
     },
     open: {
       max_items: 'Select at most {n} items.',
       n_selected: '{n} items selected.',
-      clear: 'clear'
+      clear: 'clear',
     },
     text: {
       yes: 'Yes',
-      no: 'No'
+      no: 'No',
     },
     loading: {
-      cancel: 'Cancel'
-    }
+      cancel: 'Cancel',
+    },
   },
   p: {
     admin: {
@@ -87,7 +87,7 @@ export default {
         f_enabled: 'Enabled',
         f_type: 'Type',
         delete_drive: 'Delete drive',
-        confirm_delete: 'Are you sure to delete drive {n}?'
+        confirm_delete: 'Are you sure to delete drive {n}?',
       },
       user: {
         username: 'Username',
@@ -104,7 +104,7 @@ export default {
         f_username: 'Username',
         f_password: 'Password',
         delete_user: 'Delete user',
-        confirm_delete: 'Are you sure to delete user {n}?'
+        confirm_delete: 'Are you sure to delete user {n}?',
       },
       group: {
         name: 'Name',
@@ -120,7 +120,7 @@ export default {
         or_edit: ' or edit group',
         f_name: 'Name',
         delete_group: 'Delete group',
-        confirm_delete: 'Are you sure to delete group {n}?'
+        confirm_delete: 'Are you sure to delete group {n}?',
       },
       misc: {
         permission_of_root: 'Permission of root',
@@ -130,7 +130,7 @@ export default {
         clean_cache: 'Clean cache',
         statistics: 'Statistics',
         refresh_in: 'Refresh in {n}s',
-        invalid_path_cleaned: '{n} invalid paths cleaned'
+        invalid_path_cleaned: '{n} invalid paths cleaned',
       },
       p_edit: {
         subject: 'Subject',
@@ -138,8 +138,8 @@ export default {
         policy: 'Policy',
         any: 'ANY',
         reject: 'Reject',
-        accept: 'Accept'
-      }
+        accept: 'Accept',
+      },
     },
     task: {
       empty: 'Nothing here',
@@ -153,14 +153,14 @@ export default {
       s_paused: 'Paused',
       s_stopped: 'Stopped',
       s_error: 'Error',
-      s_completed: 'Completed'
+      s_completed: 'Completed',
     },
     home: {
       file_exists: "'{n}' already exists, override or skip?",
       apply_all: 'Apply for all',
       readme_loading: 'Loading README...',
       readme_failed: 'Failed to load README.',
-      unsaved_confirm: 'You have some unsaved changes, are you sure to leave?'
+      unsaved_confirm: 'You have some unsaved changes, are you sure to leave?',
     },
     new_entry: {
       new_item: 'New item',
@@ -175,24 +175,24 @@ export default {
       file_exists: 'File exists',
       file_exists_confirm: "'{n}' already exists, override or skip?",
       skip: 'Skip',
-      override: 'Override'
+      override: 'Override',
     },
     login: {
       username: 'Username',
       password: 'Password',
-      login: 'Login'
-    }
+      login: 'Login',
+    },
   },
   hv: {
     download: {
-      download: 'Download'
+      download: 'Download',
     },
     permission: {
-      save: 'Save'
+      save: 'Save',
     },
     text_edit: {
-      save: 'Save'
-    }
+      save: 'Save',
+    },
   },
   handler: {
     copy_move: {
@@ -208,51 +208,51 @@ export default {
       move_open_title: 'Select move to',
       override_or_skip: 'Override or skip for duplicates?',
       override: 'Override',
-      skip: 'Skip'
+      skip: 'Skip',
     },
     delete: {
       name: 'Delete',
       desc: 'Delete files',
       confirm_n: 'Delete these {n} files?',
       confirm: 'Delete this file?',
-      deleting: 'Deleting {n} {p}'
+      deleting: 'Deleting {n} {p}',
     },
     download: {
       name: 'Download',
-      desc: 'Download file'
+      desc: 'Download file',
     },
     image: {
       name: 'Gallery',
-      desc: 'View images'
+      desc: 'View images',
     },
     pdf: {
       name: 'View',
-      desc: 'View PDF'
+      desc: 'View PDF',
     },
     media: {
       name: 'Play',
-      desc: 'Play media'
+      desc: 'Play media',
     },
     mount: {
       name: 'Mount to',
       desc: 'Mount entries to another location',
-      open_title: 'Select mount to'
+      open_title: 'Select mount to',
     },
     permission: {
       name: 'Permissions',
-      desc: 'Set permissions for this item'
+      desc: 'Set permissions for this item',
     },
     rename: {
       name: 'Rename',
       desc: 'Rename this file',
       input_title: 'Rename',
-      invalid_filename: 'Invalid filename'
+      invalid_filename: 'Invalid filename',
     },
     text_edit: {
       edit_name: 'Edit',
       view_name: 'View',
       edit_desc: 'Edit this file',
-      view_desc: 'View this file'
-    }
-  }
+      view_desc: 'View this file',
+    },
+  },
 }

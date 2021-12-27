@@ -154,7 +154,7 @@ export default {
   right: 0;
   transition: 0.4s;
   background-color: #bcdffb;
-  @include var(background-color, progress-bar-color);
+  background-color: var(--progress-bar-color);
 }
 
 .task-status-1 {
@@ -194,7 +194,7 @@ export default {
 
   a {
     text-decoration: none;
-    @include var(color, link-color);
+    color: var(--link-color);
   }
 }
 

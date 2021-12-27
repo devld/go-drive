@@ -30,7 +30,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
       {
         method: 'POST',
         url: '/chunk',
-        params: { size, chunk_size: 5 * 1024 * 1024 }
+        params: { size, chunk_size: 5 * 1024 * 1024 },
       },
       axios
     )
@@ -54,7 +54,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
         transformRequest: null,
         onUploadProgress: ({ loaded, total }) => {
           onProgress({ loaded, total })
-        }
+        },
       },
       axios
     )
@@ -70,7 +70,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
     try {
       return await taskDone(
         axios.post(`/chunk-content/${this._task.path}`, null, {
-          params: { id: this._uploadId }
+          params: { id: this._uploadId },
         }),
         task => {
           this._mergeTask = task

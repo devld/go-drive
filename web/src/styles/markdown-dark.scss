@@ -1,9 +1,9 @@
 .markdown-body {
-  @include var(color, primary-text-color);
+  color: var(--primary-text-color);
 
   h1,
   h2 {
-    @include var(border-bottom-color, border-color);
+    border-bottom-color: var(--border-color);
   }
 
   h1,
@@ -21,26 +21,26 @@
 
   .highlight pre,
   pre {
-    @include var(background-color, secondary-bg-color);
+    background-color: var(--secondary-bg-color);
   }
 
   kbd {
-    @include var(background-color, secondary-bg-color);
-    @include var(color, primary-text-color);
-    @include var(border-color, border-color);
+    background-color: var(--secondary-bg-color);
+    color: var(--primary-text-color);
+    border-color: var(--border-color);
   }
 
   table td,
   table th {
-    @include var(background-color, secondary-bg-color);
-    @include var(border-color, border-color);
+    background-color: var(--secondary-bg-color);
+    border-color: var(--border-color);
   }
 
   blockquote {
-    @include var(border-left-color, border-color);
+    border-left-color: var(--border-color);
   }
 
   hr {
-    @include var(background-color, secondary-bg-color);
+    background-color: var(--secondary-bg-color);
   }
 }

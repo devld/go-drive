@@ -7,13 +7,13 @@ export default {
   display: {
     name: T('handler.media.name'),
     description: T('handler.media.desc'),
-    icon: '#icon-play-circle'
+    icon: '#icon-play-circle',
   },
   view: {
     name: 'MediaView',
-    component: MediaView
+    component: MediaView,
   },
   supports: entry =>
     entry.type === 'file' &&
-    ['mp4', 'mp3', 'm4a', 'ogg'].includes(filenameExt(entry.name))
+    ['mp4', 'mp3', 'm4a', 'ogg'].includes(filenameExt(entry.name)),
 }

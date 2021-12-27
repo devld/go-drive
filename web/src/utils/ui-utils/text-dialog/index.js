@@ -10,7 +10,7 @@ export function showAlertDialog(Vue, opts) {
   }
   return showBaseDialog(Vue, TextDialog, {
     ...opts,
-    transition: opts.transition || 'flip-fade'
+    transition: opts.transition || 'flip-fade',
   })
 }
 
@@ -22,6 +22,6 @@ export function showConfirmDialog(Vue, opts) {
     ...opts,
     transition: opts.transition || 'flip-fade',
     confirmText: opts.confirmText || T('dialog.text.yes'),
-    cancelText: opts.cancelText || T('dialog.text.no')
+    cancelText: opts.cancelText || T('dialog.text.no'),
   })
 }

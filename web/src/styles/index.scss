@@ -1,5 +1,7 @@
 @import '~github-markdown-css/github-markdown.css';
 @import '~highlight.js/scss/github-gist.scss';
+@import './themes/default.scss';
+@import './themes/dark.scss';
 
 // theme
 :root {
@@ -37,7 +39,7 @@
   outline: none;
   border: none;
   background-color: transparent;
-  @include var(color, primary-text-color);
+  color: var(--primary-text-color);
   user-select: none;
   cursor: pointer;
   text-decoration: none;
@@ -65,32 +67,32 @@
   }
 
   thead {
-    @include var(background-color, thead-bg-color);
+    background-color: var(--thead-bg-color);
   }
 
   tr {
     &:not(:last-child) td {
       border-bottom: solid 1px;
-      @include var(border-color, border-color);
+      border-color: var(--border-color);
     }
 
     &:hover {
-      @include var(background-color, hover-bg-color);
+      background-color: var(--hover-bg-color);
     }
 
     td:first-child {
       border-left: solid 1px;
-      @include var(border-color, border-color);
+      border-color: var(--border-color);
     }
 
     td:last-child {
       border-right: solid 1px;
-      @include var(border-color, border-color);
+      border-color: var(--border-color);
     }
 
     td {
       border-bottom: solid 1px;
-      @include var(border-color, border-color);
+      border-color: var(--border-color);
     }
   }
 
@@ -128,15 +130,15 @@
   input.value,
   select.value,
   textarea.value {
-    @include var(background-color, form-value-bg-color);
-    @include var(border, form-value-border);
-    @include var(color, primary-text-color);
+    background-color: var(--form-value-bg-color);
+    border: var(--form-value-border);
+    color: var(--primary-text-color);
     font-size: 16px;
     outline: none;
     padding: 6px 8px;
 
     &:disabled {
-      @include var(background-color, form-value-bg-color-disabled);
+      background-color: var(--form-value-bg-color-disabled);
     }
   }
 

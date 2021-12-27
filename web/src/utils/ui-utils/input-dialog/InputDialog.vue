@@ -98,7 +98,7 @@ export default {
             this.$emit('loading')
             return true
           },
-          (e) => {
+          e => {
             this.validationResult(e, token)
             this.$emit('loading')
             return false
@@ -133,9 +133,9 @@ export default {
 }
 
 .input-dialog__input {
-  @include var(background-color, form-value-bg-color);
-  @include var(border, form-value-border);
-  @include var(color, primary-text-color);
+  background-color: var(--form-value-bg-color);
+  border: var(--form-value-border);
+  color: var(--primary-text-color);
   font-size: 16px;
   outline: none;
   padding: 6px;

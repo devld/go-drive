@@ -6,15 +6,15 @@ export default {
   display: {
     name: T('handler.download.name'),
     description: T('handler.download.desc'),
-    icon: '#icon-download'
+    icon: '#icon-download',
   },
   view: {
     name: 'DownloadView',
-    component: DownloadView
+    component: DownloadView,
   },
   multiple: true,
   supports: entry =>
     Array.isArray(entry)
       ? !entry.some(e => e.type !== 'file')
-      : entry.type === 'file'
+      : entry.type === 'file',
 }

@@ -41,7 +41,7 @@ export default {
     height: 60px;
     line-height: 60px;
     text-align: center;
-    @include var(color, secondary-text-color);
+    color: var(--secondary-text-color);
     user-select: none;
   }
 }

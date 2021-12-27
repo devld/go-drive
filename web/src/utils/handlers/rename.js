@@ -7,7 +7,7 @@ export default {
   display: {
     name: T('handler.rename.name'),
     description: T('handler.rename.desc'),
-    icon: '#icon-rename'
+    icon: '#icon-rename',
   },
   supports: (entry, parentEntry) =>
     entry.meta.can_write && parentEntry && parentEntry.meta.can_write,
@@ -18,7 +18,7 @@ export default {
         text: entry.name,
         validator: {
           pattern: /^[^/\0:*"<>|]+$/,
-          message: T('handler.rename.invalid_filename')
+          message: T('handler.rename.invalid_filename'),
         },
         onOk: async text => {
           if (text === entry.name) return
@@ -32,8 +32,8 @@ export default {
             alert(e.message)
             throw e
           }
-        }
+        },
       })
     })
-  }
+  },
 }

@@ -178,7 +178,7 @@ export default {
   },
   computed: {
     driveFactoriesMap() {
-      return mapOf(this.driveFactories, (f) => f.type)
+      return mapOf(this.driveFactories, f => f.type)
     },
     baseForm() {
       return [
@@ -200,7 +200,7 @@ export default {
           type: 'select',
           required: true,
           disabled: this.edit,
-          options: this.driveFactories.map((f) => ({
+          options: this.driveFactories.map(f => ({
             name: f.display_name,
             value: f.type,
           })),
@@ -252,7 +252,7 @@ export default {
               }
               this.loadDrives()
             },
-            (e) => {
+            e => {
               this.$alert(e.message)
               return Promise.reject(e)
             }

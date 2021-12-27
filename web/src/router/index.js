@@ -19,7 +19,7 @@ const routes = [
         name: 'Home',
         path: '/files/:path(.*)',
         component: Home,
-        props: true
+        props: true,
       },
       {
         name: 'Admin',
@@ -33,37 +33,37 @@ const routes = [
             path: '/admin/users',
             component: () =>
               import(/* webpackChunkName: "admin" */ '@/views/Admin/Users'),
-            meta: { title: T('routes.title.users') }
+            meta: { title: T('routes.title.users') },
           },
           {
             name: 'GroupsManager',
             path: '/admin/groups',
             component: () =>
               import(/* webpackChunkName: "admin" */ '@/views/Admin/Groups'),
-            meta: { title: T('routes.title.groups') }
+            meta: { title: T('routes.title.groups') },
           },
           {
             name: 'DrivesManager',
             path: '/admin/drives',
             component: () =>
               import(/* webpackChunkName: "admin" */ '@/views/Admin/Drives'),
-            meta: { title: T('routes.title.drives') }
+            meta: { title: T('routes.title.drives') },
           },
           {
             name: 'MiscSettings',
             path: '/admin/misc',
             component: () =>
               import(/* webpackChunkName: "admin" */ '@/views/Admin/Misc'),
-            meta: { title: T('routes.title.misc') }
-          }
-        ]
-      }
-    ]
-  }
+            meta: { title: T('routes.title.misc') },
+          },
+        ],
+      },
+    ],
+  },
 ]
 
 const router = new VueRouter({
-  routes
+  routes,
 })
 
 // see https://github.com/vuejs/vue-router/issues/1849#issuecomment-340767577

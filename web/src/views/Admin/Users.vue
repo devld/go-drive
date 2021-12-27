@@ -145,7 +145,7 @@ export default {
     async editUser(user) {
       try {
         const u = await getUser(user.username)
-        u.groups = u.groups.map((g) => g.name)
+        u.groups = u.groups.map(g => g.name)
         this.user = u
         this.edit = true
       } catch (e) {
@@ -162,7 +162,7 @@ export default {
             () => {
               this.loadUsers()
             },
-            (e) => {
+            e => {
               this.$alert(e.message)
               return Promise.reject(e)
             }
@@ -179,7 +179,7 @@ export default {
       const user = {
         username: this.user.username,
         password: this.user.password,
-        groups: this.user.groups.map((name) => ({ name })),
+        groups: this.user.groups.map(name => ({ name })),
       }
       this.saving = true
       try {

@@ -71,7 +71,7 @@ export default {
   right: 0;
   margin-top: 10px;
   z-index: 999;
-  @include var(background-color, secondary-bg-color);
-  @include var(box-shadow, dialog-content-shadow);
+  background-color: var(--secondary-bg-color);
+  box-shadow: var(--dialog-content-shadow);
 }
 </style>

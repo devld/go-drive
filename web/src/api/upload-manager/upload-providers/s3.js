@@ -5,7 +5,7 @@ import { STATUS_COMPLETED } from '../task'
 const PART_SIZE = 6 * 1024 * 1024 // 6M
 
 const UNSIGNED_PAYLOAD = {
-  'x-amz-content-sha256': 'UNSIGNED-PAYLOAD'
+  'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
 }
 
 export default class S3UploadTask extends ChunkUploadTask {
@@ -45,7 +45,7 @@ export default class S3UploadTask extends ChunkUploadTask {
     const r = await this._request({
       method: 'POST',
       url: this._config.url,
-      headers: { ...UNSIGNED_PAYLOAD }
+      headers: { ...UNSIGNED_PAYLOAD },
     })
     const matched = /<UploadId>(.+)<\/UploadId>/.exec(r.data)
     if (!matched) throw new Error('invalid response from aws s3')
@@ -75,10 +75,10 @@ export default class S3UploadTask extends ChunkUploadTask {
         data: blob,
         headers: {
           'Content-Type': 'application/octet-stream',
-          ...UNSIGNED_PAYLOAD
+          ...UNSIGNED_PAYLOAD,
         },
         transformRequest: null,
-        onUploadProgress: e => onProgress({ loaded: e.loaded, total: e.total })
+        onUploadProgress: e => onProgress({ loaded: e.loaded, total: e.total }),
       })
     }
 
@@ -87,7 +87,7 @@ export default class S3UploadTask extends ChunkUploadTask {
       {
         method: 'POST',
         url: `/upload/${this._task.path}`,
-        data: { action: 'UploadPart', uploadId: this._uploadId, seq: `${seq}` }
+        data: { action: 'UploadPart', uploadId: this._uploadId, seq: `${seq}` },
       },
       axios
     )
@@ -99,10 +99,10 @@ export default class S3UploadTask extends ChunkUploadTask {
       data: blob,
       headers: {
         'Content-Type': 'application/octet-stream',
-        ...UNSIGNED_PAYLOAD
+        ...UNSIGNED_PAYLOAD,
       },
       transformRequest: null,
-      onUploadProgress: e => onProgress({ loaded: e.loaded, total: e.total })
+      onUploadProgress: e => onProgress({ loaded: e.loaded, total: e.total }),
     })
 
     const etag = resp.headers.etag
@@ -115,13 +115,13 @@ export default class S3UploadTask extends ChunkUploadTask {
   async _completeUpload() {
     if (!this._uploadId) {
       return axios.post(`/upload/${this._task.path}`, {
-        action: 'CompletePutObject'
+        action: 'CompletePutObject',
       })
     }
     return axios.post(`/upload/${this._task.path}`, {
       action: 'CompleteMultipartUpload',
       uploadId: this._uploadId,
-      parts: this._uploadedParts.join(';')
+      parts: this._uploadedParts.join(';'),
     })
   }
 
@@ -142,7 +142,7 @@ export default class S3UploadTask extends ChunkUploadTask {
       axios
         .post(`/upload/${this._task.path}`, {
           action: 'AbortMultipartUpload',
-          uploadId: this._uploadId
+          uploadId: this._uploadId,
         })
         .catch(() => {})
     }

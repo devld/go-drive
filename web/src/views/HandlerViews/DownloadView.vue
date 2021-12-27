@@ -56,7 +56,7 @@ export default {
     downloadLinks() {
       if (this.singleEntry) return ''
       return this.entry
-        .map((e) => this.$.fileUrl(e.path, e.meta.access_key))
+        .map(e => this.$.fileUrl(e.path, e.meta.access_key))
         .join('\n')
     },
   },
@@ -73,7 +73,7 @@ export default {
 .download-view-page {
   position: relative;
   width: 300px;
-  @include var(background-color, secondary-bg-color);
+  background-color: var(--secondary-bg-color);
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
   padding: 16px 16px 20px;
 

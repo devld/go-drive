@@ -25,7 +25,7 @@
             :title="
               `
               ${$t('app.username')}: ${user.username}\n` +
-              `${$t('app.groups')}: ${user.groups.map((g) => g.name).join(', ')}
+                `${$t('app.groups')}: ${user.groups.map(g => g.name).join(', ')}
             `
             "
             >{{ user.username }}</span

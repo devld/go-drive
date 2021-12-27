@@ -52,10 +52,10 @@ export default {
   },
   methods: {
     async validate() {
-      await Promise.all(this.$refs.fields.map((f) => f.validate()))
+      await Promise.all(this.$refs.fields.map(f => f.validate()))
     },
     clearError() {
-      this.$refs.fields.forEach((f) => {
+      this.$refs.fields.forEach(f => {
         f.clearError()
       })
     },

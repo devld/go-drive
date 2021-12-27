@@ -13,7 +13,7 @@ if (!/^https?:\/\//.test(apiPath)) {
 export const API_PATH = apiPath
 
 const BASE_CONFIG = {
-  baseURL: API_PATH
+  baseURL: API_PATH,
 }
 
 /**

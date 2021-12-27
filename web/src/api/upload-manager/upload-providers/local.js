@@ -7,7 +7,7 @@ import UploadTask, {
   STATUS_COMPLETED,
   STATUS_ERROR,
   STATUS_STOPPED,
-  STATUS_UPLOADING
+  STATUS_UPLOADING,
 } from '../task'
 
 /**
@@ -31,7 +31,7 @@ export default class LocalUploadTask extends UploadTask {
         transformRequest: null,
         onUploadProgress: ({ loaded, total }) => {
           this._onChange(STATUS_UPLOADING, { loaded, total })
-        }
+        },
       }),
       task => {}
     ).then(

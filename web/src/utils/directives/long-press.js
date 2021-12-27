@@ -22,5 +22,5 @@ export default {
     if (el._hammer) {
       el._hammer.destroy()
     }
-  }
+  },
 }

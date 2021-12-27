@@ -16,11 +16,11 @@ export default {
         ? 'handler.text_edit.edit_desc'
         : 'handler.text_edit.view_desc'
     ),
-    icon: '#icon-cursor-text'
+    icon: '#icon-cursor-text',
   }),
   view: {
     name: 'TextEditView',
-    component: () => import('@/views/HandlerViews/TextEditView.vue')
+    component: () => import('@/views/HandlerViews/TextEditView.vue'),
   },
   supports: entry =>
     entry.type === 'file' &&
@@ -46,7 +46,7 @@ export default {
       'java',
       'kt',
       'gradle',
-      'ps1'
+      'ps1',
     ].includes(filenameExt(entry.name)) &&
-    entry.size <= TEXT_EDITOR_MAX_FILE_SIZE
+    entry.size <= TEXT_EDITOR_MAX_FILE_SIZE,
 }

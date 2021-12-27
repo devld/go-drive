@@ -54,7 +54,7 @@ const languages = {
   sql,
   yaml,
   typescript,
-  vim
+  vim,
 }
 
 Object.keys(languages).forEach(key => {

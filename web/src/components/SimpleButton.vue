@@ -42,8 +42,8 @@ export default {
 .simple-button {
   font-size: 16px;
   border: none;
-  @include var(background-color, btn-bg-color-default);
-  @include var(color, btn-color-default);
+  background-color: var(--btn-bg-color-default);
+  color: var(--btn-color-default);
   padding: 4px 10px;
   cursor: pointer;
   transition: 0.3s;
@@ -65,18 +65,18 @@ export default {
 
   &[disabled] {
     cursor: not-allowed;
-    @include var(background-color, btn-bg-color-disabled-default);
+    background-color: var(--btn-bg-color-disabled-default);
   }
 
   $types: ('info', 'success', 'warning', 'danger');
   @each $type in $types {
     &.#{$type} {
-      @include var(background-color, btn-bg-color-#{$type});
-      @include var(color, btn-color-#{$type});
+      background-color: var(--btn-bg-color-#{$type});
+      color: var(--btn-color-#{$type});
 
       &[disabled] {
-        @include var(background-color, btn-bg-color-disabled-#{$type});
-        @include var(color, btn-color-disabled-#{$type});
+        background-color: var(--btn-bg-color-disabled-#{$type});
+        color: var(--btn-color-disabled-#{$type});
       }
     }
   }

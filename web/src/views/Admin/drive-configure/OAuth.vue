@@ -72,7 +72,7 @@ export default {
   .oauth-principal {
     margin-top: 0.5em;
     font-size: 14px;
-    @include var(color, secondary-text-color);
+    color: var(--secondary-text-color);
   }
 }
 </style>

@@ -27,7 +27,7 @@ export default {
       alert,
       confirm,
       input,
-      loading
+      loading,
     }
-  }
+  },
 }

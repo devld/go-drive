@@ -8,7 +8,7 @@ export default {
     name: T('handler.delete.name'),
     description: T('handler.delete.desc'),
     type: 'danger',
-    icon: '#icon-delete'
+    icon: '#icon-delete',
   },
   supports: (entry, parentEntry) =>
     (Array.isArray(entry)
@@ -25,7 +25,7 @@ export default {
           entries.length > 1
             ? T('handler.delete.confirm_n', { n: entries.length })
             : T('handler.delete.confirm'),
-        confirmType: 'danger'
+        confirmType: 'danger',
       })
     } catch {
       return
@@ -47,9 +47,9 @@ export default {
           loading({
             text: T('handler.delete.deleting', {
               n: entry.name,
-              p: `${task.progress.loaded}/${task.progress.total}`
+              p: `${task.progress.loaded}/${task.progress.total}`,
             }),
-            onCancel
+            onCancel,
           })
         })
       }
@@ -60,5 +60,5 @@ export default {
     } finally {
       loading()
     }
-  }
+  },
 }

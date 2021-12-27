@@ -97,7 +97,7 @@ export default {
         type: 'select',
         options: [
           { name: '', value: '' },
-          ...this.drives.map((d) => ({ name: d.name, value: d.name })),
+          ...this.drives.map(d => ({ name: d.name, value: d.name })),
         ],
       }
     },
@@ -194,7 +194,7 @@ export default {
 
     &:not(:first-child) {
       border-top: solid 1px;
-      @include var(border-color, border-color);
+      border-color: var(--border-color);
     }
   }
 

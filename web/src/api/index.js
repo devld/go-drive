@@ -18,7 +18,7 @@ export function getContent(path, accessKey, noCache) {
   return axiosWrapper.get(_fileUrl(path, accessKey), {
     transformResponse: [],
     params,
-    _noAuth: true
+    _noAuth: true,
   })
 }
 
@@ -32,13 +32,13 @@ export function deleteEntry(path) {
 
 export function copyEntry(from, to, override) {
   return axios.post('/copy', null, {
-    params: { from, to, override: override ? '1' : '' }
+    params: { from, to, override: override ? '1' : '' },
   })
 }
 
 export function moveEntry(from, to, override) {
   return axios.post('/move', null, {
-    params: { from, to, override: override ? '1' : '' }
+    params: { from, to, override: override ? '1' : '' },
   })
 }
 
@@ -71,7 +71,7 @@ export function fileThumbnail(path, accessKey) {
 export function login(username, password) {
   return axios.post('/auth/login', {
     username,
-    password
+    password,
   })
 }
 

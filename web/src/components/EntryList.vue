@@ -179,7 +179,7 @@ export default {
       return isRootPath(this.path)
     },
     selectionMap() {
-      return mapOf(this.selected, (e) => e.path)
+      return mapOf(this.selected, e => e.path)
     },
   },
   methods: {
@@ -206,7 +206,7 @@ export default {
     toggleSelect(entry) {
       if (this.selectionMap[entry.path]) {
         this.selected.splice(
-          this.selected.findIndex((e) => e.path === entry.path),
+          this.selected.findIndex(e => e.path === entry.path),
           1
         )
       } else {
@@ -237,7 +237,7 @@ export default {
       let dom
       if (name === '..') dom = this.$refs.parentEntry
       else {
-        const index = this.sortedEntries.findIndex((e) => e.name === name)
+        const index = this.sortedEntries.findIndex(e => e.name === name)
         if (index >= 0) dom = this.$refs.entries[index]
       }
       dom = (dom && dom.$el) || dom
@@ -251,7 +251,7 @@ export default {
 <style lang="scss">
 .entry-list {
   .entry-link {
-    @include var(color, primary-text-color);
+    color: var(--primary-text-color);
   }
 }
 
@@ -269,7 +269,7 @@ export default {
   margin-left: auto;
 
   .icon {
-    @include var(color, secondary-text-color);
+    color: var(--secondary-text-color);
   }
 
   .view-model-toggle {
@@ -291,11 +291,11 @@ export default {
     font-size: 14px;
 
     &:hover {
-      @include var(background-color, hover-bg-color);
+      background-color: var(--hover-bg-color);
     }
 
     &.active {
-      @include var(background-color, select-bg-color);
+      background-color: var(--select-bg-color);
     }
   }
 }
@@ -354,16 +354,16 @@ export default {
     text-decoration: none;
 
     &:focus {
-      @include var(background-color, focus-bg-color);
+      background-color: var(--focus-bg-color);
     }
 
     &:hover {
-      @include var(background-color, hover-bg-color);
+      background-color: var(--hover-bg-color);
     }
   }
 
   &.selected > .entry-link {
-    @include var(background-color, select-bg-color);
+    background-color: var(--select-bg-color);
   }
 }
 
@@ -371,6 +371,6 @@ export default {
   user-select: none;
   text-align: center;
   padding: 32px 0;
-  @include var(color, secondary-text-color);
+  color: var(--secondary-text-color);
 }
 </style>
