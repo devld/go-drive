@@ -18,6 +18,10 @@ type driveAccess struct {
 	permissionDAO *storage.PathPermissionDAO
 
 	signer *utils.Signer
+
+	ch           *registry.ComponentsHolder
+	listeners    []types.IDriveListener
+	listenersMux *sync.Mutex
 }
 
 func newDriveAccess(ch *registry.ComponentsHolder,
@@ -30,6 +34,8 @@ func newDriveAccess(ch *registry.ComponentsHolder,
 		permMux:       &sync.Mutex{},
 		permissionDAO: permissionDAO,
 		signer:        signer,
+		ch:            ch,
+		listenersMux:  &sync.Mutex{},
 	}
 	if e := da.reloadPerm(); e != nil {
 		return nil, e
@@ -40,11 +46,36 @@ func newDriveAccess(ch *registry.ComponentsHolder,
 }
 
 func (da *driveAccess) getDrive(req *http.Request, session types.Session) types.IDrive {
-	return NewPermissionWrapperDrive(
-		req, session,
-		da.rootDrive.Get(),
-		da.perms,
-		da.signer,
+	if da.listeners == nil {
+		func() {
+			da.listenersMux.Lock()
+			defer da.listenersMux.Unlock()
+			if da.listeners == nil {
+				listeners := make([]types.IDriveListener, 0)
+				listenerObjects := da.ch.Gets(func(c interface{}) bool {
+					_, ok := c.(types.IDriveListener)
+					return ok
+				})
+				for _, listener := range listenerObjects {
+					listeners = append(listeners, listener.(types.IDriveListener))
+				}
+				da.listeners = listeners
+			}
+		}()
+	}
+
+	return NewDriveListenerWrapper(
+		NewPermissionWrapperDrive(
+			req, session,
+			da.rootDrive.Get(),
+			da.perms,
+			da.signer,
+		),
+		types.DriveListenerContext{
+			Request: req,
+			Session: session,
+		},
+		da.listeners,
 	)
 }
 
