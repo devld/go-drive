@@ -13,7 +13,7 @@ import (
 type driveAccess struct {
 	rootDrive *drive.RootDrive
 
-	perms         permMap
+	perms         utils.PermMap
 	permMux       *sync.Mutex
 	permissionDAO *storage.PathPermissionDAO
 
@@ -55,6 +55,6 @@ func (da *driveAccess) reloadPerm() error {
 	if e != nil {
 		return e
 	}
-	da.perms = newPermMap(all)
+	da.perms = utils.NewPermMap(all)
 	return nil
 }
