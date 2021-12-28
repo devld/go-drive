@@ -172,6 +172,15 @@ export default {
         // path changed
         this.entries = null
         this.currentDirEntry = null
+        return
+      }
+      const handlers = resolveEntryHandler(
+        entry,
+        this.currentDirEntry,
+        this.user
+      )
+      if (handlers.length > 0) {
+        this.executeEntryHandler(handlers[0], entry)
       }
     },
     menuClicked({ entry, menu }) {
@@ -196,13 +205,16 @@ export default {
         return
       }
       // execute handler
-      if (typeof handler.handler === 'function') {
-        handler.handler(entry, this.$uiUtils).then(
-          r => {
-            if (r && r.update) this.reloadEntryList()
-          },
-          () => {}
-        )
+      this.executeEntryHandler(handler, entry)
+    },
+    async executeEntryHandler(handler, entry) {
+      if (typeof handler.handler === 'function' && !handler.view) {
+        try {
+          const r = await handler.handler(entry, this.$uiUtils)
+          if (r && r.update) this.reloadEntryList()
+        } catch (e) {
+          console.error('entry handler error', e)
+        }
       }
     },
     showEntryMenu({ entry, event }) {
