@@ -7,12 +7,12 @@ export default {
   name: 'editor',
   display: entry => ({
     name: T(
-      entry.meta.can_write
+      entry.meta.writable
         ? 'handler.text_edit.edit_name'
         : 'handler.text_edit.view_name'
     ),
     description: T(
-      entry.meta.can_write
+      entry.meta.writable
         ? 'handler.text_edit.edit_desc'
         : 'handler.text_edit.view_desc'
     ),

@@ -10,7 +10,7 @@ export default {
     icon: '#icon-rename',
   },
   supports: (entry, parentEntry) =>
-    entry.meta.can_write && parentEntry && parentEntry.meta.can_write,
+    entry.meta.writable && parentEntry && parentEntry.meta.writable,
   handler: (entry, { input, alert }) => {
     return new Promise(resolve => {
       input({

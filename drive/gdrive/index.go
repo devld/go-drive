@@ -74,7 +74,7 @@ type GDrive struct {
 }
 
 func (g *GDrive) Meta(context.Context) types.DriveMeta {
-	return types.DriveMeta{CanWrite: true}
+	return types.DriveMeta{Writable: true}
 }
 
 func (g *GDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
@@ -422,7 +422,7 @@ func (g *gdriveEntry) mimeType() string {
 
 func (g *gdriveEntry) Meta() types.EntryMeta {
 	return types.EntryMeta{
-		CanRead: true, CanWrite: true, Thumbnail: g.thumbnail,
+		Readable: true, Writable: true, Thumbnail: g.thumbnail,
 		Props: types.M{
 			"ext": mimeTypeExtensionsMap[g.mimeType()],
 		},

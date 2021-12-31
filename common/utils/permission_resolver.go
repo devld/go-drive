@@ -55,7 +55,7 @@ func NewPermMap(permissions []types.PathPermission) PermMap {
 	return result
 }
 
-func (pm PermMap) Filter(subjects []string) PermMap {
+func (pm PermMap) filter(subjects []string) PermMap {
 	result := make(PermMap, len(subjects))
 	for _, s := range subjects {
 		if sp, ok := pm[s]; ok {
@@ -63,6 +63,10 @@ func (pm PermMap) Filter(subjects []string) PermMap {
 		}
 	}
 	return result
+}
+
+func (pm PermMap) Filter(session types.Session) PermMap {
+	return pm.filter(makeSubjects(session))
 }
 
 // ResolvePath resolves permission of the path
@@ -101,6 +105,20 @@ type PathPermItem struct {
 
 func (p PathPermItem) String() string {
 	return fmt.Sprintf("%s,%s,%d,%d (%v)", *p.Path, p.Subject, p.Permission, p.Policy, p.descendant)
+}
+
+func makeSubjects(session types.Session) []string {
+	subjects := make([]string, 0, 3)
+	subjects = append(subjects, types.AnySubject) // Anonymous
+	if !session.IsAnonymous() {
+		subjects = append(subjects, types.UserSubject(session.User.Username))
+		if session.User.Groups != nil {
+			for _, g := range session.User.Groups {
+				subjects = append(subjects, types.GroupSubject(g.Name))
+			}
+		}
+	}
+	return subjects
 }
 
 func resolveAcceptedPermissions(items []*PathPermItem) types.Permission {

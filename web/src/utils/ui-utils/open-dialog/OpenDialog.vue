@@ -53,7 +53,7 @@ function createFilter(filter) {
     if (!allowDir && entry.type === 'dir') return false
     if (allowedExt && !allowedExt[filenameExt(entry.name)]) return false
     if (entry.size > maxSize) return false
-    if (writable && !entry.meta.can_write) return false
+    if (writable && !entry.meta.writable) return false
     return true
   }
 }

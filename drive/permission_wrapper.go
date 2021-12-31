@@ -1,4 +1,4 @@
-package server
+package drive
 
 import (
 	"context"
@@ -28,14 +28,13 @@ type PermissionWrapperDrive struct {
 	signer  *utils.Signer
 }
 
-func NewPermissionWrapperDrive(
-	request *http.Request, session types.Session, drive types.IDrive,
+func NewPermissionWrapperDrive(request *http.Request, drive types.IDrive,
 	permissions utils.PermMap, signer *utils.Signer) *PermissionWrapperDrive {
 
 	return &PermissionWrapperDrive{
 		drive:   drive,
 		request: request,
-		pm:      permissions.Filter(makeSubjects(session)),
+		pm:      permissions,
 		signer:  signer,
 	}
 }
@@ -47,7 +46,7 @@ func (p *PermissionWrapperDrive) Meta(ctx context.Context) types.DriveMeta {
 func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	canRead := false
 	if p.signer != nil {
-		canRead = checkSignature(p.signer, p.request, path)
+		canRead = utils.CheckSignature(p.signer, p.request, path)
 	}
 	var permission = types.PermissionRead
 	if !canRead {
@@ -63,7 +62,7 @@ func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IE
 	}
 	ak := ""
 	if p.signer != nil {
-		ak = signPathRequest(p.signer, p.request, path, time.Now().Add(accessKeyValidity))
+		ak = utils.SignPathRequest(p.signer, p.request, path, time.Now().Add(accessKeyValidity))
 	}
 	return &permissionWrapperEntry{
 		p:          p,
@@ -137,7 +136,7 @@ func (p *PermissionWrapperDrive) Move(ctx types.TaskCtx, from types.IEntry, to s
 func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	permission := p.pm.ResolvePath(path)
 	// root path always can be read, but items cannot be read will be filtered
-	if !utils.IsRootPath(path) && !permission.CanRead() {
+	if !utils.IsRootPath(path) && !permission.Readable() {
 		return nil, err.NewNotFoundError()
 	}
 	entries, e := p.drive.List(ctx, path)
@@ -147,14 +146,14 @@ func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types
 
 	result := make([]types.IEntry, 0, len(entries))
 	for _, e := range entries {
-		if !e.Meta().CanRead {
+		if !e.Meta().Readable {
 			continue
 		}
 		per := p.pm.ResolvePath(e.Path())
-		if per.CanRead() {
+		if per.Readable() {
 			accessKey := ""
 			if e.Type().IsFile() && p.signer != nil {
-				accessKey = signPathRequest(p.signer, p.request, e.Path(), time.Now().Add(accessKeyValidity))
+				accessKey = utils.SignPathRequest(p.signer, p.request, e.Path(), time.Now().Add(accessKeyValidity))
 			}
 			result = append(
 				result,
@@ -222,20 +221,6 @@ func (p *PermissionWrapperDrive) requireDescendantPermission(path string, requir
 	return nil
 }
 
-func makeSubjects(session types.Session) []string {
-	subjects := make([]string, 0, 3)
-	subjects = append(subjects, types.AnySubject) // Anonymous
-	if !session.IsAnonymous() {
-		subjects = append(subjects, types.UserSubject(session.User.Username))
-		if session.User.Groups != nil {
-			for _, g := range session.User.Groups {
-				subjects = append(subjects, types.GroupSubject(g.Name))
-			}
-		}
-	}
-	return subjects
-}
-
 type permissionWrapperEntry struct {
 	p          *PermissionWrapperDrive
 	entry      types.IEntry
@@ -257,11 +242,11 @@ func (p *permissionWrapperEntry) Size() int64 {
 
 func (p *permissionWrapperEntry) Meta() types.EntryMeta {
 	meta := p.entry.Meta()
-	meta.CanRead = meta.CanRead && p.permission.CanRead()
-	meta.CanWrite = meta.CanWrite && p.permission.CanWrite()
+	meta.Readable = meta.Readable && p.permission.Readable()
+	meta.Writable = meta.Writable && p.permission.Writable()
 	if p.accessKey != "" {
 		meta.Props = utils.CopyMap(meta.Props)
-		meta.Props["access_key"] = p.accessKey
+		meta.Props["accessKey"] = p.accessKey
 	}
 	return meta
 }

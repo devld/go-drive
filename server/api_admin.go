@@ -7,17 +7,22 @@ import (
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
+	"go-drive/server/search"
 	"go-drive/storage"
 	"regexp"
 	"sort"
 )
 
-func InitAdminRoutes(r gin.IRouter,
+func InitAdminRoutes(
+	r gin.IRouter,
 	ch *registry.ComponentsHolder,
 	rootDrive *drive.RootDrive,
+	search *search.Service,
+	runner task.Runner,
 	tokenStore types.TokenStore,
 	userDAO *storage.UserDAO,
 	groupDAO *storage.GroupDAO,
@@ -307,8 +312,8 @@ func InitAdminRoutes(r gin.IRouter,
 			return
 		}
 		// permissions updated
-		da := ch.Get("driveAccess").(*driveAccess)
-		if e := da.reloadPerm(); e != nil {
+		da := ch.Get("driveAccess").(*drive.Access)
+		if e := da.ReloadPerm(); e != nil {
 			_ = c.Error(e)
 			return
 		}
@@ -340,6 +345,23 @@ func InitAdminRoutes(r gin.IRouter,
 		_ = rootDrive.ReloadMounts()
 	})
 
+	// endregion
+
+	// region search
+
+	// index files
+	r.POST("/search/index/*path", func(c *gin.Context) {
+		root := utils.CleanPath(c.Param("path"))
+		t, e := runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
+			e := search.IndexAll(ctx, root, true)
+			return nil, e
+		})
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, t)
+	})
 	// endregion
 
 	// region misc

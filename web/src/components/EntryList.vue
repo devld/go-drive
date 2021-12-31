@@ -90,11 +90,11 @@ const SORTS_METHOD = {
     -a.type.localeCompare(b.type) || -a.name.localeCompare(b.name),
   mod_time_asc: (a, b) =>
     a.type.localeCompare(b.type) ||
-    a.mod_time - b.mod_time ||
+    a.modTime - b.modTime ||
     a.name.localeCompare(b.name),
   mod_time_desc: (a, b) =>
     -a.type.localeCompare(b.type) ||
-    b.mod_time - a.mod_time ||
+    b.modTime - a.modTime ||
     a.name.localeCompare(b.name),
   size_asc: (a, b) =>
     a.type.localeCompare(b.type) ||
@@ -168,7 +168,7 @@ export default {
         meta: {},
         size: -1,
         type: 'dir',
-        mod_time: -1,
+        modTime: -1,
       }
     },
     sortedEntries() {

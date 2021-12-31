@@ -30,12 +30,12 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
       {
         method: 'POST',
         url: '/chunk',
-        params: { size, chunk_size: 5 * 1024 * 1024 },
+        params: { size, chunkSize: 5 * 1024 * 1024 },
       },
       axios
     )
     this._uploadId = data.id
-    this._chunkSize = data.chunk_size
+    this._chunkSize = data.chunkSize
     return data.chunks
   }
 

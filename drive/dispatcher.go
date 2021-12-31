@@ -142,7 +142,7 @@ func (d *DispatcherDrive) resolveMountedChildren(path string) ([]types.PathMount
 func (d *DispatcherDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	if utils.IsRootPath(path) {
 		return &driveEntry{d: d, path: "", name: "", meta: types.DriveMeta{
-			CanWrite: false,
+			Writable: false,
 		}}, nil
 	}
 	drive, realPath, e := d.resolve(path)
@@ -450,7 +450,7 @@ func (d *driveEntry) Size() int64 {
 }
 
 func (d *driveEntry) Meta() types.EntryMeta {
-	return types.EntryMeta{CanRead: true, CanWrite: true, Props: d.meta.Props}
+	return types.EntryMeta{Readable: true, Writable: true, Props: d.meta.Props}
 }
 
 func (d *driveEntry) ModTime() int64 {

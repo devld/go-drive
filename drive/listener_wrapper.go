@@ -1,4 +1,4 @@
-package server
+package drive
 
 import (
 	"context"
@@ -6,26 +6,26 @@ import (
 	"io"
 )
 
-type DriveListenerWrapper struct {
+type ListenerWrapper struct {
 	drive types.IDrive
 
 	ctx       types.DriveListenerContext
 	listeners []types.IDriveListener
 }
 
-func NewDriveListenerWrapper(drive types.IDrive, ctx types.DriveListenerContext, listeners []types.IDriveListener) *DriveListenerWrapper {
-	return &DriveListenerWrapper{
+func NewListenerWrapper(drive types.IDrive, ctx types.DriveListenerContext, listeners []types.IDriveListener) *ListenerWrapper {
+	return &ListenerWrapper{
 		drive:     drive,
 		listeners: listeners,
 		ctx:       ctx,
 	}
 }
 
-func (d *DriveListenerWrapper) Meta(ctx context.Context) types.DriveMeta {
+func (d *ListenerWrapper) Meta(ctx context.Context) types.DriveMeta {
 	return d.drive.Meta(ctx)
 }
 
-func (d *DriveListenerWrapper) Get(ctx context.Context, path string) (types.IEntry, error) {
+func (d *ListenerWrapper) Get(ctx context.Context, path string) (types.IEntry, error) {
 	entry, e := d.drive.Get(ctx, path)
 	if e == nil {
 		for _, listener := range d.listeners {
@@ -35,7 +35,7 @@ func (d *DriveListenerWrapper) Get(ctx context.Context, path string) (types.IEnt
 	return entry, e
 }
 
-func (d *DriveListenerWrapper) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
+func (d *ListenerWrapper) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
 	entry, e := d.drive.Save(ctx, path, size, override, reader)
 	if e == nil {
 		for _, listener := range d.listeners {
@@ -45,7 +45,7 @@ func (d *DriveListenerWrapper) Save(ctx types.TaskCtx, path string, size int64, 
 	return entry, e
 }
 
-func (d *DriveListenerWrapper) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
+func (d *ListenerWrapper) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
 	entry, e := d.drive.MakeDir(ctx, path)
 	if e == nil {
 		for _, listener := range d.listeners {
@@ -55,7 +55,7 @@ func (d *DriveListenerWrapper) MakeDir(ctx context.Context, path string) (types.
 	return entry, e
 }
 
-func (d *DriveListenerWrapper) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+func (d *ListenerWrapper) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	entry, e := d.drive.Copy(ctx, from, to, override)
 	if e == nil {
 		for _, listener := range d.listeners {
@@ -65,7 +65,7 @@ func (d *DriveListenerWrapper) Copy(ctx types.TaskCtx, from types.IEntry, to str
 	return entry, e
 }
 
-func (d *DriveListenerWrapper) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+func (d *ListenerWrapper) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	entry, e := d.drive.Move(ctx, from, to, override)
 	if e == nil {
 		for _, listener := range d.listeners {
@@ -76,7 +76,7 @@ func (d *DriveListenerWrapper) Move(ctx types.TaskCtx, from types.IEntry, to str
 	return entry, e
 }
 
-func (d *DriveListenerWrapper) List(ctx context.Context, path string) ([]types.IEntry, error) {
+func (d *ListenerWrapper) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	entries, e := d.drive.List(ctx, path)
 	if e == nil {
 		entry, e := d.drive.Get(ctx, path)
@@ -89,7 +89,7 @@ func (d *DriveListenerWrapper) List(ctx context.Context, path string) ([]types.I
 	return entries, e
 }
 
-func (d *DriveListenerWrapper) Delete(ctx types.TaskCtx, path string) error {
+func (d *ListenerWrapper) Delete(ctx types.TaskCtx, path string) error {
 	e := d.drive.Delete(ctx, path)
 	if e == nil {
 		for _, listener := range d.listeners {
@@ -99,6 +99,6 @@ func (d *DriveListenerWrapper) Delete(ctx types.TaskCtx, path string) error {
 	return e
 }
 
-func (d *DriveListenerWrapper) Upload(ctx context.Context, path string, size int64, override bool, config types.SM) (*types.DriveUploadConfig, error) {
+func (d *ListenerWrapper) Upload(ctx context.Context, path string, size int64, override bool, config types.SM) (*types.DriveUploadConfig, error) {
 	return d.drive.Upload(ctx, path, size, override, config)
 }

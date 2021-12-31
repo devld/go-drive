@@ -10,6 +10,7 @@ import (
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"go-drive/drive"
 	"golang.org/x/net/webdav"
 	"io"
 	"io/fs"
@@ -25,7 +26,7 @@ var webdavHTTPMethods = []string{
 }
 
 func InitWebdavAccess(router gin.IRouter, config common.Config,
-	access *driveAccess, userAuth *UserAuth) error {
+	access *drive.Access, userAuth *UserAuth) error {
 
 	wa := &webdavAccess{
 		access:  access,
@@ -47,7 +48,7 @@ func InitWebdavAccess(router gin.IRouter, config common.Config,
 }
 
 type webdavAccess struct {
-	access  *driveAccess
+	access  *drive.Access
 	lockSys webdav.LockSystem
 	config  common.Config
 }
@@ -57,7 +58,7 @@ func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 	handler := webdav.Handler{
 		Prefix: w.config.WebDav.Prefix,
 		FileSystem: &webdavFs{
-			drive:   w.access.getDrive(c.Request, session),
+			drive:   w.access.GetDrive(c.Request, session),
 			tempDir: w.config.TempDir,
 		},
 		LockSystem: w.lockSys,
@@ -342,7 +343,7 @@ func (w *webdavFile) Write(p []byte) (n int, err error) {
 	if !w.e.Type().IsFile() {
 		return 0, os.ErrInvalid
 	}
-	if !w.e.Meta().CanWrite {
+	if !w.e.Meta().Writable {
 		return 0, os.ErrPermission
 	}
 	if e := w.getFile(); e != nil {
@@ -382,15 +383,15 @@ func (e entryFileInfo) Size() int64 {
 func (e entryFileInfo) Mode() fs.FileMode {
 	var p fs.FileMode = 0
 	meta := e.e.Meta()
-	if meta.CanRead {
+	if meta.Readable {
 		p |= 04 // r
 	}
-	if meta.CanWrite {
+	if meta.Writable {
 		p |= 02 // w
 	}
 	if e.e.Type().IsDir() {
 		p |= fs.ModeDir
-		if meta.CanRead {
+		if meta.Readable {
 			p |= 01 // x
 		}
 	}
@@ -438,7 +439,7 @@ func (c *createdEntry) Size() int64 {
 }
 
 func (c *createdEntry) Meta() types.EntryMeta {
-	return types.EntryMeta{CanRead: true, CanWrite: true}
+	return types.EntryMeta{Readable: true, Writable: true}
 }
 
 func (c *createdEntry) ModTime() int64 {

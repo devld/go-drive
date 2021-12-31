@@ -63,7 +63,7 @@ export default {
       return this.entry.path
     },
     readonly() {
-      return !this.entry.meta.can_write
+      return !this.entry.meta.writable
     },
   },
   created() {
@@ -95,7 +95,7 @@ export default {
     async loadFileContent() {
       this.content = await getContent(
         this.path,
-        this.entry.meta.access_key,
+        this.entry.meta.accessKey,
         true
       )
       this.$nextTick(() => {

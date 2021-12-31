@@ -10,7 +10,7 @@
     :title="
       entry.name === '..'
         ? ''
-        : `${entry.name}\n${$.formatTime(entry.mod_time)}\n` +
+        : `${entry.name}\n${$.formatTime(entry.modTime)}\n` +
           `${
             entry.type === 'file' ? $t('app.file') : $t('app.folder')
           } | ${$.formatBytes(entry.size)}`
@@ -32,7 +32,7 @@
       </span>
       <div v-if="viewMode === 'list'" class="entry-item__meta">
         <span class="entry-item__modified-time">{{
-          entry.mod_time >= 0 ? $.formatTime(entry.mod_time) : ''
+          entry.modTime >= 0 ? $.formatTime(entry.modTime) : ''
         }}</span>
         <span class="entry-item__size">{{
           entry.size >= 0 ? $.formatBytes(entry.size) : ''

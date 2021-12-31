@@ -47,7 +47,7 @@ type FormItem struct {
 	Description  string           `json:"description" i18n:""`
 	Disabled     bool             `json:"disabled"`
 	Options      []FormItemOption `json:"options"`
-	DefaultValue string           `json:"default_value"`
+	DefaultValue string           `json:"defaultValue"`
 	// Secret is the replacement text when sending the value to client.
 	// The raw value will be sent if Secret is empty.
 	// FormItem with type 'password' will always be replaced.

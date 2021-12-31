@@ -2,11 +2,17 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
+	err "go-drive/common/errors"
 	"go-drive/common/registry"
+	"go-drive/common/task"
 	"go-drive/common/types"
 )
 
-func InitCommonRoutes(r gin.IRouter, ch *registry.ComponentsHolder) error {
+func InitCommonRoutes(
+	ch *registry.ComponentsHolder,
+	r gin.IRouter,
+	tokenStore types.TokenStore,
+	runner task.Runner) error {
 
 	// get configuration
 	r.GET("/config", func(c *gin.Context) {
@@ -27,6 +33,32 @@ func InitCommonRoutes(r gin.IRouter, ch *registry.ComponentsHolder) error {
 		}
 
 		SetResult(c, configMap)
+	})
+
+	authR := r.Group("/", TokenAuth(tokenStore))
+
+	// get task
+	authR.GET("/task/:id", func(c *gin.Context) {
+		t, e := runner.GetTask(c.Param("id"))
+		if e != nil && e == task.ErrorNotFound {
+			e = err.NewNotFoundMessageError(e.Error())
+		}
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, t)
+	})
+
+	// cancel and delete task
+	authR.DELETE("/task/:id", func(c *gin.Context) {
+		_, e := runner.StopTask(c.Param("id"))
+		if e != nil && e == task.ErrorNotFound {
+			e = err.NewNotFoundMessageError(e.Error())
+		}
+		if e != nil {
+			_ = c.Error(e)
+		}
 	})
 
 	return nil

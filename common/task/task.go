@@ -32,8 +32,8 @@ type Task struct {
 	Progress  Progress    `json:"progress"`
 	Result    interface{} `json:"result"`
 	Error     interface{} `json:"error"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	CreatedAt time.Time   `json:"createdAt"`
+	UpdatedAt time.Time   `json:"updatedAt"`
 }
 
 func (t Task) Finished() bool {

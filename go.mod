@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/Jeffail/tunny v0.0.0-20190930221602-f13eb662a36a
 	github.com/aws/aws-sdk-go v1.34.25
+	github.com/blevesearch/bleve/v2 v2.3.0
 	github.com/gin-gonic/gin v1.7.3
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.2 // indirect
@@ -19,7 +20,7 @@ require (
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
 	golang.org/x/sys v0.0.0-20201126233918-771906719818 // indirect
-	golang.org/x/text v0.3.4
+	golang.org/x/text v0.3.7
 	google.golang.org/api v0.30.0
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/yaml.v2 v2.2.8

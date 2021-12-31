@@ -12,7 +12,7 @@
     </h1>
 
     <iframe
-      :src="$.fileUrl(entry.path, entry.meta.access_key)"
+      :src="$.fileUrl(entry.path, entry.meta.accessKey)"
       frameborder="0"
       class="pdf-view-page__iframe"
     ></iframe>

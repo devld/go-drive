@@ -89,7 +89,7 @@ func NewOneDrive(_ context.Context, config types.SM,
 }
 
 func (o *OneDrive) Meta(context.Context) types.DriveMeta {
-	return types.DriveMeta{CanWrite: true}
+	return types.DriveMeta{Writable: true}
 }
 
 func (o *OneDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
@@ -364,7 +364,7 @@ func (o *oneDriveEntry) Size() int64 {
 
 func (o *oneDriveEntry) Meta() types.EntryMeta {
 	return types.EntryMeta{
-		CanRead: true, CanWrite: true,
+		Readable: true, Writable: true,
 		Thumbnail: o.thumbnail,
 	}
 }

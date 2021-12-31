@@ -8,9 +8,9 @@ import (
 
 type DriveFactoryConfig struct {
 	Type        string           `json:"type"`
-	DisplayName string           `json:"display_name" i18n:""`
+	DisplayName string           `json:"displayName" i18n:""`
 	README      string           `json:"readme" i18n:""`
-	ConfigForm  []types.FormItem `json:"config_form"`
+	ConfigForm  []types.FormItem `json:"configForm"`
 	Factory     DriveFactory     `json:"-"`
 }
 

@@ -6,18 +6,14 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
-	"go-drive/common/utils"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const (
 	keyToken   = "token"
 	keySession = "session"
 	keyResult  = "apiResult"
-
-	signatureQueryKey = "_k"
 
 	headerAuth = "Authorization"
 )
@@ -116,18 +112,6 @@ func UpdateSessionUser(c *gin.Context, tokenStore types.TokenStore, user types.U
 	session.User = user
 	_, e := tokenStore.Update(GetToken(c), session)
 	return e
-}
-
-func getSignPayload(req *http.Request, path string) string {
-	return req.Host + "." + path
-}
-
-func checkSignature(signer *utils.Signer, req *http.Request, path string) bool {
-	return signer.Validate(getSignPayload(req, path), req.URL.Query().Get(signatureQueryKey))
-}
-
-func signPathRequest(signer *utils.Signer, req *http.Request, path string, notAfter time.Time) string {
-	return signer.Sign(getSignPayload(req, path), notAfter)
 }
 
 func TranslateV(c *gin.Context, ms i18n.MessageSource, v interface{}) interface{} {

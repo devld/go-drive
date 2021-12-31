@@ -2,9 +2,15 @@ package types
 
 import "strings"
 
+type Option struct {
+	ID    uint   `gorm:"column:id;primaryKey;autoIncrement"`
+	Key   string `gorm:"column:key;type:string;size:64;not null;unique;uniqueIndex"`
+	Value string `gorm:"column:value;type:string;size:4096"`
+}
+
 type User struct {
 	Username string  `gorm:"column:username;primaryKey;not null;type:string;size:32" json:"username" binding:"required"`
-	Password string  `gorm:"column:password;not null;type:string;size:64" json:"password"`
+	Password string  `gorm:"column:password;not null;type:string;size:64" json:"password,omitempty"`
 	Groups   []Group `gorm:"many2many:user_groups;joinForeignKey:username;foreignKey:username" json:"groups"`
 }
 
@@ -65,11 +71,11 @@ func (DriveCache) TableName() string {
 
 type Permission uint8
 
-func (p Permission) CanRead() bool {
+func (p Permission) Readable() bool {
 	return p&PermissionRead == PermissionRead
 }
 
-func (p Permission) CanWrite() bool {
+func (p Permission) Writable() bool {
 	return p&PermissionWrite == PermissionWrite
 }
 

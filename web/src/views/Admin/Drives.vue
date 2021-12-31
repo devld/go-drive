@@ -75,7 +75,7 @@
             class="drive-config-readme"
           >
             <summary>
-              {{ driveFactoriesMap[drive.type].display_name }} README
+              {{ driveFactoriesMap[drive.type].displayName }} README
             </summary>
             <div
               class="markdown-body"
@@ -87,7 +87,7 @@
             ref="configForm"
             no-auto-complete
             :key="drive.type"
-            :form="driveFactoriesMap[drive.type].config_form"
+            :form="driveFactoriesMap[drive.type].configForm"
             v-model="drive.config"
           />
         </template>
@@ -201,7 +201,7 @@ export default {
           required: true,
           disabled: this.edit,
           options: this.driveFactories.map(f => ({
-            name: f.display_name,
+            name: f.displayName,
             value: f.type,
           })),
         },
