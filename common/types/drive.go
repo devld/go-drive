@@ -23,10 +23,10 @@ func (t EntryType) IsDir() bool {
 
 // EntryMeta is the metadata of entry
 type EntryMeta struct {
-	// CanRead indicates is this entry can be read
-	CanRead bool
-	// CanWrite indicates is this entry can be written
-	CanWrite bool
+	// Readable indicates is this entry can be read
+	Readable bool
+	// Writable indicates is this entry can be written
+	Writable bool
 	// Thumbnail is the thumbnail image url if available.
 	// For internal generated thumbnails, this is always empty.
 	// There is an API for internal generated thumbnails.
@@ -79,8 +79,8 @@ type IEntryWrapper interface {
 
 // DriveMeta is the metadata of drive
 type DriveMeta struct {
-	// CanWrite indicates is this drive writable
-	CanWrite bool
+	// Writable indicates is this drive writable
+	Writable bool
 	// Props is some drive-specified properties of this drive
 	Props M
 }

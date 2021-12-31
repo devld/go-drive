@@ -1,17 +1,16 @@
-package server
+package drive
 
 import (
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"go-drive/drive"
 	"go-drive/storage"
 	"net/http"
 	"sync"
 )
 
-type driveAccess struct {
-	rootDrive *drive.RootDrive
+type Access struct {
+	rootDrive *RootDrive
 
 	perms         utils.PermMap
 	permMux       *sync.Mutex
@@ -24,12 +23,12 @@ type driveAccess struct {
 	listenersMux *sync.Mutex
 }
 
-func newDriveAccess(ch *registry.ComponentsHolder,
-	rootDrive *drive.RootDrive,
+func NewAccess(ch *registry.ComponentsHolder,
+	rootDrive *RootDrive,
 	permissionDAO *storage.PathPermissionDAO,
-	signer *utils.Signer) (*driveAccess, error) {
+	signer *utils.Signer) (*Access, error) {
 
-	da := &driveAccess{
+	da := &Access{
 		rootDrive:     rootDrive,
 		permMux:       &sync.Mutex{},
 		permissionDAO: permissionDAO,
@@ -37,7 +36,7 @@ func newDriveAccess(ch *registry.ComponentsHolder,
 		ch:            ch,
 		listenersMux:  &sync.Mutex{},
 	}
-	if e := da.reloadPerm(); e != nil {
+	if e := da.ReloadPerm(); e != nil {
 		return nil, e
 	}
 
@@ -45,7 +44,7 @@ func newDriveAccess(ch *registry.ComponentsHolder,
 	return da, nil
 }
 
-func (da *driveAccess) getDrive(req *http.Request, session types.Session) types.IDrive {
+func (da *Access) GetDrive(req *http.Request, session types.Session) types.IDrive {
 	if da.listeners == nil {
 		func() {
 			da.listenersMux.Lock()
@@ -64,11 +63,11 @@ func (da *driveAccess) getDrive(req *http.Request, session types.Session) types.
 		}()
 	}
 
-	return NewDriveListenerWrapper(
+	return NewListenerWrapper(
 		NewPermissionWrapperDrive(
-			req, session,
+			req,
 			da.rootDrive.Get(),
-			da.perms,
+			da.perms.Filter(session),
 			da.signer,
 		),
 		types.DriveListenerContext{
@@ -79,7 +78,15 @@ func (da *driveAccess) getDrive(req *http.Request, session types.Session) types.
 	)
 }
 
-func (da *driveAccess) reloadPerm() error {
+func (da *Access) GetRootDrive() types.IDrive {
+	return da.rootDrive.Get()
+}
+
+func (da *Access) GetPerms() utils.PermMap {
+	return da.perms
+}
+
+func (da *Access) ReloadPerm() error {
 	da.permMux.Lock()
 	defer da.permMux.Unlock()
 	all, e := da.permissionDAO.GetAll()

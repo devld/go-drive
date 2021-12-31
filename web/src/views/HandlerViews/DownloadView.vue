@@ -14,7 +14,7 @@
           class="download-button"
           target="_blank"
           :download="$.filename(singleEntry.path)"
-          :href="$.fileUrl(singleEntry.path, singleEntry.meta.access_key)"
+          :href="$.fileUrl(singleEntry.path, singleEntry.meta.accessKey)"
         >
           {{ $t('hv.download.download') }}
           <span class="file-size" v-if="singleEntry.size >= 0">{{
@@ -62,7 +62,7 @@ export default {
     downloadLinks() {
       if (this.singleEntry) return ''
       return this.entry
-        .map(e => this.$.fileUrl(e.path, e.meta.access_key))
+        .map(e => this.$.fileUrl(e.path, e.meta.accessKey))
         .join('\n')
     },
   },
@@ -75,7 +75,7 @@ export default {
     downloadFiles() {
       this.entry.forEach(f => {
         const a = document.createElement('a')
-        a.href = this.$.fileUrl(f.path, f.meta.access_key)
+        a.href = this.$.fileUrl(f.path, f.meta.accessKey)
         a.download = filename(f.path)
         a.click()
       })

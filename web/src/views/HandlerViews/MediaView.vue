@@ -10,7 +10,7 @@
         <i-icon svg="#icon-close" />
       </button>
     </h1>
-    <video :src="$.fileUrl(entry.path, entry.meta.access_key)" controls />
+    <video :src="$.fileUrl(entry.path, entry.meta.accessKey)" controls />
   </div>
 </template>
 <script>

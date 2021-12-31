@@ -12,7 +12,7 @@ type Token struct {
 	Token string  `json:"token"`
 	Value Session `json:"-"`
 	// ExpiredAt is unix timestamp
-	ExpiredAt int64 `json:"expires_at"`
+	ExpiredAt int64 `json:"expiresAt"`
 }
 
 type TokenStore interface {

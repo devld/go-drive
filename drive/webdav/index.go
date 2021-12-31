@@ -90,7 +90,7 @@ type WebDAVDrive struct {
 }
 
 func (w *WebDAVDrive) Meta(context.Context) types.DriveMeta {
-	return types.DriveMeta{CanWrite: true}
+	return types.DriveMeta{Writable: true}
 }
 
 func (w *WebDAVDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
@@ -307,7 +307,7 @@ func (w *webDavEntry) Size() int64 {
 }
 
 func (w *webDavEntry) Meta() types.EntryMeta {
-	return types.EntryMeta{CanRead: true, CanWrite: true}
+	return types.EntryMeta{Readable: true, Writable: true}
 }
 
 func (w *webDavEntry) ModTime() int64 {

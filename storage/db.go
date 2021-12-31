@@ -50,6 +50,7 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		&types.PathMount{},
 		&types.DriveData{},
 		&types.DriveCache{},
+		&types.Option{},
 	); e != nil {
 		closeDb(db)
 		return nil, e

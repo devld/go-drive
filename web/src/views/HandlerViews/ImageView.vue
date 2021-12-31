@@ -117,7 +117,7 @@ export default {
         this.$refs.ps,
         PhotoSwipeUIDefault,
         this.images.map(i => ({
-          src: fileUrl(pathJoin(basePath, i.name), i.meta.access_key),
+          src: fileUrl(pathJoin(basePath, i.name), i.meta.accessKey),
           w: 0,
           h: 0,
         })),

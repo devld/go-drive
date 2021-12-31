@@ -257,7 +257,7 @@ func requireFile(path string, requireExists bool) error {
 }
 
 func (f *FsDrive) Meta(context.Context) types.DriveMeta {
-	return types.DriveMeta{CanWrite: true}
+	return types.DriveMeta{Writable: true}
 }
 
 func (f *fsFile) Path() string {
@@ -279,7 +279,7 @@ func (f *fsFile) Size() int64 {
 }
 
 func (f *fsFile) Meta() types.EntryMeta {
-	return types.EntryMeta{CanRead: true, CanWrite: true}
+	return types.EntryMeta{Readable: true, Writable: true}
 }
 
 func (f *fsFile) ModTime() int64 {

@@ -11,6 +11,8 @@ import (
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"go-drive/drive"
+	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"net/http"
 	"os"
@@ -19,8 +21,10 @@ import (
 	"time"
 )
 
-func InitDriveRoutes(router gin.IRouter,
-	access *driveAccess,
+func InitDriveRoutes(
+	router gin.IRouter,
+	access *drive.Access,
+	searcher *search.Service,
 	config common.Config,
 	thumbnail *thumbnail.Maker,
 	signer *utils.Signer,
@@ -31,6 +35,7 @@ func InitDriveRoutes(router gin.IRouter,
 	dr := driveRoute{
 		config:        config,
 		access:        access,
+		searcher:      searcher,
 		chunkUploader: chunkUploader,
 		thumbnail:     thumbnail,
 		runner:        runner,
@@ -68,29 +73,8 @@ func InitDriveRoutes(router gin.IRouter,
 	r.POST("/chunk-content/*path", dr.chunkUploadComplete)
 	// delete chunk upload
 	r.DELETE("/chunk/:id", dr.deleteChunkUpload)
-	// get task
-	r.GET("/task/:id", func(c *gin.Context) {
-		t, e := dr.runner.GetTask(c.Param("id"))
-		if e != nil && e == task.ErrorNotFound {
-			e = err.NewNotFoundMessageError(e.Error())
-		}
-		if e != nil {
-			_ = c.Error(e)
-			return
-		}
-		SetResult(c, t)
-	})
-
-	// cancel and delete task
-	r.DELETE("/task/:id", func(c *gin.Context) {
-		_, e := dr.runner.StopTask(c.Param("id"))
-		if e != nil && e == task.ErrorNotFound {
-			e = err.NewNotFoundMessageError(e.Error())
-		}
-		if e != nil {
-			_ = c.Error(e)
-		}
-	})
+	// search
+	r.GET("/search/*path", dr.search)
 
 	return nil
 }
@@ -98,7 +82,8 @@ func InitDriveRoutes(router gin.IRouter,
 type driveRoute struct {
 	config common.Config
 
-	access *driveAccess
+	access   *drive.Access
+	searcher *search.Service
 
 	chunkUploader *ChunkUploader
 	thumbnail     *thumbnail.Maker
@@ -107,7 +92,7 @@ type driveRoute struct {
 }
 
 func (dr *driveRoute) getDrive(c *gin.Context) types.IDrive {
-	return dr.access.getDrive(c.Request, GetSession(c))
+	return dr.access.GetDrive(c.Request, GetSession(c))
 }
 
 func (dr *driveRoute) list(c *gin.Context) {
@@ -266,7 +251,7 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 
 func (dr *driveRoute) getThumbnail(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	if !checkSignature(dr.signer, c.Request, path) {
+	if !utils.CheckSignature(dr.signer, c.Request, path) {
 		_ = c.Error(err.NewNotFoundError())
 		return
 	}
@@ -395,19 +380,35 @@ func (dr *driveRoute) deleteChunkUpload(c *gin.Context) {
 	}
 }
 
+func (dr *driveRoute) search(c *gin.Context) {
+	root := utils.CleanPath(c.Param("path"))
+	query := c.Query("q")
+	next := utils.ToInt64(c.Query("next"), 0)
+
+	r, e := dr.searcher.Search(
+		c.Request.Context(), root, query, int(next),
+		dr.access.GetPerms().Filter(GetSession(c)),
+	)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	SetResult(c, r)
+}
+
 type entryJson struct {
 	Path    string          `json:"path"`
 	Name    string          `json:"name"`
 	Type    types.EntryType `json:"type"`
 	Size    int64           `json:"size"`
 	Meta    types.M         `json:"meta"`
-	ModTime int64           `json:"mod_time"`
+	ModTime int64           `json:"modTime"`
 }
 
 func newEntryJson(e types.IEntry) *entryJson {
 	entryMeta := e.Meta()
 	meta := utils.CopyMap(entryMeta.Props)
-	meta["can_write"] = entryMeta.CanWrite
+	meta["writable"] = entryMeta.Writable
 	if entryMeta.Thumbnail != "" {
 		meta["thumbnail"] = entryMeta.Thumbnail
 	}

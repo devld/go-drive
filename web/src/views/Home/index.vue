@@ -129,7 +129,7 @@ export default {
       )
     },
     isCurrentDirReadonly() {
-      return !this.currentDirEntry || !this.currentDirEntry.meta.can_write
+      return !this.currentDirEntry || !this.currentDirEntry.meta.writable
     },
     ...mapState(['user']),
   },
@@ -382,7 +382,7 @@ export default {
       this.readmeContent = `<p style="text-align: center">${this.$t(
         'p.home.readme_loading'
       )}</p>`
-      this._readmeTask = getContent(entry.path, entry.meta.access_key)
+      this._readmeTask = getContent(entry.path, entry.meta.accessKey)
       try {
         content = await this._readmeTask
       } catch (e) {

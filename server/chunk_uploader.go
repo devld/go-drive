@@ -235,7 +235,7 @@ func (c *ChunkUploader) getDir(id string) string {
 type ChunkUpload struct {
 	Id        string `json:"id"`
 	Size      int64  `json:"size"`
-	ChunkSize int64  `json:"chunk_size"`
+	ChunkSize int64  `json:"chunkSize"`
 	Chunks    int    `json:"chunks"`
 }
 

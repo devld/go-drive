@@ -47,7 +47,7 @@ export default {
       return (
         this.entry.meta.thumbnail ||
         (this.supportThumbnail &&
-          fileThumbnail(this.entry.path, this.entry.meta.access_key))
+          fileThumbnail(this.entry.path, this.entry.meta.accessKey))
       )
     },
     supportThumbnail() {

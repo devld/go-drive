@@ -12,10 +12,10 @@ export default {
   },
   supports: (entry, parentEntry) =>
     (Array.isArray(entry)
-      ? !entry.some(e => !e.meta.can_write)
-      : entry.meta.can_write) &&
+      ? !entry.some(e => !e.meta.writable)
+      : entry.meta.writable) &&
     parentEntry &&
-    parentEntry.meta.can_write,
+    parentEntry.meta.writable,
   multiple: true,
   handler: async (entries, { confirm, alert, loading }) => {
     if (!Array.isArray(entries)) entries = [entries]

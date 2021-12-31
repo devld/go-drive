@@ -66,7 +66,7 @@ export default {
       if (this.value) return
       const dat = {}
       for (const f of this.form) {
-        if (f.default_value) dat[f.field] = f.default_value
+        if (f.defaultValue) dat[f.field] = f.defaultValue
       }
       this.data = dat
       this.emitInput()

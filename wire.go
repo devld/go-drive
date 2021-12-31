@@ -1,4 +1,5 @@
-//+build wireinject
+//go:build wireinject
+// +build wireinject
 
 package main
 
@@ -14,6 +15,7 @@ import (
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server"
+	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
 )
@@ -29,6 +31,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 		storage.NewPathMountDAO,
 		storage.NewDriveDAO,
 		storage.NewDriveDataDAO,
+		storage.NewOptionsDAO,
 		wire.Bind(new(task.Runner), new(*task.TunnyRunner)),
 		task.NewTunnyRunner,
 		utils.NewSigner,
@@ -37,6 +40,8 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 		server.NewChunkUploader,
 		thumbnail.NewMaker,
 		drive.NewRootDrive,
+		drive.NewAccess,
+		search.NewService,
 		wire.Bind(new(i18n.MessageSource), new(*i18n.FileMessageSource)),
 		i18n.NewFileMessageSource,
 		server.InitServer,

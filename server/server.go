@@ -12,6 +12,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
+	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
 	"html"
@@ -26,6 +27,8 @@ import (
 func InitServer(config common.Config,
 	ch *registry.ComponentsHolder,
 	rootDrive *drive.RootDrive,
+	driveAccess *drive.Access,
+	searcher *search.Service,
 	tokenStore types.TokenStore,
 	thumbnail *thumbnail.Maker,
 	signer *utils.Signer,
@@ -56,29 +59,24 @@ func InitServer(config common.Config,
 
 	router := engine.Group(config.APIPath)
 
-	if e := InitCommonRoutes(router, ch); e != nil {
+	if e := InitCommonRoutes(ch, router, tokenStore, runner); e != nil {
 		return nil, e
 	}
 	if e := InitAuthRoutes(router, userAuth, tokenStore); e != nil {
 		return nil, e
 	}
-	if e := InitAdminRoutes(router, ch, rootDrive, tokenStore, userDAO, groupDAO,
+	if e := InitAdminRoutes(router, ch, rootDrive, searcher, runner, tokenStore, userDAO, groupDAO,
 		driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO); e != nil {
 		return nil, e
 	}
 
-	access, e := newDriveAccess(ch, rootDrive, permissionDAO, signer)
-	if e != nil {
-		return nil, e
-	}
-
-	if e := InitDriveRoutes(router, access, config, thumbnail,
+	if e := InitDriveRoutes(router, driveAccess, searcher, config, thumbnail,
 		signer, chunkUploader, runner, tokenStore); e != nil {
 		return nil, e
 	}
 
 	if config.WebDav.Enabled {
-		if e := InitWebdavAccess(engine, config, access, userAuth); e != nil {
+		if e := InitWebdavAccess(engine, config, driveAccess, userAuth); e != nil {
 			return nil, e
 		}
 	}

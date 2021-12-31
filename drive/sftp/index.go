@@ -104,7 +104,7 @@ func (f *SFTPDrive) InitConn() {
 }
 
 func (f *SFTPDrive) Meta(context.Context) types.DriveMeta {
-	return types.DriveMeta{CanWrite: true}
+	return types.DriveMeta{Writable: true}
 }
 
 func (f *SFTPDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
@@ -315,7 +315,7 @@ func (f *sftpEntry) Size() int64 {
 }
 
 func (f *sftpEntry) Meta() types.EntryMeta {
-	return types.EntryMeta{CanRead: true, CanWrite: true}
+	return types.EntryMeta{Readable: true, Writable: true}
 }
 
 func (f *sftpEntry) ModTime() int64 {

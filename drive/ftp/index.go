@@ -78,7 +78,7 @@ type FTPDrive struct {
 }
 
 func (f *FTPDrive) Meta(context.Context) types.DriveMeta {
-	return types.DriveMeta{CanWrite: true}
+	return types.DriveMeta{Writable: true}
 }
 
 func (f *FTPDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
@@ -270,7 +270,7 @@ func (f *ftpEntry) Size() int64 {
 }
 
 func (f *ftpEntry) Meta() types.EntryMeta {
-	return types.EntryMeta{CanRead: true, CanWrite: true}
+	return types.EntryMeta{Readable: true, Writable: true}
 }
 
 func (f *ftpEntry) ModTime() int64 {

@@ -119,7 +119,7 @@ func (s *S3Drive) deserializeEntry(dat string) (types.IEntry, error) {
 }
 
 func (s *S3Drive) Meta(context.Context) types.DriveMeta {
-	return types.DriveMeta{CanWrite: true}
+	return types.DriveMeta{Writable: true}
 }
 
 func (s *S3Drive) get(path string, ctx context.Context) (*s3Entry, error) {
@@ -490,8 +490,8 @@ func (s *s3Entry) Size() int64 {
 
 func (s *s3Entry) Meta() types.EntryMeta {
 	return types.EntryMeta{
-		CanRead:  true,
-		CanWrite: true,
+		Readable: true,
+		Writable: true,
 	}
 }
 
