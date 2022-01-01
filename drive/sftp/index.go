@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/secsy/goftp"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -14,14 +13,17 @@ import (
 	"net"
 	"os"
 	path2 "path"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
+var t = i18n.TPrefix("drive.sftp.")
+
 func init() {
-	t := i18n.TPrefix("drive.sftp.")
 	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
 		Type:        "sftp",
 		DisplayName: t("name"),
@@ -30,7 +32,9 @@ func init() {
 			{Label: t("form.host.label"), Type: "text", Field: "host", Required: true, Description: t("form.host.description")},
 			{Label: t("form.port.label"), Type: "text", Field: "port", Required: true, Description: t("form.port.description"), DefaultValue: "22"},
 			{Label: t("form.user.label"), Type: "text", Field: "user", Required: true, Description: t("form.user.description")},
-			{Label: t("form.password.label"), Type: "password", Field: "password", Required: true, Description: t("form.password.description")},
+			{Label: t("form.password.label"), Type: "textarea", Field: "password", Required: true, Secret: "-------HIDDEN-------", Description: t("form.password.description")},
+			{Label: t("form.host_key.label"), Type: "text", Field: "host_key", Description: t("form.host_key.description")},
+			{Label: t("form.root_path.label"), Type: "text", Field: "root_path", Description: t("form.root_path.description")},
 			{Label: t("form.cache_ttl.label"), Type: "text", Field: "cache_ttl", Description: t("form.cache_ttl.description")},
 		},
 		Factory: drive_util.DriveFactory{Create: NewSftpDrive},
@@ -39,34 +43,32 @@ func init() {
 
 func NewSftpDrive(_ context.Context, config types.SM, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	cacheTTL := config.GetDuration("cache_ttl", -1)
-
-	sshConfig := &ssh.ClientConfig{
-		User: config["user"],
-		Auth: []ssh.AuthMethod{
-			ssh.Password(config["password"]),
-		},
-		HostKeyCallback: ssh.HostKeyCallback(func(hostname string, remote net.Addr, key ssh.PublicKey) error { return nil }),
-	}
-
-	p, e := ConcurrentPool("tcp", fmt.Sprintf("%v:%v", config["host"], config["port"]), sshConfig)
-	if e != nil {
-		return nil, e
-	}
-
-	conn, e := p.GetConn()
-	if conn == nil || e != nil {
-		return nil, e
-	}
-
-	client, e := sftp.NewClient(conn)
-	if e != nil {
-		return nil, e
+	hostKey := config["host_key"]
+	rootPath := path2.Clean(config["root_path"])
+	if !strings.HasPrefix(rootPath, "/") {
+		return nil, errors.New(t("invalid_root_path"))
 	}
 
 	s := &SFTPDrive{
-		c:        client,
-		p:        p,
 		cacheTTL: cacheTTL,
+		rootPath: rootPath,
+		addr:     fmt.Sprintf("%s:%s", config["host"], config["port"]),
+		sshConfig: &ssh.ClientConfig{
+			User: config["user"],
+			Auth: []ssh.AuthMethod{
+				ssh.Password(config["password"]),
+			},
+			HostKeyCallback: ssh.HostKeyCallback(func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+				if hostKey == "" {
+					return nil
+				}
+				hostKey, _, _, _, e := ssh.ParseAuthorizedKey([]byte(hostKey))
+				if e != nil {
+					return e
+				}
+				return ssh.FixedHostKey(hostKey)(hostname, remote, key)
+			}),
+		},
 	}
 	if cacheTTL <= 0 {
 		s.cache = drive_util.DummyCache()
@@ -74,78 +76,110 @@ func NewSftpDrive(_ context.Context, config types.SM, driveUtils drive_util.Driv
 		s.cache = driveUtils.CreateCache(s.deserializeEntry, nil)
 	}
 
+	_, e := s.getClient()
+	if e != nil {
+		return nil, e
+	}
+
 	return s, nil
 }
 
-func isSftpRootPath(path string) bool {
-	return path == "/"
+func (f *SFTPDrive) getClient() (*sftp.Client, error) {
+	if f.client != nil {
+		return f.client, nil
+	}
+	f.clientMux.Lock()
+	defer f.clientMux.Unlock()
+	if f.client != nil {
+		return f.client, nil
+	}
+	sshClient, e := ssh.Dial("tcp", f.addr, f.sshConfig)
+	if e != nil {
+		return nil, f.handleError(e)
+	}
+	f.ssh = sshClient
+	client, e := sftp.NewClient(f.ssh)
+	if e != nil {
+		return nil, f.handleError(e)
+	}
+	f.client = client
+	return f.client, nil
 }
 
 type SFTPDrive struct {
-	c        *sftp.Client
-	p        Pool
 	cache    drive_util.DriveCache
 	cacheTTL time.Duration
+	rootPath string
+
+	addr      string
+	sshConfig *ssh.ClientConfig
+	ssh       *ssh.Client
+	client    *sftp.Client
+	clientMux sync.Mutex
 }
 
-func (f *SFTPDrive) InitConn() {
-	if f.p.IsClosed() {
-		conn, e := f.p.GetConn()
-		if conn == nil || e != nil {
-			panic(e)
-		}
-		client, e := sftp.NewClient(conn)
-		if e != nil {
-			panic(e)
-		}
+func (f *SFTPDrive) toRemotePath(path string) string {
+	return path2.Join(f.rootPath, path)
+}
 
-		f.c = client
+func (f *SFTPDrive) toPath(remotePath string) string {
+	if f.rootPath == "" {
+		return remotePath
 	}
+	return strings.TrimPrefix(remotePath, f.rootPath)
 }
 
 func (f *SFTPDrive) Meta(context.Context) types.DriveMeta {
 	return types.DriveMeta{Writable: true}
 }
 
-func (f *SFTPDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
-	// Linux 路径格式必须 / 开始
-	path = "/" + path
-	if isSftpRootPath(path) {
-		return &sftpEntry{d: f, isDir: true, modTime: -1}, nil
-	}
+func (f *SFTPDrive) Get(_ context.Context, path string) (types.IEntry, error) {
 	if cached, _ := f.cache.GetEntry(path); cached != nil {
 		return cached, nil
 	}
-	parentPath := utils.PathParent(path)
-	name := utils.PathBase(path)
-	entries, e := f.list(ctx, parentPath)
+	// Linux 路径格式必须 / 开始
+	if utils.IsRootPath(path) {
+		return &sftpEntry{d: f, isDir: true, modTime: -1}, nil
+	}
+	c, e := f.getClient()
 	if e != nil {
 		return nil, e
 	}
-	for _, found := range entries {
-		if utils.PathBase(found.Path()) == name {
-			_ = f.cache.PutEntry(found, f.cacheTTL)
-			return found, nil
-		}
+	stat, e := c.Stat(f.toRemotePath(path))
+	if e != nil {
+		return nil, f.handleError(e)
 	}
-	return nil, err.NewNotFoundError()
+	entry := f.newSFTPEntry("", stat)
+	entry.path = path
+	_ = f.cache.PutEntry(entry, f.cacheTTL)
+	return entry, nil
 }
 
-func (f *SFTPDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool, reader io.Reader) (types.IEntry, error) {
-	path = "/" + path
+func (f *SFTPDrive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
 		}
 	}
-	f.InitConn()
-	file, e := f.c.Create(path)
+	c, e := f.getClient()
 	if e != nil {
-		return nil, mapError(e)
+		return nil, e
 	}
-	_, e = file.ReadFrom(reader)
+	openMode := os.O_WRONLY | os.O_CREATE
+	if override {
+		openMode |= os.O_TRUNC
+	}
+	file, e := c.OpenFile(f.toRemotePath(path), openMode)
 	if e != nil {
-		return nil, mapError(e)
+		return nil, f.handleError(e)
+	}
+	defer func() { _ = file.Close() }()
+	writtenSize, e := file.ReadFrom(reader)
+	if e != nil {
+		return nil, f.handleError(e)
+	}
+	if writtenSize != size {
+		return nil, errors.New("written size not equal to file size")
 	}
 	_ = f.cache.Evict(path, false)
 	_ = f.cache.Evict(utils.PathParent(path), false)
@@ -153,11 +187,13 @@ func (f *SFTPDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool,
 }
 
 func (f *SFTPDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	path = "/" + path
-	f.InitConn()
-	e := f.c.Mkdir(path)
+	c, e := f.getClient()
 	if e != nil {
-		return nil, mapError(e)
+		return nil, e
+	}
+	e = c.Mkdir(f.toRemotePath(path))
+	if e != nil {
+		return nil, f.handleError(e)
 	}
 	_ = f.cache.Evict(utils.PathParent(path), false)
 	return f.Get(ctx, path)
@@ -178,10 +214,13 @@ func (f *SFTPDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, overri
 			return nil, e
 		}
 	}
-	f.InitConn()
-	e := f.c.Rename(fromEntry.path, to)
+	c, e := f.getClient()
 	if e != nil {
-		return nil, mapError(e)
+		return nil, e
+	}
+	e = c.Rename(f.toRemotePath(fromEntry.path), f.toRemotePath(to))
+	if e != nil {
+		return nil, f.handleError(e)
 	}
 	_ = f.cache.Evict(to, true)
 	_ = f.cache.Evict(utils.PathParent(to), false)
@@ -190,15 +229,17 @@ func (f *SFTPDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, overri
 	return f.Get(ctx, to)
 }
 
-func (f *SFTPDrive) list(_ context.Context, path string) ([]types.IEntry, error) {
-	path = "/" + path
+func (f *SFTPDrive) List(_ context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := f.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
-	f.InitConn()
-	stats, e := f.c.ReadDir(path)
+	c, e := f.getClient()
 	if e != nil {
-		return nil, mapError(e)
+		return nil, e
+	}
+	stats, e := c.ReadDir(f.toRemotePath(path))
+	if e != nil {
+		return nil, f.handleError(e)
 	}
 	entries := make([]types.IEntry, len(stats))
 	for i, s := range stats {
@@ -208,59 +249,29 @@ func (f *SFTPDrive) list(_ context.Context, path string) ([]types.IEntry, error)
 	return entries, nil
 }
 
-func (f *SFTPDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
-	path = "/" + path
-	if cached, _ := f.cache.GetChildren(path); cached != nil {
-		return cached, nil
-	}
-	f.InitConn()
-	entries, e := f.list(ctx, path)
-	if e != nil {
-		return nil, e
-	}
-	if len(entries) == 0 {
-		// we need to check whether the folder exists
-		_, e := f.Get(ctx, path)
-		if e != nil {
-			return nil, e
-		}
-	}
-	return entries, nil
-}
-
 func (f *SFTPDrive) Delete(ctx types.TaskCtx, path string) error {
-	path = "/" + path
-	deleteRoot, e := f.Get(ctx, path)
+	c, e := f.getClient()
 	if e != nil {
 		return e
 	}
-	tree, e := drive_util.BuildEntriesTree(ctx, deleteRoot, false)
+	entry, e := f.Get(ctx, path)
 	if e != nil {
 		return e
 	}
-	entries := drive_util.FlattenEntriesTree(tree)
-
-	for i := len(entries) - 1; i >= 0; i-- {
-		var e error
-		if entries[i].Type().IsDir() {
-			e = f.c.RemoveDirectory(entries[i].Path())
-		} else {
-			e = f.c.Remove(entries[i].Path())
-		}
-		if e != nil {
-			return e
-		}
-		ctx.Progress(1, false)
+	if entry.Type().IsDir() {
+		e = c.RemoveDirectory(path)
+	} else {
+		e = c.Remove(path)
 	}
-
+	if e != nil {
+		return f.handleError(e)
+	}
 	_ = f.cache.Evict(utils.PathParent(path), false)
 	_ = f.cache.Evict(path, true)
 	return nil
 }
 
 func (f *SFTPDrive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
-	path = "/" + path
-	f.InitConn()
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
@@ -269,11 +280,10 @@ func (f *SFTPDrive) Upload(ctx context.Context, path string, size int64, overrid
 	return types.UseLocalProvider(size), nil
 }
 
-func (f *SFTPDrive) newSFTPEntry(path string, stat os.FileInfo) *sftpEntry {
-	path = "/" + path
+func (f *SFTPDrive) newSFTPEntry(parent string, stat os.FileInfo) *sftpEntry {
 	return &sftpEntry{
 		d:       f,
-		path:    path2.Join(path, stat.Name()),
+		path:    path2.Join(parent, stat.Name()),
 		size:    stat.Size(),
 		isDir:   stat.IsDir(),
 		modTime: utils.Millisecond(stat.ModTime()),
@@ -286,6 +296,34 @@ func (f *SFTPDrive) deserializeEntry(dat string) (types.IEntry, error) {
 		return nil, e
 	}
 	return &sftpEntry{path: ec.Path, d: f, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
+}
+
+var connectionLost = err.NewRemoteApiError(500, "Connection lost")
+
+func (f *SFTPDrive) handleError(e error) error {
+	switch e {
+	case sftp.ErrSSHFxEOF:
+	case io.EOF:
+		return err.NewRemoteApiError(500, "EOF")
+	case sftp.ErrSSHFxNoSuchFile:
+	case os.ErrNotExist:
+		return err.NewNotFoundError()
+	case sftp.ErrSSHFxPermissionDenied:
+		return err.NewPermissionDeniedError(e.Error())
+	case sftp.ErrSSHFxBadMessage:
+		return err.NewRemoteApiError(500, "Bad Message")
+	case sftp.ErrSSHFxNoConnection:
+		return err.NewRemoteApiError(500, "No Connection")
+	case sftp.ErrSSHFxConnectionLost:
+		f.clientMux.Lock()
+		defer f.clientMux.Unlock()
+		f.ssh = nil
+		f.client = nil
+		return connectionLost
+	case sftp.ErrSSHFxOpUnsupported:
+		return err.NewUnsupportedError()
+	}
+	return e
 }
 
 type sftpEntry struct {
@@ -334,13 +372,21 @@ func (f *sftpEntry) GetReader(context.Context) (io.ReadCloser, error) {
 	return utils.NewLazyReader(func() (io.ReadCloser, error) {
 		r, w := io.Pipe()
 		go func() {
-			file, e := f.d.c.Open(f.path)
+			c, e := f.d.getClient()
 			if e != nil {
 				_ = r.CloseWithError(e)
+				return
 			}
+			file, e := c.Open(f.d.toRemotePath(f.path))
+			if e != nil {
+				_ = r.CloseWithError(e)
+				return
+			}
+			defer func() { _ = file.Close() }()
 			_, e = file.WriteTo(w)
 			if e != nil {
 				_ = r.CloseWithError(e)
+				return
 			}
 			_ = w.Close()
 		}()
@@ -350,67 +396,4 @@ func (f *sftpEntry) GetReader(context.Context) (io.ReadCloser, error) {
 
 func (f *sftpEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return nil, err.NewUnsupportedError()
-}
-
-var connectionTimeout = time.Minute * 10
-
-type Pool interface {
-	GetConn() (*ssh.Client, error)
-	Clean()
-	IsClosed() bool
-}
-
-func ConcurrentPool(protocol, addr string, config *ssh.ClientConfig) (Pool, error) {
-	sshClient, e := ssh.Dial(protocol, addr, config)
-
-	if e != nil {
-		return &concurPool{}, e
-	}
-	pool := &concurPool{
-		protocol: protocol,
-		addr:     addr,
-		config:   config,
-		client:   sshClient,
-		isClosed: false,
-	}
-	pool.timeout = utils.TimeTick(pool.Clean, connectionTimeout)
-	return pool, nil
-}
-
-type concurPool struct {
-	protocol string
-	addr     string
-	config   *ssh.ClientConfig
-	client   *ssh.Client
-	timeout  func()
-	isClosed bool
-}
-
-func (p *concurPool) GetConn() (*ssh.Client, error) {
-	if p.isClosed {
-		p.isClosed = false
-		sshClient, e := ssh.Dial(p.protocol, p.addr, p.config)
-		if e != nil {
-			return &ssh.Client{}, e
-		}
-		p.client = sshClient
-	}
-	return p.client, nil
-}
-
-func (p *concurPool) Clean() {
-	p.isClosed = true
-	_ = p.client.Close()
-}
-
-func (p *concurPool) IsClosed() bool {
-	return p.isClosed
-}
-
-func mapError(e error) error {
-	fe, ok := e.(goftp.Error)
-	if !ok {
-		return e
-	}
-	return errors.New(fmt.Sprintf("[%d] %s", fe.Code(), fe.Message()))
 }
