@@ -32,11 +32,11 @@ func init() {
 			{Label: t("form.timeout.label"), Type: "text", Field: "timeout", Description: t("form.timeout.description")},
 			{Label: t("form.cache_ttl.label"), Type: "text", Field: "cache_ttl", Description: t("form.cache_ttl.description")},
 		},
-		Factory: drive_util.DriveFactory{Create: NewFtpDrive},
+		Factory: drive_util.DriveFactory{Create: NewDrive},
 	})
 }
 
-func NewFtpDrive(ctx context.Context, config types.SM,
+func NewDrive(ctx context.Context, config types.SM,
 	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	cacheTTL := config.GetDuration("cache_ttl", -1)
 
@@ -52,7 +52,7 @@ func NewFtpDrive(ctx context.Context, config types.SM,
 	if e != nil {
 		return nil, e
 	}
-	ftp := &FTPDrive{
+	ftp := &Drive{
 		c:        client,
 		cacheTTL: cacheTTL,
 	}
@@ -71,17 +71,17 @@ func NewFtpDrive(ctx context.Context, config types.SM,
 	return ftp, nil
 }
 
-type FTPDrive struct {
+type Drive struct {
 	c        *goftp.Client
 	cache    drive_util.DriveCache
 	cacheTTL time.Duration
 }
 
-func (f *FTPDrive) Meta(context.Context) types.DriveMeta {
+func (f *Drive) Meta(context.Context) types.DriveMeta {
 	return types.DriveMeta{Writable: true}
 }
 
-func (f *FTPDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
+func (f *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	if utils.IsRootPath(path) {
 		return &ftpEntry{d: f, isDir: true, modTime: -1}, nil
 	}
@@ -103,7 +103,7 @@ func (f *FTPDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	return nil, err.NewNotFoundError()
 }
 
-func (f *FTPDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool, reader io.Reader) (types.IEntry, error) {
+func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
@@ -118,7 +118,7 @@ func (f *FTPDrive) Save(ctx types.TaskCtx, path string, _ int64, override bool, 
 	return f.Get(ctx, path)
 }
 
-func (f *FTPDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
+func (f *Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
 	_, e := f.c.Mkdir(path)
 	if e != nil {
 		return nil, mapError(e)
@@ -127,11 +127,11 @@ func (f *FTPDrive) MakeDir(ctx context.Context, path string) (types.IEntry, erro
 	return f.Get(ctx, path)
 }
 
-func (f *FTPDrive) Copy(types.TaskCtx, types.IEntry, string, bool) (types.IEntry, error) {
+func (f *Drive) Copy(types.TaskCtx, types.IEntry, string, bool) (types.IEntry, error) {
 	return nil, err.NewUnsupportedError()
 }
 
-func (f *FTPDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+func (f *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetSelfEntry(f, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
@@ -153,7 +153,7 @@ func (f *FTPDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, overrid
 	return f.Get(ctx, to)
 }
 
-func (f *FTPDrive) list(_ context.Context, path string) ([]types.IEntry, error) {
+func (f *Drive) list(_ context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := f.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
@@ -169,7 +169,7 @@ func (f *FTPDrive) list(_ context.Context, path string) ([]types.IEntry, error) 
 	return entries, nil
 }
 
-func (f *FTPDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
+func (f *Drive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := f.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
@@ -187,7 +187,7 @@ func (f *FTPDrive) List(ctx context.Context, path string) ([]types.IEntry, error
 	return entries, nil
 }
 
-func (f *FTPDrive) Delete(ctx types.TaskCtx, path string) error {
+func (f *Drive) Delete(ctx types.TaskCtx, path string) error {
 	deleteRoot, e := f.Get(ctx, path)
 	if e != nil {
 		return e
@@ -216,7 +216,7 @@ func (f *FTPDrive) Delete(ctx types.TaskCtx, path string) error {
 	return nil
 }
 
-func (f *FTPDrive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
+func (f *Drive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
@@ -225,7 +225,7 @@ func (f *FTPDrive) Upload(ctx context.Context, path string, size int64, override
 	return types.UseLocalProvider(size), nil
 }
 
-func (f *FTPDrive) newFTPEntry(path string, stat os.FileInfo) *ftpEntry {
+func (f *Drive) newFTPEntry(path string, stat os.FileInfo) *ftpEntry {
 	return &ftpEntry{
 		d:       f,
 		path:    path2.Join(path, stat.Name()),
@@ -235,7 +235,7 @@ func (f *FTPDrive) newFTPEntry(path string, stat os.FileInfo) *ftpEntry {
 	}
 }
 
-func (f *FTPDrive) deserializeEntry(dat string) (types.IEntry, error) {
+func (f *Drive) deserializeEntry(dat string) (types.IEntry, error) {
 	ec, e := drive_util.DeserializeEntry(dat)
 	if e != nil {
 		return nil, e
@@ -243,8 +243,12 @@ func (f *FTPDrive) deserializeEntry(dat string) (types.IEntry, error) {
 	return &ftpEntry{path: ec.Path, d: f, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 
+func (f *Drive) Dispose() error {
+	return f.c.Close()
+}
+
 type ftpEntry struct {
-	d       *FTPDrive
+	d       *Drive
 	path    string
 	size    int64
 	isDir   bool

@@ -37,11 +37,11 @@ func init() {
 			{Label: t("form.root_path.label"), Type: "text", Field: "root_path", Description: t("form.root_path.description")},
 			{Label: t("form.cache_ttl.label"), Type: "text", Field: "cache_ttl", Description: t("form.cache_ttl.description")},
 		},
-		Factory: drive_util.DriveFactory{Create: NewSftpDrive},
+		Factory: drive_util.DriveFactory{Create: NewDrive},
 	})
 }
 
-func NewSftpDrive(_ context.Context, config types.SM, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
+func NewDrive(_ context.Context, config types.SM, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	cacheTTL := config.GetDuration("cache_ttl", -1)
 	hostKey := config["host_key"]
 	rootPath := path2.Clean(config["root_path"])
@@ -49,7 +49,7 @@ func NewSftpDrive(_ context.Context, config types.SM, driveUtils drive_util.Driv
 		return nil, errors.New(t("invalid_root_path"))
 	}
 
-	s := &SFTPDrive{
+	s := &Drive{
 		cacheTTL: cacheTTL,
 		rootPath: rootPath,
 		addr:     fmt.Sprintf("%s:%s", config["host"], config["port"]),
@@ -84,7 +84,7 @@ func NewSftpDrive(_ context.Context, config types.SM, driveUtils drive_util.Driv
 	return s, nil
 }
 
-func (f *SFTPDrive) getClient() (*sftp.Client, error) {
+func (f *Drive) getClient() (*sftp.Client, error) {
 	if f.client != nil {
 		return f.client, nil
 	}
@@ -106,7 +106,7 @@ func (f *SFTPDrive) getClient() (*sftp.Client, error) {
 	return f.client, nil
 }
 
-type SFTPDrive struct {
+type Drive struct {
 	cache    drive_util.DriveCache
 	cacheTTL time.Duration
 	rootPath string
@@ -118,22 +118,22 @@ type SFTPDrive struct {
 	clientMux sync.Mutex
 }
 
-func (f *SFTPDrive) toRemotePath(path string) string {
+func (f *Drive) toRemotePath(path string) string {
 	return path2.Join(f.rootPath, path)
 }
 
-func (f *SFTPDrive) toPath(remotePath string) string {
+func (f *Drive) toPath(remotePath string) string {
 	if f.rootPath == "" {
 		return remotePath
 	}
 	return strings.TrimPrefix(remotePath, f.rootPath)
 }
 
-func (f *SFTPDrive) Meta(context.Context) types.DriveMeta {
+func (f *Drive) Meta(context.Context) types.DriveMeta {
 	return types.DriveMeta{Writable: true}
 }
 
-func (f *SFTPDrive) Get(_ context.Context, path string) (types.IEntry, error) {
+func (f *Drive) Get(_ context.Context, path string) (types.IEntry, error) {
 	if cached, _ := f.cache.GetEntry(path); cached != nil {
 		return cached, nil
 	}
@@ -155,7 +155,7 @@ func (f *SFTPDrive) Get(_ context.Context, path string) (types.IEntry, error) {
 	return entry, nil
 }
 
-func (f *SFTPDrive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
+func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
@@ -186,7 +186,7 @@ func (f *SFTPDrive) Save(ctx types.TaskCtx, path string, size int64, override bo
 	return f.Get(ctx, path)
 }
 
-func (f *SFTPDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
+func (f *Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
 	c, e := f.getClient()
 	if e != nil {
 		return nil, e
@@ -199,11 +199,11 @@ func (f *SFTPDrive) MakeDir(ctx context.Context, path string) (types.IEntry, err
 	return f.Get(ctx, path)
 }
 
-func (f *SFTPDrive) Copy(types.TaskCtx, types.IEntry, string, bool) (types.IEntry, error) {
+func (f *Drive) Copy(types.TaskCtx, types.IEntry, string, bool) (types.IEntry, error) {
 	return nil, err.NewUnsupportedError()
 }
 
-func (f *SFTPDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+func (f *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetSelfEntry(f, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
@@ -229,7 +229,7 @@ func (f *SFTPDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, overri
 	return f.Get(ctx, to)
 }
 
-func (f *SFTPDrive) List(_ context.Context, path string) ([]types.IEntry, error) {
+func (f *Drive) List(_ context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := f.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
@@ -249,7 +249,7 @@ func (f *SFTPDrive) List(_ context.Context, path string) ([]types.IEntry, error)
 	return entries, nil
 }
 
-func (f *SFTPDrive) Delete(ctx types.TaskCtx, path string) error {
+func (f *Drive) Delete(ctx types.TaskCtx, path string) error {
 	c, e := f.getClient()
 	if e != nil {
 		return e
@@ -271,7 +271,7 @@ func (f *SFTPDrive) Delete(ctx types.TaskCtx, path string) error {
 	return nil
 }
 
-func (f *SFTPDrive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
+func (f *Drive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
@@ -280,7 +280,7 @@ func (f *SFTPDrive) Upload(ctx context.Context, path string, size int64, overrid
 	return types.UseLocalProvider(size), nil
 }
 
-func (f *SFTPDrive) newSFTPEntry(parent string, stat os.FileInfo) *sftpEntry {
+func (f *Drive) newSFTPEntry(parent string, stat os.FileInfo) *sftpEntry {
 	return &sftpEntry{
 		d:       f,
 		path:    path2.Join(parent, stat.Name()),
@@ -290,7 +290,7 @@ func (f *SFTPDrive) newSFTPEntry(parent string, stat os.FileInfo) *sftpEntry {
 	}
 }
 
-func (f *SFTPDrive) deserializeEntry(dat string) (types.IEntry, error) {
+func (f *Drive) deserializeEntry(dat string) (types.IEntry, error) {
 	ec, e := drive_util.DeserializeEntry(dat)
 	if e != nil {
 		return nil, e
@@ -300,7 +300,7 @@ func (f *SFTPDrive) deserializeEntry(dat string) (types.IEntry, error) {
 
 var connectionLost = err.NewRemoteApiError(500, "Connection lost")
 
-func (f *SFTPDrive) handleError(e error) error {
+func (f *Drive) handleError(e error) error {
 	switch e {
 	case sftp.ErrSSHFxEOF:
 	case io.EOF:
@@ -326,8 +326,18 @@ func (f *SFTPDrive) handleError(e error) error {
 	return e
 }
 
+func (f *Drive) Dispose() error {
+	if f.client != nil {
+		_ = f.client.Close()
+	}
+	if f.ssh != nil {
+		_ = f.ssh.Close()
+	}
+	return nil
+}
+
 type sftpEntry struct {
-	d       *SFTPDrive
+	d       *Drive
 	path    string
 	size    int64
 	isDir   bool
