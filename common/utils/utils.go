@@ -136,6 +136,14 @@ func ToInt64(s string, def int64) int64 {
 	return v
 }
 
+func ToInt(s string, def int) int {
+	v, e := strconv.ParseInt(s, 10, 32)
+	if e != nil {
+		return def
+	}
+	return int(v)
+}
+
 func FlattenStringMap(m map[string]interface{}, separator string) map[string]string {
 	r := make(map[string]string)
 	for k, v := range m {
@@ -229,4 +237,10 @@ func BuildURL(pattern string, variables ...string) string {
 		j++
 	}
 	return pattern
+}
+
+func LogSanitize(s string) string {
+	s = strings.Replace(s, "\n", "", -1)
+	s = strings.Replace(s, "\r", "", -1)
+	return s
 }

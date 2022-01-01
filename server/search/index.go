@@ -197,7 +197,7 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 	entries, e := d.List(ctx, rootPath)
 	if e != nil {
 		if ignoreError {
-			log.Printf("failed to index %s: %s", rootPath, e)
+			log.Printf("failed to index %s: %s", utils.LogSanitize(rootPath), e)
 			return nil
 		}
 		return e
@@ -251,7 +251,7 @@ func (s *Service) OnDeleted(_ types.DriveListenerContext, path string) {
 	_, _ = s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
 		e := s.es.DeleteDir(ctx, path)
 		if e != nil {
-			log.Printf("Error deleting index %s: %s", path, e)
+			log.Printf("Error deleting index %s: %s", utils.LogSanitize(path), e)
 		}
 		return nil, e
 	})
