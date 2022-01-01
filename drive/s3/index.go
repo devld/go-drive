@@ -41,11 +41,11 @@ func init() {
 			{Field: "proxy_download", Label: s3T("form.proxy_out.label"), Type: "checkbox", Description: s3T("form.proxy_out.description")},
 			{Field: "cache_ttl", Label: s3T("form.cache_ttl.label"), Type: "text", Description: s3T("form.cache_ttl.description")},
 		},
-		Factory: drive_util.DriveFactory{Create: NewS3Drive},
+		Factory: drive_util.DriveFactory{Create: NewDrive},
 	})
 }
 
-type S3Drive struct {
+type Drive struct {
 	s             *session.Session
 	c             *s3.S3
 	bucket        *string
@@ -57,8 +57,8 @@ type S3Drive struct {
 	tempDir string
 }
 
-// NewS3Drive creates a S3 compatible storage
-func NewS3Drive(ctx context.Context, config types.SM,
+// NewDrive creates a S3 compatible storage
+func NewDrive(ctx context.Context, config types.SM,
 	utils drive_util.DriveUtils) (types.IDrive, error) {
 	id := config["id"]
 	secret := config["secret"]
@@ -78,7 +78,7 @@ func NewS3Drive(ctx context.Context, config types.SM,
 		return nil, e
 	}
 	client := s3.New(sess)
-	d := &S3Drive{
+	d := &Drive{
 		s:             sess,
 		c:             client,
 		bucket:        aws.String(bucket),
@@ -95,7 +95,7 @@ func NewS3Drive(ctx context.Context, config types.SM,
 	return d, d.check(ctx)
 }
 
-func (s *S3Drive) check(ctx context.Context) error {
+func (s *Drive) check(ctx context.Context) error {
 	_, e := s.c.HeadBucketWithContext(ctx, &s3.HeadBucketInput{
 		Bucket: s.bucket,
 	})
@@ -110,7 +110,7 @@ func (s *S3Drive) check(ctx context.Context) error {
 	return e
 }
 
-func (s *S3Drive) deserializeEntry(dat string) (types.IEntry, error) {
+func (s *Drive) deserializeEntry(dat string) (types.IEntry, error) {
 	ec, e := drive_util.DeserializeEntry(dat)
 	if e != nil {
 		return nil, e
@@ -118,11 +118,11 @@ func (s *S3Drive) deserializeEntry(dat string) (types.IEntry, error) {
 	return &s3Entry{key: ec.Path, c: s, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 
-func (s *S3Drive) Meta(context.Context) types.DriveMeta {
+func (s *Drive) Meta(context.Context) types.DriveMeta {
 	return types.DriveMeta{Writable: true}
 }
 
-func (s *S3Drive) get(path string, ctx context.Context) (*s3Entry, error) {
+func (s *Drive) get(path string, ctx context.Context) (*s3Entry, error) {
 	obj, e := s.c.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
@@ -142,7 +142,7 @@ func (s *S3Drive) get(path string, ctx context.Context) (*s3Entry, error) {
 	return s.newS3ObjectEntry(path, obj.ContentLength, obj.LastModified), nil
 }
 
-func (s *S3Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
+func (s *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	if utils.IsRootPath(path) {
 		return s.newS3DirEntry(path, nil), nil
 	}
@@ -157,7 +157,7 @@ func (s *S3Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	return entry, nil
 }
 
-func (s *S3Drive) Save(ctx types.TaskCtx, path string, _ int64,
+func (s *Drive) Save(ctx types.TaskCtx, path string, _ int64,
 	override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
 		if _, e := drive_util.RequireFileNotExists(ctx, s, path); e != nil {
@@ -183,7 +183,7 @@ func (s *S3Drive) Save(ctx types.TaskCtx, path string, _ int64,
 	return get, nil
 }
 
-func (s *S3Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
+func (s *Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
 	path = path + "/"
 	if dir, e := s.Get(ctx, path); e == nil {
 		if !dir.Type().IsDir() {
@@ -202,7 +202,7 @@ func (s *S3Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error
 	return s.newS3DirEntry(path, nil), nil
 }
 
-func (s *S3Drive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+func (s *Drive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetSelfEntry(s, from)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
@@ -211,7 +211,7 @@ func (s *S3Drive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override
 	return entry, e
 }
 
-func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCtx) (*s3Entry, bool, error) {
+func (s *Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCtx) (*s3Entry, bool, error) {
 	if !override {
 		_, e := s.Get(ctx, to)
 		if e == nil {
@@ -238,7 +238,7 @@ func (s *S3Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCt
 	return s.newS3ObjectEntry(to, &from.size, obj.CopyObjectResult.LastModified), false, nil
 }
 
-func (s *S3Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+func (s *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
 	from = drive_util.GetSelfEntry(s, from)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
@@ -256,7 +256,7 @@ func (s *S3Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override
 	return entry, e
 }
 
-func (s *S3Drive) List(ctx context.Context, path string) ([]types.IEntry, error) {
+func (s *Drive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := s.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
@@ -293,7 +293,7 @@ func (s *S3Drive) List(ctx context.Context, path string) ([]types.IEntry, error)
 	return entries, nil
 }
 
-func (s *S3Drive) delete(path string, ctx types.TaskCtx) error {
+func (s *Drive) delete(path string, ctx types.TaskCtx) error {
 	entry, e := s.Get(ctx, path)
 	if e != nil {
 		return e
@@ -334,14 +334,14 @@ func (s *S3Drive) delete(path string, ctx types.TaskCtx) error {
 	return nil
 }
 
-func (s *S3Drive) Delete(ctx types.TaskCtx, path string) error {
+func (s *Drive) Delete(ctx types.TaskCtx, path string) error {
 	e := s.delete(path, ctx)
 	_ = s.cache.Evict(utils.PathParent(path), false)
 	_ = s.cache.Evict(path, true)
 	return e
 }
 
-func (s *S3Drive) Upload(ctx context.Context, path string, size int64,
+func (s *Drive) Upload(ctx context.Context, path string, size int64,
 	override bool, config types.SM) (*types.DriveUploadConfig, error) {
 	action := config["action"]
 	uploadId := config["uploadId"]
@@ -433,11 +433,11 @@ func buildCompleteUploadBody(etag string) []*s3.CompletedPart {
 	return r
 }
 
-func (s *S3Drive) Dispose() error {
+func (s *Drive) Dispose() error {
 	return nil
 }
 
-func (s *S3Drive) newS3DirEntry(path string, lastModified *time.Time) *s3Entry {
+func (s *Drive) newS3DirEntry(path string, lastModified *time.Time) *s3Entry {
 	var mtime int64 = -1
 	if lastModified != nil {
 		mtime = utils.Millisecond(*lastModified)
@@ -451,7 +451,7 @@ func (s *S3Drive) newS3DirEntry(path string, lastModified *time.Time) *s3Entry {
 	}
 }
 
-func (s *S3Drive) newS3ObjectEntry(path string, size *int64, lastModified *time.Time) *s3Entry {
+func (s *Drive) newS3ObjectEntry(path string, size *int64, lastModified *time.Time) *s3Entry {
 	path = utils.CleanPath(path)
 	return &s3Entry{
 		isDir:   false,
@@ -464,7 +464,7 @@ func (s *S3Drive) newS3ObjectEntry(path string, size *int64, lastModified *time.
 
 type s3Entry struct {
 	key     string
-	c       *S3Drive
+	c       *Drive
 	size    int64
 	modTime int64
 	isDir   bool
