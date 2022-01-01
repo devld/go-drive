@@ -383,10 +383,10 @@ func (dr *driveRoute) deleteChunkUpload(c *gin.Context) {
 func (dr *driveRoute) search(c *gin.Context) {
 	root := utils.CleanPath(c.Param("path"))
 	query := c.Query("q")
-	next := utils.ToInt64(c.Query("next"), 0)
+	next := utils.ToInt(c.Query("next"), 0)
 
 	r, e := dr.searcher.Search(
-		c.Request.Context(), root, query, int(next),
+		c.Request.Context(), root, query, next,
 		dr.access.GetPerms().Filter(GetSession(c)),
 	)
 	if e != nil {
