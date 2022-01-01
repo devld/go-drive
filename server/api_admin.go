@@ -238,6 +238,7 @@ func InitAdminRoutes(
 			_ = c.Error(e)
 			return
 		}
+		_ = driveCacheDAO.Remove(name)
 	})
 
 	// delete drive
