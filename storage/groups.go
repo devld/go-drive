@@ -77,7 +77,7 @@ func (g *GroupDAO) AddGroup(group GroupWithUsers) (GroupWithUsers, error) {
 		return GroupWithUsers{}, e
 	}
 	e = g.db.C().Transaction(func(tx *gorm.DB) error {
-		if e := tx.Create(group).Error; e != nil {
+		if e := tx.Create(&group.Group).Error; e != nil {
 			return e
 		}
 		return saveUserGroup(group.Users, group.Name, tx)
