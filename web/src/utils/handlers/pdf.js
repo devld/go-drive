@@ -13,5 +13,6 @@ export default {
     name: 'PdfView',
     component: PdfView,
   },
-  supports: entry => entry.type === 'file' && filenameExt(entry.name) === 'pdf',
+  supports: (entry) =>
+    entry.type === 'file' && filenameExt(entry.name) === 'pdf',
 }

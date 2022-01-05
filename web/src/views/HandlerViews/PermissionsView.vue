@@ -3,9 +3,9 @@
     <h1 class="filename">
       <simple-button
         class="header-button save-button"
-        @click="savePermissions"
         :loading="saving"
         :disabled="!canSave"
+        @click="savePermissions"
       >
         {{ $t('hv.permission.save') }}
       </simple-button>
@@ -13,73 +13,67 @@
       <button
         class="header-button close-button plain-button"
         title="Close"
-        @click="$emit('close')"
+        @click="emit('close')"
       >
         <i-icon svg="#icon-close" />
       </button>
     </h1>
     <permissions-editor
-      ref="editor"
-      :path="path"
+      ref="editorEl"
       v-model="permissions"
+      :path="path"
       @save-state="setSaveState"
     />
   </div>
 </template>
-<script>
-import { filename } from '@/utils'
-import PermissionsEditor from '@/views/Admin/PermissionsEditor'
+<script setup>
+import { filename as filenameFn } from '@/utils'
+import PermissionsEditor from '@/views/Admin/PermissionsEditor.vue'
+import { alert } from '@/utils/ui-utils'
+import { computed, ref, watch } from 'vue'
 
-export default {
-  name: 'PermissionsView',
-  components: { PermissionsEditor },
-  props: {
-    entry: {
-      type: Object,
-      required: true,
-    },
-    entries: { type: Array },
+const props = defineProps({
+  entry: {
+    type: Object,
+    required: true,
   },
-  data() {
-    return {
-      permissions: [],
+  entries: { type: Array },
+})
 
-      saving: false,
-      canSave: true,
-    }
-  },
-  watch: {
-    permissions: {
-      deep: true,
-      handler() {
-        this.canSave = this.$refs.editor.validate()
-      },
-    },
-  },
-  computed: {
-    filename() {
-      return filename(this.path)
-    },
-    path() {
-      return this.entry.path
-    },
-  },
-  methods: {
-    async savePermissions() {
-      this.saving = true
-      try {
-        await this.$refs.editor.save()
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.saving = false
-      }
-    },
-    setSaveState(saved) {
-      this.$emit('save-state', saved)
-    },
-  },
+const emit = defineEmits(['close', 'save-state'])
+
+const permissions = ref([])
+const saving = ref(false)
+const canSave = ref(true)
+
+const path = computed(() => props.entry.path)
+
+const filename = computed(() => filenameFn(path.value))
+
+const editorEl = ref(null)
+
+const savePermissions = async () => {
+  saving.value = true
+  try {
+    await editorEl.value.save()
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    saving.value = false
+  }
 }
+
+const setSaveState = (saved) => {
+  emit('save-state', saved)
+}
+
+watch(
+  () => permissions.value,
+  () => {
+    canSave.value = editorEl.value.validate()
+  },
+  { deep: true }
+)
 </script>
 <style lang="scss">
 .permissions-view {

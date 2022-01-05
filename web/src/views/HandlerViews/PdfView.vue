@@ -5,30 +5,31 @@
       <button
         class="close-button plain-button"
         title="Close"
-        @click="$emit('close')"
+        @click="emit('close')"
       >
         <i-icon svg="#icon-close" />
       </button>
     </h1>
 
     <iframe
-      :src="$.fileUrl(entry.path, entry.meta.accessKey)"
+      :src="fileUrl(entry.path, entry.meta.accessKey)"
       frameborder="0"
       class="pdf-view-page__iframe"
     ></iframe>
   </div>
 </template>
-<script>
-export default {
-  name: 'PdfView',
-  props: {
-    entry: {
-      type: [Array, Object],
-      required: true,
-    },
-    entries: { type: Array },
+<script setup>
+import { fileUrl } from '@/api'
+
+defineProps({
+  entry: {
+    type: [Array, Object],
+    required: true,
   },
-}
+  entries: { type: Array },
+})
+
+const emit = defineEmits(['close'])
 </script>
 <style lang="scss">
 .pdf-view-page {

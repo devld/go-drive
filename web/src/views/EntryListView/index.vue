@@ -2,124 +2,144 @@
   <div class="entry-list-view">
     <entry-list
       v-if="!error"
-      ref="entryList"
+      ref="entryListEl"
       :path="loadedPath"
       :entries="filteredEntries"
-      @entry-click="$emit('entry-click', $event)"
-      @entry-menu="$emit('entry-menu', $event)"
-      @path-change="$emit('path-change', $event)"
       :sort="sort"
-      @update:sort="$emit('update:sort', $event)"
       :selection="selection"
-      @update:selection="$emit('update:selection', $event)"
       :selectable="selectable"
       :view-mode="viewMode"
-      @update:viewMode="$emit('update:viewMode', $event)"
       :show-toggles="showToggles"
+      :get-link="getLink"
+      @entry-click="emit('entry-click', $event)"
+      @entry-menu="emit('entry-menu', $event)"
+      @update:path="emit('update:path', $event)"
+      @update:sort="emit('update:sort', $event)"
+      @update:selection="emit('update:selection', $event)"
+      @update:view-mode="emit('update:viewMode', $event)"
     />
     <error-view v-else :status="error.status" :message="error.message" />
   </div>
 </template>
 <script>
+export default { name: 'EntryListView' }
+</script>
+<script setup>
 import { listEntries } from '@/api'
+import { ref, computed, watch, nextTick } from 'vue'
 
-export default {
-  name: 'EntryListView',
-  model: {
-    prop: 'path',
-    event: 'path-change',
+const props = defineProps({
+  path: {
+    type: String,
   },
-  props: {
-    path: {
-      type: String,
-    },
-    filter: {
-      type: Function,
-    },
-    sort: {
-      type: String,
-    },
-    selection: {
-      type: Array,
-    },
-    selectable: {
-      type: [Boolean, Function],
-      default: true,
-    },
-    viewMode: {
-      type: String,
-    },
-    showToggles: {
-      type: Boolean,
-    },
+  filter: {
+    type: Function,
   },
-  data() {
-    return {
-      currentPath: null,
-      loadedPath: '',
-      entries: [],
+  sort: {
+    type: String,
+  },
+  selection: {
+    type: Array,
+  },
+  selectable: {
+    type: [Boolean, Function],
+    default: true,
+  },
+  viewMode: {
+    type: String,
+  },
+  showToggles: {
+    type: Boolean,
+  },
+  getLink: {
+    type: Function,
+  },
+})
 
-      error: null,
-    }
-  },
-  computed: {
-    filteredEntries() {
-      return this.filter ? this.entries.filter(this.filter) : this.entries
-    },
-  },
-  watch: {
-    path(path, oldPath) {
-      this.tryRecoverState(path, oldPath)
-      this.commitPathChange(path)
-    },
-  },
-  created() {
-    this.commitPathChange(this.path)
-  },
-  methods: {
-    commitPathChange(path = '') {
-      if (this.currentPath === path) return
-      this.currentPath = path
-      this.loadEntries()
-    },
-    tryRecoverState(newPath, oldPath) {
-      if (!oldPath.startsWith(newPath)) return
-      const path = oldPath.substr(newPath ? newPath.length + 1 : newPath.length)
-      this._lastEntry = path
-    },
-    focusOnEntry(name) {
-      this.$refs.entryList.focusOnEntry(name)
-    },
-    async loadEntries() {
-      if (this._task) this._task.cancel()
-      this.error = null
-      this.$emit('loading', true)
-      try {
-        const path = this.currentPath
-        this._task = listEntries(path)
-        this.entries = await this._task
-        this.loadedPath = path
-        this.$emit('entries-load', {
-          entries: this.entries,
-          path: this.loadedPath,
-        })
+const emit = defineEmits([
+  'entry-click',
+  'entry-menu',
+  'update:path',
+  'update:sort',
+  'update:selection',
+  'update:viewMode',
+  'loading',
+  'entries-load',
+  'error',
+])
 
-        await this.$nextTick()
-        if (this._lastEntry) {
-          this.focusOnEntry(this._lastEntry)
-          this._lastEntry = null
-        }
-      } catch (e) {
-        if (e.isCancel) return
-        this.error = e
-        this.$emit('error', e)
-      } finally {
-        this.$emit('loading', false)
-      }
-    },
-    reload() {
-      this.loadEntries()
-    },
-  },
+const currentPath = ref(null)
+const loadedPath = ref('')
+const entries = ref([])
+const error = ref(null)
+const entryListEl = ref(null)
+let task
+let lastEntry
+
+const filteredEntries = computed(() =>
+  props.filter ? entries.value.filter(props.filter) : entries.value
+)
+
+const focusOnEntry = (name) => {
+  entryListEl.value.focusOnEntry(name)
 }
+
+const loadEntries = async () => {
+  if (task) task.cancel()
+  error.value = null
+  emit('loading', true)
+  try {
+    const path = currentPath.value
+    task = listEntries(path)
+    const loadedEntries = await task
+    const thisEntry = loadedEntries[0]
+    entries.value = loadedEntries.slice(1)
+    loadedPath.value = path
+    emit('entries-load', {
+      entries: entries.value,
+      entry: thisEntry,
+      path: loadedPath.value,
+    })
+
+    await nextTick()
+    if (lastEntry) {
+      focusOnEntry(lastEntry)
+      lastEntry = null
+    }
+  } catch (e) {
+    if (e.isCancel) return
+    error.value = e
+    emit('error', e)
+  } finally {
+    emit('loading', false)
+  }
+}
+
+const commitPathChange = (path = '') => {
+  if (currentPath.value === path) return
+  currentPath.value = path
+  loadEntries()
+}
+
+const tryRecoverState = (newPath, oldPath) => {
+  if (!oldPath.startsWith(newPath)) return
+  const path = oldPath.substr(newPath ? newPath.length + 1 : newPath.length)
+  lastEntry = path
+}
+
+const reload = () => {
+  loadEntries()
+}
+
+defineExpose({ reload, focusOnEntry })
+
+watch(
+  () => props.path,
+  (path, oldPath) => {
+    tryRecoverState(path, oldPath)
+    commitPathChange(path)
+  }
+)
+
+commitPathChange(props.path)
 </script>

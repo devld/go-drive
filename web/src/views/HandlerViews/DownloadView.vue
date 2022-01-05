@@ -2,7 +2,7 @@
   <div class="download-view-page">
     <h1 class="page-title">
       <span>{{ $t('hv.download.download') }}</span>
-      <button class="plain-button close-button" @click="$emit('close')">
+      <button class="plain-button close-button" @click="emit('close')">
         <i-icon svg="#icon-close" />
       </button>
     </h1>
@@ -13,22 +13,22 @@
         <a
           class="download-button"
           target="_blank"
-          :download="$.filename(singleEntry.path)"
-          :href="$.fileUrl(singleEntry.path, singleEntry.meta.accessKey)"
+          :download="filename(singleEntry.path)"
+          :href="fileUrl(singleEntry.path, singleEntry.meta.accessKey)"
         >
           {{ $t('hv.download.download') }}
-          <span class="file-size" v-if="singleEntry.size >= 0">{{
-            $.formatBytes(singleEntry.size)
+          <span v-if="singleEntry.size >= 0" class="file-size">{{
+            formatBytes(singleEntry.size)
           }}</span>
         </a>
       </template>
       <template v-else>
         <textarea
-          ref="links"
+          ref="linksEl"
+          v-focus
           class="download-links"
           readonly
           :value="downloadLinks"
-          v-focus
           @focus="downloadLinksFocus"
         ></textarea>
         <a class="download-button" href="javascript:;" @click="downloadFiles">
@@ -38,49 +38,49 @@
     </div>
   </div>
 </template>
-<script>
-import { filename } from '@/utils'
+<script setup>
+import { filename, formatBytes } from '@/utils'
+import { fileUrl } from '@/api'
+import { computed, ref } from 'vue'
 
-export default {
-  name: 'DownloadView',
-  props: {
-    entry: {
-      type: [Array, Object],
-      required: true,
-    },
-    entries: { type: Array },
+const props = defineProps({
+  entry: {
+    type: [Array, Object],
+    required: true,
   },
-  computed: {
-    singleEntry() {
-      if (Array.isArray(this.entry)) {
-        if (this.entry.length === 1) return this.entry[0]
-        return null
-      } else {
-        return this.entry
-      }
-    },
-    downloadLinks() {
-      if (this.singleEntry) return ''
-      return this.entry
-        .map(e => this.$.fileUrl(e.path, e.meta.accessKey))
-        .join('\n')
-    },
-  },
-  methods: {
-    downloadLinksFocus() {
-      this.$refs.links.select()
-      this.$refs.links.scrollTop = 0
-      this.$refs.links.scrollLeft = 0
-    },
-    downloadFiles() {
-      this.entry.forEach(f => {
-        const a = document.createElement('a')
-        a.href = this.$.fileUrl(f.path, f.meta.accessKey)
-        a.download = filename(f.path)
-        a.click()
-      })
-    },
-  },
+  entries: { type: Array },
+})
+const emit = defineEmits(['close'])
+
+const linksEl = ref(null)
+
+const singleEntry = computed(() => {
+  if (Array.isArray(props.entry)) {
+    if (props.entry.length === 1) return props.entry[0]
+    return null
+  } else {
+    return props.entry
+  }
+})
+
+const downloadLinks = computed(() => {
+  if (singleEntry.value) return ''
+  return props.entry.map((e) => fileUrl(e.path, e.meta.accessKey)).join('\n')
+})
+
+const downloadLinksFocus = () => {
+  linksEl.value.select()
+  linksEl.value.scrollTop = 0
+  linksEl.value.scrollLeft = 0
+}
+
+const downloadFiles = () => {
+  props.entry.forEach((f) => {
+    const a = document.createElement('a')
+    a.href = fileUrl(f.path, f.meta.accessKey)
+    a.download = filename(f.path)
+    a.click()
+  })
 }
 </script>
 <style lang="scss">

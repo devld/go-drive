@@ -37,7 +37,7 @@
         </tbody>
       </table>
     </div>
-    <div class="group-edit" v-if="group">
+    <div v-if="group" class="group-edit">
       <div class="small-title">
         {{
           edit
@@ -46,22 +46,22 @@
         }}
       </div>
       <div class="group-form">
-        <simple-form ref="form" :form="groupForm" v-model="group" />
+        <simple-form ref="formEl" v-model="group" :form="groupForm" />
         <div class="form-item">
           <span class="label">{{ $t('p.admin.group.users') }}</span>
           <div class="value">
-            <span class="user-item" v-for="u in users" :key="u.username">
+            <span v-for="u in users" :key="u.username" class="user-item">
               <input
+                v-model="group.users"
                 type="checkbox"
                 :value="u.username"
-                v-model="group.users"
               />
               <span class="user-name">{{ u.username }}</span>
             </span>
           </div>
         </div>
         <div class="form-item save-button">
-          <simple-button small @click="saveGroup" :loading="saving">
+          <simple-button small :loading="saving" @click="saveGroup">
             {{ $t('p.admin.group.save') }}
           </simple-button>
           <simple-button small type="info" @click="group = null">
@@ -70,12 +70,12 @@
         </div>
       </div>
     </div>
-    <div class="edit-tips" v-else>
+    <div v-else class="edit-tips">
       <simple-button
         icon="#icon-add"
         :title="$t('p.admin.group.add_group')"
-        @click="addGroup"
         small
+        @click="addGroup"
       >
         {{ $t('p.admin.group.add') }}
       </simple-button>
@@ -83,121 +83,120 @@
     </div>
   </div>
 </template>
-<script>
+<script setup>
 import {
   createGroup,
-  deleteGroup,
+  deleteGroup as deleteGroupApi,
   getGroup,
   getGroups,
   getUsers,
   updateGroup,
 } from '@/api/admin'
+import { alert, confirm } from '@/utils/ui-utils'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-export default {
-  name: 'GroupsManager',
-  data() {
-    return {
-      users: [],
-      groups: [],
+const { t } = useI18n()
 
-      group: null,
-      edit: false,
-      saving: false,
-    }
+const users = ref([])
+const groups = ref([])
+const group = ref(null)
+const edit = ref(false)
+const saving = ref(false)
+
+const groupForm = computed(() => [
+  {
+    field: 'name',
+    label: t('p.admin.group.f_name'),
+    type: 'text',
+    required: true,
+    disabled: edit.value,
   },
-  computed: {
-    groupForm() {
-      return [
-        {
-          field: 'name',
-          label: this.$t('p.admin.group.f_name'),
-          type: 'text',
-          required: true,
-          disabled: this.edit,
-        },
-      ]
-    },
-  },
-  created() {
-    this.loadGroups()
-    this.loadUsers()
-  },
-  methods: {
-    async loadUsers() {
-      try {
-        this.users = await getUsers()
-      } catch (e) {
-        this.$alert(e.message)
-      }
-    },
-    async loadGroups() {
-      try {
-        this.groups = await getGroups()
-      } catch (e) {
-        this.$alert(e.message)
-      }
-    },
-    addGroup() {
-      this.group = {
-        name: '',
-        users: [],
-      }
-      this.edit = false
-    },
-    async editGroup(group) {
-      try {
-        const g = await getGroup(group.name)
-        g.users = g.users.map(g => g.username)
-        this.group = g
-        this.edit = true
-      } catch (e) {
-        this.$alert(e.message)
-      }
-    },
-    async deleteGroup(group) {
-      this.$confirm({
-        title: this.$t('p.admin.group.delete_group'),
-        message: this.$t('p.admin.group.delete_group', { n: group.name }),
-        confirmType: 'danger',
-        onOk: () => {
-          return deleteGroup(group.name).then(
-            () => {
-              this.loadGroups()
-            },
-            e => {
-              this.$alert(e.message)
-              return Promise.reject(e)
-            }
-          )
-        },
-      })
-    },
-    async saveGroup() {
-      try {
-        await this.$refs.form.validate()
-      } catch {
-        return
-      }
-      const group = {
-        name: this.group.name,
-        users: this.group.users.map(username => ({ username })),
-      }
-      this.saving = true
-      try {
-        if (this.edit) {
-          await updateGroup(this.group.name, group)
-        } else {
-          await createGroup(group)
-        }
-        this.loadGroups()
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.saving = false
-      }
-    },
-  },
+])
+
+const formEl = ref(null)
+
+const loadUsers = async () => {
+  try {
+    users.value = await getUsers()
+  } catch (e) {
+    alert(e.message)
+  }
 }
+const loadGroups = async () => {
+  try {
+    groups.value = await getGroups()
+  } catch (e) {
+    alert(e.message)
+  }
+}
+const addGroup = () => {
+  group.value = {
+    name: '',
+    users: [],
+  }
+  edit.value = false
+}
+const editGroup = async (group_) => {
+  try {
+    const g = await getGroup(group_.name)
+    g.users = g.users.map((g) => g.username)
+    group.value = g
+    edit.value = true
+  } catch (e) {
+    alert(e.message)
+  }
+}
+const deleteGroup = async (g) => {
+  confirm({
+    title: t('p.admin.group.delete_group'),
+    message: t('p.admin.group.delete_group', { n: g.name }),
+    confirmType: 'danger',
+    onOk: () => {
+      return deleteGroupApi(g.name).then(
+        () => {
+          if (g.name === group.value?.name) {
+            group.value = null
+          }
+          loadGroups()
+        },
+        (e) => {
+          alert(e.message)
+          return Promise.reject(e)
+        }
+      )
+    },
+  })
+}
+
+const saveGroup = async () => {
+  try {
+    await formEl.value.validate()
+  } catch {
+    return
+  }
+  const g = {
+    name: group.value.name,
+    users: group.value.users.map((username) => ({ username })),
+  }
+  saving.value = true
+  try {
+    if (edit.value) {
+      await updateGroup(group.value.name, g)
+    } else {
+      await createGroup(g)
+    }
+    edit.value = true
+    loadGroups()
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    saving.value = false
+  }
+}
+
+loadGroups()
+loadUsers()
 </script>
 <style lang="scss">
 .groups-manager {

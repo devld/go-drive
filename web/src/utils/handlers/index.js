@@ -25,12 +25,12 @@ export const HANDLERS = Object.freeze([
 ])
 
 export const HANDLER_COMPONENTS = mapOf(
-  HANDLERS.filter(h => h.view),
-  h => h.view.name,
-  h => h.view.component
+  HANDLERS.filter((h) => h.view),
+  (h) => h.view.name,
+  (h) => h.view.component
 )
 
-const HANDLERS_MAP = mapOf(HANDLERS, h => h.name)
+const HANDLERS_MAP = mapOf(HANDLERS, (h) => h.name)
 
 export function getHandler(name) {
   return HANDLERS_MAP[name] && HANDLERS_MAP[name]

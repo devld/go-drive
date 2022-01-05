@@ -12,7 +12,7 @@ export default {
   supports: (entry, parentEntry) =>
     entry.meta.writable && parentEntry && parentEntry.meta.writable,
   handler: (entry, { input, alert }) => {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       input({
         title: T('handler.rename.input_title'),
         text: entry.name,
@@ -20,7 +20,7 @@ export default {
           pattern: /^[^/\0:*"<>|]+$/,
           message: T('handler.rename.invalid_filename'),
         },
-        onOk: async text => {
+        onOk: async (text) => {
           if (text === entry.name) return
           try {
             await taskDone(

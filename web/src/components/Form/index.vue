@@ -1,81 +1,82 @@
 <template>
   <form
     class="simple-form"
-    @submit="onSubmit"
     :autocomplete="noAutoComplete ? 'off' : 'on'"
+    @submit="onSubmit"
   >
     <form-item
       v-for="item in form"
       :key="item.field"
-      ref="fields"
-      :item="item"
+      :ref="setFieldsRef"
       v-model="data[item.field]"
-      @input="emitInput"
+      :item="item"
+      @update:model-value="emitInput"
     />
   </form>
 </template>
 <script>
-import FormItem from './FormItem'
+export default { name: 'FormView' }
+</script>
+<script setup>
+import { onBeforeUpdate, ref, watchEffect } from 'vue'
+import FormItem from './FormItem.vue'
 
-export default {
-  name: 'SimpleForm',
-  components: { FormItem },
-  props: {
-    form: {
-      type: Array,
-      required: true,
-    },
-    value: {
-      type: Object,
-    },
-    noAutoComplete: {
-      type: Boolean,
-    },
+const props = defineProps({
+  form: {
+    type: Array,
+    required: true,
   },
-  watch: {
-    value: {
-      immediate: true,
-      deep: true,
-      handler(val) {
-        if (val === this.data) return
-        this.data = val || {}
-      },
-    },
+  modelValue: {
+    type: Object,
   },
-  data() {
-    return {
-      data: {},
-    }
+  noAutoComplete: {
+    type: Boolean,
   },
-  created() {
-    this.fillDefaultValue()
-  },
-  methods: {
-    async validate() {
-      await Promise.all(this.$refs.fields.map(f => f.validate()))
-    },
-    clearError() {
-      this.$refs.fields.forEach(f => {
-        f.clearError()
-      })
-    },
-    onSubmit(e) {
-      e.preventDefault()
-    },
-    fillDefaultValue() {
-      if (this.value) return
-      const dat = {}
-      for (const f of this.form) {
-        if (f.defaultValue) dat[f.field] = f.defaultValue
-      }
-      this.data = dat
-      this.emitInput()
-    },
-    emitInput() {
-      this.$emit('input', this.data)
-    },
-  },
+})
+
+const data = ref({})
+const fields = ref([])
+
+const emit = defineEmits(['update:modelValue'])
+
+const setFieldsRef = (el) => fields.value.push(el)
+onBeforeUpdate(() => {
+  fields.value = []
+})
+
+watchEffect(() => {
+  const val = props.modelValue
+  if (val === data.value) return
+  data.value = val || {}
+})
+
+const validate = async () => {
+  await Promise.all(fields.value.map((f) => f.validate()))
 }
+
+const clearError = () => {
+  fields.value.forEach((f) => {
+    f.clearError()
+  })
+}
+
+defineExpose({ validate, clearError })
+
+const onSubmit = (e) => e.preventDefault()
+
+const emitInput = () => emit('update:modelValue', data.value)
+
+const fillDefaultValue = () => {
+  if (props.modelValue) return
+  const dat = {}
+  for (const f of props.form) {
+    if (f.defaultValue) dat[f.field] = f.defaultValue
+  }
+  data.value = dat
+  emitInput()
+}
+
+fillDefaultValue()
 </script>
 <style lang="scss">
 .simple-form {

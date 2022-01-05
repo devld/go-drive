@@ -2,9 +2,9 @@
   <button
     class="simple-button"
     :class="{ loading, [type]: !!type, small }"
-    @click="$emit('click')"
     :disabled="!!loading || disabled"
     :type="nativeType"
+    @click="emit('click')"
   >
     <i-icon v-if="loading" svg="#icon-loading" />
     <template v-else>
@@ -13,30 +13,29 @@
     </template>
   </button>
 </template>
-<script>
-export default {
-  name: 'SimpleButton',
-  props: {
-    loading: {
-      type: Boolean,
-    },
-    type: {
-      type: String,
-    },
-    small: {
-      type: Boolean,
-    },
-    icon: {
-      type: String,
-    },
-    disabled: {
-      type: Boolean,
-    },
-    nativeType: {
-      type: String,
-    },
+<script setup>
+defineProps({
+  loading: {
+    type: Boolean,
   },
-}
+  type: {
+    type: String,
+  },
+  small: {
+    type: Boolean,
+  },
+  icon: {
+    type: String,
+  },
+  disabled: {
+    type: Boolean,
+  },
+  nativeType: {
+    type: String,
+  },
+})
+
+const emit = defineEmits(['click'])
 </script>
 <style lang="scss">
 .simple-button {

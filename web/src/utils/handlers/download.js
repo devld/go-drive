@@ -13,8 +13,8 @@ export default {
     component: DownloadView,
   },
   multiple: true,
-  supports: entry =>
+  supports: (entry) =>
     Array.isArray(entry)
-      ? !entry.some(e => e.type !== 'file')
+      ? !entry.some((e) => e.type !== 'file')
       : entry.type === 'file',
 }

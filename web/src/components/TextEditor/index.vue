@@ -1,8 +1,12 @@
 <template>
-  <div ref="editor" class="text-editor" />
+  <div ref="editorEl" class="text-editor" />
 </template>
 <script>
-import CodeMirror from './codemirror'
+export default { name: 'TextEditor' }
+</script>
+<script setup>
+import { watch, onMounted, onBeforeUnmount, ref } from 'vue'
+import CodeMirror, { loadMode } from './codemirror'
 import { filenameExt } from '@/utils'
 import {
   addPreferColorListener,
@@ -14,97 +18,101 @@ function getThemeName() {
   return isDarkMode() ? 'material-darker' : 'github-light'
 }
 
-export default {
-  name: 'TextEditor',
-  props: {
-    value: {
-      type: String,
-    },
-    filename: {
-      type: String,
-    },
-    lineNumbers: {
-      type: Boolean,
-    },
-    disabled: {
-      type: Boolean,
-    },
+const props = defineProps({
+  modelValue: {
+    type: String,
   },
-  watch: {
-    filename() {
-      if (this.filename) {
-        this.setEditorMode()
-      }
-    },
-    value: {
-      immediate: true,
-      handler() {
-        this.setEditorContent(this.value)
-      },
-    },
-    lineNumbers(val) {
-      this.setEditorOption('lineNumbers', val)
-    },
-    disabled(val) {
-      this.setEditorOption('readOnly', val ? 'nocursor' : false)
-    },
+  filename: {
+    type: String,
   },
-  created() {
-    addPreferColorListener(this.prefersColorChanged)
+  lineNumbers: {
+    type: Boolean,
   },
-  beforeDestroy() {
-    removePreferColorListener(this.prefersColorChanged)
+  disabled: {
+    type: Boolean,
   },
-  mounted() {
-    this.initEditor()
-  },
-  methods: {
-    initEditor() {
-      this.editor = CodeMirror(this.$refs.editor, {
-        theme: getThemeName(),
-        value: this.content || '',
-        lineNumbers: this.lineNumbers,
-        readOnly: this.disabled ? 'nocursor' : false,
-      })
-      this.setEditorMode()
-      this.editor.on('change', () => {
-        this.content = this.editor.getValue()
-        this.$emit('input', this.content)
-      })
-    },
-    async setEditorMode() {
-      const ext = filenameExt(this.filename)
-      const mode = CodeMirror.findModeByExtension(ext)
-      if (mode) {
-        this.setEditorOption('mode', mode.mode)
-        CodeMirror.autoLoadMode(this.editor, mode.mode)
-      } else {
-        console.warn(`[CodeMirror] language mode of '${ext}' not found`)
-      }
-    },
-    setEditorContent(content) {
-      if (this.content === content) return
-      this.content = content
-      if (this.editor) {
-        this.editor.setValue(this.content)
-      }
-    },
-    setEditorOption(name, value) {
-      if (this.editor) {
-        this.editor.setOption(name, value)
-      }
-    },
-    prefersColorChanged() {
-      this.setEditorOption('theme', getThemeName())
-    },
-  },
+})
+
+const emit = defineEmits(['update:modelValue'])
+
+const editorEl = ref(null)
+let editor
+let currentContent
+
+const setEditorContent = (content) => {
+  if (currentContent === content) return
+  currentContent = content
+  if (editor) {
+    editor.setValue(currentContent)
+  }
 }
+
+const setEditorOption = (name, value) => {
+  if (editor) editor.setOption(name, value)
+}
+
+const prefersColorChanged = () => setEditorOption('theme', getThemeName())
+
+const initEditor = () => {
+  editor = CodeMirror(editorEl.value, {
+    theme: getThemeName(),
+    value: currentContent || '',
+    lineNumbers: props.lineNumbers,
+    readOnly: props.disabled ? 'nocursor' : false,
+  })
+  setEditorMode()
+  editor.on('change', () => {
+    currentContent = editor.getValue()
+    emit('update:modelValue', currentContent)
+  })
+}
+
+const setEditorMode = async () => {
+  const ext = filenameExt(props.filename)
+  try {
+    const mode = CodeMirror.findModeByExtension(ext)
+    if (!mode) throw new Error(`mode ${mode.mode} not found`)
+    await loadMode(mode)
+    setEditorOption('mode', mode.mode)
+  } catch (e) {
+    console.warn(`[CodeMirror] failed to load language mode of '${ext}'`, e)
+  }
+}
+
+watch(
+  () => props.filename,
+  (val) => {
+    if (val) setEditorMode()
+  }
+)
+
+watch(
+  () => props.modelValue,
+  (val) => setEditorContent(val),
+  { immediate: true }
+)
+watch(
+  () => props.lineNumbers,
+  (val) => setEditorOption('lineNumbers', val)
+)
+watch(
+  () => props.disabled,
+  (val) => setEditorOption('readOnly', val ? 'nocursor' : false)
+)
+
+onMounted(() => {
+  initEditor()
+  addPreferColorListener(prefersColorChanged)
+})
+onBeforeUnmount(() => {
+  removePreferColorListener(prefersColorChanged)
+})
 </script>
 <style lang="scss">
-@import url('~codemirror/lib/codemirror.css');
+@import url('codemirror/lib/codemirror.css');
 
-@import url('~codemirror-github-light/lib/codemirror-github-light-theme.css');
-@import '~codemirror/theme/material-darker.css';
+@import url('codemirror-github-light/lib/codemirror-github-light-theme.css');
+@import 'codemirror/theme/material-darker.css';
 
 .text-editor {
   .CodeMirror {

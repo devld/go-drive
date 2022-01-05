@@ -7,68 +7,64 @@
     ></div>
   </div>
 </template>
-<script>
+<script setup>
+import { ref, watchEffect } from 'vue'
+
 const FAKE_START = 10
 const FAKE_FREEZE = 90
 
-export default {
-  name: 'ProgressBar',
-  props: {
-    value: {
-      type: [Number, Boolean],
-      required: true,
-    },
+const props = defineProps({
+  show: {
+    type: [Number, Boolean],
+    required: true,
   },
-  data() {
-    return {
-      progress: 0,
-    }
-  },
-  watch: {
-    value: {
-      immediate: true,
-      handler(v) {
-        if (typeof v === 'number') {
-          this.clearTimer()
-          this.progress = v
-        }
-        if (typeof v === 'boolean') {
-          if (v) {
-            this.startFakeProgress()
-          } else {
-            this.completeFakeProgress()
-          }
-        }
-      },
-    },
-  },
-  methods: {
-    startFakeProgress() {
-      this.progress = FAKE_START
-      this.setTimer()
-    },
-    completeFakeProgress() {
-      this.clearTimer()
-      this.progress = 100
-      this._tt = setTimeout(() => {
-        this.progress = null
-      }, 400)
-    },
+})
 
-    setTimer() {
-      this.clearTimer()
-      this._t = setInterval(() => {
-        if (this.progress <= FAKE_FREEZE) {
-          this.progress += 1
-        }
-      }, 100)
-    },
-    clearTimer() {
-      clearTimeout(this._tt)
-      clearInterval(this._t)
-    },
-  },
+const progress = ref(0)
+
+let timer
+let timer1
+
+const clearTimer = () => {
+  clearTimeout(timer1)
+  clearInterval(timer)
 }
+
+const setTimer = () => {
+  clearTimer()
+  timer = setInterval(() => {
+    if (progress.value <= FAKE_FREEZE) {
+      progress.value += 1
+    }
+  }, 100)
+}
+
+const startFakeProgress = () => {
+  progress.value = FAKE_START
+  setTimer()
+}
+
+const completeFakeProgress = () => {
+  clearTimer()
+  progress.value = 100
+  timer1 = setTimeout(() => {
+    progress.value = null
+  }, 400)
+}
+
+watchEffect(() => {
+  const v = props.show
+  if (typeof v === 'number') {
+    clearTimer()
+    progress.value = v
+  } else if (typeof v === 'boolean') {
+    if (v) {
+      startFakeProgress()
+    } else {
+      completeFakeProgress()
+    }
+  }
+})
 </script>
 <style lang="scss">
 .progress-bar {

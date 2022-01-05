@@ -1,11 +1,11 @@
 <template>
-  <dialog-view class="loading-dialog" v-model="showing" transition="none">
+  <dialog-view v-model:show="showing" class="loading-dialog" transition="none">
     <div class="loading-dialog__content">
       <i-icon class="loading-dialog__icon" svg="#icon-loading" />
       <span class="loading-dialog__text">{{ text }}</span>
       <simple-button
-        class="loading-dialog__cancel"
         v-if="cancelText"
+        class="loading-dialog__cancel"
         :type="cancelType"
         :loading="cancelLoading"
         @click="cancel"
@@ -14,48 +14,50 @@
     </div>
   </dialog-view>
 </template>
-<script>
-export default {
-  name: 'LoadingDialog',
-  data() {
-    return {
-      showing: false,
-      text: '',
-      cancelText: '',
-      cancelType: '',
+<script setup>
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-      cancelLoading: false,
-    }
-  },
-  methods: {
-    show(opts = {}) {
-      this.text = opts.text || ''
+const showing = ref(false)
+const text = ref('')
+const cancelText = ref('')
+const cancelType = ref('')
+const cancelLoading = ref(false)
 
-      this._cancelCallback = opts.onCancel
+const { t } = useI18n()
 
-      this.cancelText = this._cancelCallback
-        ? opts.cancelText || this.$t('dialog.loading.cancel')
-        : ''
-      this.cancelType = opts.cancelType || 'info'
+let cancelCallback
 
-      this.showing = true
-    },
-    hide() {
-      this.showing = false
-    },
-    async cancel() {
-      this.cancelLoading = true
-      try {
-        await this._cancelCallback()
-        this.hide()
-      } catch (e) {
-        /* nothing */
-      } finally {
-        this.cancelLoading = false
-      }
-    },
-  },
+const show = (opts = {}) => {
+  text.value = opts.text || ''
+
+  cancelCallback = opts.onCancel
+
+  cancelText.value = cancelCallback
+    ? opts.cancelText || t('dialog.loading.cancel')
+    : ''
+  cancelType.value = opts.cancelType || 'info'
+
+  showing.value = true
 }
+
+const hide = () => {
+  showing.value = false
+}
+
+const cancel = async () => {
+  cancelLoading.value = true
+  try {
+    await cancelCallback()
+    hide()
+  } catch (e) {
+    /* nothing */
+  } finally {
+    cancelLoading.value = false
+  }
+}
+
+defineExpose({ show, hide })
 </script>
 <style lang="scss">
 .dialog-view.loading-dialog {

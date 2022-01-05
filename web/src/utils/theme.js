@@ -6,8 +6,8 @@ export function isDarkMode() {
 
 const listeners = []
 matchMedia &&
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-    listeners.forEach(fn => {
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    listeners.forEach((fn) => {
       fn()
     })
   })
@@ -17,5 +17,5 @@ export function addPreferColorListener(fn) {
 }
 
 export function removePreferColorListener(fn) {
-  arrayRemove(listeners, e => e === fn)
+  arrayRemove(listeners, (e) => e === fn)
 }

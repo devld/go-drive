@@ -1,5 +1,6 @@
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
+import { defineAsyncComponent } from 'vue'
 
 export default {
   name: 'image',
@@ -10,9 +11,11 @@ export default {
   },
   view: {
     name: 'ImageView',
-    component: () => import('@/views/HandlerViews/ImageView.vue'),
+    component: defineAsyncComponent(() =>
+      import('@/views/HandlerViews/ImageView.vue')
+    ),
   },
-  supports: entry =>
+  supports: (entry) =>
     entry.type === 'file' &&
     ['jpg', 'jpeg', 'png', 'gif'].includes(filenameExt(entry.name)),
 }

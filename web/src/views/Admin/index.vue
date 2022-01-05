@@ -2,10 +2,10 @@
   <div class="admin-page">
     <ul class="menu-list">
       <li
-        class="menu-item"
-        :class="{ active: currentMenu === m.path }"
         v-for="m in menus"
         :key="m.path"
+        class="menu-item"
+        :class="{ active: currentMenu === m.path }"
       >
         <router-link class="menu-link" :to="m.path">{{ m.name }}</router-link>
       </li>
@@ -16,24 +16,25 @@
   </div>
 </template>
 <script>
-export default {
-  name: 'Admin',
-  data() {
-    return {
-      menus: [
-        { name: this.$t('p.admin.t_users'), path: '/admin/users' },
-        { name: this.$t('p.admin.t_groups'), path: '/admin/groups' },
-        { name: this.$t('p.admin.t_drives'), path: '/admin/drives' },
-        { name: this.$t('p.admin.t_misc'), path: '/admin/misc' },
-      ],
-    }
-  },
-  computed: {
-    currentMenu() {
-      return this.$route.path
-    },
-  },
-}
+export default { name: 'AdminPage' }
+</script>
+<script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+
+const { t } = useI18n()
+
+const router = useRouter()
+
+const menus = [
+  { name: t('p.admin.t_users'), path: '/admin/users' },
+  { name: t('p.admin.t_groups'), path: '/admin/groups' },
+  { name: t('p.admin.t_drives'), path: '/admin/drives' },
+  { name: t('p.admin.t_misc'), path: '/admin/misc' },
+]
+
+const currentMenu = computed(() => router.currentRoute.value.path)
 </script>
 <style lang="scss">
 .admin-page {

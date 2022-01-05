@@ -1,13 +1,9 @@
-import { fileUrl, getTask } from '@/api'
-import dayjs from 'dayjs'
+import { getTask } from '@/api'
 
 import focus from './directives/focus'
 import longPress from './directives/long-press'
 import markdown from './directives/markdown'
-
-import LazyLoad from 'vue-lazyload'
-
-import UiUtils from './ui-utils'
+import lazySrc from './directives/lazy-src'
 
 export const IS_DEBUG = process.env.NODE_ENV === 'development'
 
@@ -17,10 +13,21 @@ export function setTitle(title) {
   document.title = title
 }
 
-export function formatTime(d, toFormat) {
-  const date = dayjs(d)
-  if (!date.isValid()) return ''
-  return date.format(toFormat || 'YYYY-MM-DD HH:mm:ss')
+export function formatTime(d) {
+  const date = new Date(d)
+  if (isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  let month = date.getMonth() + 1
+  let day = date.getDate()
+  let hour = date.getHours()
+  let minute = date.getMinutes()
+  let second = date.getSeconds()
+  month = month < 10 ? '0' + month : month
+  day = day < 10 ? '0' + day : day
+  hour = hour < 10 ? '0' + hour : hour
+  minute = minute < 10 ? '0' + minute : minute
+  second = second < 10 ? '0' + second : second
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`
 }
 
 // from https://stackoverflow.com/a/18650828/8749466
@@ -69,26 +76,19 @@ export function filenameExt(filename) {
 }
 
 export function pathJoin(...segments) {
-  return segments
-    .filter(Boolean)
-    .join('/')
-    .replace(/\/+/g, '/')
+  return segments.filter(Boolean).join('/').replace(/\/+/g, '/')
 }
 
 export function pathClean(path) {
   if (!path) return ''
   const segments = path.split('/').filter(Boolean)
   const paths = []
-  segments.forEach(s => {
+  segments.forEach((s) => {
     if (s === '.') return
     if (s === '..') paths.pop()
     else paths.push(s)
   })
-  return (
-    (path.charAt(0) === '/' ? '/' : '') +
-    paths.join('/') +
-    (path.charAt(path.length - 1) === '/' ? '/' : '')
-  )
+  return paths.join('/')
 }
 
 /**
@@ -128,13 +128,13 @@ export function throttle(func, wait, options) {
   let timeout = null
   let previous = 0
   if (!options) options = {}
-  const later = function() {
+  const later = function () {
     previous = options.leading === false ? 0 : Date.now()
     timeout = null
     result = func.apply(context, args)
     if (!timeout) context = args = null
   }
-  return function() {
+  return function () {
     const now = Date.now()
     if (!previous && options.leading === false) previous = now
     const remaining = wait - (now - previous)
@@ -158,18 +158,18 @@ export function throttle(func, wait, options) {
 export function waitPromise(fn) {
   const promises = []
   let waiting = false
-  return function() {
+  return function () {
     if (!waiting) {
       waiting = true
       fn.apply(this, arguments)
         .then(
-          v => {
-            promises.forEach(p => {
+          (v) => {
+            promises.forEach((p) => {
               p.resolve(v)
             })
           },
-          e => {
-            promises.forEach(p => {
+          (e) => {
+            promises.forEach((p) => {
               p.reject(e)
             })
           }
@@ -185,10 +185,10 @@ export function waitPromise(fn) {
   }
 }
 
-const DEFAULT_VALUE_FN = e => e
+const DEFAULT_VALUE_FN = (e) => e
 export function mapOf(list, keyFn, valueFn = DEFAULT_VALUE_FN) {
   const map = {}
-  list.forEach(e => {
+  list.forEach((e) => {
     map[keyFn(e)] = valueFn(e)
   })
   return map
@@ -207,12 +207,12 @@ export function isAdmin(user) {
   return !!(
     user &&
     user.groups &&
-    user.groups.findIndex(g => g.name === 'admin') !== -1
+    user.groups.findIndex((g) => g.name === 'admin') !== -1
   )
 }
 
 export function wait(ms) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
 }
@@ -246,42 +246,20 @@ export async function taskDone(task, cb, interval = 1000) {
   }
 }
 
-const filters = {
-  formatTime,
-  formatBytes,
-}
-
 const directives = {
   markdown,
   longPress,
   focus,
-}
-
-const utils = {
-  formatTime,
-  formatBytes,
-  formatPercent,
-  filenameExt,
-  pathJoin,
-  fileUrl,
-  filename,
-  dir,
+  lazySrc,
 }
 
 export default {
-  install(Vue) {
-    Vue.prototype.$ = utils
-    Object.keys(filters).forEach(key => {
-      Vue.filter(key, filters[key])
-    })
-    Object.keys(directives).forEach(key => {
-      Vue.directive(key, directives[key])
-    })
-
-    Vue.use(UiUtils)
-    Vue.use(LazyLoad, {
-      dispatchEvent: true,
-      attempt: 1,
+  /**
+   * @param {import('vue').App} app
+   */
+  install(app) {
+    Object.keys(directives).forEach((key) => {
+      app.directive(key, directives[key])
     })
   },
 }

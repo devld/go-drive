@@ -3,7 +3,7 @@
     <span class="error-code" :title="message">{{ status || 'ERROR' }}</span>
     <span class="error-message">{{
       (ERROR_MESSAGES[status] && $t(ERROR_MESSAGES[status], { status })) ||
-        message
+      message
     }}</span>
     <div class="back-button">
       <simple-button @click="$router.go(-1)">{{
@@ -12,27 +12,21 @@
     </div>
   </div>
 </template>
-<script>
+<script setup>
 const ERROR_MESSAGES = {
   403: 'error.not_allowed',
   404: 'error.not_found',
   500: 'error.server_error',
 }
 
-export default {
-  name: 'ErrorView',
-  props: {
-    status: {
-      type: [Number, String],
-    },
-    message: {
-      type: String,
-    },
+defineProps({
+  status: {
+    type: [Number, String],
   },
-  created() {
-    this.ERROR_MESSAGES = ERROR_MESSAGES
+  message: {
+    type: String,
   },
-}
+})
 </script>
 <style lang="scss">
 .error-view {

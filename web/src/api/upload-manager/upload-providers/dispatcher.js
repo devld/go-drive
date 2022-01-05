@@ -16,11 +16,6 @@ const TASK_PROVIDERS = {
 }
 
 class DispatcherUploadTask extends UploadTask {
-  /**
-   * @type {UploadTask}
-   */
-  _targetTask
-
   start() {
     if (this._targetTask) return this._targetTask.start()
     if (this._started) return false

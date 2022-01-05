@@ -2,58 +2,50 @@
   <div class="simple-dropdown" :class="{ active }" tabindex="-1" @blur="onBlur">
     <span
       class="simple-dropdown__trigger"
-      @click="triggerClicked"
       role="button"
+      @click="triggerClicked"
     >
       <slot />
     </span>
-    <transition name="top-fade">
-      <div class="simple-dropdown__dropdown" v-show="active">
+    <transition :name="transition">
+      <div v-show="active" class="simple-dropdown__dropdown">
         <slot name="dropdown" />
       </div>
     </transition>
   </div>
 </template>
-<script>
-export default {
-  name: 'SimpleDropdown',
-  props: {
-    value: {
-      type: Boolean,
-    },
+<script setup>
+import { ref, watchEffect } from 'vue'
+
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
   },
-  watch: {
-    value: {
-      immediate: true,
-      handler(val) {
-        this.active = !!val
-      },
-    },
-    transition: {
-      type: String,
-      default: 'top-fade',
-    },
+  transition: {
+    type: String,
+    default: 'top-fade',
   },
-  mounted() {},
-  beforeDestroy() {},
-  data() {
-    return {
-      active: false,
-    }
-  },
-  methods: {
-    triggerClicked() {
-      this.active = !this.active
-      this.emitInput()
-    },
-    onBlur() {
-      this.active = false
-      this.emitInput()
-    },
-    emitInput() {
-      this.$emit('input', this.active)
-    },
-  },
+})
+const emit = defineEmits(['update:modelValue'])
+
+const active = ref(false)
+
+watchEffect(() => {
+  active.value = !!props.modelValue
+})
+
+const emitInput = () => {
+  emit('update:modelValue', active.value)
+}
+
+const triggerClicked = () => {
+  active.value = !active.value
+  emitInput()
+}
+
+const onBlur = () => {
+  active.value = false
+  emitInput()
 }
 </script>
 <style lang="scss">

@@ -24,32 +24,6 @@ function insertSeq(arr, seq) {
  */
 export default class ChunkUploadTask extends UploadTask {
   /**
-   * @type {number}
-   */
-  _maxConcurrent = 3
-
-  /**
-   * @type {Array.<import('axios').CancelTokenSource>}
-   */
-  _axiosSources = []
-
-  /**
-   * @type {Array.<number>}
-   */
-  _queue = []
-
-  /**
-   * @type {number}
-   */
-  _chunks
-
-  _totalProgress = { loaded: 0, total: 0 }
-  /**
-   * @type {Object.<number, number>}
-   */
-  _uploadingChunkProgress = {}
-
-  /**
    * @param {number} id task id
    * @param {TaskChangeListener} changeListener task changed listener
    * @param {TaskDef} task task definition
@@ -60,6 +34,25 @@ export default class ChunkUploadTask extends UploadTask {
     if (new.target === ChunkUploadTask) {
       throw new Error('Cannot construct abstract ChunkUploadTask')
     }
+    this._maxConcurrent = 3
+    /**
+     * @type {Array.<import('axios').CancelTokenSource>}
+     */
+    this._axiosSources = []
+    /**
+     * @type {Array.<number>}
+     */
+    this._queue = []
+    /**
+     * @type {number}
+     */
+    this._chunks = undefined
+    this._totalProgress = { loaded: 0, total: 0 }
+    /**
+     * @type {Object.<number, number>}
+     */
+    this._uploadingChunkProgress = {}
+
     this._totalProgress.total = this._task.size
   }
 
@@ -110,14 +103,14 @@ export default class ChunkUploadTask extends UploadTask {
   }
 
   _pause() {
-    this._axiosSources.forEach(t => {
+    this._axiosSources.forEach((t) => {
       t.cancel()
     })
     this._onChange(STATUS_PAUSED)
   }
 
   _abort(e) {
-    this._axiosSources.forEach(t => {
+    this._axiosSources.forEach((t) => {
       t.cancel()
     })
     if (
@@ -135,13 +128,14 @@ export default class ChunkUploadTask extends UploadTask {
   _sumProgress() {
     const total = this._totalProgress.total
     let loaded = this._totalProgress.loaded
-    Object.values(this._uploadingChunkProgress).forEach(l => {
+    Object.values(this._uploadingChunkProgress).forEach((l) => {
       loaded += l
     })
     return { loaded, total }
   }
 
   _chunkUploadLoop() {
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (!this.isStatus(STATUS_UPLOADING)) return
       const uploadingChunks = Object.keys(this._uploadingChunkProgress).length
@@ -157,7 +151,7 @@ export default class ChunkUploadTask extends UploadTask {
         () => {
           this._chunkUploadLoop()
         },
-        e => {
+        (e) => {
           insertSeq(this._queue, seq)
           this._abort(e)
         }
@@ -207,7 +201,7 @@ export default class ChunkUploadTask extends UploadTask {
         cancelToken: cancelToken.token,
       })
     } finally {
-      arrayRemove(this._axiosSources, e => e === cancelToken)
+      arrayRemove(this._axiosSources, (e) => e === cancelToken)
     }
   }
 
@@ -224,6 +218,7 @@ export default class ChunkUploadTask extends UploadTask {
    * @param {Blob} blob  chunk
    * @param {Function} onProgress progress
    */
+  // eslint-disable-next-line no-unused-vars
   async _chunkUpload(seq, blob, onProgress) {
     throw new Error('not implemented')
   }
@@ -239,6 +234,7 @@ export default class ChunkUploadTask extends UploadTask {
    * @param {number} seq chunk seq
    * @returns {Blob} chunk
    */
+  // eslint-disable-next-line no-unused-vars
   _getChunk(seq) {
     throw new Error('not implemented')
   }

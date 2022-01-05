@@ -1,12 +1,13 @@
 import { waitPromise } from '@/utils'
 import Axios from 'axios'
 import { getLang } from '@/i18n'
+import { API_BASE } from '@/config'
 
 const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
 const MAX_RETRY = 1
 
-let apiPath = window.___config___.api || process.env.VUE_APP_API
+let apiPath = window.___config___.api || API_BASE
 if (!/^https?:\/\//.test(apiPath)) {
   apiPath = location.origin + apiPath
 }
@@ -43,19 +44,13 @@ export class RequestTask {
   }
 
   /**
-   * @type {import('axios').CancelTokenSource}
-   */
-  _axiosSource
-
-  /**
-   * @type {Promise.<any>}
-   */
-  _promise
-
-  /**
    * @param {import('axios').CancelTokenSource} [axiosSource]
    */
   constructor(axiosSource) {
+    /**
+     * @type {Promise.<any>}
+     */
+    this._promise = undefined
     this._axiosSource = axiosSource || Axios.CancelToken.source()
     this.then = this.then.bind(this)
     this.catch = this.catch.bind(this)
@@ -119,21 +114,21 @@ function wrapAxios(axios) {
   /**
    * @param {import('axios').AxiosRequestConfig} config
    */
-  const axiosWrapper = function(config) {
-    return RequestTask.wrap(t => axios(wrapConfig(t, config, axiosWrapper)))
+  const axiosWrapper = function (config) {
+    return RequestTask.wrap((t) => axios(wrapConfig(t, config, axiosWrapper)))
   }
 
   /**
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.getUri = function(config) {
+  axiosWrapper.getUri = function (config) {
     return axios.getUri(config)
   }
   /**
    * @param {import('axios').AxiosRequestConfig} config
    */
-  axiosWrapper.request = function(config) {
-    return RequestTask.wrap(t =>
+  axiosWrapper.request = function (config) {
+    return RequestTask.wrap((t) =>
       axios.request(wrapConfig(t, config, axiosWrapper))
     )
   }
@@ -141,8 +136,8 @@ function wrapAxios(axios) {
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.head = function(url, config) {
-    return RequestTask.wrap(t =>
+  axiosWrapper.head = function (url, config) {
+    return RequestTask.wrap((t) =>
       axios.head(url, wrapConfig(t, config, axiosWrapper))
     )
   }
@@ -150,8 +145,8 @@ function wrapAxios(axios) {
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.get = function(url, config) {
-    return RequestTask.wrap(t =>
+  axiosWrapper.get = function (url, config) {
+    return RequestTask.wrap((t) =>
       axios.get(url, wrapConfig(t, config, axiosWrapper))
     )
   }
@@ -160,8 +155,8 @@ function wrapAxios(axios) {
    * @param {any} [data]
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.post = function(url, data, config) {
-    return RequestTask.wrap(t =>
+  axiosWrapper.post = function (url, data, config) {
+    return RequestTask.wrap((t) =>
       axios.post(url, data, wrapConfig(t, config, axiosWrapper))
     )
   }
@@ -169,8 +164,8 @@ function wrapAxios(axios) {
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.delete = function(url, config) {
-    return RequestTask.wrap(t =>
+  axiosWrapper.delete = function (url, config) {
+    return RequestTask.wrap((t) =>
       axios.delete(url, wrapConfig(t, config, axiosWrapper))
     )
   }
@@ -178,8 +173,8 @@ function wrapAxios(axios) {
    * @param {string} url
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.options = function(url, config) {
-    return RequestTask.wrap(t =>
+  axiosWrapper.options = function (url, config) {
+    return RequestTask.wrap((t) =>
       axios.options(url, wrapConfig(t, config, axiosWrapper))
     )
   }
@@ -188,8 +183,8 @@ function wrapAxios(axios) {
    * @param {any} [data]
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.put = function(url, data, config) {
-    return RequestTask.wrap(t =>
+  axiosWrapper.put = function (url, data, config) {
+    return RequestTask.wrap((t) =>
       axios.put(url, data, wrapConfig(t, config, axiosWrapper))
     )
   }
@@ -198,8 +193,8 @@ function wrapAxios(axios) {
    * @param {any} [data]
    * @param {import('axios').AxiosRequestConfig} [config]
    */
-  axiosWrapper.patch = function(url, data, config) {
-    return RequestTask.wrap(t =>
+  axiosWrapper.patch = function (url, data, config) {
+    return RequestTask.wrap((t) =>
       axios.patch(url, data, wrapConfig(t, config, axiosWrapper))
     )
   }
@@ -281,7 +276,7 @@ async function handlerError(e) {
 }
 
 axios.interceptors.request.use(processConfig)
-axios.interceptors.response.use(resp => resp.data, handlerError)
+axios.interceptors.response.use((resp) => resp.data, handlerError)
 
 export default axios
 export const axiosWrapper = wrapAxios(axios)

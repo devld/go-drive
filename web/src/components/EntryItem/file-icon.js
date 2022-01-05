@@ -1,5 +1,3 @@
-/* eslint-disable quote-props */
-
 import { filenameExt } from '@/utils'
 
 const fileExts = {
@@ -41,8 +39,8 @@ const fileExts = {
 }
 
 const extMapping = {}
-Object.keys(fileExts).forEach(icon => {
-  fileExts[icon].forEach(ext => {
+Object.keys(fileExts).forEach((icon) => {
+  fileExts[icon].forEach((ext) => {
     extMapping[ext] = icon
   })
 })

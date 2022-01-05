@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/icon/android-chrome-192x192.png" />
+    <title><%- VITE_SITE_TITLE %></title>
+    <link rel="stylesheet" href="/static/iconfont/iconfont.css" />
+    <script>
+      var ___config___ = {
+        api: /*$api_path*/ '',
+        appName: /*$app_name*/ '<%- VITE_SITE_TITLE %>',
+        /* value inject */
+        _: 0,
+      }
+      if (___config___.appName) {
+        document.title = ___config___.appName
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+    <script src="/static/iconfont/iconfont.js"></script>
+  </body>
+</html>

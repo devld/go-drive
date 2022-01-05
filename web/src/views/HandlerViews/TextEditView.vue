@@ -1,11 +1,11 @@
 <template>
-  <div class="text-edit-view" @keydown="onKeyDown">
+  <div ref="el" class="text-edit-view" @keydown="onKeyDown">
     <h1 class="filename">
       <simple-button
-        class="header-button save-button"
         v-if="!readonly"
-        @click="saveFile"
+        class="header-button save-button"
         :loading="saving"
+        @click="saveFile"
       >
         {{ $t('hv.text_edit.save') }}
       </simple-button>
@@ -13,7 +13,7 @@
       <button
         class="header-button close-button plain-button"
         title="Close"
-        @click="$emit('close')"
+        @click="emit('close')"
       >
         <i-icon svg="#icon-close" />
       </button>
@@ -29,118 +29,113 @@
     <div v-if="!inited" class="loading-tips">Loading...</div>
   </div>
 </template>
-<script>
-import { filename } from '@/utils'
+<script setup>
+import { filename as filenameFn } from '@/utils'
 import { getContent } from '@/api'
-import TextEditor from '@/components/TextEditor'
+import TextEditor from '@/components/TextEditor/index.vue'
 import uploadManager from '@/api/upload-manager'
+import { alert } from '@/utils/ui-utils'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-export default {
-  name: 'TextEditView',
-  components: { TextEditor },
-  props: {
-    entry: {
-      type: Object,
-      required: true,
-    },
-    entries: { type: Array },
+const props = defineProps({
+  entry: {
+    type: Object,
+    required: true,
   },
-  data() {
-    return {
-      error: null,
-      inited: false,
+  entries: { type: Array },
+})
 
-      content: '',
+const emit = defineEmits(['close', 'save-state'])
 
-      saving: false,
-    }
-  },
-  computed: {
-    filename() {
-      return filename(this.path)
-    },
-    path() {
-      return this.entry.path
-    },
-    readonly() {
-      return !this.entry.meta.writable
-    },
-  },
-  created() {
-    this.loadFile()
-    window.addEventListener('resize', this.onWindowResize)
-  },
-  mounted() {
-    this.onWindowResize()
-  },
-  beforeDestroy() {
-    window.removeEventListener('resize', this.onWindowResize)
-  },
-  watch: {
-    content() {
-      this.changeSaveState(false)
-    },
-  },
-  methods: {
-    async loadFile() {
-      this.inited = false
-      try {
-        return await this.loadFileContent()
-      } catch (e) {
-        this.error = e
-      } finally {
-        this.inited = true
-      }
-    },
-    async loadFileContent() {
-      this.content = await getContent(
-        this.path,
-        this.entry.meta.accessKey,
-        true
-      )
-      this.$nextTick(() => {
-        this.changeSaveState(true)
-      })
-      return this.content
-    },
-    async saveFile() {
-      if (this.saving) {
-        return
-      }
-      this.saving = true
-      try {
-        await uploadManager.upload(
-          {
-            path: this.path,
-            file: this.content,
-            override: true,
-          },
-          true
-        )
-        this.changeSaveState(true)
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.saving = false
-      }
-    },
-    changeSaveState(saved) {
-      this.$emit('save-state', saved)
-    },
-    onKeyDown(e) {
-      if (e.key === 's' && e.ctrlKey && !this.readonly) {
-        e.preventDefault()
-        this.saveFile()
-      }
-    },
-    onWindowResize() {
-      const el = this.$el
-      if (window.innerWidth <= 800) {
-        el.style.height = `${window.innerHeight}px`
-      }
-    },
-  },
+const error = ref(null)
+const inited = ref(false)
+
+const content = ref('')
+
+const saving = ref(false)
+
+const path = computed(() => props.entry.path)
+
+const filename = computed(() => filenameFn(path.value))
+
+const readonly = computed(() => !props.entry.meta.writable)
+
+const el = ref(null)
+
+const loadFile = async () => {
+  inited.value = false
+  try {
+    return await loadFileContent()
+  } catch (e) {
+    error.value = e
+  } finally {
+    inited.value = true
+  }
 }
+
+const loadFileContent = async () => {
+  content.value = await getContent(path.value, props.entry.meta.accessKey, true)
+  nextTick(() => {
+    changeSaveState(true)
+  })
+  return content.value
+}
+
+const saveFile = async () => {
+  if (saving.value) {
+    return
+  }
+  saving.value = true
+  try {
+    await uploadManager.upload(
+      {
+        path: path.value,
+        file: content.value,
+        override: true,
+      },
+      true
+    )
+    changeSaveState(true)
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    saving.value = false
+  }
+}
+
+const changeSaveState = (saved) => {
+  emit('save-state', saved)
+}
+
+const onKeyDown = (e) => {
+  if (e.key === 's' && e.ctrlKey && !readonly.value) {
+    e.preventDefault()
+    saveFile()
+  }
+}
+
+const onWindowResize = () => {
+  if (window.innerWidth <= 800) {
+    el.value.style.height = `${window.innerHeight}px`
+  }
+}
+
+watch(
+  () => content.value,
+  () => {
+    changeSaveState(false)
+  }
+)
+
+onMounted(() => {
+  window.addEventListener('resize', onWindowResize)
+  onWindowResize()
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onWindowResize)
+})
+
+loadFile()
 </script>
 <style lang="scss">
 .text-edit-view {

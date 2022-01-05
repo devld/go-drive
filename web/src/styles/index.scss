@@ -1,5 +1,5 @@
-@import '~github-markdown-css/github-markdown.css';
-@import '~highlight.js/scss/github-gist.scss';
+@import 'github-markdown-css/github-markdown.css';
+@import 'highlight.js/scss/github.scss';
 @import './themes/default.scss';
 @import './themes/dark.scss';
 
@@ -19,7 +19,7 @@
   }
 
   @import './markdown-dark.scss';
-  @import '~highlight.js/scss/agate.scss';
+  @import 'highlight.js/scss/agate.scss';
 }
 
 .iconfont {

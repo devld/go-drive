@@ -14,11 +14,6 @@ import UploadTask, {
  * local upload task provider
  */
 export default class LocalUploadTask extends UploadTask {
-  /**
-   * @type {import('axios').CancelTokenSource}
-   */
-  _axiosSource
-
   start() {
     if (super.start() === false) return false
 
@@ -33,12 +28,12 @@ export default class LocalUploadTask extends UploadTask {
           this._onChange(STATUS_UPLOADING, { loaded, total })
         },
       }),
-      task => {}
+      () => {}
     ).then(
       () => {
         this._onChange(STATUS_COMPLETED)
       },
-      e => {
+      (e) => {
         if (this._status === STATUS_STOPPED) return
         this._onChange(STATUS_ERROR, ApiError.from(e))
       }

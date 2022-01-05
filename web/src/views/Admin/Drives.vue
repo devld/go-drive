@@ -52,7 +52,7 @@
         </tbody>
       </table>
     </div>
-    <div class="drive-edit" v-if="drive">
+    <div v-if="drive" class="drive-edit">
       <div class="small-title">
         {{
           edit
@@ -63,9 +63,9 @@
 
       <div class="drive-form">
         <simple-form
-          ref="baseForm"
-          :form="baseForm"
+          ref="baseFormEl"
           v-model="drive"
+          :form="baseForm"
           no-auto-complete
         />
 
@@ -78,22 +78,22 @@
               {{ driveFactoriesMap[drive.type].displayName }} README
             </summary>
             <div
-              class="markdown-body"
               v-markdown="driveFactoriesMap[drive.type].readme"
+              class="markdown-body"
             ></div>
           </details>
 
           <simple-form
-            ref="configForm"
-            no-auto-complete
+            ref="configFormEl"
             :key="drive.type"
-            :form="driveFactoriesMap[drive.type].configForm"
             v-model="drive.config"
+            no-auto-complete
+            :form="driveFactoriesMap[drive.type].configForm"
           />
         </template>
 
         <div class="form-item save-button">
-          <simple-button small @click="saveDrive" :loading="saving">
+          <simple-button small :loading="saving" @click="saveDrive">
             {{ $t('p.admin.drive.save') }}
           </simple-button>
           <simple-button small type="info" @click="cancelEdit">
@@ -115,18 +115,18 @@
           >
         </div>
         <o-auth-configure
-          :key="drive.name"
           v-if="driveInit.oauth"
+          :key="drive.name"
           :configured="driveInit.configured"
           :data="driveInit.oauth"
           :drive="drive"
           @refresh="getDriveInitConfigInfo"
         />
-        <div class="drive-init-form" v-if="driveInit.form">
+        <div v-if="driveInit.form" class="drive-init-form">
           <simple-form
-            ref="initForm"
-            :form="driveInit.form"
+            ref="initFormEl"
             v-model="driveInitForm"
+            :form="driveInit.form"
           />
           <simple-button small @click="saveDriveConfig">
             {{ $t('p.admin.drive.save') }}
@@ -134,210 +134,204 @@
         </div>
       </div>
     </div>
-    <div class="edit-tips" v-else>
-      <simple-button icon="#icon-add" title="Add drive" @click="addDrive" small>
+    <div v-else class="edit-tips">
+      <simple-button icon="#icon-add" title="Add drive" small @click="addDrive">
         {{ $t('p.admin.drive.add') }}
       </simple-button>
       {{ $t('p.admin.drive.or_edit') }}
     </div>
   </div>
 </template>
-<script>
+<script setup>
 import {
   createDrive,
-  deleteDrive,
+  deleteDrive as deleteDriveApi,
   getDrives,
-  reloadDrives,
+  reloadDrives as reloadDrivesApi,
   updateDrive,
   getDriveInitConfig,
   initDrive,
   getDriveFactories,
 } from '@/api/admin'
+import { alert, confirm, loading } from '@/utils/ui-utils'
 
-import OAuthConfigure from './drive-configure/OAuth'
+import OAuthConfigure from './drive-configure/OAuth.vue'
 import { mapOf } from '@/utils'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-export default {
-  name: 'DrivesManager',
-  components: { OAuthConfigure },
-  data() {
-    return {
-      drives: [],
+const { t } = useI18n()
 
-      drive: null,
-      edit: false,
-      saving: false,
+const drives = ref([])
+const drive = ref(null)
+const edit = ref(false)
+const saving = ref(false)
+const driveInit = ref(null)
+const driveInitForm = ref({})
+const reloading = ref(false)
+const driveFactories = ref([])
 
-      driveInit: null,
-      driveInitForm: {},
+const driveFactoriesMap = computed(() =>
+  mapOf(driveFactories.value, (f) => f.type)
+)
 
-      reloading: false,
+const baseFormEl = ref(null)
+const configFormEl = ref(null)
+const initFormEl = ref(null)
 
-      driveFactories: [],
-    }
+const baseForm = computed(() => [
+  {
+    field: 'name',
+    label: t('p.admin.drive.f_name'),
+    type: 'text',
+    required: true,
+    disabled: edit.value,
   },
-  computed: {
-    driveFactoriesMap() {
-      return mapOf(this.driveFactories, f => f.type)
-    },
-    baseForm() {
-      return [
-        {
-          field: 'name',
-          label: this.$t('p.admin.drive.f_name'),
-          type: 'text',
-          required: true,
-          disabled: this.edit,
-        },
-        {
-          field: 'enabled',
-          label: this.$t('p.admin.drive.f_enabled'),
-          type: 'checkbox',
-        },
-        {
-          field: 'type',
-          label: this.$t('p.admin.drive.f_type'),
-          type: 'select',
-          required: true,
-          disabled: this.edit,
-          options: this.driveFactories.map(f => ({
-            name: f.displayName,
-            value: f.type,
-          })),
-        },
-      ]
-    },
+  {
+    field: 'enabled',
+    label: t('p.admin.drive.f_enabled'),
+    type: 'checkbox',
   },
-  created() {
-    this.loadDrives()
+  {
+    field: 'type',
+    label: t('p.admin.drive.f_type'),
+    type: 'select',
+    required: true,
+    disabled: edit.value,
+    options: driveFactories.value.map((f) => ({
+      name: f.displayName,
+      value: f.type,
+    })),
   },
-  methods: {
-    async loadDrives() {
-      try {
-        this.driveFactories = await getDriveFactories()
-        this.drives = await getDrives()
-      } catch (e) {
-        this.$alert(e.message)
-      }
-    },
-    addDrive() {
-      this.drive = {
-        name: '',
-        enabled: '1',
-        type: '',
-        config: null,
-      }
-      this.edit = false
-    },
-    editDrive(drive) {
-      this.drive = {
-        name: drive.name,
-        enabled: drive.enabled ? '1' : '',
-        type: drive.type,
-        config: JSON.parse(drive.config),
-      }
-      this.edit = true
-      this.getDriveInitConfigInfo()
-    },
-    async deleteDrive(drive) {
-      this.$confirm({
-        title: this.$t('p.admin.drive.delete_drive'),
-        message: this.$t('p.admin.drive.confirm_delete', { n: drive.name }),
-        confirmType: 'danger',
-        onOk: () => {
-          return deleteDrive(drive.name).then(
-            () => {
-              if (this.drive && drive.name === this.drive.name) {
-                this.drive = null
-              }
-              this.loadDrives()
-            },
-            e => {
-              this.$alert(e.message)
-              return Promise.reject(e)
-            }
-          )
-        },
-      })
-    },
-    async saveDrive() {
-      try {
-        await Promise.all([
-          this.$refs.baseForm.validate(),
-          this.$refs.configForm && this.$refs.configForm.validate(),
-        ])
-      } catch {
-        return
-      }
+])
 
-      const drive = {
-        name: this.drive.name,
-        enabled: !!this.drive.enabled,
-        type: this.drive.type,
-        config: JSON.stringify(this.drive.config),
-      }
-      this.saving = true
-      try {
-        if (this.edit) {
-          await updateDrive(this.drive.name, drive)
-        } else {
-          await createDrive(drive)
-        }
-        this.edit = true
-      } catch (e) {
-        this.$alert(e.message)
-        return
-      } finally {
-        this.saving = false
-      }
-      this.getDriveInitConfigInfo()
-      this.loadDrives()
-    },
-    cancelEdit() {
-      this.drive = null
-      this.driveInit = null
-      this.driveInitForm = {}
-    },
-    async getDriveInitConfigInfo() {
-      this.$loading(true)
-      try {
-        this.driveInit = await getDriveInitConfig(this.drive.name)
-        this.driveInitForm = (this.driveInit && this.driveInit.value) || {}
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.$loading()
-      }
-    },
-    async saveDriveConfig() {
-      try {
-        await this.$refs.initForm.validate()
-      } catch {
-        return
-      }
-      this.$loading(true)
-      try {
-        await initDrive(this.drive.name, this.driveInitForm)
-      } catch (e) {
-        this.$alert(e.message)
-        return
-      } finally {
-        this.$loading()
-      }
-      this.getDriveInitConfigInfo()
-    },
-    async reloadDrives() {
-      this.reloading = true
-      try {
-        await reloadDrives()
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.reloading = false
-      }
-    },
-  },
+const loadDrives = async () => {
+  try {
+    driveFactories.value = await getDriveFactories()
+    drives.value = await getDrives()
+  } catch (e) {
+    alert(e.message)
+  }
 }
+const addDrive = () => {
+  drive.value = {
+    name: '',
+    enabled: '1',
+    type: '',
+    config: null,
+  }
+  edit.value = false
+}
+const editDrive = (drive_) => {
+  drive.value = {
+    name: drive_.name,
+    enabled: drive_.enabled ? '1' : '',
+    type: drive_.type,
+    config: JSON.parse(drive_.config),
+  }
+  edit.value = true
+  getDriveInitConfigInfo()
+}
+
+const deleteDrive = (drive_) => {
+  confirm({
+    title: t('p.admin.drive.delete_drive'),
+    message: t('p.admin.drive.confirm_delete', { n: drive_.name }),
+    confirmType: 'danger',
+    onOk: () => {
+      return deleteDriveApi(drive_.name).then(
+        () => {
+          if (drive_.name === drive.value?.name) {
+            drive.value = null
+          }
+          loadDrives()
+        },
+        (e) => {
+          alert(e.message)
+          return Promise.reject(e)
+        }
+      )
+    },
+  })
+}
+const saveDrive = async () => {
+  try {
+    await Promise.all([
+      baseFormEl.value.validate(),
+      configFormEl.value?.validate(),
+    ])
+  } catch {
+    return
+  }
+
+  const d = {
+    name: drive.value.name,
+    enabled: !!drive.value.enabled,
+    type: drive.value.type,
+    config: JSON.stringify(drive.value.config),
+  }
+  saving.value = true
+  try {
+    if (edit.value) {
+      await updateDrive(drive.value.name, d)
+    } else {
+      await createDrive(d)
+    }
+    edit.value = true
+  } catch (e) {
+    alert(e.message)
+    return
+  } finally {
+    saving.value = false
+  }
+  getDriveInitConfigInfo()
+  loadDrives()
+}
+const cancelEdit = () => {
+  drive.value = null
+  driveInit.value = null
+  driveInitForm.value = {}
+}
+const getDriveInitConfigInfo = async () => {
+  loading(true)
+  try {
+    driveInit.value = await getDriveInitConfig(drive.value.name)
+    driveInitForm.value = driveInit.value?.value || {}
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    loading()
+  }
+}
+const saveDriveConfig = async () => {
+  try {
+    await initFormEl.value.validate()
+  } catch {
+    return
+  }
+  loading(true)
+  try {
+    await initDrive(drive.value.name, driveInitForm.value)
+  } catch (e) {
+    alert(e.message)
+    return
+  } finally {
+    loading()
+  }
+  getDriveInitConfigInfo()
+}
+const reloadDrives = async () => {
+  reloading.value = true
+  try {
+    await reloadDrivesApi()
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    reloading.value = false
+  }
+}
+
+loadDrives()
 </script>
 <style lang="scss">
 .drives-manager {

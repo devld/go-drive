@@ -6,21 +6,6 @@ import { STATUS_COMPLETED, STATUS_UPLOADING } from '../task'
 
 export default class LocalChunkUploadTask extends ChunkUploadTask {
   /**
-   * @type {string}
-   */
-  _uploadId
-
-  /**
-   * @type {number}
-   */
-  _chunkSize
-
-  /**
-   * complete chunk upload task
-   */
-  _mergeTask
-
-  /**
    * prepare upload
    * @returns {Promise.<number>} chunks count
    */
@@ -72,7 +57,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
         axios.post(`/chunk-content/${this._task.path}`, null, {
           params: { id: this._uploadId },
         }),
-        task => {
+        (task) => {
           this._mergeTask = task
           this._onChange(STATUS_UPLOADING, task.progress)
         }

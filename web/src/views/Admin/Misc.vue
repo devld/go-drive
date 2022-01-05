@@ -4,17 +4,17 @@
       <h1 class="section-title">
         {{ $t('p.admin.misc.permission_of_root') }}
         <simple-button
-          @click="savePermissions"
           :loading="saving"
           :disabled="!permissionsCanSave"
+          @click="savePermissions"
         >
           {{ $t('p.admin.misc.save') }}
         </simple-button>
       </h1>
       <permissions-editor
-        ref="permissionsEditor"
-        :path="rootPath"
+        ref="permissionsEditorEl"
         v-model="permissions"
+        :path="rootPath"
       />
     </div>
     <div class="section">
@@ -26,14 +26,14 @@
     <div class="section">
       <h1 class="section-title">{{ $t('p.admin.misc.clean_cache') }}</h1>
       <simple-form-item
+        v-model="cacheSelectedDrive"
         class="cache-clean-form-item"
         :item="drivesForm"
-        v-model="cacheSelectedDrive"
       />
       <simple-button
         :loading="cacheCleaning"
-        @click="cleanDriveCache"
         :disabled="!cacheSelectedDrive"
+        @click="cleanDriveCache"
       >
         {{ $t('p.admin.misc.clean') }}
       </simple-button>
@@ -46,7 +46,7 @@
         </simple-button>
       </h1>
       <div class="statistics">
-        <table class="stat-item simple-table" v-for="(s, i) in stats" :key="i">
+        <table v-for="(s, i) in stats" :key="i" class="stat-item simple-table">
           <thead>
             <tr>
               <th colspan="2">{{ s.name }}</th>
@@ -61,128 +61,132 @@
     </div>
   </div>
 </template>
-<script>
+<script setup>
 import {
-  cleanDriveCache,
-  cleanPermissionsAndMounts,
+  cleanDriveCache as cleanDriveCacheApi,
+  cleanPermissionsAndMounts as cleanPermissionsAndMountsApi,
   getDrives,
-  loadStats,
+  loadStats as loadStatsApi,
 } from '@/api/admin'
-import PermissionsEditor from './PermissionsEditor'
+import PermissionsEditor from './PermissionsEditor.vue'
+import { alert } from '@/utils/ui-utils'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-export default {
-  name: 'MiscSettings',
-  components: { PermissionsEditor },
-  data() {
-    return {
-      permissions: [],
-      rootPath: '',
-      saving: false,
-      permissionsCanSave: true,
+const { t } = useI18n()
 
-      cleaning: false,
+const permissions = ref([])
+const rootPath = ref('')
+const saving = ref(false)
+const permissionsCanSave = ref(true)
 
-      drives: [],
-      cacheSelectedDrive: null,
-      cacheCleaning: false,
+const cleaning = ref(false)
 
-      stats: [],
-      refreshCountDown: 0,
-      statLoading: false,
-    }
-  },
-  computed: {
-    drivesForm() {
-      return {
-        type: 'select',
-        options: [
-          { name: '', value: '' },
-          ...this.drives.map(d => ({ name: d.name, value: d.name })),
-        ],
-      }
-    },
-  },
-  watch: {
-    permissions: {
-      deep: true,
-      handler() {
-        this.permissionsCanSave = this.$refs.permissionsEditor.validate()
-      },
-    },
-  },
-  created() {
-    this.loadDrives()
-    this.loadStats()
-  },
-  beforeDestroy() {
-    this.stopStatTimer()
-  },
-  methods: {
-    async savePermissions() {
-      this.saving = true
-      try {
-        await this.$refs.permissionsEditor.save()
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.saving = false
-      }
-    },
-    async cleanPermissionsAndMounts() {
-      this.cleaning = true
-      try {
-        const n = await cleanPermissionsAndMounts()
-        this.$alert(this.$t('p.admin.misc.invalid_path_cleaned', { n: n }))
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.cleaning = false
-      }
-    },
-    async loadDrives() {
-      try {
-        this.drives = await getDrives()
-      } catch (e) {
-        this.$alert(e.message)
-      }
-    },
-    async cleanDriveCache() {
-      this.cacheCleaning = true
-      try {
-        await cleanDriveCache(this.cacheSelectedDrive)
-      } catch (e) {
-        await this.$alert(e.message)
-      } finally {
-        this.cacheCleaning = false
-      }
-    },
-    async loadStats() {
-      this.statLoading = true
-      try {
-        this.stats = await loadStats()
-      } catch (e) {
-        await this.$alert(e.message)
-      } finally {
-        this.statLoading = false
-        this.startStatTimer()
-      }
-    },
-    startStatTimer() {
-      this.refreshCountDown = 10
-      this._timer = setInterval(this.statRefreshTimer, 1000)
-    },
-    stopStatTimer() {
-      clearInterval(this._timer)
-    },
-    statRefreshTimer() {
-      this.refreshCountDown--
-      if (this.refreshCountDown <= 0) {
-        this.loadStats()
-        this.stopStatTimer()
-      }
-    },
-  },
+const drives = ref([])
+const cacheSelectedDrive = ref(null)
+const cacheCleaning = ref(false)
+
+const stats = ref([])
+const refreshCountDown = ref(0)
+const statLoading = ref(false)
+
+const permissionsEditorEl = ref(null)
+
+let timer
+
+const drivesForm = computed(() => ({
+  type: 'select',
+  options: [
+    { name: '', value: '' },
+    ...drives.value.map((d) => ({ name: d.name, value: d.name })),
+  ],
+}))
+
+const savePermissions = async () => {
+  saving.value = true
+  try {
+    await permissionsEditorEl.value.save()
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    saving.value = false
+  }
 }
+
+const cleanPermissionsAndMounts = async () => {
+  cleaning.value = true
+  try {
+    const n = await cleanPermissionsAndMountsApi()
+    alert(t('p.admin.misc.invalid_path_cleaned', { n: n }))
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    cleaning.value = false
+  }
+}
+
+const loadDrives = async () => {
+  try {
+    drives.value = await getDrives()
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+const cleanDriveCache = async () => {
+  cacheCleaning.value = true
+  try {
+    await cleanDriveCacheApi(cacheSelectedDrive.value)
+  } catch (e) {
+    await alert(e.message)
+  } finally {
+    cacheCleaning.value = false
+  }
+}
+
+const loadStats = async () => {
+  statLoading.value = true
+  try {
+    stats.value = await loadStatsApi()
+  } catch (e) {
+    await alert(e.message)
+  } finally {
+    statLoading.value = false
+    startStatTimer()
+  }
+}
+
+const startStatTimer = async () => {
+  refreshCountDown.value = 10
+  timer = setInterval(statRefreshTimer, 1000)
+}
+
+const stopStatTimer = () => {
+  clearInterval(timer)
+}
+
+const statRefreshTimer = () => {
+  refreshCountDown.value--
+  if (refreshCountDown.value <= 0) {
+    loadStats()
+    stopStatTimer()
+  }
+}
+
+watch(
+  () => permissions.value,
+  () => {
+    permissionsCanSave.value = permissionsEditorEl.value.validate()
+  },
+  { deep: true }
+)
+
+loadDrives()
+loadStats()
+
+onBeforeUnmount(() => {
+  stopStatTimer()
+})
 </script>
 <style lang="scss">
 .misc-settings {

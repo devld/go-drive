@@ -1,16 +1,13 @@
-<template functional>
-  <div class="text-dialog__inner">{{ props.opts.message }}</div>
+<template>
+  <div class="text-dialog__inner">{{ opts.message }}</div>
 </template>
-<script>
-export default {
-  name: 'TextDialogInner',
-  props: {
-    opts: {
-      type: Object,
-      required: true,
-    },
+<script setup>
+defineProps({
+  opts: {
+    type: Object,
+    required: true,
   },
-}
+})
 </script>
 <style lang="scss">
 .text-dialog__inner {
