@@ -1,58 +1,66 @@
 <template>
-  <a
-    class="entry-link"
-    :href="link"
-    @click="entryClicked"
+  <router-link
+    v-if="link"
     v-long-press
+    class="entry-link"
+    :to="link"
+    @click="entryClicked"
+    @contextmenu="entryContextMenu"
+    @long-press="entryContextMenu"
+  >
+    <slot />
+  </router-link>
+  <a
+    v-else
+    v-long-press
+    class="entry-link"
+    href="javascript:;"
+    @click="entryClicked"
     @contextmenu="entryContextMenu"
     @long-press="entryContextMenu"
   >
     <slot />
   </a>
 </template>
-<script>
-import { makeEntryLink, getDirEntryLink } from '@/utils/routes'
-import router from '@/router'
+<script setup>
+import { computed } from 'vue'
 
-const ROUTER_MODE = router.mode
-const routePathPrefix = ROUTER_MODE === 'hash' ? '#' : ''
+const props = defineProps({
+  entry: {
+    type: Object,
+  },
+  path: {
+    type: String,
+  },
+  getLink: {
+    type: Function,
+  },
+})
 
-export default {
-  name: 'EntryLink',
-  props: {
-    entry: {
-      type: Object,
-    },
-    path: {
-      type: String,
-    },
-  },
-  computed: {
-    link() {
-      if (this.entry) {
-        const link = makeEntryLink(this.entry)
-        if (link) return routePathPrefix + link
-      } else if (typeof this.path === 'string') {
-        return routePathPrefix + getDirEntryLink(this.path)
-      }
-      return 'javascript:;'
-    },
-  },
-  methods: {
-    entryClicked(event) {
-      this.$emit('click', {
-        entry: this.entry,
-        path: this.path,
-        event,
-      })
-    },
-    entryContextMenu(event) {
-      this.$emit('menu', {
-        entry: this.entry,
-        path: this.path,
-        event,
-      })
-    },
-  },
+const emit = defineEmits(['click', 'menu'])
+
+const link = computed(() => {
+  let link
+  if (props.entry) {
+    link = props.getLink?.(props.entry)
+  } else if (typeof props.path === 'string') {
+    link = props.getLink?.(props.path)
+  }
+  return link || ''
+})
+
+const entryClicked = (event) => {
+  emit('click', {
+    entry: props.entry,
+    path: props.path,
+    event,
+  })
+}
+const entryContextMenu = (event) => {
+  emit('menu', {
+    entry: props.entry,
+    path: props.path,
+    event,
+  })
 }
 </script>

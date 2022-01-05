@@ -1,6 +1,8 @@
 import BaseDialog from './BaseDialog.vue'
 import { IS_DEBUG } from '@/utils'
-import i18n, { T } from '@/i18n'
+import { T } from '@/i18n'
+import { createApp, h } from 'vue'
+import dialogUse from '../dialog-use'
 
 /**
  * @typedef Options
@@ -10,6 +12,12 @@ import i18n, { T } from '@/i18n'
  * @property {Function} onCancel called when user canceled
  */
 
+/**
+ * create a dialog wrapper of the given component
+ * @param {string} name
+ * @param {import('vue').Component} component
+ * @returns {import('vue').Component}
+ */
 export function createDialog(name, component) {
   return {
     name,
@@ -31,60 +39,40 @@ export function createDialog(name, component) {
         overlayClose: false,
       }
     },
-    render(h) {
+    render() {
       return h(
         BaseDialog,
         {
           ref: 'bd',
-          props: {
-            showing: this.showing,
-            loading: this.loading,
-            title: this.title,
-            confirmText: this.confirmText,
-            confirmType: this.confirmType,
-            confirmDisabled: this.confirmDisabled,
-            cancelText: this.cancelText,
-            cancelType: this.cancelType,
-            transition: this.transition,
-            escClose: this.escClose,
-            overlayClose: this.overlayClose,
-          },
-          on: {
-            close: () => this.close(),
-            closed: () => {
-              this.$emit('closed')
-            },
-            confirm: () => {
-              this.onConfirmOrCancel(true)
-            },
-            cancel: () => {
-              this.onConfirmOrCancel(false)
-            },
-          },
+          showing: this.showing,
+          loading: this.loading,
+          title: this.title,
+          confirmText: this.confirmText,
+          confirmType: this.confirmType,
+          confirmDisabled: this.confirmDisabled,
+          cancelText: this.cancelText,
+          cancelType: this.cancelType,
+          transition: this.transition,
+          escClose: this.escClose,
+          overlayClose: this.overlayClose,
+          onClose: () => this.close(),
+          onClosed: () => this._onClose?.(),
+          onConfirm: () => this.onConfirmOrCancel(true),
+          onCancel: () => this.onConfirmOrCancel(false),
         },
-        [
-          h(component, {
-            ref: 'inner',
-            props: {
+        {
+          default: () =>
+            h(component, {
+              ref: 'inner',
               loading: this.loading,
               opts: this.opts,
-            },
-            on: {
-              loading: v => {
-                this.toggleLoading(v)
-              },
-              confirm: () => {
-                this.onConfirmOrCancel(true)
-              },
-              cancel: () => {
-                this.onConfirmOrCancel(false)
-              },
-              'confirm-disabled': disabled => {
-                this.confirmDisabled = !!disabled
-              },
-            },
-          }),
-        ]
+              onLoading: (v) => this.toggleLoading(v),
+              onConfirm: () => this.onConfirmOrCancel(true),
+              onCancel: () => this.onConfirmOrCancel(false),
+              onConfirmDisabled: (disabled) =>
+                (this.confirmDisabled = !!disabled),
+            }),
+        }
       )
     },
     methods: {
@@ -124,7 +112,7 @@ export function createDialog(name, component) {
       },
       async onConfirmOrCancel(confirm) {
         let val
-        this.toggleLoading(confirm)
+        let t = setTimeout(() => this.toggleLoading(confirm), 0)
         try {
           val = await this.beforeConfirmOrCancel(confirm)
         } catch (e) {
@@ -133,11 +121,12 @@ export function createDialog(name, component) {
           }
           return
         } finally {
+          clearTimeout(t)
           this.toggleLoading()
         }
 
         if (this._callback) {
-          this.toggleLoading(confirm)
+          t = setTimeout(() => this.toggleLoading(confirm), 0)
           try {
             if (confirm && this._callback.onOk) {
               await this._callback.onOk(val)
@@ -145,9 +134,11 @@ export function createDialog(name, component) {
             if (!confirm && this._callback.onCancel) {
               await this._callback.onCancel(val || 'cancel')
             }
-          } catch {
+          } catch (e) {
+            console.warn('dialog callback error', e)
             return
           } finally {
+            clearTimeout(t)
             this.toggleLoading()
           }
           this.close()
@@ -180,23 +171,24 @@ export function createDialog(name, component) {
 
         this.showing = false
       },
+      onClose(fn) {
+        this._onClose = fn
+      },
     },
     _base_dialog: true,
   }
 }
 
-export default function showBaseDialog(Vue, component, opts) {
+export default function showBaseDialog(component, opts) {
   if (!component._base_dialog) throw new Error()
 
   const div = document.createElement('div')
   document.body.appendChild(div)
 
-  const vm = new Vue({ i18n, ...component })
-  vm.$mount(div)
-
-  vm.$once('closed', () => {
-    vm.$destroy()
-    document.body.removeChild(vm.$el)
+  const vm = createApp(component).use(dialogUse).mount(div)
+  vm.onClose(() => {
+    vm.$.appContext.app.unmount()
+    document.body.removeChild(div)
   })
 
   return vm.show(opts)

@@ -1,21 +1,15 @@
-<template functional>
-  <svg
-    class="icon"
-    aria-hidden
-    @click="listeners.click && listeners.click($event)"
-    :class="[data.class, data.staticClass]"
-  >
-    <use :xlink:href="props.svg" />
+<template>
+  <svg class="icon" aria-hidden @click="emit('click', $event)">
+    <use :xlink:href="svg" />
   </svg>
 </template>
-<script>
-export default {
-  name: 'IIcon',
-  props: {
-    svg: {
-      type: String,
-      required: true,
-    },
+<script setup>
+defineProps({
+  svg: {
+    type: String,
+    required: true,
   },
-}
+})
+
+const emit = defineEmits(['click'])
 </script>

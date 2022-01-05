@@ -1,16 +1,16 @@
 <template>
   <div class="open-dialog__inner">
     <entry-list-view
+      v-model:selection="selection"
       :path="path"
       :filter="filterEntries"
-      @entry-click="entryClicked"
-      @path-change="pathChanged"
-      @entries-load="entriesLoaded"
-      :selection.sync="selection"
       :selectable="dirMode ? false : isEntrySelectable"
       view-mode="list"
+      @entry-click="entryClicked"
+      @update:path="pathChanged"
+      @entries-load="entriesLoaded"
     />
-    <div class="open-dialog__selected-count" v-if="!dirMode">
+    <div v-if="!dirMode" class="open-dialog__selected-count">
       <span v-if="max > 0">{{ $t('dialog.open.max_items', { n: max }) }}</span>
       <span>{{ $t('dialog.open.n_selected', { n: selection.length }) }}</span>
       <a href="javascript:;" @click="clearSelection">
@@ -19,24 +19,24 @@
     </div>
   </div>
 </template>
-<script>
-import EntryListView from '@/views/EntryListView'
-import { getEntry } from '@/api'
+<script setup>
+import EntryListView from '@/views/EntryListView/index.vue'
 import { filenameExt } from '@/utils'
+import { ref, unref, watch } from 'vue'
 
 /// file,dir,<1024,.js,write
 function createFilter(filter) {
   if (typeof filter !== 'string') return () => true
   const filters = filter
     .split(',')
-    .map(f => f.trim())
+    .map((f) => f.trim())
     .filter(Boolean)
   if (!filters.length) return () => true
   let allowFile, allowDir
   let maxSize = Number.POSITIVE_INFINITY
   let allowedExt = {}
   let writable
-  filters.forEach(f => {
+  filters.forEach((f) => {
     if (f === 'file') allowFile = true
     if (f === 'dir') allowDir = true
     if (f === 'write') writable = true
@@ -48,7 +48,7 @@ function createFilter(filter) {
     allowFile = true
   }
   if (Object.keys(allowedExt).length === 0) allowedExt = null
-  return entry => {
+  return (entry) => {
     if (!allowFile && entry.type === 'file') return false
     if (!allowDir && entry.type === 'dir') return false
     if (allowedExt && !allowedExt[filenameExt(entry.name)]) return false
@@ -58,117 +58,104 @@ function createFilter(filter) {
   }
 }
 
-export default {
-  name: 'OpenDialogInner',
-  components: { EntryListView },
-  props: {
-    loading: {
-      type: String,
-      required: true,
-    },
-    opts: {
-      type: Object,
-      required: true,
-    },
+const props = defineProps({
+  loading: {
+    type: String,
+    required: true,
   },
-  data() {
-    return {
-      dirMode: false,
-
-      path: '',
-
-      message: '',
-
-      selection: [],
-      max: 0,
-    }
+  opts: {
+    type: Object,
+    required: true,
   },
-  watch: {
-    selection() {
-      this.selectionChanged()
-    },
-  },
-  created() {
-    if (this.opts.type === 'dir') {
-      this.dirMode = true
-    }
+})
 
-    // filter selectable entries
-    if (typeof this.opts.filter === 'function') {
-      this._filter = this.opts.filter
-    } else {
-      this._filter = createFilter(this.opts.filter)
-    }
-    // max selection
-    let max = +this.opts.max
-    if (max <= 0) max = 0
-    this.max = max
+const emit = defineEmits(['confirm-disabled'])
 
-    this.message = this.opts.message || ''
+const dirMode = ref(false)
+const path = ref('')
+const message = ref('')
+const selection = ref([])
+const max = ref(0)
+let filter
 
-    this.confirmDisabled(true)
-  },
-  methods: {
-    beforeConfirm() {
-      if (this.dirMode) return this.path
-      return [...this.selection]
-    },
-    selectionChanged() {
-      this.confirmDisabled(!this.selection.length)
-    },
-    isEntrySelectable(entry) {
-      if (this.max > 0 && this.selection.length >= this.max) return false
-      return this._filter(entry)
-    },
-    entriesLoaded(entries) {
-      if (!this.dirMode) return
-      this.cancelGetEntry()
-      this._getEntryTask = getEntry(this.path).then(
-        entry => {
-          this.confirmDisabled(!this._filter(entry))
-        },
-        () => {}
-      )
-    },
-    entryClicked({ entry, event }) {
-      event.preventDefault()
-      if (!this.dirMode) {
-        if (entry.type === 'file') {
-          if (this.selection.findIndex(e => e.path === entry.path) === -1) {
-            this.selection.push(entry)
-          }
-          return
-        }
-      }
-      this.path = entry.path
-      this.confirmDisabled(true)
-      this.cancelGetEntry()
-    },
-    pathChanged({ path, event }) {
-      event.preventDefault()
-      this.path = path
-      this.confirmDisabled(true)
-      this.cancelGetEntry()
-    },
-    filterEntries(entry) {
-      if (entry.type === 'dir') return true
-      if (this.dirMode) return false
-      return this._filter(entry)
-    },
-    cancelGetEntry() {
-      if (this._getEntryTask) {
-        this._getEntryTask.cancel()
-        this._getEntryTask = null
-      }
-    },
-    clearSelection() {
-      this.selection.splice(0)
-    },
-    confirmDisabled(disabled) {
-      this.$emit('confirm-disabled', disabled)
-    },
-  },
+const beforeConfirm = () => {
+  if (dirMode.value) return path.value
+  return [...selection.value]
 }
+
+const selectionChanged = () => {
+  confirmDisabled(!selection.value.length)
+}
+
+const isEntrySelectable = (entry) => {
+  if (max.value > 0 && selection.value.length >= max.value) return false
+  return filter(entry)
+}
+
+const entriesLoaded = ({ entry }) => {
+  if (!dirMode.value) return
+  confirmDisabled(!filter(entry))
+}
+
+const entryClicked = ({ entry, event }) => {
+  event.preventDefault()
+  if (!dirMode.value) {
+    if (entry.type === 'file') {
+      if (selection.value.findIndex((e) => e.path === entry.path) === -1) {
+        selection.value.push(entry)
+      }
+      return
+    }
+  }
+  path.value = entry.path
+  confirmDisabled(true)
+}
+
+const pathChanged = ({ path: path_, event }) => {
+  event.preventDefault()
+  path.value = path_
+  confirmDisabled(true)
+}
+
+const filterEntries = (entry) => {
+  if (entry.type === 'dir') return true
+  if (dirMode.value) return false
+  return filter(entry)
+}
+
+const clearSelection = () => {
+  selection.value.splice(0)
+}
+
+const confirmDisabled = (disabled) => {
+  emit('confirm-disabled', disabled)
+}
+
+watch(
+  () => selection.value,
+  () => selectionChanged()
+)
+
+if (props.opts.type === 'dir') {
+  dirMode.value = true
+}
+
+// filter selectable entries
+if (typeof props.opts.filter === 'function') {
+  filter = unref(props.opts.filter)
+} else {
+  filter = createFilter(props.opts.filter)
+}
+// max selection
+let tempMax = +props.opts.max
+if (tempMax <= 0) tempMax = 0
+max.value = tempMax
+
+message.value = props.opts.message || ''
+
+confirmDisabled(true)
+
+defineExpose({ beforeConfirm })
 </script>
 <style lang="scss">
 .open-dialog__inner {

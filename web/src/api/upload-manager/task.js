@@ -78,36 +78,6 @@ export const STATUS_MASK_CAN_STOP =
 
 export default class UploadTask {
   /**
-   * @type {number}
-   */
-  _id
-
-  /**
-   * @type {TaskDef}
-   */
-  _task
-
-  /**
-   * @type {any}
-   */
-  _config
-
-  /**
-   * @type {number}
-   */
-  _status
-
-  /**
-   * @type {{loaded: number, total: number}|undefined}
-   */
-  _progress
-
-  /**
-   * @type {TaskChangeListener}
-   */
-  _changeListener
-
-  /**
    * @param {number} id task id
    * @param {TaskChangeListener} changeListener task changed listener
    * @param {TaskDef} task task definition
@@ -117,10 +87,24 @@ export default class UploadTask {
     if (new.target === UploadTask) {
       throw new Error('Cannot construct abstract UploadTask')
     }
+    /**
+     * @type {number}
+     */
     this._id = id
     this._changeListener = changeListener
+
+    /**
+     * @type {number}
+     */
     this._status = STATUS_CREATED
+    /**
+     * @type {TaskDef}
+     */
     this._task = processTaskDef(task)
+    /**
+     * @type {{loaded: number, total: number}|undefined}
+     */
+    this._progress = undefined
     this._config = config
   }
 
@@ -188,22 +172,6 @@ export default class UploadTask {
 }
 
 export class UploadTaskItem {
-  /**
-   * @type {number}
-   */
-  id
-  /**
-   * @type {TaskDef}
-   */
-  task
-  /**
-   * @type {number}
-   */
-  status
-  /**
-   * @type {{ loaded: number, total: number }}
-   */
-  progress
   /**
    * @param {UploadTask} task
    */

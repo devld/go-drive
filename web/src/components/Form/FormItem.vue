@@ -2,7 +2,7 @@
   <div class="form-item" :class="{ error: !!error, required: item.required }">
     <span v-if="item.label" class="label">
       <span>{{ item.label }}</span>
-      <span class="form-item-required" v-if="item.required">*</span>
+      <span v-if="item.required" class="form-item-required">*</span>
     </span>
     <span v-if="item.description" class="description">
       {{ item.description }}
@@ -11,50 +11,50 @@
       v-if="item.type === 'textarea'"
       class="value"
       :name="item.field"
-      :value="value"
-      @input="textInput"
+      :value="modelValue"
       :required="item.required"
       :disabled="item.disabled"
       rows="4"
+      @input="textInput"
     />
     <input
       v-if="item.type === 'text'"
       class="value"
       type="text"
       :name="item.field"
-      :value="value"
-      @input="textInput"
+      :value="modelValue"
       :required="item.required"
       :disabled="item.disabled"
+      @input="textInput"
     />
     <input
       v-if="item.type === 'password'"
       class="value"
       type="password"
       :name="item.field"
-      :value="value"
-      @input="textInput"
+      :value="modelValue"
       :required="item.required"
       :disabled="item.disabled"
+      @input="textInput"
     />
     <input
       v-if="item.type === 'checkbox'"
       class="value"
       type="checkbox"
       :name="item.field"
-      :checked="!!value"
-      @input="checkboxInput"
+      :checked="!!modelValue"
       :required="item.required"
       :disabled="item.disabled"
+      @input="checkboxInput"
     />
     <select
       v-if="item.type === 'select'"
       class="value"
       :name="item.field"
-      :value="value"
-      @input="selectInput"
+      :value="modelValue"
       :required="item.required"
       :disabled="item.disabled"
+      @input="selectInput"
     >
       <option
         v-for="o in item.options"
@@ -69,47 +69,53 @@
     <span v-if="error" class="form-item-error">{{ error }}</span>
   </div>
 </template>
-<script>
-export default {
-  name: 'FormItem',
-  props: {
-    value: {
-      type: [String, Number],
-    },
-    item: {
-      type: Object,
-      required: true,
-    },
+<script setup>
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const props = defineProps({
+  modelValue: {
+    type: [String, Number],
   },
-  data() {
-    return {
-      error: null,
-    }
+  item: {
+    type: Object,
+    required: true,
   },
-  methods: {
-    async validate() {
-      if (this.item.required && !this.value) {
-        this.error = this.$t('form.required_msg', { f: this.item.label })
-        throw new Error(this.error)
-      }
-      return this.value
-    },
-    clearError() {
-      this.error = null
-    },
-    textInput(e) {
-      this.$emit('input', e.target.value)
-      this.clearError()
-    },
-    checkboxInput(e) {
-      this.$emit('input', e.target.checked ? '1' : '')
-      this.clearError()
-    },
-    selectInput(e) {
-      this.$emit('input', e.target.value)
-      this.clearError()
-    },
-  },
+})
+
+const emit = defineEmits(['update:modelValue'])
+
+const error = ref(null)
+
+const { t } = useI18n()
+
+const validate = async () => {
+  if (props.item.required && !props.modelValue) {
+    error.value = t('form.required_msg', { f: props.item.label })
+    throw new Error(error.value)
+  }
+  return props.modelValue
+}
+
+const clearError = () => {
+  error.value = null
+}
+
+defineExpose({ clearError, validate })
+
+const textInput = (e) => {
+  emit('update:modelValue', e.target.value)
+  clearError()
+}
+
+const checkboxInput = (e) => {
+  emit('update:modelValue', e.target.checked ? '1' : '')
+  clearError()
+}
+
+const selectInput = (e) => {
+  emit('update:modelValue', e.target.value)
+  clearError()
 }
 </script>
 <style lang="scss">

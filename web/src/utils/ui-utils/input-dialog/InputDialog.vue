@@ -1,27 +1,30 @@
 <template>
   <div class="input-dialog__input-wrapper">
     <textarea
-      class="input-dialog__input"
       v-if="multipleLine"
       v-model="text"
-      :disabled="!!loading"
       v-focus
+      class="input-dialog__input"
+      :placeholder="placeholder"
+      :disabled="!!loading"
     ></textarea>
     <input
-      class="input-dialog__input"
       v-else
-      type="text"
       v-model="text"
-      :disabled="!!loading"
       v-focus
+      class="input-dialog__input"
+      :placeholder="placeholder"
+      type="text"
+      :disabled="!!loading"
     />
     <div v-if="validationError" class="input-dialog__validation">
       {{ validationError }}
     </div>
   </div>
 </template>
-<script>
+<script setup>
 import { val } from '@/utils'
+import { ref, unref, watch } from 'vue'
 
 /**
  * @typedef Validator
@@ -31,100 +34,97 @@ import { val } from '@/utils'
  * @property {string} message message to display when pattern violated
  */
 
-export default {
-  name: 'InputDialogInner',
-  props: {
-    loading: {
-      type: String,
-      required: true,
-    },
-    opts: {
-      type: Object,
-      required: true,
-    },
+const props = defineProps({
+  loading: {
+    type: String,
+    required: true,
   },
-  data() {
-    return {
-      text: '',
-      placeholder: '',
-      multipleLine: false,
+  opts: {
+    type: Object,
+    required: true,
+  },
+})
 
-      validationError: '',
-    }
-  },
-  watch: {
-    text() {
-      this.clearValidationResult()
-      if (this._validator && this._validator.trigger !== 'confirm') {
-        this.doValidate()
-      }
-    },
-  },
-  created() {
-    this.text = this.opts.text || ''
-    this.placeholder = this.opts.placeholder || ''
-    this.multipleLine = val(this.opts.multipleLine, false)
+const emit = defineEmits(['loading'])
 
-    this._validator = this.opts.validator
-  },
-  methods: {
-    async beforeConfirm() {
-      // eslint-disable-next-line prefer-promise-reject-errors
-      return (await this.doValidate()) ? this.text : Promise.reject()
-    },
-    doValidate() {
-      const v = this._validator
-      if (!v) return true
-      if (typeof v.validate === 'function') {
-        return this.doValidateCallback(v.validate)
+const text = ref(props.opts.text || '')
+const placeholder = ref(props.opts.placeholder || '')
+const multipleLine = ref(val(props.opts.multipleLine, false))
+const validationError = ref('')
+
+let validator = unref(props.opts.validator)
+
+let _t
+
+const doValidateCallback = (validate) => {
+  const r = validate(text.value)
+  if (r && typeof r.then === 'function') {
+    emit('loading', true)
+    if (!_t) _t = 0
+    const token = ++_t
+    return r.then(
+      () => {
+        validationResult(null, token)
+        emit('loading')
+        return true
+      },
+      (e) => {
+        validationResult(e, token)
+        emit('loading')
+        return false
       }
-      if (v.pattern instanceof RegExp) {
-        if (!v.pattern.test(this.text)) {
-          this.validationResult(v.message || 'Invalid input')
-          return false
-        }
-      }
-      return true
-    },
-    doValidateCallback(validate) {
-      const r = validate(this.text)
-      if (r && typeof r.then === 'function') {
-        this.$emit('loading', true)
-        if (!this._t) this._t = 0
-        const token = ++this._t
-        return r.then(
-          () => {
-            this.validationResult(null, token)
-            this.$emit('loading')
-            return true
-          },
-          e => {
-            this.validationResult(e, token)
-            this.$emit('loading')
-            return false
-          }
-        )
-      } else {
-        this.validationResult(r)
-        return !!r
-      }
-    },
-    validationResult(message, token) {
-      if (token !== undefined && token !== this._t) return
-      if (!message) {
-        this.clearValidationResult()
-        return
-      }
-      if (typeof message === 'string') this.validationError = message
-      if (typeof message === 'object' && typeof message.message === 'string') {
-        this.validationError = message.message
-      }
-    },
-    clearValidationResult() {
-      this.validationError = null
-    },
-  },
+    )
+  } else {
+    validationResult(r)
+    return !!r
+  }
 }
+
+const doValidate = () => {
+  const v = validator
+  if (!v) return true
+  if (typeof v.validate === 'function') {
+    return doValidateCallback(v.validate)
+  }
+  if (v.pattern instanceof RegExp) {
+    if (!v.pattern.test(text.value)) {
+      validationResult(v.message || 'Invalid input')
+      return false
+    }
+  }
+  return true
+}
+
+const beforeConfirm = async () => {
+  return (await doValidate()) ? text.value : Promise.reject()
+}
+
+const validationResult = (message, token) => {
+  if (token !== undefined && token !== _t) return
+  if (!message) {
+    clearValidationResult()
+    return
+  }
+  if (typeof message === 'string') validationError.value = message
+  if (typeof message === 'object' && typeof message.message === 'string') {
+    validationError.value = message.message
+  }
+}
+const clearValidationResult = () => {
+  validationError.value = null
+}
+
+watch(
+  () => text.value,
+  () => {
+    clearValidationResult()
+    if (validator && validator.trigger !== 'confirm') {
+      doValidate()
+    }
+  }
+)
+
+defineExpose({ beforeConfirm })
 </script>
 <style lang="scss">
 .input-dialog__input-wrapper {

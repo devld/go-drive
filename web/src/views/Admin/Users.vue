@@ -37,7 +37,7 @@
         </tbody>
       </table>
     </div>
-    <div class="user-edit" v-if="user">
+    <div v-if="user" class="user-edit">
       <div class="small-title">
         {{
           edit
@@ -46,18 +46,18 @@
         }}
       </div>
       <div class="user-form">
-        <simple-form ref="form" :form="userForm" v-model="user" />
+        <simple-form ref="formEl" v-model="user" :form="userForm" />
         <div class="form-item">
           <span class="label">{{ $t('p.admin.user.groups') }}</span>
           <div class="value">
-            <span class="group-item" v-for="g in groups" :key="g.name">
-              <input type="checkbox" :value="g.name" v-model="user.groups" />
+            <span v-for="g in groups" :key="g.name" class="group-item">
+              <input v-model="user.groups" type="checkbox" :value="g.name" />
               <span class="group-name">{{ g.name }}</span>
             </span>
           </div>
         </div>
         <div class="form-item save-button">
-          <simple-button small @click="saveUser" :loading="saving">
+          <simple-button small :loading="saving" @click="saveUser">
             {{ $t('p.admin.user.save') }}
           </simple-button>
           <simple-button small type="info" @click="user = null">
@@ -66,137 +66,141 @@
         </div>
       </div>
     </div>
-    <div class="edit-tips" v-else>
-      <simple-button icon="#icon-add" title="Add user" @click="addUser" small>
+    <div v-else class="edit-tips">
+      <simple-button icon="#icon-add" title="Add user" small @click="addUser">
         {{ $t('p.admin.user.add') }}
       </simple-button>
       {{ $t('p.admin.user.or_edit') }}
     </div>
   </div>
 </template>
-<script>
+<script setup>
 import {
   createUser,
-  deleteUser,
+  deleteUser as deleteUserApi,
   getGroups,
   getUser,
   getUsers,
   updateUser,
 } from '@/api/admin'
+import { alert, confirm } from '@/utils/ui-utils'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-export default {
-  name: 'UsersManager',
-  data() {
-    return {
-      users: [],
-      groups: [],
+const { t } = useI18n()
 
-      user: null,
-      edit: false,
-      saving: false,
-    }
+const users = ref([])
+const groups = ref([])
+
+const user = ref(null)
+const edit = ref(false)
+const saving = ref(false)
+
+const formEl = ref(null)
+
+const userForm = computed(() => [
+  {
+    field: 'username',
+    label: t('p.admin.user.f_username'),
+    type: 'text',
+    required: true,
+    disabled: edit.value,
   },
-  computed: {
-    userForm() {
-      return [
-        {
-          field: 'username',
-          label: this.$t('p.admin.user.f_username'),
-          type: 'text',
-          required: true,
-          disabled: this.edit,
-        },
-        {
-          field: 'password',
-          label: this.$t('p.admin.user.f_password'),
-          type: 'text',
-          required: !this.edit,
-        },
-      ]
-    },
+  {
+    field: 'password',
+    label: t('p.admin.user.f_password'),
+    type: 'text',
+    required: !edit.value,
   },
-  created() {
-    this.loadUsers()
-    this.loadGroups()
-  },
-  methods: {
-    async loadUsers() {
-      try {
-        this.users = await getUsers()
-      } catch (e) {
-        this.$alert(e.message)
-      }
-    },
-    async loadGroups() {
-      try {
-        this.groups = await getGroups()
-      } catch (e) {
-        this.$alert(e.message)
-      }
-    },
-    addUser() {
-      this.user = {
-        username: '',
-        password: '',
-        groups: [],
-      }
-      this.edit = false
-    },
-    async editUser(user) {
-      try {
-        const u = await getUser(user.username)
-        u.groups = u.groups.map(g => g.name)
-        this.user = u
-        this.edit = true
-      } catch (e) {
-        this.$alert(e.message)
-      }
-    },
-    async deleteUser(user) {
-      this.$confirm({
-        title: this.$t('p.admin.user.delete_user'),
-        message: this.$t('p.admin.user.confirm_delete', { n: user.username }),
-        confirmType: 'danger',
-        onOk: () => {
-          return deleteUser(user.username).then(
-            () => {
-              this.loadUsers()
-            },
-            e => {
-              this.$alert(e.message)
-              return Promise.reject(e)
-            }
-          )
-        },
-      })
-    },
-    async saveUser() {
-      try {
-        await this.$refs.form.validate()
-      } catch {
-        return
-      }
-      const user = {
-        username: this.user.username,
-        password: this.user.password,
-        groups: this.user.groups.map(name => ({ name })),
-      }
-      this.saving = true
-      try {
-        if (this.edit) {
-          await updateUser(this.user.username, user)
-        } else {
-          await createUser(user)
-        }
-        this.loadUsers()
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.saving = false
-      }
-    },
-  },
+])
+
+const loadUsers = async () => {
+  try {
+    users.value = await getUsers()
+  } catch (e) {
+    alert(e.message)
+  }
 }
+
+const loadGroups = async () => {
+  try {
+    groups.value = await getGroups()
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+const addUser = () => {
+  user.value = {
+    username: '',
+    password: '',
+    groups: [],
+  }
+  edit.value = false
+}
+
+const editUser = async (user_) => {
+  try {
+    const u = await getUser(user_.username)
+    u.groups = u.groups.map((g) => g.name)
+    user.value = u
+    edit.value = true
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+const deleteUser = async (user_) => {
+  confirm({
+    title: t('p.admin.user.delete_user'),
+    message: t('p.admin.user.confirm_delete', { n: user_.username }),
+    confirmType: 'danger',
+    onOk: () => {
+      return deleteUserApi(user_.username).then(
+        () => {
+          if (user_.username === user.value?.username) {
+            user.value = null
+          }
+          loadUsers()
+        },
+        (e) => {
+          alert(e.message)
+          return Promise.reject(e)
+        }
+      )
+    },
+  })
+}
+
+const saveUser = async () => {
+  try {
+    await formEl.value.validate()
+  } catch {
+    return
+  }
+  const data = {
+    username: user.value.username,
+    password: user.value.password,
+    groups: user.value.groups.map((name) => ({ name })),
+  }
+  saving.value = true
+  try {
+    if (edit.value) {
+      await updateUser(data.username, data)
+    } else {
+      await createUser(data)
+      edit.value = true
+    }
+    loadUsers()
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    saving.value = false
+  }
+}
+
+loadUsers()
+loadGroups()
 </script>
 <style lang="scss">
 .users-manager {

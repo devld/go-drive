@@ -3,22 +3,20 @@
     <form action @submit="onSubmit">
       <span class="form-item username">
         <input
-          ref="username"
+          v-model="username"
           class="value"
           type="text"
           required
           :placeholder="$t('p.login.username')"
-          v-model="username"
         />
       </span>
       <span class="form-item password">
         <input
-          ref="password"
+          v-model="password"
           class="value"
           type="password"
           required
           :placeholder="$t('p.login.password')"
-          v-model="password"
         />
       </span>
       <span class="form-item submit">
@@ -29,35 +27,33 @@
     </form>
   </div>
 </template>
-<script>
+<script setup>
 import { login } from '@/api'
+import { alert } from '@/utils/ui-utils'
+import { ref } from 'vue'
+import { useStore } from 'vuex'
 
-export default {
-  name: 'LoginView',
-  data() {
-    return {
-      username: '',
-      password: '',
+const emit = defineEmits(['success'])
 
-      loading: false,
-    }
-  },
-  methods: {
-    async onSubmit(e) {
-      e.preventDefault()
-      if (this.loading) return
-      this.loading = true
-      try {
-        await login(this.username, this.password)
-        const user = await this.$store.dispatch('getUser')
-        this.$emit('success', user)
-      } catch (e) {
-        this.$alert(e.message)
-      } finally {
-        this.loading = false
-      }
-    },
-  },
+const store = useStore()
+
+const username = ref('')
+const password = ref('')
+const loading = ref(false)
+
+const onSubmit = async (e) => {
+  e.preventDefault()
+  if (loading.value) return
+  loading.value = true
+  try {
+    await login(username.value, password.value)
+    const user = await store.dispatch('getUser')
+    emit('success', user)
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 <style lang="scss">

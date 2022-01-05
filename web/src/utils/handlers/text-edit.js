@@ -1,11 +1,12 @@
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
+import { defineAsyncComponent } from 'vue'
 
 const TEXT_EDITOR_MAX_FILE_SIZE = 128 * 1024 // 128kb
 
 export default {
   name: 'editor',
-  display: entry => ({
+  display: (entry) => ({
     name: T(
       entry.meta.writable
         ? 'handler.text_edit.edit_name'
@@ -20,9 +21,11 @@ export default {
   }),
   view: {
     name: 'TextEditView',
-    component: () => import('@/views/HandlerViews/TextEditView.vue'),
+    component: defineAsyncComponent(() =>
+      import('@/views/HandlerViews/TextEditView.vue')
+    ),
   },
-  supports: entry =>
+  supports: (entry) =>
     entry.type === 'file' &&
     [
       'txt',

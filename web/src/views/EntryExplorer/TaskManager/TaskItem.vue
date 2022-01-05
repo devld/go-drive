@@ -6,58 +6,71 @@
       :style="{ width: `${progress * 100}%` }"
     ></div>
     <span class="upload-task-item__filename" :title="filename">
-      <entry-icon class="upload-task-item__icon" :entry="entry" />
+      <entry-icon
+        class="upload-task-item__icon"
+        :entry="entry"
+        :show-thumbnail="false"
+      />
       <span class="upload-task__name">{{ filename }}</span>
     </span>
     <span
       class="upload-task-item__size"
-      :title="$.formatBytes(task.task.size, 1)"
-      >{{ task.task.size | formatBytes(1) }}</span
+      :title="formatBytes(task.task.size, 1)"
+      >{{ formatBytes(task.task.size, 1) }}</span
     >
     <span class="upload-task-item__location">
-      <entry-link :path="dir" @click="$emit('navigate', $event)">
-        {{ $.filename(dir) }}
+      <entry-link
+        :path="dir"
+        :get-link="getLink"
+        @click="emit('navigate', $event)"
+      >
+        {{ filenameFn(dir) }}
       </entry-link>
     </span>
     <span class="upload-task-item__status">{{ statusText }}</span>
     <span class="upload-task-item__ops">
       <button
-        class="upload-task-item__start plain-button"
-        :title="$t('p.task.start')"
         v-if="showStart"
-        @click="$emit('start')"
+        class="upload-task-item__start plain-button"
+        :title="t('p.task.start')"
+        @click="emit('start')"
       >
         <i-icon svg="#icon-play" />
       </button>
       <button
-        class="upload-task-item__pause plain-button"
-        :title="$t('p.task.pause')"
         v-if="showPause"
-        @click="$emit('pause')"
+        class="upload-task-item__pause plain-button"
+        :title="t('p.task.pause')"
+        @click="emit('pause')"
       >
         <i-icon svg="#icon-pause" />
       </button>
       <button
-        class="upload-task-item__stop plain-button"
-        :title="$t('p.task.stop')"
         v-if="showStop"
-        @click="$emit('stop')"
+        class="upload-task-item__stop plain-button"
+        :title="t('p.task.stop')"
+        @click="emit('stop')"
       >
         <i-icon svg="#icon-stop" />
       </button>
       <button
-        class="upload-task-item__remove plain-button"
-        :title="$t('p.task.remove')"
         v-if="showRemove"
-        @click="$emit('remove')"
+        class="upload-task-item__remove plain-button"
+        :title="t('p.task.remove')"
+        @click="emit('remove')"
       >
         <i-icon svg="#icon-close" />
       </button>
     </span>
   </div>
 </template>
-<script>
-import { filename, dir, formatPercent } from '@/utils'
+<script setup>
+import {
+  filename as filenameFn,
+  dir as dirFn,
+  formatPercent,
+  formatBytes,
+} from '@/utils'
 import {
   STATUS_CREATED,
   STATUS_PAUSED,
@@ -70,68 +83,64 @@ import {
   STATUS_MASK_CAN_STOP,
   STATUS_STARTING,
 } from '@/api/upload-manager/task'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-export default {
-  name: 'UploadTaskItem',
-  props: {
-    task: {
-      type: Object,
-      required: true,
-    },
+const { t } = useI18n()
+
+const props = defineProps({
+  task: {
+    type: Object,
+    required: true,
   },
-  computed: {
-    entry() {
-      return {
-        type: 'file',
-        name: filename(this.task.task.path),
-        path: this.task.task.path,
-        meta: {},
-      }
-    },
-    dir() {
-      return dir(this.entry.path)
-    },
-    filename() {
-      return this.entry.name
-    },
-    statusText() {
-      switch (this.task.status) {
-        case STATUS_CREATED:
-          return this.$t('p.task.s_created')
-        case STATUS_STARTING:
-          return this.$t('p.task.s_starting')
-        case STATUS_PAUSED:
-          return this.$t('p.task.s_paused')
-        case STATUS_UPLOADING:
-          return formatPercent(this.progress)
-        case STATUS_STOPPED:
-          return this.$t('p.task.s_stopped')
-        case STATUS_ERROR:
-          return this.$t('p.task.s_error')
-        case STATUS_COMPLETED:
-          return this.$t('p.task.s_completed')
-      }
-      return ''
-    },
-    progress() {
-      const p = this.task.progress
-      if (!p) return null
-      return p.loaded / p.total
-    },
-    showStart() {
-      return this.task.isStatus(STATUS_MASK_CAN_START)
-    },
-    showPause() {
-      return this.task.isStatus(STATUS_MASK_CAN_PAUSE)
-    },
-    showStop() {
-      return this.task.isStatus(STATUS_MASK_CAN_STOP)
-    },
-    showRemove() {
-      return !this.showStop
-    },
+  getLink: {
+    type: Function,
   },
-}
+})
+
+const emit = defineEmits(['navigate', 'start', 'remove', 'stop', 'pause'])
+
+const entry = computed(() => ({
+  type: 'file',
+  name: filenameFn(props.task.task.path),
+  path: props.task.task.path,
+  meta: {},
+}))
+
+const dir = computed(() => dirFn(entry.value.path))
+
+const filename = computed(() => filenameFn(entry.value.name))
+
+const statusText = computed(() => {
+  switch (props.task.status) {
+    case STATUS_CREATED:
+      return t('p.task.s_created')
+    case STATUS_STARTING:
+      return t('p.task.s_starting')
+    case STATUS_PAUSED:
+      return t('p.task.s_paused')
+    case STATUS_UPLOADING:
+      return formatPercent(progress.value)
+    case STATUS_STOPPED:
+      return t('p.task.s_stopped')
+    case STATUS_ERROR:
+      return t('p.task.s_error')
+    case STATUS_COMPLETED:
+      return t('p.task.s_completed')
+  }
+  return ''
+})
+
+const progress = computed(() => {
+  const p = props.task.progress
+  if (!p) return null
+  return p.loaded / p.total
+})
+
+const showStart = computed(() => props.task.isStatus(STATUS_MASK_CAN_START))
+const showPause = computed(() => props.task.isStatus(STATUS_MASK_CAN_PAUSE))
+const showStop = computed(() => props.task.isStatus(STATUS_MASK_CAN_STOP))
+const showRemove = computed(() => !showStop.value)
 </script>
 <style lang="scss">
 .upload-task-item {

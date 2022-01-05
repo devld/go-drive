@@ -1,69 +1,57 @@
 <template>
-  <span class="entry-icon" @click="$emit('click', $event)">
+  <span class="entry-icon" @click="emit('click', $event)">
     <i-icon :svg="icon || entryIcon" />
     <img
-      class="entry-icon__thumbnail"
       v-if="showThumbnail && thumbnail && !err"
-      v-lazy="thumbnail"
+      v-lazy-src="thumbnail"
+      class="entry-icon__thumbnail"
       :alt="entry.name"
       @error="onError"
     />
   </span>
 </template>
-<script>
+<script setup>
 import { getIconSVG } from './file-icon'
 import { fileThumbnail } from '@/api'
 import { filenameExt } from '@/utils'
+import { ref, computed } from 'vue'
+import { useStore } from 'vuex'
 
-export default {
-  name: 'EntryIcon',
-  props: {
-    entry: {
-      type: Object,
-      required: true,
-    },
-    icon: {
-      type: String,
-    },
-    showThumbnail: {
-      type: Boolean,
-      default: true,
-    },
+const props = defineProps({
+  entry: {
+    type: Object,
+    required: true,
   },
-  data() {
-    return {
-      err: null,
-    }
+  icon: {
+    type: String,
   },
-  computed: {
-    thumbnailConfig() {
-      const config = this.$store.state.config
-      return config && config.thumbnail
-    },
-    entryIcon() {
-      return getIconSVG(this.entry)
-    },
-    thumbnail() {
-      return (
-        this.entry.meta.thumbnail ||
-        (this.supportThumbnail &&
-          fileThumbnail(this.entry.path, this.entry.meta.accessKey))
-      )
-    },
-    supportThumbnail() {
-      const entry = this.entry
-      const ext = entry.type === 'dir' ? '/' : filenameExt(entry.name)
-      return !!(
-        this.thumbnailConfig.extensions && this.thumbnailConfig.extensions[ext]
-      )
-    },
+  showThumbnail: {
+    type: Boolean,
+    default: true,
   },
-  methods: {
-    onError(e) {
-      this.err = e
-    },
-  },
-}
+})
+
+const emit = defineEmits(['click'])
+
+const err = ref(null)
+
+const store = useStore()
+
+const thumbnailConfig = computed(() => store.state.config?.thumbnail)
+const entryIcon = computed(() => getIconSVG(props.entry))
+const supportThumbnail = computed(() => {
+  const entry = props.entry
+  const ext = entry.type === 'dir' ? '/' : filenameExt(entry.name)
+  return !!thumbnailConfig.value.extensions?.[ext]
+})
+const thumbnail = computed(
+  () =>
+    props.entry.meta.thumbnail ||
+    (supportThumbnail.value &&
+      fileThumbnail(props.entry.path, props.entry.meta.accessKey))
+)
+
+const onError = (e) => (err.value = e)
 </script>
 <style lang="scss">
 .entry-icon {

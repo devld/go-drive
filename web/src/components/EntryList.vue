@@ -4,8 +4,12 @@
     :class="[viewMode ? `entry-list--view-${viewMode}` : '']"
   >
     <div class="entry-list__head">
-      <path-bar :path="path" @path-change="$emit('path-change', $event)" />
-      <div class="entry-list__toggles" v-if="showToggles">
+      <path-bar
+        :path="path"
+        :get-link="getLink"
+        @path-change="emit('update:path', $event)"
+      />
+      <div v-if="showToggles" class="entry-list__toggles">
         <button
           class="plain-button view-model-toggle"
           :title="
@@ -14,7 +18,7 @@
               : $t('app.toggle_to_list')
           "
           @click="
-            $emit('update:viewMode', viewMode === 'list' ? 'thumbnail' : 'list')
+            emit('update:viewMode', viewMode === 'list' ? 'thumbnail' : 'list')
           "
         >
           <i-icon :svg="viewMode === 'list' ? '#icon-gallery' : '#icon-list'" />
@@ -23,64 +27,69 @@
           <span :title="$t('app.toggle_sort')">
             <i-icon svg="#icon-sort" />
           </span>
-          <ul slot="dropdown" class="sort-modes">
-            <li
-              class="sort-mode"
-              :class="{ active: sort === s.key }"
-              v-for="s in sortModes"
-              :key="s.key"
-              @click="setSortBy(s.key)"
-            >
-              {{ $t(s.name) }}
-            </li>
-          </ul>
+          <template #dropdown>
+            <ul class="sort-modes">
+              <li
+                v-for="s in sortModes"
+                :key="s.key"
+                class="sort-mode"
+                :class="{ active: sort === s.key }"
+                @click="setSortBy(s.key)"
+              >
+                {{ $t(s.name) }}
+              </li>
+            </ul>
+          </template>
         </simple-dropdown>
       </div>
     </div>
     <ul class="entry-list__entries">
-      <li class="entry-list__item" v-if="!isRootPath">
+      <li v-if="!isRootPath" class="entry-list__item">
         <entry-link
-          ref="parentEntry"
+          ref="parentEntryRef"
           :entry="parentDirEntry"
+          :get-link="getLink"
           @click="entryClicked"
         >
           <entry-item
             :view-mode="viewMode"
             :entry="parentDirEntry"
             :icon="selected.length > 0 ? '#icon-duigou' : undefined"
-            @icon-click="parentIconClicked($event)"
             :show-thumbnail="false"
+            @icon-click="parentIconClicked($event)"
           />
         </entry-link>
       </li>
       <li
-        class="entry-list__item"
         v-for="entry in sortedEntries"
         :key="entry.path"
+        class="entry-list__item"
         :class="{ selected: selectionMap[entry.path] }"
       >
         <entry-link
-          ref="entries"
+          :ref="addEntryRef"
           :entry="entry"
+          :get-link="getLink"
           @click="entryClicked"
           @menu="entryContextMenu"
         >
           <entry-item
             :view-mode="viewMode"
             :entry="entry"
-            @icon-click="iconClicked(entry, $event)"
             show-thumbnail
+            @icon-click="iconClicked(entry, $event)"
           />
         </entry-link>
       </li>
     </ul>
-    <div class="entry-list__empty" v-if="sortedEntries.length === 0">
+    <div v-if="sortedEntries.length === 0" class="entry-list__empty">
       {{ $t('app.empty_list') }}
     </div>
   </div>
 </template>
-<script>
-import { pathJoin, pathClean, isRootPath, mapOf } from '@/utils'
+<script setup>
+import { isRootPath as isRootPathFn, mapOf, pathClean, pathJoin } from '@/utils'
+import { computed, nextTick, onBeforeUpdate, ref, watchEffect } from 'vue'
 import IIcon from './IIcon.vue'
 
 const SORTS_METHOD = {
@@ -106,147 +115,156 @@ const SORTS_METHOD = {
     a.name.localeCompare(b.name),
 }
 
-export default {
-  components: { IIcon },
-  name: 'EntryList',
-  props: {
-    path: {
-      type: String,
-      required: true,
-    },
-    entries: {
-      type: Array,
-      required: true,
-    },
-    sort: {
-      type: String,
-      default: 'name_asc',
-    },
-    selectable: {
-      type: [Boolean, Function],
-    },
-    selection: {
-      type: Array,
-    },
-    viewMode: {
-      type: String,
-      default: 'list',
-    },
-    showToggles: {
-      type: Boolean,
-    },
+const props = defineProps({
+  path: {
+    type: String,
+    required: true,
   },
-  watch: {
-    selection: {
-      immediate: true,
-      handler(val) {
-        if (val === this.selection) return
-        this.selection = [...(val || [])]
-      },
-    },
+  entries: {
+    type: Array,
+    required: true,
   },
-  data() {
-    return {
-      selected: [],
+  sort: {
+    type: String,
+    default: 'name_asc',
+  },
+  selectable: {
+    type: [Boolean, Function],
+  },
+  selection: {
+    type: Array,
+  },
+  viewMode: {
+    type: String,
+    default: 'list',
+  },
+  showToggles: {
+    type: Boolean,
+  },
+  getLink: {
+    type: Function,
+  },
+})
 
-      sortDropdownShowing: false,
-      sortModes: [
-        { key: 'name_asc', name: 'app.sort.name_asc' },
-        { key: 'name_desc', name: 'app.sort.name_desc' },
-        { key: 'mod_time_asc', name: 'app.sort.mod_time_asc' },
-        { key: 'mod_time_desc', name: 'app.sort.mod_time_desc' },
-        { key: 'size_asc', name: 'app.sort.size_asc' },
-        { key: 'size_desc', name: 'app.sort.size_desc' },
-      ],
+const emit = defineEmits([
+  'update:path',
+  'update:viewMode',
+  'entry-click',
+  'entry-menu',
+  'update:selection',
+  'update:sort',
+])
+
+const selected = ref([])
+const sortDropdownShowing = ref(false)
+const sortModes = [
+  { key: 'name_asc', name: 'app.sort.name_asc' },
+  { key: 'name_desc', name: 'app.sort.name_desc' },
+  { key: 'mod_time_asc', name: 'app.sort.mod_time_asc' },
+  { key: 'mod_time_desc', name: 'app.sort.mod_time_desc' },
+  { key: 'size_asc', name: 'app.sort.size_asc' },
+  { key: 'size_desc', name: 'app.sort.size_desc' },
+]
+
+const parentEntryRef = ref(null)
+const entriesRef = ref([])
+
+const addEntryRef = (el) => entriesRef.value.push(el)
+onBeforeUpdate(() => {
+  entriesRef.value = []
+})
+
+const parentDirEntry = computed(() => ({
+  path: pathClean(pathJoin(props.path, '..')),
+  name: '..',
+  meta: {},
+  size: -1,
+  type: 'dir',
+  modTime: -1,
+}))
+
+const sortedEntries = computed(() => {
+  const sortMethod = SORTS_METHOD[props.sort] || SORTS_METHOD.name_asc
+  return [...props.entries].sort(sortMethod)
+})
+
+const isRootPath = computed(() => isRootPathFn(props.path))
+const selectionMap = computed(() =>
+  mapOf(selected.value, (entry) => entry.path)
+)
+
+watchEffect(() => {
+  if (props.selection === selected.value) return
+  selected.value = [...(props.selection || [])]
+})
+
+const entryClicked = (e) => emit('entry-click', e)
+
+const entryContextMenu = (e) => emit('entry-menu', e)
+
+const toggleSelect = (entry) => {
+  if (selectionMap.value[entry.path]) {
+    selected.value.splice(
+      selected.value.findIndex((e) => e.path === entry.path),
+      1
+    )
+  } else {
+    if (typeof props.selectable === 'function') {
+      if (!props.selectable(entry)) return
     }
-  },
-  computed: {
-    parentDirEntry() {
-      return {
-        path: pathClean(pathJoin(this.path, '..')),
-        name: '..',
-        meta: {},
-        size: -1,
-        type: 'dir',
-        modTime: -1,
-      }
-    },
-    sortedEntries() {
-      const sortMethod = SORTS_METHOD[this.sort] || SORTS_METHOD.name_asc
-      return [...this.entries].sort(sortMethod)
-    },
-    isRootPath() {
-      return isRootPath(this.path)
-    },
-    selectionMap() {
-      return mapOf(this.selected, e => e.path)
-    },
-  },
-  methods: {
-    entryClicked(e) {
-      this.$emit('entry-click', e)
-    },
-    entryContextMenu(e) {
-      this.$emit('entry-menu', e)
-    },
-    iconClicked(entry, e) {
-      if (this.viewMode !== 'list') return
-      if (!this.selectable) return
-      e.stopPropagation()
-      e.preventDefault()
-      this.toggleSelect(entry)
-    },
-    parentIconClicked(e) {
-      if (this.viewMode !== 'list') return
-      if (!this.selectable) return
-      e.stopPropagation()
-      e.preventDefault()
-      this.toggleSelectAll()
-    },
-    toggleSelect(entry) {
-      if (this.selectionMap[entry.path]) {
-        this.selected.splice(
-          this.selected.findIndex(e => e.path === entry.path),
-          1
-        )
-      } else {
-        if (typeof this.selectable === 'function') {
-          if (!this.selectable(entry)) return
-        }
-        this.selected.push(entry)
-      }
-      this.$emit('update:selection', this.selected)
-    },
-    toggleSelectAll() {
-      if (this.selected.length === this.entries.length) {
-        this.selected.splice(0)
-      } else {
-        let entries = this.entries
-        if (typeof this.selectable === 'function') {
-          entries = entries.filter(this.selectable)
-        }
-        this.selected = [...entries]
-      }
-      this.$emit('update:selection', this.selected)
-    },
-    setSortBy(sort) {
-      this.$emit('update:sort', sort)
-      this.sortDropdownShowing = false
-    },
-    focusOnEntry(name) {
-      let dom
-      if (name === '..') dom = this.$refs.parentEntry
-      else {
-        const index = this.sortedEntries.findIndex(e => e.name === name)
-        if (index >= 0) dom = this.$refs.entries[index]
-      }
-      dom = (dom && dom.$el) || dom
-      this.$nextTick(() => {
-        dom && dom.focus()
-      })
-    },
-  },
+    selected.value.push(entry)
+  }
+  emit('update:selection', selected.value)
 }
+
+const toggleSelectAll = () => {
+  if (selected.value.length === props.entries.length) {
+    selected.value.splice(0)
+  } else {
+    let entries = props.entries
+    if (typeof props.selectable === 'function') {
+      entries = entries.filter(props.selectable)
+    }
+    selected.value = [...entries]
+  }
+  emit('update:selection', selected.value)
+}
+
+const iconClicked = (entry, e) => {
+  if (props.viewMode !== 'list') return
+  if (!props.selectable) return
+  e.stopPropagation()
+  e.preventDefault()
+  toggleSelect(entry)
+}
+
+const parentIconClicked = (e) => {
+  if (props.viewMode !== 'list') return
+  if (!props.selectable) return
+  e.stopPropagation()
+  e.preventDefault()
+  toggleSelectAll()
+}
+
+const setSortBy = (sort) => {
+  emit('update:sort', sort)
+  sortDropdownShowing.value = false
+}
+
+const focusOnEntry = (name) => {
+  let dom
+  if (name === '..') dom = parentEntryRef.value
+  else {
+    const index = sortedEntries.value.findIndex((e) => e.name === name)
+    if (index >= 0) dom = entriesRef.value[index]
+  }
+  dom = (dom && dom.$el) || dom
+  nextTick(() => {
+    dom && dom.focus()
+  })
+}
+
+defineExpose({ focusOnEntry })
 </script>
 <style lang="scss">
 .entry-list {

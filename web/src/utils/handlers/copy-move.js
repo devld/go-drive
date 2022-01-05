@@ -2,7 +2,7 @@ import { copyEntry, deleteTask, moveEntry } from '@/api'
 import { T } from '@/i18n'
 import { formatBytes, pathClean, pathJoin, taskDone, TASK_CANCELLED } from '..'
 
-const createHandler = isMove => {
+const createHandler = (isMove) => {
   return {
     name: isMove ? 'move' : 'copy',
     display: {
@@ -18,14 +18,14 @@ const createHandler = isMove => {
     supports: isMove
       ? (entry, parentEntry) =>
           (Array.isArray(entry)
-            ? !entry.some(e => !e.meta.writable)
+            ? !entry.some((e) => !e.meta.writable)
             : entry.meta.writable) &&
           parentEntry &&
           parentEntry.meta.writable
       : () => true,
     handler: (entries, { confirm, alert, loading, open }) => {
       if (!Array.isArray(entries)) entries = [entries]
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         open({
           title: T(
             isMove
@@ -66,7 +66,7 @@ const createHandler = isMove => {
                   ),
                 })
                 const copyOrMove = isMove ? moveEntry : copyEntry
-                await taskDone(copyOrMove(entry.path, dest, override), t => {
+                await taskDone(copyOrMove(entry.path, dest, override), (t) => {
                   if (canceled) return false
                   task = t
                   loading({

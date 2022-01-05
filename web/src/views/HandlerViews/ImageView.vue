@@ -1,7 +1,7 @@
 <template>
   <div class="image-view-page">
     <!-- Root element of PhotoSwipe. Must have class pswp. -->
-    <div ref="ps" class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+    <div ref="psEl" class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
       <!-- Background of PhotoSwipe.
       It's a separate element as animating opacity is faster than rgba().-->
       <div class="pswp__bg"></div>
@@ -71,93 +71,93 @@
     </div>
   </div>
 </template>
-<script>
+<script setup>
 import { fileUrl } from '@/api'
 import PhotoSwipe from 'photoswipe'
 import PhotoSwipeUIDefault from 'photoswipe/dist/photoswipe-ui-default'
-import { filenameExt, filename, dir, pathJoin } from '@/utils'
+import { filenameExt, filename as filenameFn, dir, pathJoin } from '@/utils'
+import { computed, onMounted, ref } from 'vue'
 
 function isSupportedImageExt(ext) {
   return ['jpg', 'jpeg', 'png', 'gif'].includes(ext)
 }
 
-export default {
-  name: 'ImageView',
-  props: {
-    entry: {
-      type: Object,
-      required: true,
-    },
-    entries: {
-      type: Array,
-      required: true,
-    },
+const props = defineProps({
+  entry: {
+    type: Object,
+    required: true,
   },
-  computed: {
-    images() {
-      return this.entries.filter(
-        e => e.type === 'file' && isSupportedImageExt(filenameExt(e.name))
-      )
-    },
-    path() {
-      return this.entry.path
-    },
-    filename() {
-      return filename(this.path)
-    },
+  entries: {
+    type: Array,
+    required: true,
   },
-  mounted() {
-    this.initPhotoSwipe()
-  },
-  methods: {
-    initPhotoSwipe() {
-      this.index = this.images.findIndex(f => f.name === this.filename)
-      const basePath = dir(this.path)
-      const ps = new PhotoSwipe(
-        this.$refs.ps,
-        PhotoSwipeUIDefault,
-        this.images.map(i => ({
-          src: fileUrl(pathJoin(basePath, i.name), i.meta.accessKey),
-          w: 0,
-          h: 0,
-        })),
-        {
-          history: false,
-          index: this.index,
-          loop: false,
-        }
-      )
-      ps.listen('gettingData', (index, item) => {
-        // https://github.com/dimsemenov/PhotoSwipe/issues/796
-        if (item.w > 0 && item.h > 0) return
-        const img = new Image()
-        img.onload = function() {
-          item.w = this.width
-          item.h = this.height
-          ps.updateSize(true)
-        }
-        img.src = item.src
-      })
-      ps.listen('close', () => {
-        this.$emit('close')
-      })
-      ps.listen('beforeChange', offset => {
-        if (!offset) return
-        let newIndex = (this.index += offset)
-        if (newIndex < 0) newIndex += this.images.length
-        if (newIndex >= this.images.length) newIndex -= this.images.length
-        this.index = newIndex
-        this.$emit('entry-change', this.images[this.index].path)
-      })
-      ps.init()
-      this.ps = ps
-    },
-  },
+})
+
+const emit = defineEmits(['close', 'entry-change'])
+
+const images = computed(() =>
+  props.entries.filter(
+    (e) => e.type === 'file' && isSupportedImageExt(filenameExt(e.name))
+  )
+)
+
+const path = computed(() => props.entry.path)
+
+const filename = computed(() => filenameFn(path.value))
+
+const psEl = ref(null)
+
+let index
+
+const initPhotoSwipe = () => {
+  index = images.value.findIndex((f) => f.name === filename.value)
+  const basePath = dir(path.value)
+  const ps = new PhotoSwipe(
+    psEl.value,
+    PhotoSwipeUIDefault,
+    images.value.map((i) => ({
+      src: fileUrl(pathJoin(basePath, i.name), i.meta.accessKey),
+      w: 0,
+      h: 0,
+    })),
+    {
+      history: false,
+      index,
+      loop: false,
+    }
+  )
+  ps.listen('gettingData', (index, item) => {
+    // https://github.com/dimsemenov/PhotoSwipe/issues/796
+    if (item.w > 0 && item.h > 0) return
+    const img = new Image()
+    img.onload = function () {
+      item.w = this.width
+      item.h = this.height
+      ps.updateSize(true)
+    }
+    img.src = item.src
+  })
+  ps.listen('close', () => {
+    emit('close')
+  })
+  ps.listen('beforeChange', (offset) => {
+    if (!offset) return
+    let newIndex = (index += offset)
+    if (newIndex < 0) newIndex += images.value.length
+    if (newIndex >= images.value.length) newIndex -= images.value.length
+    index = newIndex
+    emit('entry-change', images.value[index].path)
+  })
+  ps.init()
 }
+
+onMounted(() => {
+  initPhotoSwipe()
+})
 </script>
 <style lang="scss">
-@import url('~photoswipe/dist/photoswipe.css');
-@import url('~photoswipe/dist/default-skin/default-skin.css');
+@import url('photoswipe/dist/photoswipe.css');
+@import url('photoswipe/dist/default-skin/default-skin.css');
 .image-view-page {
   width: 100vw;
   height: 100vh;

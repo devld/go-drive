@@ -1,44 +1,44 @@
 <template>
   <ul class="path-bar">
-    <li class="path-bar__segment" v-for="s in segments" :key="s.path">
-      <entry-link class="path-bar__path" :path="s.path" @click="pathChange">{{
-        s.name
-      }}</entry-link>
+    <li v-for="s in segments" :key="s.path" class="path-bar__segment">
+      <entry-link
+        class="path-bar__path"
+        :path="s.path"
+        :get-link="getLink"
+        @click="pathChange"
+        >{{ s.name }}</entry-link
+      >
     </li>
   </ul>
 </template>
-<script>
-export default {
-  name: 'PathBar',
-  model: {
-    prop: 'path',
-    event: 'path-change',
+<script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const props = defineProps({
+  path: {
+    type: String,
+    required: true,
   },
-  props: {
-    path: {
-      type: String,
-      required: true,
-    },
+  getLink: {
+    type: Function,
   },
-  computed: {
-    segments() {
-      const ss = this.path
-        .replace(/\/+/g, '/')
-        .split('/')
-        .filter(Boolean)
-      const pathSegments = [{ name: this.$t('app.root_path'), path: '' }]
-      ss.forEach((s, i) => {
-        pathSegments.push({ name: s, path: ss.slice(0, i + 1).join('/') })
-      })
-      return pathSegments
-    },
-  },
-  methods: {
-    pathChange(e) {
-      this.$emit('path-change', e)
-    },
-  },
-}
+})
+
+const { t } = useI18n()
+
+const emit = defineEmits(['update:path'])
+
+const segments = computed(() => {
+  const ss = props.path.replace(/\/+/g, '/').split('/').filter(Boolean)
+  const pathSegments = [{ name: t('app.root_path'), path: '' }]
+  ss.forEach((s, i) => {
+    pathSegments.push({ name: s, path: ss.slice(0, i + 1).join('/') })
+  })
+  return pathSegments
+})
+
+const pathChange = (e) => emit('update:path', e)
 </script>
 <style lang="scss">
 .path-bar {

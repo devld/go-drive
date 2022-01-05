@@ -1,17 +1,17 @@
 <template>
   <div class="entry-menu">
-    <h2 class="entry-menu__entry" v-if="!multiple">
+    <h2 v-if="!multiple" class="entry-menu__entry">
       <entry-icon :entry="entry" />
       <span class="entry-menu__entry-name">{{ entry.name }}</span>
     </h2>
     <ul class="entry-menu__menus">
       <li
-        @click="$emit('click', { entry, menu: m })"
-        class="entry-menu__menu-item"
-        :class="m.display.type && `entry-menu__menu-item-${m.display.type}`"
         v-for="(m, i) in menus"
         :key="i"
+        class="entry-menu__menu-item"
+        :class="m.display.type && `entry-menu__menu-item-${m.display.type}`"
         :title="m.display.description"
+        @click="emit('click', { entry, menu: m })"
       >
         <span class="entry-menu__icon">
           <i-icon v-if="m.display.icon" :svg="m.display.icon" />
@@ -21,25 +21,23 @@
     </ul>
   </div>
 </template>
-<script>
-export default {
-  name: 'EntryMenu',
-  props: {
-    menus: {
-      type: Array,
-      required: true,
-    },
-    entry: {
-      type: [Object, Array],
-      required: true,
-    },
+<script setup>
+import { computed } from 'vue'
+
+const props = defineProps({
+  menus: {
+    type: Array,
+    required: true,
   },
-  computed: {
-    multiple() {
-      return Array.isArray(this.entry)
-    },
+  entry: {
+    type: [Object, Array],
+    required: true,
   },
-}
+})
+
+const emit = defineEmits(['click'])
+
+const multiple = computed(() => Array.isArray(props.entry))
 </script>
 <style lang="scss">
 .entry-menu {

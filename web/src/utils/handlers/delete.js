@@ -12,7 +12,7 @@ export default {
   },
   supports: (entry, parentEntry) =>
     (Array.isArray(entry)
-      ? !entry.some(e => !e.meta.writable)
+      ? !entry.some((e) => !e.meta.writable)
       : entry.meta.writable) &&
     parentEntry &&
     parentEntry.meta.writable,
@@ -41,7 +41,7 @@ export default {
       for (const entry of entries) {
         if (canceled) break
         loading({ text: T('handler.delete.deleting', { n: entry.name }) })
-        await taskDone(deleteEntry(entry.path), t => {
+        await taskDone(deleteEntry(entry.path), (t) => {
           if (canceled) return false
           task = t
           loading({

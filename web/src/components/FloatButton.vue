@@ -3,7 +3,7 @@
     class="float-button"
     :class="[
       `float-button__posi-${position}`,
-      value ? 'float-button--active' : '',
+      modelValue ? 'float-button--active' : '',
     ]"
   >
     <div
@@ -13,9 +13,9 @@
     >
       <transition v-for="(b, i) in buttons" :key="i" name="scale-fade">
         <button
+          v-show="modelValue"
           class="float-button__button"
           :title="b.title"
-          v-show="value"
           @click="buttonClicked(b, i)"
         >
           <slot v-if="$slots[b.slot]" :name="b.slot"></slot>
@@ -36,56 +36,59 @@
     </button>
   </div>
 </template>
-<script>
-export default {
-  name: 'FloatButton',
-  props: {
-    value: {
-      type: Boolean,
-      default: true,
-    },
-    title: {
-      type: String,
-    },
-    buttons: {
-      type: Array,
-      default() {
-        return []
-      },
-    },
-    position: {
-      type: String,
-      default: 'top',
-    },
-    autoClose: {
-      type: Boolean,
+<script setup>
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    default: true,
+  },
+  title: {
+    type: String,
+  },
+  buttons: {
+    type: Array,
+    default() {
+      return []
     },
   },
-  methods: {
-    mouseEnter() {
-      clearTimeout(this._leaveTimer)
-      setTimeout(() => {
-        const show = true
-        this.$emit('input', show)
-      }, 0)
-    },
-    mouseLeave() {
-      clearTimeout(this._leaveTimer)
-      this._leaveTimer = setTimeout(() => {
-        const show = false
-        this.$emit('input', show)
-      }, 100)
-    },
-    triggerClicked() {
-      clearTimeout(this._leaveTimer)
-      const show = !this.value
-      this.$emit('input', show)
-    },
-    buttonClicked(button, index) {
-      this.$emit('input', false)
-      this.$emit('click', { button, index })
-    },
+  position: {
+    type: String,
+    default: 'top',
   },
+  autoClose: {
+    type: Boolean,
+  },
+})
+
+const emit = defineEmits(['update:modelValue', 'click'])
+
+let leaveTimer
+
+const mouseEnter = () => {
+  clearTimeout(leaveTimer)
+  setTimeout(() => {
+    const show = true
+    emit('update:modelValue', show)
+  }, 0)
+}
+
+const mouseLeave = () => {
+  clearTimeout(leaveTimer)
+  leaveTimer = setTimeout(() => {
+    const show = false
+    emit('update:modelValue', show)
+  }, 100)
+}
+
+const triggerClicked = () => {
+  clearTimeout(leaveTimer)
+  const show = !props.modelValue
+  emit('update:modelValue', show)
+}
+
+const buttonClicked = (button, index) => {
+  emit('update:modelValue', false)
+  emit('click', { button, index })
 }
 </script>
 <style lang="scss">

@@ -10,24 +10,6 @@ const UNSIGNED_PAYLOAD = {
 
 export default class S3UploadTask extends ChunkUploadTask {
   /**
-   * @type {{url: string, multipart?: boolean}}
-   */
-  _config
-
-  /**
-   * @type {string} the multipart upload id
-   */
-  _uploadId
-
-  /**
-   * ETag of uploaded parts
-   * @type {Array.<string>}
-   */
-  _uploadedParts
-
-  _partSize = PART_SIZE
-
-  /**
    * @param {number} id task id
    * @param {TaskChangeListener} changeListener task changed listener
    * @param {TaskDef} task task definition
@@ -36,6 +18,22 @@ export default class S3UploadTask extends ChunkUploadTask {
   constructor(id, changeListener, task, config) {
     super(id, changeListener, task, config)
     this._config = config
+    this._partSize = PART_SIZE
+    /**
+     * @type {{url: string, multipart?: boolean}}
+     */
+    this._config = undefined
+
+    /**
+     * @type {string} the multipart upload id
+     */
+    this._uploadId = undefined
+
+    /**
+     * ETag of uploaded parts
+     * @type {Array.<string>}
+     */
+    this._uploadedParts = undefined
   }
 
   async _prepare() {
@@ -78,7 +76,8 @@ export default class S3UploadTask extends ChunkUploadTask {
           ...UNSIGNED_PAYLOAD,
         },
         transformRequest: null,
-        onUploadProgress: e => onProgress({ loaded: e.loaded, total: e.total }),
+        onUploadProgress: (e) =>
+          onProgress({ loaded: e.loaded, total: e.total }),
       })
     }
 
@@ -102,7 +101,7 @@ export default class S3UploadTask extends ChunkUploadTask {
         ...UNSIGNED_PAYLOAD,
       },
       transformRequest: null,
-      onUploadProgress: e => onProgress({ loaded: e.loaded, total: e.total }),
+      onUploadProgress: (e) => onProgress({ loaded: e.loaded, total: e.total }),
     })
 
     const etag = resp.headers.etag

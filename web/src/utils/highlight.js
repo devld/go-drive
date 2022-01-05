@@ -1,7 +1,6 @@
 import hljs from 'highlight.js/lib/core'
 import bash from 'highlight.js/lib/languages/bash'
 import c from 'highlight.js/lib/languages/c'
-import c$like from 'highlight.js/lib/languages/c-like'
 import cpp from 'highlight.js/lib/languages/cpp'
 import csharp from 'highlight.js/lib/languages/csharp'
 import css from 'highlight.js/lib/languages/css'
@@ -28,7 +27,6 @@ import xml from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
 
 const languages = {
-  c$like,
   cpp,
   xml,
   bash,
@@ -57,7 +55,7 @@ const languages = {
   vim,
 }
 
-Object.keys(languages).forEach(key => {
+Object.keys(languages).forEach((key) => {
   const lang = languages[key]
   key = key.replace(/^\$+/, '').replace('$', '-')
   hljs.registerLanguage(key, lang)

@@ -1,16 +1,16 @@
 import IIcon from './IIcon.vue'
 import EntryIcon from './EntryItem/EntryIcon.vue'
 import EntryLink from './EntryLink.vue'
-import EntryItem from './EntryItem'
+import EntryItem from './EntryItem/index.vue'
 import EntryList from './EntryList.vue'
 import PathBar from './PathBar.vue'
 import ErrorView from './ErrorView.vue'
-import DialogView from './DialogView.vue'
+import DialogView from './DialogView/index.vue'
 import FloatButton from './FloatButton.vue'
 import SimpleButton from './SimpleButton.vue'
 import SimpleFormItem from './Form/FormItem.vue'
-import SimpleForm from './Form'
-import SimpleDropdown from './SimpleDropdown'
+import SimpleForm from './Form/index.vue'
+import SimpleDropdown from './SimpleDropdown.vue'
 import ProgressBar from './ProgressBar.vue'
 
 const components = {
@@ -31,9 +31,12 @@ const components = {
 }
 
 export default {
-  install(Vue) {
-    Object.keys(components).forEach(key => {
-      Vue.component(key, components[key])
+  /**
+   * @param {import('vue').App} app
+   */
+  install(app) {
+    Object.keys(components).forEach((key) => {
+      app.component(key, components[key])
     })
   },
 }

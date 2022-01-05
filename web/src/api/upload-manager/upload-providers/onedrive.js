@@ -6,18 +6,6 @@ import { STATUS_COMPLETED } from '../task'
 const CHUNK_SIZE = 4 * 1024 * 1024
 
 export default class OneDriveUploadTask extends ChunkUploadTask {
-  /**
-   * @type {number}
-   */
-  _chunkSize
-
-  /**
-   * @type {string}
-   */
-  _url
-
-  _finishedResponse
-
   _pause() {
     this._paused = true
     super._pause()
@@ -53,9 +41,8 @@ export default class OneDriveUploadTask extends ChunkUploadTask {
         resp.data.nextExpectedRanges &&
         resp.data.nextExpectedRanges.length
       ) {
-        const nextExpectedRanges = +resp.data.nextExpectedRanges[0].split(
-          '-'
-        )[0]
+        const nextExpectedRanges =
+          +resp.data.nextExpectedRanges[0].split('-')[0]
         if (
           !(
             nextExpectedRanges >= startByte && nextExpectedRanges <= endByte + 1

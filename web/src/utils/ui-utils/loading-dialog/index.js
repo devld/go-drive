@@ -1,14 +1,16 @@
-import i18n, { isT } from '@/i18n'
+import { isT } from '@/i18n'
+import { createApp } from 'vue'
+import dialogUse from '../dialog-use'
 import LoadingDialog from './LoadingDialog.vue'
 
 let vm
 
-export default function toggleLoadingDialog(Vue, opts) {
+export default function toggleLoadingDialog(opts) {
   if (!vm) {
     const div = document.createElement('div')
     document.body.appendChild(div)
-    vm = new Vue({ i18n, ...LoadingDialog })
-    vm.$mount(div)
+
+    vm = createApp(LoadingDialog).use(dialogUse).mount(div)
   }
 
   if (opts) {

@@ -1,4 +1,5 @@
 import { T } from '@/i18n'
+import { defineAsyncComponent } from 'vue'
 import { isAdmin } from '..'
 
 export default {
@@ -10,10 +11,9 @@ export default {
   },
   view: {
     name: 'PermissionsView',
-    component: () =>
-      import(
-        /* webpackChunkName: "admin" */ '@/views/HandlerViews/PermissionsView.vue'
-      ),
+    component: defineAsyncComponent(() =>
+      import('@/views/HandlerViews/PermissionsView.vue')
+    ),
   },
   supports: (entry, parentEntry, user) => isAdmin(user),
 }

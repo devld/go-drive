@@ -3,15 +3,15 @@
     <router-view />
   </div>
 </template>
-<script>
-export default {
-  name: 'App',
-  created() {
-    this.$store.dispatch('init').catch(e => {
-      this.$alert(e.message)
-    })
-  },
-}
+<script setup>
+import { alert } from '@/utils/ui-utils'
+import { useStore } from 'vuex'
+
+useStore()
+  .dispatch('init')
+  .catch((e) => {
+    alert(e.message)
+  })
 </script>
 
 <style lang="scss">

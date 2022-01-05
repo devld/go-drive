@@ -5,25 +5,26 @@
       <button
         class="close-button plain-button"
         title="Close"
-        @click="$emit('close')"
+        @click="emit('close')"
       >
         <i-icon svg="#icon-close" />
       </button>
     </h1>
-    <video :src="$.fileUrl(entry.path, entry.meta.accessKey)" controls />
+    <video :src="fileUrl(entry.path, entry.meta.accessKey)" controls />
   </div>
 </template>
-<script>
-export default {
-  name: 'MediaView',
-  props: {
-    entry: {
-      type: Object,
-      required: true,
-    },
-    entries: { type: Array },
+<script setup>
+import { fileUrl } from '@/api'
+
+defineProps({
+  entry: {
+    type: Object,
+    required: true,
   },
-}
+  entries: { type: Array },
+})
+
+const emit = defineEmits(['close'])
 </script>
 <style lang="scss">
 .media-view-page {

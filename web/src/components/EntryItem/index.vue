@@ -6,15 +6,15 @@
       `entry-item--view-${viewMode}`,
       entry.type === 'file' ? `entry-item--ext-${ext}` : '',
     ]"
-    @click="$emit('click', $event)"
     :title="
       entry.name === '..'
         ? ''
-        : `${entry.name}\n${$.formatTime(entry.modTime)}\n` +
+        : `${entry.name}\n${formatTime(entry.modTime)}\n` +
           `${
             entry.type === 'file' ? $t('app.file') : $t('app.folder')
-          } | ${$.formatBytes(entry.size)}`
+          } | ${formatBytes(entry.size)}`
     "
+    @click="emit('click', $event)"
   >
     <span class="entry-item__icon-wrapper">
       <entry-icon
@@ -22,7 +22,7 @@
         :entry="entry"
         :icon="icon"
         :show-thumbnail="showThumbnail && viewMode === 'thumbnail'"
-        @click="$emit('icon-click', $event)"
+        @click="emit('icon-click', $event)"
       />
     </span>
     <span class="entry-item__info">
@@ -32,43 +32,43 @@
       </span>
       <div v-if="viewMode === 'list'" class="entry-item__meta">
         <span class="entry-item__modified-time">{{
-          entry.modTime >= 0 ? $.formatTime(entry.modTime) : ''
+          entry.modTime >= 0 ? formatTime(entry.modTime) : ''
         }}</span>
         <span class="entry-item__size">{{
-          entry.size >= 0 ? $.formatBytes(entry.size) : ''
+          entry.size >= 0 ? formatBytes(entry.size) : ''
         }}</span>
       </div>
     </span>
   </div>
 </template>
 <script>
-import { filenameExt } from '@/utils'
+export default { name: 'EntryItem' }
+</script>
+<script setup>
+import { filenameExt, formatBytes, formatTime } from '@/utils'
+import { computed } from 'vue'
 
-export default {
-  name: 'EntryItem',
-  props: {
-    entry: {
-      type: Object,
-      required: true,
-    },
-    icon: {
-      type: String,
-    },
-    viewMode: {
-      type: String,
-      default: 'list',
-      validator: val => val === 'list' || val === 'thumbnail',
-    },
-    showThumbnail: {
-      type: Boolean,
-    },
+const props = defineProps({
+  entry: {
+    type: Object,
+    required: true,
   },
-  computed: {
-    ext() {
-      return filenameExt(this.entry.name)
-    },
+  icon: {
+    type: String,
   },
-}
+  viewMode: {
+    type: String,
+    default: 'list',
+    validator: (val) => val === 'list' || val === 'thumbnail',
+  },
+  showThumbnail: {
+    type: Boolean,
+  },
+})
+
+const emit = defineEmits(['click', 'icon-click'])
+
+const ext = computed(() => filenameExt(props.entry.name))
 </script>
 <style lang="scss">
 .entry-item__name {

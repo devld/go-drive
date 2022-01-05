@@ -31,43 +31,29 @@ import DispatcherUploadTask from './upload-providers/dispatcher'
 
 export class UploadManager {
   /**
-   * @type {number}
-   */
-  _idSeq
-
-  /**
-   * @type {Array.<UploadTask>}
-   */
-  _tasks
-
-  /**
-   * @type {Object.<number, UploadTask>}
-   */
-  _taskMap
-  /**
-   * @type {Object.<string, Array.<Function>>}
-   */
-  _events
-
-  /**
-   * @type {Object.<number, UploadTaskFinishedCallback>}
-   */
-  _taskFinishedCallbacks
-
-  /**
-   * @type {UploadManagerConfig}
-   */
-  _config
-
-  /**
    * @param {UploadManagerConfig} config
    */
   constructor(config) {
+    /**
+     * @type {Array.<UploadTask>}
+     */
     this._tasks = []
+    /**
+     * @type {Object.<number, UploadTask>}
+     */
     this._taskMap = {}
+    /**
+     * @type {Object.<string, Array.<Function>>}
+     */
     this._events = {}
+    /**
+     * @type {Object.<number, UploadTaskFinishedCallback>}
+     */
     this._taskFinishedCallbacks = {}
     this._idSeq = 0
+    /**
+     * @type {UploadManagerConfig}
+     */
     this._config = { ...config }
     this._taskChanged = this._taskChanged.bind(this)
   }
@@ -150,21 +136,21 @@ export class UploadManager {
 
   rescheduleTasks() {
     const uploading = this._tasks.filter(
-      t => t.status === STATUS_UPLOADING || t.status === STATUS_STARTING
+      (t) => t.status === STATUS_UPLOADING || t.status === STATUS_STARTING
     ).length
     const needStart = this._config.concurrent - uploading
     if (needStart <= 0) return
     this._tasks
-      .filter(t => t.status === STATUS_CREATED)
+      .filter((t) => t.status === STATUS_CREATED)
       .slice(0, needStart)
-      .forEach(t => t.start())
+      .forEach((t) => t.start())
   }
 
   /**
    * @returns {Array.<UploadTaskItem>}
    */
   getTasks() {
-    return this._tasks.map(t => new UploadTaskItem(t))
+    return this._tasks.map((t) => new UploadTaskItem(t))
   }
 
   /**
@@ -184,14 +170,14 @@ export class UploadManager {
   off(event, fn) {
     const events = this._events[event]
     if (events) {
-      arrayRemove(events, e => e === fn)
+      arrayRemove(events, (e) => e === fn)
     }
   }
 
   _emitEvent(event, argsArray) {
     const events = this._events[event]
     if (events) {
-      events.forEach(fn => {
+      events.forEach((fn) => {
         fn.apply(this, argsArray)
       })
     }
@@ -234,7 +220,7 @@ export class UploadManager {
       if (force) task.stop()
       else return false
     }
-    const index = this._tasks.findIndex(t => t.id === task.id)
+    const index = this._tasks.findIndex((t) => t.id === task.id)
     if (index === -1) return false
     this._tasks.splice(index, 1)
     delete this._taskMap[task.id]

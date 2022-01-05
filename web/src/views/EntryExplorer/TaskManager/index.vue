@@ -4,11 +4,11 @@
       v-for="task of tasks"
       :key="task.id"
       :task="task"
-      @navigate="$emit('navigate', $event)"
-      @start="$emit('start', task)"
-      @pause="$emit('pause', task)"
-      @stop="$emit('stop', task)"
-      @remove="$emit('remove', task)"
+      @navigate="emit('navigate', $event)"
+      @start="emit('start', task)"
+      @pause="emit('pause', task)"
+      @stop="emit('stop', task)"
+      @remove="emit('remove', task)"
     />
     <div v-if="tasks.length === 0" class="no-task">
       {{ $t('p.task.empty') }}
@@ -16,18 +16,19 @@
   </div>
 </template>
 <script>
-import UploadTaskItem from './TaskItem'
+export default { name: 'TaskManager' }
+</script>
+<script setup>
+import UploadTaskItem from './TaskItem.vue'
 
-export default {
-  name: 'UploadTaskManager',
-  components: { UploadTaskItem },
-  props: {
-    tasks: {
-      type: Array,
-      required: true,
-    },
+defineProps({
+  tasks: {
+    type: Array,
+    required: true,
   },
-}
+})
+
+const emit = defineEmits(['navigate', 'start', 'pause', 'stop', 'remove'])
 </script>
 <style lang="scss">
 .upload-task-manager {
