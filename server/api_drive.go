@@ -97,12 +97,20 @@ func (dr *driveRoute) getDrive(c *gin.Context) types.IDrive {
 
 func (dr *driveRoute) list(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	entries, e := dr.getDrive(c).List(c.Request.Context(), path)
+	d := dr.getDrive(c)
+
+	entry, e := d.Get(c.Request.Context(), path)
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
-	res := make([]entryJson, 0, len(entries))
+	entries, e := d.List(c.Request.Context(), path)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	res := make([]entryJson, 0, len(entries)+1)
+	res = append(res, *newEntryJson(entry))
 	for _, v := range entries {
 		res = append(res, *newEntryJson(v))
 	}
@@ -317,7 +325,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 
 func (dr *driveRoute) chunkUploadRequest(c *gin.Context) {
 	size := utils.ToInt64(c.Query("size"), -1)
-	chunkSize := utils.ToInt64(c.Query("chunk_size"), -1)
+	chunkSize := utils.ToInt64(c.Query("chunkSize"), -1)
 	if size <= 0 || chunkSize <= 0 {
 		_ = c.Error(err.NewBadRequestError(i18n.T("api.drive.invalid_size_or_chunk_size")))
 		return
