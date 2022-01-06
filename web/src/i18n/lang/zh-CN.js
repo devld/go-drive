@@ -78,6 +78,7 @@ export default {
         save: '保存',
         cancel: '取消',
         configure: '配置',
+        start_configure: '配置',
         configured: '已配置',
         not_configured: '尚未配置',
         add: '添加',
