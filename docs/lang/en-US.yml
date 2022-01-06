@@ -78,6 +78,11 @@ drive:
     name: OneDrive
     readme: OneDrive, see [Setup OneDrive](https://go-drive.top/drives/onedrive)
     form:
+      site:
+        label: Account Type
+        description: ""
+        global: Global
+        china: China
       tenant:
         label: Tenant
         description: ""
@@ -90,6 +95,9 @@ drive:
       client_secret:
         label: Client Secret
         description: ""
+      share_point:
+        label: SharePoint URL
+        description: "Optional if you want store your files in the SharePoint site"
       proxy_in:
         label: Proxy Upload
         description: Upload files through server proxy
@@ -99,7 +107,7 @@ drive:
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
-    drive_not_selected: Drive not yet selected
+    drive_not_selected: Drive not yet selected or failed to get SharePoint site info
     oauth_text: Connect to OneDrive
     drive_select: Select drive
     drive_used: "{{ 1 }} / {{ 2 }} | {{ 3 }} used"

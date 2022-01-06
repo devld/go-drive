@@ -13,6 +13,8 @@ import (
 	"go-drive/common/utils"
 	"golang.org/x/oauth2"
 	"io"
+	"log"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -20,16 +22,50 @@ import (
 
 var t = i18n.TPrefix("drive.onedrive.")
 
+type apiConfig struct {
+	AuthorizeURL string
+	TokenURL     string
+	ApiBase      string
+}
+
+var sites = map[string]apiConfig{
+	"global": {
+		AuthorizeURL: "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize",
+		TokenURL:     "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token",
+		ApiBase:      "https://graph.microsoft.com/v1.0",
+	},
+	"china": {
+		AuthorizeURL: "https://login.chinacloudapi.cn/{tenant}/oauth2/v2.0/authorize",
+		TokenURL:     "https://login.chinacloudapi.cn/{tenant}/oauth2/v2.0/token",
+		ApiBase:      "https://microsoftgraph.chinacloudapi.cn/v1.0",
+	},
+}
+
+func getSiteConfig(site string) apiConfig {
+	s, ok := sites[site]
+	if !ok {
+		s = sites["global"]
+	}
+	return s
+}
+
 func oauthReq(c common.Config, config types.SM) *drive_util.OAuthRequest {
 	tenant := config["tenant"]
+	site := getSiteConfig(config["site"])
+
+	filesScope := "Files.ReadWrite"
+	if config["share_point"] != "" {
+		filesScope = "Files.ReadWrite.All"
+	}
+
 	return &drive_util.OAuthRequest{
 		Endpoint: oauth2.Endpoint{
-			AuthURL:   "https://login.microsoftonline.com/" + tenant + "/oauth2/v2.0/authorize",
-			TokenURL:  "https://login.microsoftonline.com/" + tenant + "/oauth2/v2.0/token",
+			AuthURL:   strings.ReplaceAll(site.AuthorizeURL, "{tenant}", tenant),
+			TokenURL:  strings.ReplaceAll(site.TokenURL, "{tenant}", tenant),
 			AuthStyle: oauth2.AuthStyleInParams,
 		},
 		RedirectURL: c.OAuthRedirectURI,
-		Scopes:      []string{"Files.ReadWrite", "offline_access", "User.Read"},
+		Scopes:      []string{filesScope, "offline_access", "User.Read"},
 		Text:        i18n.T("drive.onedrive.oauth_text"),
 	}
 }
@@ -82,85 +118,146 @@ func InitConfig(ctx context.Context, config types.SM,
 	}
 
 	// get user
-	user, e := getUser(ctx, reqClient)
+	user, e := getUser(ctx, reqClient, config["site"])
 	initConfig.Configured = e == nil
+
+	if e != nil {
+		log.Println("[OneDrive] Failed to get user info", e)
+	}
+
 	if e == nil {
 		initConfig.OAuth.Principal = fmt.Sprintf("%s <%s>", user.DisplayName, user.UserPrincipalName)
 	}
 
-	params, e := driveUtils.Data.Load("drive_id")
+	params, e := driveUtils.Data.Load("drive_id", "share_point_id")
 	if e != nil {
 		return nil, e
 	}
 
+	sharePointURL := config["share_point"]
+
 	// get drives
-	if initConfig.Configured {
-		drives, e := getDrives(ctx, reqClient)
-		initConfig.Configured = e == nil
-		if e == nil {
-			opts := make([]types.FormItemOption, len(drives))
-			for i, d := range drives {
-				used := "-"
-				if d.Quota.Total != 0 {
-					used = fmt.Sprintf("%.1f%%", float64(d.Quota.Used)/float64(d.Quota.Total)*100)
-				}
-				opts[i] = types.FormItemOption{
-					Name: fmt.Sprintf("%s %d", d.DriveType, i+1),
-					Title: i18n.T("drive.onedrive.drive_used",
-						utils.FormatBytes(uint64(d.Quota.Used), 1),
-						utils.FormatBytes(uint64(d.Quota.Total), 1),
-						used),
-					Value: d.Id,
-				}
-			}
-			initConfig.Form = []types.FormItem{
-				{Label: i18n.T("drive.onedrive.drive_select"), Type: "select", Field: "drive_id", Required: true, Options: opts},
-			}
-			initConfig.Value = types.SM{"drive_id": params["drive_id"]}
-		}
+	if initConfig.Configured && sharePointURL == "" {
+		_ = generateDrivesForm(ctx, reqClient, config, params, initConfig)
 	}
 
+	// if no SharePoint site provided, get the user's drives
+	// otherwise, treat the SharePoint site as a drive
 	if initConfig.Configured {
-		initConfig.Configured = params["drive_id"] != ""
+		if sharePointURL == "" {
+			initConfig.Configured = params["drive_id"] != ""
+		} else {
+			initConfig.Configured = params["share_point_id"] != ""
+		}
 	}
 
 	return initConfig, nil
 }
 
 func Init(ctx context.Context, data types.SM, config types.SM, utils drive_util.DriveUtils) error {
-	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config, config), data, config, utils.Data)
+	oReq := *oauthReq(utils.Config, config)
+	resp, e := drive_util.OAuthInit(ctx, oReq, data, config, utils.Data)
 	if e != nil {
 		return e
 	}
-	driveId := data["drive_id"]
-	if driveId != "" {
-		return utils.Data.Save(types.SM{"drive_id": driveId})
+
+	var paramsData types.SM
+
+	sharePointURL := config["share_point"]
+	if sharePointURL != "" {
+		if resp == nil {
+			resp, e = drive_util.OAuthGet(oReq, config, utils.Data)
+			if e != nil {
+				return e
+			}
+		}
+
+		reqClient, e := req.NewClient("", nil, ifApiCallError, resp.Client())
+		if e != nil {
+			return e
+		}
+		info, e := getSharePointInfo(ctx, reqClient, config["site"], sharePointURL)
+		if e != nil {
+			return e
+		}
+
+		paramsData = types.SM{"share_point_id": info.Id, "drive_id": ""}
+	} else {
+		paramsData = types.SM{"drive_id": data["drive_id"], "share_point_id": ""}
 	}
+
+	return utils.Data.Save(paramsData)
+}
+
+func generateDrivesForm(ctx context.Context, reqClient *req.Client,
+	config types.SM, params types.SM, initConfig *drive_util.DriveInitConfig) error {
+	drives, e := getDrives(ctx, reqClient, config["site"])
+	initConfig.Configured = e == nil
+	if e != nil {
+		log.Println("[OneDrive] Error getting drives:", e)
+		return e
+	}
+	opts := make([]types.FormItemOption, len(drives))
+	for i, d := range drives {
+		used := "-"
+		if d.Quota.Total != 0 {
+			used = fmt.Sprintf("%.1f%%", float64(d.Quota.Used)/float64(d.Quota.Total)*100)
+		}
+		opts[i] = types.FormItemOption{
+			Name: fmt.Sprintf("%s %d", d.DriveType, i+1),
+			Title: i18n.T("drive.onedrive.drive_used",
+				utils.FormatBytes(uint64(d.Quota.Used), 1),
+				utils.FormatBytes(uint64(d.Quota.Total), 1),
+				used),
+			Value: d.Id,
+		}
+	}
+	initConfig.Form = []types.FormItem{
+		{Label: i18n.T("drive.onedrive.drive_select"), Type: "select", Field: "drive_id", Required: true, Options: opts},
+	}
+	initConfig.Value = types.SM{"drive_id": params["drive_id"]}
 	return nil
 }
 
-func getUser(ctx context.Context, req *req.Client) (userProfile, error) {
+func getUser(ctx context.Context, req *req.Client, site string) (userProfile, error) {
+	s := getSiteConfig(site)
 	user := userProfile{}
-	resp, e := req.Get(ctx, "https://graph.microsoft.com/v1.0/me", nil)
+	resp, e := req.Get(ctx, s.ApiBase+"/me", nil)
 	if e != nil {
 		return user, e
 	}
-	if e := resp.Json(&user); e != nil {
-		return user, e
-	}
-	return user, nil
+	e = resp.Json(&user)
+	return user, e
 }
 
-func getDrives(ctx context.Context, req *req.Client) ([]driveInfo, error) {
+func getDrives(ctx context.Context, req *req.Client, site string) ([]driveInfo, error) {
+	s := getSiteConfig(site)
 	o := userDrives{}
-	resp, e := req.Get(ctx, "https://graph.microsoft.com/v1.0/me/drives", nil)
+	resp, e := req.Get(ctx, s.ApiBase+"/me/drives", nil)
 	if e != nil {
 		return nil, e
 	}
-	if e := resp.Json(&o); e != nil {
-		return nil, e
+	e = resp.Json(&o)
+	return o.Drives, e
+}
+
+func getSharePointInfo(ctx context.Context, req *req.Client, site string, sharePointURL string) (sharePointInfo, error) {
+	parsedURL, e := url.Parse(sharePointURL)
+	if e != nil {
+		return sharePointInfo{}, e
 	}
-	return o.Drives, nil
+	s := getSiteConfig(site)
+	o := sharePointInfo{}
+	resp, e := req.Get(ctx, s.ApiBase+utils.BuildURL(
+		"/sites/{}:/{}",
+		parsedURL.Hostname(),
+		strings.Trim(parsedURL.Path, "/"),
+	), nil)
+	if e != nil {
+		return o, e
+	}
+	e = resp.Json(&o)
+	return o, e
 }
 
 // uploadSmallFile uploads a new file that less than 4Mb
