@@ -78,18 +78,26 @@ drive:
     name: OneDrive
     readme: OneDrive, 请参阅 [配置 OneDrive](https://go-drive.top/drives/onedrive)
     form:
+      site:
+        label: 账号类型
+        description: ""
+        global: 国际版
+        china: 世纪互联版
       tenant:
         label: 租户模式
         description: ""
         common: 适用于 Microsoft 帐户和工作或学校帐户
         organizations: 仅适用于工作或学校帐户
-        consumers: 仅适用于 Microsoft 帐户的
+        consumers: 仅适用于 Microsoft 帐户
       client_id:
         label: 客户端 ID
         description: ""
       client_secret:
         label: 客户端密钥
         description: ""
+      share_point:
+        label: SharePoint URL
+        description: 可选，如果你想将文件存储在 SharePoint 站点中
       proxy_in:
         label: 上传代理
         description: 上传时是否经过服务器代理
@@ -99,7 +107,7 @@ drive:
       cache_ttl:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
-    drive_not_selected: OneDrive 尚未配置完成
+    drive_not_selected: OneDrive 尚未配置完成或者获取 SharePoint 站点失败
     oauth_text: 连接到 OneDrive
     drive_select: 选择 Drive
     drive_used: "{{ 1 }} / {{ 2 }} | {{ 3 }} 已使用"

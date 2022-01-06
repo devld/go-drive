@@ -24,6 +24,14 @@ func init() {
 		README:      t("readme"),
 		ConfigForm: []types.FormItem{
 			{
+				Field: "site", Label: t("form.site.label"), Type: "select", Description: t("form.site.description"),
+				Options: []types.FormItemOption{
+					{Name: t("form.site.global"), Value: "global", Title: t("form.site.global")},
+					{Name: t("form.site.china"), Value: "china", Title: t("form.site.china")},
+				},
+				DefaultValue: "global", Required: true,
+			},
+			{
 				Field: "tenant", Label: t("form.tenant.label"), Type: "select", Description: t("form.tenant.description"),
 				Options: []types.FormItemOption{
 					{Name: "common", Value: "common", Title: t("form.tenant.common")},
@@ -34,6 +42,7 @@ func init() {
 			},
 			{Field: "client_id", Label: t("form.client_id.label"), Type: "text", Description: t("form.client_id.description"), Required: true},
 			{Field: "client_secret", Label: t("form.client_secret.label"), Type: "password", Description: t("form.client_secret.description"), Required: true},
+			{Field: "share_point", Label: t("form.share_point.label"), Type: "text", Description: t("form.share_point.description"), Required: false},
 			{Field: "proxy_upload", Label: t("form.proxy_in.label"), Type: "checkbox", Description: t("form.proxy_in.description")},
 			{Field: "proxy_download", Label: t("form.proxy_out.label"), Type: "checkbox", Description: t("form.proxy_out.description")},
 			{Field: "cache_ttl", Label: t("form.cache_ttl.label"), Type: "text", Description: t("form.cache_ttl.description")},
@@ -43,8 +52,6 @@ func init() {
 }
 
 type OneDrive struct {
-	driveId string
-
 	c         *req.Client
 	reqPrefix string
 
@@ -63,9 +70,8 @@ func NewOneDrive(_ context.Context, config types.SM,
 	}
 
 	cacheTtl := config.GetDuration("cache_ttl", -1)
-	params, e := driveUtils.Data.Load("drive_id")
+	params, e := driveUtils.Data.Load("drive_id", "share_point_id")
 	od := &OneDrive{
-		driveId:       params["drive_id"],
 		cacheTTL:      cacheTtl,
 		uploadProxy:   config.GetBool("proxy_upload"),
 		downloadProxy: config.GetBool("proxy_download"),
@@ -76,11 +82,20 @@ func NewOneDrive(_ context.Context, config types.SM,
 		od.cache = driveUtils.CreateCache(od.deserializeEntry, nil)
 	}
 
-	if od.driveId == "" {
+	driveId := params["drive_id"]
+	sharePointId := params["share_point_id"]
+
+	if driveId == "" && sharePointId == "" {
 		return nil, err.NewNotAllowedMessageError(t("drive_not_selected"))
 	}
 
-	reqPrefix := utils.BuildURL("https://graph.microsoft.com/v1.0/drives/{}", od.driveId)
+	site := getSiteConfig(config["site"])
+	var reqPrefix string
+	if driveId != "" {
+		reqPrefix = utils.BuildURL(site.ApiBase+"/drives/{}", driveId)
+	} else {
+		reqPrefix = utils.BuildURL(site.ApiBase+"/sites/{}/drive", sharePointId)
+	}
 
 	od.c, e = req.NewClient(reqPrefix, nil, ifApiCallError, resp.Client())
 	od.reqPrefix = reqPrefix

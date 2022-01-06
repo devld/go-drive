@@ -13,6 +13,16 @@ const uploadChunkSize = 4 * 1024 * 1024
 // https://docs.microsoft.com/en-us/graph/api/resources/driveitem?view=graph-rest-1.0#instance-attributes
 const downloadUrlTTL = 40 * time.Minute
 
+// https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/site_getbypath?view=odsp-graph-online
+type sharePointInfo struct {
+	Id                   string    `json:"id"`
+	DisplayName          string    `json:"displayName"`
+	Name                 string    `json:"name"`
+	CreatedDateTime      time.Time `json:"createdDateTime"`
+	LastModifiedDateTime time.Time `json:"lastModifiedDateTime"`
+	WebURL               string    `json:"webUrl"`
+}
+
 type userProfile struct {
 	DisplayName       string `json:"displayName"`
 	UserPrincipalName string `json:"userPrincipalName"`
