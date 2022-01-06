@@ -6,7 +6,7 @@ title: OneDrive
 
 ## 注册应用
 
-访问 [https://portal.azure.com/](https://portal.azure.com/)，首先登录你的 Microsoft 账户。
+访问 [https://portal.azure.com/](https://portal.azure.com/)（如果是世纪互联版的 OneDrive，请访问 [https://portal.azure.cn/](https://portal.azure.cn/)），首先登录你的 Microsoft 账户。
 
 在页面左侧的菜单中选择 "Azure Active Directory"。
 
@@ -17,7 +17,7 @@ title: OneDrive
 按照上图填写表单。
 
 - **名称**: 应用的名称，可随意填写
-- **受支持的账户类型**: 支持的 Microsoft 账户类型，选择 "仅 Microsoft 个人账户" 即可
+- **受支持的账户类型**: 支持的 Microsoft 账户类型，按照需绑定的账号类型选择
 - **重定向 URI**: 用于 OAuth2 的回调 URL，暂时先不填写
 
 接下来，点击 "注册"。
@@ -53,6 +53,8 @@ title: OneDrive
 - `User.Read`: 读取用户的基本信息
 - `Files.ReadWrite`: 读写 OneDrive 的任何文件
 - `offline_access`: 这个权限用于登录成功后获取 `Refresh Token`，保持登录状态
+
+> **注意，如果需要将文件存放在 SharePoint 站点中，则需要将 `Files.ReadWrite` 更换为 `Files.ReadWrite.All`**
 
 添加完成后，应该如下图所示
 
