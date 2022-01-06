@@ -24,9 +24,12 @@ async function getRender() {
 }
 
 const render = (el, binding) => {
+  el._currentMarkdownContent = binding.value
   getRender().then(
     (render) => {
-      el.innerHTML = render(binding.value)
+      if (el._currentMarkdownContent === el._renderedMarkdownContent) return
+      el.innerHTML = render(el._currentMarkdownContent)
+      el._renderedMarkdownContent = el._currentMarkdownContent
     },
     (e) => {
       console.error('markdown render error: ', e)
