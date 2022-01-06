@@ -31,7 +31,7 @@ function _setLang(lang) {
 }
 
 export function getLang() {
-  return i18n.locale
+  return i18n.global.locale
 }
 
 export async function setLang(lang) {

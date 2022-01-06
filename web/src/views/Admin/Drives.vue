@@ -205,6 +205,13 @@ const baseForm = computed(() => [
   },
 ])
 
+const showReloadingTips = () => {
+  if (!localStorage.getItem('drive-reloading-tips')) {
+    alert(t('p.admin.drive.reload_tips'))
+    localStorage.setItem('drive-reloading-tips', '1')
+  }
+}
+
 const loadDrives = async () => {
   try {
     driveFactories.value = await getDriveFactories()
@@ -213,6 +220,7 @@ const loadDrives = async () => {
     alert(e.message)
   }
 }
+
 const addDrive = () => {
   drive.value = {
     name: '',
@@ -222,6 +230,7 @@ const addDrive = () => {
   }
   edit.value = false
 }
+
 const editDrive = (drive_) => {
   drive.value = {
     name: drive_.name,
@@ -254,6 +263,7 @@ const deleteDrive = (drive_) => {
     },
   })
 }
+
 const saveDrive = async () => {
   try {
     await Promise.all([
@@ -278,6 +288,8 @@ const saveDrive = async () => {
       await createDrive(d)
     }
     edit.value = true
+
+    showReloadingTips()
   } catch (e) {
     alert(e.message)
     return
@@ -287,11 +299,13 @@ const saveDrive = async () => {
   getDriveInitConfigInfo()
   loadDrives()
 }
+
 const cancelEdit = () => {
   drive.value = null
   driveInit.value = null
   driveInitForm.value = {}
 }
+
 const getDriveInitConfigInfo = async () => {
   loading(true)
   try {
@@ -303,6 +317,7 @@ const getDriveInitConfigInfo = async () => {
     loading()
   }
 }
+
 const saveDriveConfig = async () => {
   try {
     await initFormEl.value.validate()
@@ -312,6 +327,7 @@ const saveDriveConfig = async () => {
   loading(true)
   try {
     await initDrive(drive.value.name, driveInitForm.value)
+    showReloadingTips()
   } catch (e) {
     alert(e.message)
     return
@@ -320,6 +336,7 @@ const saveDriveConfig = async () => {
   }
   getDriveInitConfigInfo()
 }
+
 const reloadDrives = async () => {
   reloading.value = true
   try {

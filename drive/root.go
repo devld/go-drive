@@ -76,6 +76,8 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 	if e != nil {
 		return e
 	}
+
+	log.Println("Reloading drives...")
 	drives := make(map[string]types.IDrive, len(drivesConfig))
 	ok := false
 	defer func() {
@@ -99,6 +101,7 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 			}
 			return e
 		}
+		log.Println("Creating drive:", dc.Name)
 		iDrive, e := factory.Create(ctx, config, d.createDriveUtils(dc.Name))
 		if e != nil {
 			if ignoreFailure {
@@ -107,10 +110,13 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 			}
 			return err.NewBadRequestError(i18n.T("drive.root.error_create_drive", dc.Name, e.Error()))
 		}
+		log.Println("Created drive:", dc.Name)
 		drives[dc.Name] = iDrive
 	}
 	d.root.setDrives(drives)
 	ok = true
+
+	log.Println("Reloading drives done.")
 	return nil
 }
 
