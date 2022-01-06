@@ -77,6 +77,7 @@ export default {
         add_drive: 'Add drive',
         edit_drive: 'Edit drive: {n}',
         save: 'Save',
+        start_configure: 'Configure',
         cancel: 'Cancel',
         configure: 'Configure',
         configured: 'Configured',

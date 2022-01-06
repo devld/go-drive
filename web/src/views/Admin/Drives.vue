@@ -129,7 +129,7 @@
             :form="driveInit.form"
           />
           <simple-button small @click="saveDriveConfig">
-            {{ $t('p.admin.drive.save') }}
+            {{ $t('p.admin.drive.start_configure') }}
           </simple-button>
         </div>
       </div>
