@@ -42,8 +42,8 @@ const doOauth = () => {
 }
 
 const authorized = async ({ data }) => {
-  w.close()
   if (!data.oauth) return
+  w?.close()
 
   if (data.error) {
     console.error('OAuth error: ', data)

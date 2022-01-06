@@ -88,6 +88,7 @@ export default {
         f_type: 'Type',
         delete_drive: 'Delete drive',
         confirm_delete: 'Are you sure to delete drive {n}?',
+        reload_tips: 'You need to reload drives to take effect',
       },
       user: {
         username: 'Username',

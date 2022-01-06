@@ -89,7 +89,7 @@
 </template>
 <script setup>
 import { isRootPath as isRootPathFn, mapOf, pathClean, pathJoin } from '@/utils'
-import { computed, nextTick, onBeforeUpdate, ref, watchEffect } from 'vue'
+import { computed, nextTick, onBeforeUpdate, ref, watch } from 'vue'
 import IIcon from './IIcon.vue'
 
 const SORTS_METHOD = {
@@ -193,10 +193,14 @@ const selectionMap = computed(() =>
   mapOf(selected.value, (entry) => entry.path)
 )
 
-watchEffect(() => {
-  if (props.selection === selected.value) return
-  selected.value = [...(props.selection || [])]
-})
+watch(
+  () => props.selection,
+  () => {
+    if (props.selection === selected.value) return
+    selected.value = [...(props.selection || [])]
+  },
+  { immediate: true }
+)
 
 const entryClicked = (e) => emit('entry-click', e)
 

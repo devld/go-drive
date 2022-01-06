@@ -87,6 +87,7 @@ export default {
         f_type: '类型',
         delete_drive: '删除盘',
         confirm_delete: '确认删除 {n}？',
+        reload_tips: '你所做的更改只有在重新加载盘后才会生效',
       },
       user: {
         username: '用户名',

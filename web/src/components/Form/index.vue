@@ -18,7 +18,7 @@
 export default { name: 'FormView' }
 </script>
 <script setup>
-import { onBeforeUpdate, ref, watchEffect } from 'vue'
+import { onBeforeUpdate, ref, watch } from 'vue'
 import FormItem from './FormItem.vue'
 
 const props = defineProps({
@@ -44,11 +44,14 @@ onBeforeUpdate(() => {
   fields.value = []
 })
 
-watchEffect(() => {
-  const val = props.modelValue
-  if (val === data.value) return
-  data.value = val || {}
-})
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (val === data.value) return
+    data.value = val || {}
+  },
+  { immediate: true }
+)
 
 const validate = async () => {
   await Promise.all(fields.value.map((f) => f.validate()))
@@ -70,8 +73,9 @@ const fillDefaultValue = () => {
   if (props.modelValue) return
   const dat = {}
   for (const f of props.form) {
-    if (f.defaultValue) dat[f.field] = f.defaultValue
+    dat[f.field] = f.defaultValue || null
   }
+  console.log(JSON.stringify(dat))
   data.value = dat
   emitInput()
 }
