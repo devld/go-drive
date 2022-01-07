@@ -10,6 +10,12 @@ export function getEntry(path) {
   return axiosWrapper.get(`/entry/${path}`)
 }
 
+export function searchEntries(path, q, next) {
+  return axiosWrapper.get(`/search/${path}`, {
+    params: { q, next },
+  })
+}
+
 export function getContent(path, accessKey, noCache) {
   const params = {}
   if (noCache) {
@@ -39,6 +45,12 @@ export function copyEntry(from, to, override) {
 export function moveEntry(from, to, override) {
   return axios.post('/move', null, {
     params: { from, to, override: override ? '1' : '' },
+  })
+}
+
+export function getTasks(group) {
+  return axiosWrapper.get('/tasks', {
+    params: { group },
   })
 }
 

@@ -13,6 +13,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"log"
+	"strings"
 	"sync"
 	"time"
 )
@@ -23,7 +24,7 @@ type TunnyRunner struct {
 	tickerStop func()
 }
 
-var cleanThreshold = 1 * time.Minute
+var cleanThreshold = 10 * time.Minute
 
 func NewTunnyRunner(config common.Config, ch *registry.ComponentsHolder) *TunnyRunner {
 	tr := &TunnyRunner{
@@ -35,12 +36,16 @@ func NewTunnyRunner(config common.Config, ch *registry.ComponentsHolder) *TunnyR
 	return tr
 }
 
-func (t *TunnyRunner) createTask(runnable Runnable) *tunnyTaskCtx {
+func (t *TunnyRunner) createTask(runnable Runnable, options ...Option) *tunnyTaskCtx {
 	task := &Task{
 		Id:        uuid.New().String(),
 		Status:    Pending,
 		Progress:  Progress{Loaded: 0, Total: 0},
 		CreatedAt: time.Now(),
+	}
+
+	for _, o := range options {
+		o(task)
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -56,14 +61,14 @@ func (t *TunnyRunner) createTask(runnable Runnable) *tunnyTaskCtx {
 	return w
 }
 
-func (t *TunnyRunner) Execute(runnable Runnable) (Task, error) {
-	w := t.createTask(runnable)
+func (t *TunnyRunner) Execute(runnable Runnable, option ...Option) (Task, error) {
+	w := t.createTask(runnable, option...)
 	go t.pool.Process(w)
 	return *w.task, nil
 }
 
-func (t *TunnyRunner) ExecuteAndWait(runnable Runnable, timeout time.Duration) (Task, error) {
-	w := t.createTask(runnable)
+func (t *TunnyRunner) ExecuteAndWait(runnable Runnable, timeout time.Duration, option ...Option) (Task, error) {
+	w := t.createTask(runnable, option...)
 
 	timer := time.NewTimer(timeout)
 	done := make(chan int)
@@ -81,6 +86,17 @@ func (t *TunnyRunner) ExecuteAndWait(runnable Runnable, timeout time.Duration) (
 	return *w.task, nil
 }
 
+func (t *TunnyRunner) GetTasks(group string) ([]Task, error) {
+	tasks := make([]Task, 0)
+	for _, v := range t.store.Items() {
+		w := v.(*tunnyTaskCtx)
+		if group == "" || w.task.Group == group || strings.HasPrefix(w.task.Group, group+"/") {
+			tasks = append(tasks, *w.task)
+		}
+	}
+	return tasks, nil
+}
+
 func (t *TunnyRunner) GetTask(id string) (Task, error) {
 	w, ok := t.store.Get(id)
 	if !ok {
@@ -95,6 +111,9 @@ func (t *TunnyRunner) StopTask(id string) (Task, error) {
 		return Task{}, ErrorNotFound
 	}
 	w := temp.(*tunnyTaskCtx)
+	if w.task.Finished() {
+		return *w.task, nil
+	}
 	w.cancel()
 	return *w.task, nil
 }

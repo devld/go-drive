@@ -6,6 +6,8 @@ util:
   request_failed: "[{{ 1 }}] Request failed"
 oauth:
   state_mismatch: state does not match
+search:
+  invalid_query: Invalid query
 api:
   admin:
     unknown_drive_type: Unknown drive type '{{ 1 }}'

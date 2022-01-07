@@ -7,7 +7,7 @@
     <form-item
       v-for="item in form"
       :key="item.field"
-      :ref="setFieldsRef"
+      :ref="addFieldsRef"
       v-model="data[item.field]"
       :item="item"
       @update:model-value="emitInput"
@@ -35,13 +35,15 @@ const props = defineProps({
 })
 
 const data = ref({})
-const fields = ref([])
+let fields = []
 
 const emit = defineEmits(['update:modelValue'])
 
-const setFieldsRef = (el) => fields.value.push(el)
+const addFieldsRef = (el) => {
+  if (el) fields.push(el)
+}
 onBeforeUpdate(() => {
-  fields.value = []
+  fields = []
 })
 
 watch(
@@ -54,11 +56,11 @@ watch(
 )
 
 const validate = async () => {
-  await Promise.all(fields.value.map((f) => f.validate()))
+  await Promise.all(fields.map((f) => f.validate()))
 }
 
 const clearError = () => {
-  fields.value.forEach((f) => {
+  fields.forEach((f) => {
     f.clearError()
   })
 }
@@ -75,7 +77,6 @@ const fillDefaultValue = () => {
   for (const f of props.form) {
     dat[f.field] = f.defaultValue || null
   }
-  console.log(JSON.stringify(dat))
   data.value = dat
   emitInput()
 }

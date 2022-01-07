@@ -15,6 +15,7 @@ export const API_PATH = apiPath
 
 const BASE_CONFIG = {
   baseURL: API_PATH,
+  timeout: 60000,
 }
 
 /**

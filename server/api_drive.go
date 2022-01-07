@@ -157,7 +157,7 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 			return nil, e
 		}
 		return newEntryJson(r), nil
-	}, 2*time.Second)
+	}, 2*time.Second, task.WithNameGroup(from+" -> "+to, "drive/copy"))
 
 	if e != nil {
 		_ = c.Error(e)
@@ -186,7 +186,7 @@ func (dr *driveRoute) move(c *gin.Context) {
 			return nil, e
 		}
 		return newEntryJson(r), nil
-	}, 2*time.Second)
+	}, 2*time.Second, task.WithNameGroup(from+" -> "+to, "drive/move"))
 
 	if e != nil {
 		_ = c.Error(e)
@@ -209,7 +209,7 @@ func (dr *driveRoute) deleteEntry(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
 		return nil, dr.getDrive(c).Delete(ctx, path)
-	}, 2*time.Second)
+	}, 2*time.Second, task.WithNameGroup(path, "drive/delete"))
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -315,7 +315,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 			_ = os.Remove(tempFile.Name())
 		}()
 		return dr.getDrive(c).Save(ctx, path, size, override != "", tempFile)
-	}, 2*time.Second)
+	}, 2*time.Second, task.WithNameGroup(path, "drive/write"))
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -373,7 +373,7 @@ func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 		_ = tempFile.Close()
 		e = dr.chunkUploader.DeleteUpload(id)
 		return newEntryJson(entry), nil
-	}, 2*time.Second)
+	}, 2*time.Second, task.WithNameGroup(path, "drive/chunk-merge"))
 	if e != nil {
 		_ = c.Error(e)
 		return

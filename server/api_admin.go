@@ -356,7 +356,7 @@ func InitAdminRoutes(
 		t, e := runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
 			e := search.IndexAll(ctx, root, true)
 			return nil, e
-		})
+		}, task.WithNameGroup(root, "search/index"))
 		if e != nil {
 			_ = c.Error(e)
 			return

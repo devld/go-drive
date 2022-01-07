@@ -1,7 +1,7 @@
 <template>
   <div
     class="entry-list"
-    :class="[viewMode ? `entry-list--view-${viewMode}` : '']"
+    :class="[validViewMode ? `entry-list--view-${validViewMode}` : '']"
   >
     <div class="entry-list__head">
       <path-bar
@@ -13,15 +13,15 @@
         <button
           class="plain-button view-model-toggle"
           :title="
-            viewMode === 'list'
+            validViewMode === 'list'
               ? $t('app.toggle_to_thumbnail')
               : $t('app.toggle_to_list')
           "
-          @click="
-            emit('update:viewMode', viewMode === 'list' ? 'thumbnail' : 'list')
-          "
+          @click="toggleViewMode"
         >
-          <i-icon :svg="viewMode === 'list' ? '#icon-gallery' : '#icon-list'" />
+          <i-icon
+            :svg="validViewMode === 'list' ? '#icon-gallery' : '#icon-list'"
+          />
         </button>
         <simple-dropdown v-model="sortDropdownShowing">
           <span :title="$t('app.toggle_sort')">
@@ -33,7 +33,7 @@
                 v-for="s in sortModes"
                 :key="s.key"
                 class="sort-mode"
-                :class="{ active: sort === s.key }"
+                :class="{ active: validSort === s.key }"
                 @click="setSortBy(s.key)"
               >
                 {{ $t(s.name) }}
@@ -52,7 +52,7 @@
           @click="entryClicked"
         >
           <entry-item
-            :view-mode="viewMode"
+            :view-mode="validViewMode"
             :entry="parentDirEntry"
             :icon="selected.length > 0 ? '#icon-duigou' : undefined"
             :show-thumbnail="false"
@@ -70,11 +70,12 @@
           :ref="addEntryRef"
           :entry="entry"
           :get-link="getLink"
+          :data-name="entry.name"
           @click="entryClicked"
           @menu="entryContextMenu"
         >
           <entry-item
-            :view-mode="viewMode"
+            :view-mode="validViewMode"
             :entry="entry"
             show-thumbnail
             @icon-click="iconClicked(entry, $event)"
@@ -89,6 +90,7 @@
 </template>
 <script setup>
 import { isRootPath as isRootPathFn, mapOf, pathClean, pathJoin } from '@/utils'
+import { useHotKey } from '@/utils/hooks/hotkey'
 import { computed, nextTick, onBeforeUpdate, ref, watch } from 'vue'
 import IIcon from './IIcon.vue'
 
@@ -157,21 +159,28 @@ const emit = defineEmits([
 
 const selected = ref([])
 const sortDropdownShowing = ref(false)
-const sortModes = [
-  { key: 'name_asc', name: 'app.sort.name_asc' },
-  { key: 'name_desc', name: 'app.sort.name_desc' },
-  { key: 'mod_time_asc', name: 'app.sort.mod_time_asc' },
-  { key: 'mod_time_desc', name: 'app.sort.mod_time_desc' },
-  { key: 'size_asc', name: 'app.sort.size_asc' },
-  { key: 'size_desc', name: 'app.sort.size_desc' },
-]
+const sortModes = Object.keys(SORTS_METHOD).map((key) => ({
+  key,
+  name: `app.sort.${key}`,
+}))
+
+const validViewMode = computed(
+  () => ['list', 'thumbnail'].find((e) => e === props.viewMode) || 'list'
+)
+
+const validSort = computed(() => {
+  const sort = props.sort
+  return SORTS_METHOD[sort] ? sort : 'name_asc'
+})
 
 const parentEntryRef = ref(null)
-const entriesRef = ref([])
+let entriesRef = []
 
-const addEntryRef = (el) => entriesRef.value.push(el)
+const addEntryRef = (el) => {
+  if (el) entriesRef.push(el)
+}
 onBeforeUpdate(() => {
-  entriesRef.value = []
+  entriesRef = []
 })
 
 const parentDirEntry = computed(() => ({
@@ -184,7 +193,7 @@ const parentDirEntry = computed(() => ({
 }))
 
 const sortedEntries = computed(() => {
-  const sortMethod = SORTS_METHOD[props.sort] || SORTS_METHOD.name_asc
+  const sortMethod = SORTS_METHOD[validSort.value] || SORTS_METHOD.name_asc
   return [...props.entries].sort(sortMethod)
 })
 
@@ -234,8 +243,17 @@ const toggleSelectAll = () => {
   emit('update:selection', selected.value)
 }
 
+const setViewMode = (mode) => {
+  emit('update:viewMode', mode)
+  return mode
+}
+
+const toggleViewMode = () => {
+  setViewMode(validViewMode.value === 'list' ? 'thumbnail' : 'list')
+}
+
 const iconClicked = (entry, e) => {
-  if (props.viewMode !== 'list') return
+  if (validViewMode.value !== 'list') return
   if (!props.selectable) return
   e.stopPropagation()
   e.preventDefault()
@@ -243,7 +261,7 @@ const iconClicked = (entry, e) => {
 }
 
 const parentIconClicked = (e) => {
-  if (props.viewMode !== 'list') return
+  if (validViewMode.value !== 'list') return
   if (!props.selectable) return
   e.stopPropagation()
   e.preventDefault()
@@ -255,20 +273,21 @@ const setSortBy = (sort) => {
   sortDropdownShowing.value = false
 }
 
-const focusOnEntry = (name) => {
+const focusOnEntry = async (name) => {
+  await nextTick()
   let dom
   if (name === '..') dom = parentEntryRef.value
   else {
-    const index = sortedEntries.value.findIndex((e) => e.name === name)
-    if (index >= 0) dom = entriesRef.value[index]
+    dom = entriesRef.find((el) => el.$el?.dataset.name === name)?.$el
   }
-  dom = (dom && dom.$el) || dom
-  nextTick(() => {
-    dom && dom.focus()
-  })
+  dom?.focus()
 }
 
-defineExpose({ focusOnEntry })
+useHotKey(() => {
+  toggleViewMode()
+}, 't')
+
+defineExpose({ focusOnEntry, setSortBy, setViewMode, toggleViewMode })
 </script>
 <style lang="scss">
 .entry-list {

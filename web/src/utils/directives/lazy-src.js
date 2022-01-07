@@ -22,6 +22,8 @@ function loadImage(img) {
 
 export default {
   mounted(el, { value }) {
+    el.src =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAAtJREFUGFdjYAACAAAFAAGq1chRAAAAAElFTkSuQmCC'
     el.dataset.src = value
     if (value) {
       observer.observe(el)

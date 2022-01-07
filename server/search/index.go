@@ -112,7 +112,9 @@ func (s *Service) search(path, query string, from, size int,
 }
 
 func (s *Service) IndexAll(ctx types.TaskCtx, path string, ignoreError bool) error {
-	_ = s.es.DeleteDir(task.NewContextWrapper(context.Background()), path)
+	_ = s.es.DeleteDir(ctx, path)
+	ctx.Total(0, true)
+	ctx.Progress(0, true)
 	filters := s.loadFilters()
 	return s.walk(ctx, s.drive.Get(), path, ignoreError, func(entry types.IEntry) error {
 		if isEntryExcluded(entry, filters) {
@@ -178,12 +180,12 @@ func (s *Service) loadFilters() *searchFilter {
 func (s *Service) mapEntry(e types.IEntry) types.EntrySearchItem {
 	name := filepath.Base(e.Path())
 	return types.EntrySearchItem{
-		Path:       e.Path(),
-		Name:       name,
-		Ext:        utils.PathExt(name),
-		Type:       e.Type(),
-		Size:       e.Size(),
-		ModifiedAt: utils.Time(e.ModTime()),
+		Path:    e.Path(),
+		Name:    name,
+		Ext:     utils.PathExt(name),
+		Type:    e.Type(),
+		Size:    e.Size(),
+		ModTime: utils.Time(e.ModTime()),
 	}
 }
 
@@ -217,6 +219,7 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 			}
 			return e
 		}
+		ctx.Total(1, false)
 		ctx.Progress(1, false)
 
 		if entry.Type().IsDir() {
@@ -254,7 +257,7 @@ func (s *Service) OnDeleted(_ types.DriveListenerContext, path string) {
 			log.Printf("Error deleting index %s: %s", utils.LogSanitize(path), e)
 		}
 		return nil, e
-	})
+	}, task.WithNameGroup(path, "search/delete"))
 }
 
 func (s *Service) Status() (string, types.SM, error) {
