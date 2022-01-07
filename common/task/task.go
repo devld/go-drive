@@ -1,7 +1,6 @@
 package task
 
 import (
-	"context"
 	"errors"
 	"go-drive/common/types"
 	"time"
@@ -34,6 +33,10 @@ type Task struct {
 	Error     interface{} `json:"error"`
 	CreatedAt time.Time   `json:"createdAt"`
 	UpdatedAt time.Time   `json:"updatedAt"`
+
+	// meta data
+	Name  string `json:"name"`
+	Group string `json:"group"`
 }
 
 func (t Task) Finished() bool {
@@ -43,57 +46,11 @@ func (t Task) Finished() bool {
 type Runnable = func(ctx types.TaskCtx) (interface{}, error)
 
 type Runner interface {
-	Execute(runnable Runnable) (Task, error)
-	ExecuteAndWait(runnable Runnable, timeout time.Duration) (Task, error)
+	Execute(runnable Runnable, options ...Option) (Task, error)
+	ExecuteAndWait(runnable Runnable, timeout time.Duration, options ...Option) (Task, error)
 	GetTask(id string) (Task, error)
+	GetTasks(group string) ([]Task, error)
 	StopTask(id string) (Task, error)
 	RemoveTask(id string) error
 	Dispose() error
-}
-
-func DummyContext() types.TaskCtx {
-	return dummyCtx
-}
-
-// NewContextWrapper wraps Context as a TaskCtx
-func NewContextWrapper(ctx context.Context) types.TaskCtx {
-	return &taskContextWrapper{ctx}
-}
-
-var dummyCtx = &taskContextWrapper{context.Background()}
-
-type taskContextWrapper struct {
-	context.Context
-}
-
-func (d *taskContextWrapper) Progress(int64, bool) {
-}
-
-func (d *taskContextWrapper) Total(int64, bool) {
-}
-
-func NewCtxWrapper(ctx types.TaskCtx, mutableLoaded, mutableTotal bool) types.TaskCtx {
-	return &ctxWrapper{
-		TaskCtx:       ctx,
-		mutableLoaded: mutableLoaded,
-		mutableTotal:  mutableTotal,
-	}
-}
-
-type ctxWrapper struct {
-	types.TaskCtx
-	mutableLoaded bool
-	mutableTotal  bool
-}
-
-func (c *ctxWrapper) Progress(loaded int64, abs bool) {
-	if c.mutableLoaded {
-		c.TaskCtx.Progress(loaded, abs)
-	}
-}
-
-func (c *ctxWrapper) Total(total int64, abs bool) {
-	if c.mutableTotal {
-		c.TaskCtx.Total(total, abs)
-	}
 }

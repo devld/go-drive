@@ -26,7 +26,7 @@ export default { name: 'EntryListView' }
 </script>
 <script setup>
 import { listEntries } from '@/api'
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   path: {
@@ -80,9 +80,16 @@ const filteredEntries = computed(() =>
   props.filter ? entries.value.filter(props.filter) : entries.value
 )
 
-const focusOnEntry = (name) => {
+const focusOnEntry = (name, later) => {
+  if (later) {
+    lastEntry = name
+    return
+  }
   entryListEl.value.focusOnEntry(name)
 }
+const setViewMode = (mode) => entryListEl.value.setViewMode(mode)
+const toggleViewMode = (mode) => entryListEl.value.toggleViewMode(mode)
+const setSortBy = (sort) => entryListEl.value.setSortBy(sort)
 
 const loadEntries = async () => {
   if (task) task.cancel()
@@ -101,7 +108,6 @@ const loadEntries = async () => {
       path: loadedPath.value,
     })
 
-    await nextTick()
     if (lastEntry) {
       focusOnEntry(lastEntry)
       lastEntry = null
@@ -123,15 +129,23 @@ const commitPathChange = (path = '') => {
 
 const tryRecoverState = (newPath, oldPath) => {
   if (!oldPath.startsWith(newPath)) return
+  // navigate back
+  // entry name
   const path = oldPath.substr(newPath ? newPath.length + 1 : newPath.length)
-  lastEntry = path
+  focusOnEntry(path, true)
 }
 
 const reload = () => {
   loadEntries()
 }
 
-defineExpose({ reload, focusOnEntry })
+defineExpose({
+  reload,
+  focusOnEntry,
+  setViewMode,
+  toggleViewMode,
+  setSortBy,
+})
 
 watch(
   () => props.path,

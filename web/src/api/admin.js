@@ -95,3 +95,7 @@ export function cleanDriveCache(name) {
 export function loadStats() {
   return axios.get('/admin/stats')
 }
+
+export function searchIndex(path) {
+  return axios.post(`/admin/search/index/${path}`)
+}

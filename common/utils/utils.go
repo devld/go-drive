@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"go-drive/common/types"
 	"math"
@@ -237,6 +238,27 @@ func BuildURL(pattern string, variables ...string) string {
 		j++
 	}
 	return pattern
+}
+
+var sizeRegexp = regexp.MustCompile("^([0-9]+)([bkmgtBKMGT]?)$")
+var invalidSizeErr = errors.New("invalid size")
+var sizeMultiplier = map[string]int64{
+	"":  1,
+	"b": 1,
+	"k": 1024,
+	"m": 1024 * 1024,
+	"g": 1024 * 1024 * 1024,
+	"t": 1024 * 1024 * 1024 * 1024,
+}
+
+func DataSizeToBytes(s string) (int64, error) {
+	m := sizeRegexp.FindStringSubmatch(s)
+	if m == nil {
+		return 0, invalidSizeErr
+	}
+	size := ToInt64(m[1], 0)
+	unit := strings.ToLower(m[2])
+	return sizeMultiplier[unit] * size, nil
 }
 
 func LogSanitize(s string) string {

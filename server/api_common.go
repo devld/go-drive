@@ -36,6 +36,7 @@ func InitCommonRoutes(
 	})
 
 	authR := r.Group("/", TokenAuth(tokenStore))
+	authAdmin := authR.Group("/", UserGroupRequired("admin"))
 
 	// get task
 	authR.GET("/task/:id", func(c *gin.Context) {
@@ -50,8 +51,19 @@ func InitCommonRoutes(
 		SetResult(c, t)
 	})
 
+	// get tasks
+	authAdmin.GET("/tasks", func(c *gin.Context) {
+		group := c.Query("group")
+		tasks, e := runner.GetTasks(group)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, tasks)
+	})
+
 	// cancel and delete task
-	authR.DELETE("/task/:id", func(c *gin.Context) {
+	authAdmin.DELETE("/task/:id", func(c *gin.Context) {
 		_, e := runner.StopTask(c.Param("id"))
 		if e != nil && e == task.ErrorNotFound {
 			e = err.NewNotFoundMessageError(e.Error())

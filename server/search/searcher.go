@@ -4,8 +4,12 @@ import (
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/mapping"
 	"github.com/blevesearch/bleve/v2/search"
+	err "go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"regexp"
+	"strconv"
 	"time"
 )
 
@@ -31,19 +35,33 @@ func createMapping() mapping.IndexMapping {
 	m := bleve.NewIndexMapping()
 	entryMapping := bleve.NewDocumentMapping()
 
-	entryMapping.AddFieldMappingsAt("Path", bleve.NewTextFieldMapping())
-	entryMapping.AddFieldMappingsAt("Name", bleve.NewTextFieldMapping())
-	entryMapping.AddFieldMappingsAt("Ext", bleve.NewKeywordFieldMapping())
-	entryMapping.AddFieldMappingsAt("Type", bleve.NewKeywordFieldMapping())
-	entryMapping.AddFieldMappingsAt("Size", bleve.NewNumericFieldMapping())
-	entryMapping.AddFieldMappingsAt("ModifiedAt", bleve.NewNumericFieldMapping())
+	entryMapping.AddFieldMappingsAt("path", bleve.NewTextFieldMapping(), bleve.NewKeywordFieldMapping())
+	entryMapping.AddFieldMappingsAt("name", bleve.NewTextFieldMapping(), bleve.NewKeywordFieldMapping())
+	entryMapping.AddFieldMappingsAt("ext", bleve.NewKeywordFieldMapping())
+	entryMapping.AddFieldMappingsAt("type", bleve.NewKeywordFieldMapping())
+	entryMapping.AddFieldMappingsAt("size", bleve.NewNumericFieldMapping())
+	entryMapping.AddFieldMappingsAt("modTime", bleve.NewDateTimeFieldMapping())
 
 	m.DefaultMapping = entryMapping
 	return m
 }
 
+var sizePattern = regexp.MustCompile("(size:)([>=<]*)(([0-9]+)([bkmgtBKMGT])?)")
+
+func (s *EntrySearcher) processQuery(query string) string {
+	query = sizePattern.ReplaceAllStringFunc(query, func(s string) string {
+		g := sizePattern.FindStringSubmatch(s)
+		size, e := utils.DataSizeToBytes(g[3])
+		if e != nil {
+			return ""
+		}
+		return g[1] + g[2] + strconv.FormatInt(size, 10)
+	})
+	return query
+}
+
 func (s *EntrySearcher) Search(path string, query string, from, size int) ([]types.EntrySearchResultItem, error) {
-	if path != "" {
+	if !utils.IsRootPath(path) {
 		path += "/"
 	}
 
@@ -54,7 +72,7 @@ func (s *EntrySearcher) Search(path string, query string, from, size int) ([]typ
 	// exclude this query from highlights
 	bqn.AddMustNot(pq)
 
-	qq := bleve.NewQueryStringQuery(query)
+	qq := bleve.NewQueryStringQuery(s.processQuery(query))
 
 	bq := bleve.NewBooleanQuery()
 	bq.AddMustNot(bqn)
@@ -70,6 +88,9 @@ func (s *EntrySearcher) Search(path string, query string, from, size int) ([]typ
 
 	result, e := s.index.Search(sr)
 	if e != nil {
+		if e.Error() == "syntax error" {
+			return nil, err.NewBadRequestError(i18n.T("search.invalid_query"))
+		}
 		return nil, e
 	}
 
@@ -90,7 +111,10 @@ func (s *EntrySearcher) Delete(path string) error {
 func (s *EntrySearcher) DeleteDir(ctx types.TaskCtx, dirPath string) error {
 	ctx.Total(1, false)
 	total := uint64(0)
-	ps := bleve.NewPrefixQuery(dirPath + "/")
+	if !utils.IsRootPath(dirPath) {
+		dirPath += "/"
+	}
+	ps := bleve.NewPrefixQuery(dirPath)
 	for {
 		if e := ctx.Err(); e != nil {
 			return e
@@ -105,6 +129,9 @@ func (s *EntrySearcher) DeleteDir(ctx types.TaskCtx, dirPath string) error {
 			ctx.Total(int64(total), false)
 		}
 		if total == 0 {
+			break
+		}
+		if len(r.Hits) == 0 {
 			break
 		}
 		for _, hit := range r.Hits {
@@ -146,14 +173,14 @@ func (s *EntrySearcher) Dispose() error {
 func mapSearchResultItem(hits search.DocumentMatchCollection) []types.EntrySearchResultItem {
 	items := make([]types.EntrySearchResultItem, 0, len(hits))
 	for _, hit := range hits {
-		modTime, _ := time.Parse(time.RFC3339, hit.Fields["modifiedAt"].(string))
+		modTime, _ := time.Parse(time.RFC3339, hit.Fields["modTime"].(string))
 		esi := types.EntrySearchItem{
-			Path:       hit.Fields["path"].(string),
-			Name:       hit.Fields["name"].(string),
-			Ext:        hit.Fields["ext"].(string),
-			Type:       types.EntryType(hit.Fields["type"].(string)),
-			Size:       int64(hit.Fields["size"].(float64)),
-			ModifiedAt: modTime,
+			Path:    hit.Fields["path"].([]interface{})[0].(string),
+			Name:    hit.Fields["name"].([]interface{})[0].(string),
+			Ext:     hit.Fields["ext"].(string),
+			Type:    types.EntryType(hit.Fields["type"].(string)),
+			Size:    int64(hit.Fields["size"].(float64)),
+			ModTime: modTime,
 		}
 		highlights := make(map[string][]string, len(hit.Locations))
 		for k, v := range hit.Locations {

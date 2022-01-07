@@ -6,6 +6,8 @@ util:
   request_failed: "[{{ 1 }}] 请求失败"
 oauth:
   state_mismatch: state 不匹配
+search:
+  invalid_query: 无效的查询
 api:
   admin:
     unknown_drive_type: 未知的 Drive 类型 '{{ 1 }}'

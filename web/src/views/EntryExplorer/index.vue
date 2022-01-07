@@ -1,15 +1,22 @@
 <template>
   <div class="entry-explorer">
+    <!-- search panel -->
+    <div class="search-panel-wrapper">
+      <search-panel :path="path" @navigate="navigateToEntry" />
+    </div>
+    <!-- search panel -->
+
     <!-- file list main area -->
     <div class="files-list">
       <entry-list-view
         ref="entryListEl"
         v-model:selection="selectedEntries"
         v-model:sort="sortBy"
-        v-model:view-mode="viewMode"
+        :view-mode="viewMode"
         :path="path"
         show-toggles
         :get-link="getLink"
+        @update:view-mode="onViewModeChanged"
         @entries-load="entriesLoaded"
         @entry-click="entryClicked"
         @entry-menu="showEntryMenu"
@@ -70,26 +77,26 @@
 export default { name: 'EntryExplorer' }
 </script>
 <script setup>
+import { getContent } from '@/api'
+import { debounce, dir, filename, setTitle } from '@/utils'
+import { useEntryExplorer } from '@/utils/explorer'
+import {
+  getHandler,
+  HANDLER_COMPONENTS,
+  resolveEntryHandler,
+} from '@/utils/handlers'
+import uiUtils, { confirm } from '@/utils/ui-utils'
 import EntryListView from '@/views/EntryListView/index.vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 import EntryMenu from './EntryMenu.vue'
 import NewEntryArea from './NewEntryArea.vue'
-
-import { getContent } from '@/api'
-import { filename, dir, debounce, setTitle } from '@/utils'
-
-import {
-  resolveEntryHandler,
-  HANDLER_COMPONENTS,
-  getHandler,
-} from '@/utils/handlers'
-import { useStore } from 'vuex'
-import uiUtils, { confirm } from '@/utils/ui-utils'
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { onBeforeRouteLeave, onBeforeRouteUpdate, useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import { useEntryExplorer } from '@/utils/explorer'
+import SearchPanel from './SearchPanel/index.vue'
 
 const README_FILENAME = 'readme.md'
+const VIEW_MODE_STORAGE_KEY = 'entries-list-view-mode'
 
 const HISTORY_FLAG = '_h'
 const setHistoryFlag = () => {
@@ -121,7 +128,9 @@ const {
   resolvePath,
 } = useEntryExplorer(props.basePath)
 
-const path = computed(() => resolvePath(router.currentRoute.value))
+const path = computed(() =>
+  decodeURIComponent(resolvePath(router.currentRoute.value))
+)
 
 const readmeContent = ref('')
 
@@ -135,7 +144,7 @@ const selectedEntries = ref([])
 
 const currentDirEntry = ref(null)
 
-const viewMode = ref('list')
+const viewMode = ref(localStorage.getItem(VIEW_MODE_STORAGE_KEY) || 'list')
 const sortBy = ref(undefined)
 
 const entryListEl = ref(null)
@@ -278,6 +287,7 @@ const resolveRouteAndHandleEntry = (to) => {
     setTitle(`${entryName}`)
   }
 }
+
 const closeEntryHandlerView = () => {
   setTitle(path.value)
 
@@ -289,6 +299,7 @@ const closeEntryHandlerView = () => {
     entryHandlerView.value = null
   }
 }
+
 const entryHandlerViewChange = async (path) => {
   try {
     await confirmUnsavedState()
@@ -297,7 +308,6 @@ const entryHandlerViewChange = async (path) => {
   }
   const dirPath = dir(path)
   const name = filename(path)
-  focusOnEntry(name)
   const newPath = getHandlerLink(entryHandlerView.value.handler, name, dirPath)
   if (
     decodeURIComponent(router.currentRoute.value.fullPath) !==
@@ -337,9 +347,24 @@ const replaceHandlerRoute = () => {
   }
 }
 
-const focusOnEntry = (name) => {
-  entryListEl.value.focusOnEntry(name)
+const focusOnEntry = (name, later) => {
+  entryListEl.value.focusOnEntry(name, later)
 }
+
+const navigateToEntry = (entry) => {
+  const targetPath = dir(entry.path)
+  if (targetPath !== path.value) {
+    router.push(getDirLink(targetPath))
+    focusOnEntry(entry.name, true)
+  } else {
+    focusOnEntry(entry.name)
+  }
+}
+
+const onViewModeChanged = debounce((mode) => {
+  viewMode.value = mode
+  localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
+}, 500)
 
 const tryLoadReadme = async (entries) => {
   let readmeFound
@@ -419,12 +444,21 @@ onBeforeUnmount(() => {
 </script>
 <style lang="scss">
 .entry-explorer {
-  margin-bottom: 40px;
+  position: relative;
+  margin: 0 auto 40px;
+  max-width: 900px;
+  padding-top: 72px;
+}
+
+.search-panel-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
 }
 
 .files-list {
-  max-width: 880px;
-  margin: 16px auto 0;
   background-color: var(--primary-bg-color);
   padding: 16px 0;
   border-radius: 16px;
@@ -432,8 +466,7 @@ onBeforeUnmount(() => {
 
 .page-footer {
   box-sizing: border-box;
-  max-width: 880px;
-  margin: 42px auto;
+  margin: 42px 0;
   background-color: var(--primary-bg-color);
   padding: 16px;
   border-radius: 16px;

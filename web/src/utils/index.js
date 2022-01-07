@@ -14,14 +14,16 @@ export function setTitle(title) {
 }
 
 export function formatTime(d) {
-  const date = new Date(d)
-  if (isNaN(date.getTime())) return ''
-  const year = date.getFullYear()
-  let month = date.getMonth() + 1
-  let day = date.getDate()
-  let hour = date.getHours()
-  let minute = date.getMinutes()
-  let second = date.getSeconds()
+  if (!d) return ''
+  if (!(d instanceof Date)) d = new Date(d)
+  if (isNaN(d.getTime())) return ''
+  if (d.getTime() < 0) return ''
+  const year = d.getFullYear()
+  let month = d.getMonth() + 1
+  let day = d.getDate()
+  let hour = d.getHours()
+  let minute = d.getMinutes()
+  let second = d.getSeconds()
   month = month < 10 ? '0' + month : month
   day = day < 10 ? '0' + day : day
   hour = hour < 10 ? '0' + hour : hour
@@ -111,7 +113,7 @@ export const debounce = (func, wait) => {
   return function executedFunction() {
     const later = () => {
       timeout = null
-      func.call(this, arguments)
+      func.apply(this, arguments)
     }
     clearTimeout(timeout)
     timeout = setTimeout(later, wait)

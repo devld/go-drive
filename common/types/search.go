@@ -3,12 +3,12 @@ package types
 import "time"
 
 type EntrySearchItem struct {
-	Path       string    `json:"path"`
-	Name       string    `json:"name"`
-	Ext        string    `json:"ext"`
-	Type       EntryType `json:"type"`
-	Size       int64     `json:"size"`
-	ModifiedAt time.Time `json:"modifiedAt"`
+	Path    string    `json:"path"`
+	Name    string    `json:"name"`
+	Ext     string    `json:"ext"`
+	Type    EntryType `json:"type"`
+	Size    int64     `json:"size"`
+	ModTime time.Time `json:"modTime"`
 }
 
 type EntrySearchResultItem struct {

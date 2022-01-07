@@ -44,7 +44,7 @@ const routes = [
           {
             name: 'MiscSettings',
             path: '/admin/misc',
-            component: () => import('@/views/Admin/Misc.vue'),
+            component: () => import('@/views/Admin/Misc/index.vue'),
             meta: { title: T('routes.title.misc') },
           },
         ],
