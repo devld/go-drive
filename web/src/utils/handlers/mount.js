@@ -12,8 +12,8 @@ export default {
   supports: (entry, parentEntry, user) =>
     isAdmin(user) &&
     (Array.isArray(entry)
-      ? !entry.some((e) => e.meta.is_mount)
-      : !entry.meta.is_mount),
+      ? !entry.some((e) => e.meta.isMount)
+      : !entry.meta.isMount),
   multiple: true,
   async handler(entries, { open, loading }) {
     if (!Array.isArray(entries)) entries = [entries]

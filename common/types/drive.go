@@ -3,7 +3,6 @@ package types
 import (
 	"context"
 	"io"
-	"net/http"
 )
 
 const (
@@ -119,17 +118,6 @@ type IDrive interface {
 
 	// Upload returns the upload config of the path
 	Upload(ctx context.Context, path string, size int64, override bool, config SM) (*DriveUploadConfig, error)
-}
-
-type DriveListenerContext struct {
-	Request *http.Request
-	Session Session
-}
-
-type IDriveListener interface {
-	OnAccess(ctx DriveListenerContext, entry IEntry)
-	OnUpdated(ctx DriveListenerContext, entry IEntry, includeDescendants bool)
-	OnDeleted(ctx DriveListenerContext, path string)
 }
 
 const (

@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"go-drive/common/event"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -18,15 +19,14 @@ type Access struct {
 
 	signer *utils.Signer
 
-	ch           *registry.ComponentsHolder
-	listeners    []types.IDriveListener
-	listenersMux *sync.Mutex
+	ch  *registry.ComponentsHolder
+	bus event.Bus
 }
 
 func NewAccess(ch *registry.ComponentsHolder,
 	rootDrive *RootDrive,
 	permissionDAO *storage.PathPermissionDAO,
-	signer *utils.Signer) (*Access, error) {
+	signer *utils.Signer, bus event.Bus) (*Access, error) {
 
 	da := &Access{
 		rootDrive:     rootDrive,
@@ -34,7 +34,7 @@ func NewAccess(ch *registry.ComponentsHolder,
 		permissionDAO: permissionDAO,
 		signer:        signer,
 		ch:            ch,
-		listenersMux:  &sync.Mutex{},
+		bus:           bus,
 	}
 	if e := da.ReloadPerm(); e != nil {
 		return nil, e
@@ -45,24 +45,6 @@ func NewAccess(ch *registry.ComponentsHolder,
 }
 
 func (da *Access) GetDrive(req *http.Request, session types.Session) types.IDrive {
-	if da.listeners == nil {
-		func() {
-			da.listenersMux.Lock()
-			defer da.listenersMux.Unlock()
-			if da.listeners == nil {
-				listeners := make([]types.IDriveListener, 0)
-				listenerObjects := da.ch.Gets(func(c interface{}) bool {
-					_, ok := c.(types.IDriveListener)
-					return ok
-				})
-				for _, listener := range listenerObjects {
-					listeners = append(listeners, listener.(types.IDriveListener))
-				}
-				da.listeners = listeners
-			}
-		}()
-	}
-
 	return NewListenerWrapper(
 		NewPermissionWrapperDrive(
 			req,
@@ -74,7 +56,7 @@ func (da *Access) GetDrive(req *http.Request, session types.Session) types.IDriv
 			Request: req,
 			Session: session,
 		},
-		da.listeners,
+		da.bus,
 	)
 }
 

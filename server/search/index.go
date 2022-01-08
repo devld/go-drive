@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"go-drive/common"
+	"go-drive/common/event"
 	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -33,10 +34,12 @@ type Service struct {
 
 	runner  task.Runner
 	options *storage.OptionsDAO
+
+	bus event.Bus
 }
 
 func NewService(ch *registry.ComponentsHolder, config common.Config, od *storage.OptionsDAO,
-	rootDrive *drive.RootDrive, runner task.Runner) (*Service, error) {
+	rootDrive *drive.RootDrive, runner task.Runner, bus event.Bus) (*Service, error) {
 
 	indexPath, _ := config.GetDir(searchIndexName, false)
 	searcher, e := NewEntrySearcher(indexPath)
@@ -49,8 +52,13 @@ func NewService(ch *registry.ComponentsHolder, config common.Config, od *storage
 		drive:   rootDrive,
 		runner:  runner,
 		options: od,
+		bus:     bus,
 	}
 	ch.Add("searchService", s)
+
+	s.bus.Subscribe(event.EntryUpdated, s.onUpdated)
+	s.bus.Subscribe(event.EntryDeleted, s.onDeleted)
+
 	return s, nil
 }
 
@@ -91,6 +99,16 @@ func (s *Service) Search(ctx context.Context, path string, query string,
 	}, nil
 }
 
+func (s *Service) TriggerIndexAll(path string, ignoreError bool) (task.Task, error) {
+	return s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
+		e := s.indexAll(ctx, path, ignoreError)
+		if e != nil {
+			log.Printf("Error indexing %s: %s", path, e)
+		}
+		return nil, e
+	}, task.WithNameGroup(path, "search/index"))
+}
+
 func (s *Service) search(path, query string, from, size int,
 	perms utils.PermMap) ([]types.EntrySearchResultItem, bool, error) {
 	r, e := s.es.Search(path, query, from, size)
@@ -111,7 +129,7 @@ func (s *Service) search(path, query string, from, size int,
 	return items, len(r) >= size, nil
 }
 
-func (s *Service) IndexAll(ctx types.TaskCtx, path string, ignoreError bool) error {
+func (s *Service) indexAll(ctx types.TaskCtx, path string, ignoreError bool) error {
 	_ = s.es.DeleteDir(ctx, path)
 	ctx.Total(0, true)
 	ctx.Progress(0, true)
@@ -196,33 +214,35 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 	if e := ctx.Err(); e != nil {
 		return e
 	}
-	entries, e := d.List(ctx, rootPath)
+	entry, e := d.Get(ctx, rootPath)
 	if e != nil {
 		if ignoreError {
-			log.Printf("failed to index %s: %s", utils.LogSanitize(rootPath), e)
 			return nil
 		}
 		return e
 	}
-	for _, entry := range entries {
-		if e := ctx.Err(); e != nil {
-			return e
+	if e := visit(entry); e != nil {
+		if e == skip {
+			return nil
 		}
-		e = visit(entry)
-		if e != nil {
-			if e == skip {
-				continue
-			}
-			if ignoreError {
-				log.Printf("failed to index %s: %s", entry.Path(), e)
-				continue
-			}
-			return e
+		if ignoreError {
+			return nil
 		}
-		ctx.Total(1, false)
-		ctx.Progress(1, false)
+		return e
+	}
+	ctx.Total(1, false)
+	ctx.Progress(1, false)
 
-		if entry.Type().IsDir() {
+	if entry.Type() == types.TypeDir {
+		entries, e := d.List(ctx, rootPath)
+		if e != nil {
+			if ignoreError {
+				log.Printf("failed to index %s: %s", utils.LogSanitize(rootPath), e)
+				return nil
+			}
+			return e
+		}
+		for _, entry := range entries {
 			e = s.walk(ctx, d, entry.Path(), ignoreError, visit)
 			if e != nil {
 				return e
@@ -232,25 +252,25 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 	return nil
 }
 
-func (s *Service) OnAccess(types.DriveListenerContext, types.IEntry) {
-	// nothing
-}
-
-func (s *Service) OnUpdated(_ types.DriveListenerContext, entry types.IEntry, includeDescendants bool) {
+func (s *Service) onUpdated(_ types.DriveListenerContext, path string, includeDescendants bool) {
 	if includeDescendants {
-		e := s.IndexAll(task.NewContextWrapper(context.Background()), entry.Path(), false)
-		if e != nil {
-			log.Printf("Error indexing descendants of %s: %s", entry.Path(), e)
-		}
+		_, _ = s.TriggerIndexAll(path, true)
 	} else {
-		e := s.Index(entry)
-		if e != nil {
-			log.Printf("Error indexing %s: %s", entry.Path(), e)
-		}
+		_, _ = s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
+			entry, e := s.drive.Get().Get(ctx, path)
+			if e != nil {
+				return nil, e
+			}
+			e = s.Index(entry)
+			if e != nil {
+				log.Printf("Error indexing %s: %s", path, e)
+			}
+			return nil, e
+		})
 	}
 }
 
-func (s *Service) OnDeleted(_ types.DriveListenerContext, path string) {
+func (s *Service) onDeleted(_ types.DriveListenerContext, path string) {
 	_, _ = s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
 		e := s.es.DeleteDir(ctx, path)
 		if e != nil {
@@ -273,6 +293,8 @@ func (s *Service) Status() (string, types.SM, error) {
 }
 
 func (s *Service) Dispose() error {
+	s.bus.Unsubscribe(event.EntryUpdated, s.onUpdated)
+	s.bus.Unsubscribe(event.EntryDeleted, s.onDeleted)
 	return s.es.Dispose()
 }
 

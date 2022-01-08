@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
+	"go-drive/common/event"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
 	"go-drive/common/task"
@@ -28,6 +29,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
+	bus := event.NewBus(ch)
 	db, err := storage.NewDB(config, ch)
 	if err != nil {
 		return nil, err
@@ -42,13 +44,13 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	}
 	pathPermissionDAO := storage.NewPathPermissionDAO(db)
 	signer := utils.NewSigner()
-	access, err := drive.NewAccess(ch, rootDrive, pathPermissionDAO, signer)
+	access, err := drive.NewAccess(ch, rootDrive, pathPermissionDAO, signer, bus)
 	if err != nil {
 		return nil, err
 	}
 	optionsDAO := storage.NewOptionsDAO(db)
 	tunnyRunner := task.NewTunnyRunner(config, ch)
-	service, err := search.NewService(ch, config, optionsDAO, rootDrive, tunnyRunner)
+	service, err := search.NewService(ch, config, optionsDAO, rootDrive, tunnyRunner, bus)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +72,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	engine, err := server.InitServer(config, ch, rootDrive, access, service, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, fileMessageSource)
+	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, fileMessageSource)
 	if err != nil {
 		return nil, err
 	}

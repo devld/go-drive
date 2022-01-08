@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/errors"
+	"go-drive/common/event"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
 	"go-drive/common/task"
@@ -26,6 +27,7 @@ import (
 
 func InitServer(config common.Config,
 	ch *registry.ComponentsHolder,
+	bus event.Bus,
 	rootDrive *drive.RootDrive,
 	driveAccess *drive.Access,
 	searcher *search.Service,
@@ -65,7 +67,7 @@ func InitServer(config common.Config,
 	if e := InitAuthRoutes(router, userAuth, tokenStore); e != nil {
 		return nil, e
 	}
-	if e := InitAdminRoutes(router, ch, rootDrive, searcher, runner, tokenStore, userDAO, groupDAO,
+	if e := InitAdminRoutes(router, ch, bus, rootDrive, searcher, tokenStore, userDAO, groupDAO,
 		driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO); e != nil {
 		return nil, e
 	}

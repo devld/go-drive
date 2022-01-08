@@ -395,7 +395,7 @@ func (d *entryWrapper) Meta() types.EntryMeta {
 	meta := d.entry.Meta()
 	if d.isMount {
 		meta.Props = utils.CopyMap(meta.Props)
-		meta.Props["is_mount"] = true
+		meta.Props["isMount"] = true
 	}
 	return meta
 }

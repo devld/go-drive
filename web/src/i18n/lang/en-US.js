@@ -153,6 +153,8 @@ export default {
         search_th_updated_at: 'Updated At',
         search_th_ops: 'Operations',
         search_index_stop: 'Stop',
+        search_op_index: 'Index',
+        search_op_delete: 'Delete',
       },
       p_edit: {
         subject: 'Subject',
