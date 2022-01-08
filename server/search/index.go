@@ -103,7 +103,7 @@ func (s *Service) TriggerIndexAll(path string, ignoreError bool) (task.Task, err
 	return s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
 		e := s.indexAll(ctx, path, ignoreError)
 		if e != nil {
-			log.Printf("Error indexing %s: %s", path, e)
+			log.Printf("Error indexing %s: %s", utils.LogSanitize(path), e)
 		}
 		return nil, e
 	}, task.WithNameGroup(path, "search/index"))
