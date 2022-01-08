@@ -27,7 +27,7 @@
     </span>
     <span class="entry-item__info">
       <span class="entry-item__name">
-        <i v-if="entry.meta.is_mount">@</i>{{ entry.name
+        <i v-if="entry.meta.isMount">@</i>{{ entry.name
         }}<template v-if="entry.meta.ext">.{{ entry.meta.ext }}</template>
       </span>
       <div v-if="viewMode === 'list'" class="entry-item__meta">

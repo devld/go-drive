@@ -25,7 +25,14 @@
         </thead>
         <tbody>
           <tr v-for="task in tasks" :key="task.id">
-            <td>{{ task.name }}</td>
+            <td>
+              <span
+                class="search-index-op"
+                :class="`search-index-op-${task.group.split('/')[1]}`"
+                >{{ searchIndexType[task.group] }}</span
+              >
+              <span class="search-index-op-path">{{ task.name }}</span>
+            </td>
             <td class="center">{{ taskStatus(task) }}</td>
             <td class="center">{{ formatTime(task.createdAt) }}</td>
             <td class="center">{{ formatTime(task.updatedAt) }}</td>
@@ -64,15 +71,18 @@ const indexSubmitting = ref(false)
 
 const tasks = ref([])
 
+const searchIndexType = {
+  'search/index': t('p.admin.misc.search_op_index'),
+  'search/delete': t('p.admin.misc.search_op_delete'),
+}
+
 const isTaskFinished = (task) =>
   ['done', 'error', 'canceled'].includes(task.status)
 
 const taskStatus = (task) =>
-  `${t(`app.task_status_${task.status}`)}${
-    isTaskFinished(task)
-      ? ''
-      : ` (${task.progress.loaded}/${task.progress.total || '-'})`
-  }`
+  `${t(`app.task_status_${task.status}`)} (${task.progress.loaded}/${
+    task.progress.total || '-'
+  })`
 
 let tasksLoading = false
 const loadTasks = async () => {
@@ -139,5 +149,32 @@ useInterval(
   flex: 1;
   margin-bottom: 0;
   padding-right: 16px;
+}
+
+.search-index-tasks {
+  font-size: 14px;
+}
+
+.search-index-op,
+.search-index-op-path {
+  font-size: 12px;
+}
+
+.search-index-op {
+  margin-right: 0.5em;
+
+  &-index {
+    color: #1890ff;
+  }
+
+  &-delete {
+    color: #f5222d;
+  }
+}
+
+.search-index-op-path {
+  border: solid 1px var(--secondary-text-color);
+  padding: 2px 4px;
+  border-radius: 4px;
 }
 </style>

@@ -5,14 +5,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"go-drive/common/drive_util"
 	"go-drive/common/errors"
+	"go-drive/common/event"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
-	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server/search"
 	"go-drive/storage"
+	path2 "path"
 	"regexp"
 	"sort"
 )
@@ -20,9 +21,9 @@ import (
 func InitAdminRoutes(
 	r gin.IRouter,
 	ch *registry.ComponentsHolder,
+	bus event.Bus,
 	rootDrive *drive.RootDrive,
 	search *search.Service,
-	runner task.Runner,
 	tokenStore types.TokenStore,
 	userDAO *storage.UserDAO,
 	groupDAO *storage.GroupDAO,
@@ -344,6 +345,9 @@ func InitAdminRoutes(
 			return
 		}
 		_ = rootDrive.ReloadMounts()
+		for _, m := range mounts {
+			bus.Publish(event.EntryUpdated, types.DriveListenerContext{}, path2.Join(*m.Path, m.Name), true)
+		}
 	})
 
 	// endregion
@@ -353,10 +357,7 @@ func InitAdminRoutes(
 	// index files
 	r.POST("/search/index/*path", func(c *gin.Context) {
 		root := utils.CleanPath(c.Param("path"))
-		t, e := runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
-			e := search.IndexAll(ctx, root, true)
-			return nil, e
-		}, task.WithNameGroup(root, "search/index"))
+		t, e := search.TriggerIndexAll(root, true)
 		if e != nil {
 			_ = c.Error(e)
 			return

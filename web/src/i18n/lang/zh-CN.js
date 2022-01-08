@@ -152,6 +152,8 @@ export default {
         search_th_updated_at: '更新于',
         search_th_ops: '操作',
         search_index_stop: '停止',
+        search_op_index: '索引',
+        search_op_delete: '删除',
       },
       p_edit: {
         subject: '主体',

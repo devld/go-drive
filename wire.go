@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"go-drive/common"
+	"go-drive/common/event"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
 	"go-drive/common/task"
@@ -24,6 +25,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	wire.Build(
 		common.InitConfig,
 		storage.NewDB,
+		event.NewBus,
 		storage.NewUserDAO,
 		storage.NewPathPermissionDAO,
 		storage.NewDriveCacheDAO,

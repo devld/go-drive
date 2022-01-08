@@ -2,103 +2,80 @@ package drive
 
 import (
 	"context"
+	"go-drive/common/event"
 	"go-drive/common/types"
 	"io"
 )
 
 type ListenerWrapper struct {
-	drive types.IDrive
+	types.IDrive
 
-	ctx       types.DriveListenerContext
-	listeners []types.IDriveListener
+	ctx types.DriveListenerContext
+	bus event.Bus
 }
 
-func NewListenerWrapper(drive types.IDrive, ctx types.DriveListenerContext, listeners []types.IDriveListener) *ListenerWrapper {
+func NewListenerWrapper(drive types.IDrive, ctx types.DriveListenerContext, bus event.Bus) *ListenerWrapper {
 	return &ListenerWrapper{
-		drive:     drive,
-		listeners: listeners,
-		ctx:       ctx,
+		drive,
+		ctx,
+		bus,
 	}
 }
 
-func (d *ListenerWrapper) Meta(ctx context.Context) types.DriveMeta {
-	return d.drive.Meta(ctx)
-}
-
 func (d *ListenerWrapper) Get(ctx context.Context, path string) (types.IEntry, error) {
-	entry, e := d.drive.Get(ctx, path)
+	entry, e := d.IDrive.Get(ctx, path)
 	if e == nil {
-		for _, listener := range d.listeners {
-			listener.OnAccess(d.ctx, entry)
-		}
+		d.bus.Publish(event.EntryAccessed, d.ctx, path)
 	}
 	return entry, e
 }
 
 func (d *ListenerWrapper) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
-	entry, e := d.drive.Save(ctx, path, size, override, reader)
+	entry, e := d.IDrive.Save(ctx, path, size, override, reader)
 	if e == nil {
-		for _, listener := range d.listeners {
-			listener.OnUpdated(d.ctx, entry, false)
-		}
+		d.bus.Publish(event.EntryUpdated, d.ctx, path, false)
 	}
 	return entry, e
 }
 
 func (d *ListenerWrapper) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	entry, e := d.drive.MakeDir(ctx, path)
+	entry, e := d.IDrive.MakeDir(ctx, path)
 	if e == nil {
-		for _, listener := range d.listeners {
-			listener.OnUpdated(d.ctx, entry, false)
-		}
+		d.bus.Publish(event.EntryUpdated, d.ctx, path, false)
 	}
 	return entry, e
 }
 
 func (d *ListenerWrapper) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	entry, e := d.drive.Copy(ctx, from, to, override)
+	entry, e := d.IDrive.Copy(ctx, from, to, override)
 	if e == nil {
-		for _, listener := range d.listeners {
-			listener.OnUpdated(d.ctx, entry, true)
-		}
+		d.bus.Publish(event.EntryAccessed, d.ctx, from.Path())
+		d.bus.Publish(event.EntryUpdated, d.ctx, entry.Path(), true)
 	}
 	return entry, e
 }
 
 func (d *ListenerWrapper) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	entry, e := d.drive.Move(ctx, from, to, override)
+	entry, e := d.IDrive.Move(ctx, from, to, override)
 	if e == nil {
-		for _, listener := range d.listeners {
-			listener.OnDeleted(d.ctx, from.Path())
-			listener.OnUpdated(d.ctx, entry, true)
-		}
+		d.bus.Publish(event.EntryDeleted, d.ctx, from.Path())
+		d.bus.Publish(event.EntryUpdated, d.ctx, entry.Path(), true)
 	}
 	return entry, e
 }
 
 func (d *ListenerWrapper) List(ctx context.Context, path string) ([]types.IEntry, error) {
-	entries, e := d.drive.List(ctx, path)
+	entries, e := d.IDrive.List(ctx, path)
 	if e == nil {
-		entry, e := d.drive.Get(ctx, path)
-		if e == nil {
-			for _, listener := range d.listeners {
-				listener.OnAccess(d.ctx, entry)
-			}
-		}
+		d.bus.Publish(event.EntryAccessed, d.ctx, path)
 	}
 	return entries, e
 }
 
 func (d *ListenerWrapper) Delete(ctx types.TaskCtx, path string) error {
-	e := d.drive.Delete(ctx, path)
+	e := d.IDrive.Delete(ctx, path)
 	if e == nil {
-		for _, listener := range d.listeners {
-			listener.OnDeleted(d.ctx, path)
-		}
+		d.bus.Publish(event.EntryDeleted, d.ctx, path)
 	}
 	return e
-}
-
-func (d *ListenerWrapper) Upload(ctx context.Context, path string, size int64, override bool, config types.SM) (*types.DriveUploadConfig, error) {
-	return d.drive.Upload(ctx, path, size, override, config)
 }
