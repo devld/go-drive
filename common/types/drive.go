@@ -40,7 +40,7 @@ type ContentURL struct {
 	// Header is the extra HTTP headers to the request to URL
 	Header SM
 	// If Proxy is true, URL will always be proxied by server,
-	// otherwise just a http.StatusFound redirection will be send to client.
+	// otherwise just a http.StatusFound redirection will be sent to client.
 	Proxy bool
 }
 
