@@ -67,17 +67,17 @@ func BasicAuth(userAuth *UserAuth, realm string, allowAnonymous bool) gin.Handle
 func UserGroupRequired(group string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session := GetSession(c)
-		if session.User.Groups != nil {
-			for _, g := range session.User.Groups {
-				if g.Name == group {
-					c.Next()
-					return
-				}
-			}
+		if session.HasUserGroup(group) {
+			c.Next()
+			return
 		}
 		_ = c.Error(err.NewPermissionDeniedError(i18n.T("api.auth.group_permission_required", group)))
 		c.Abort()
 	}
+}
+
+func AdminGroupRequired() gin.HandlerFunc {
+	return UserGroupRequired("admin")
 }
 
 func SetResult(c *gin.Context, result interface{}) {

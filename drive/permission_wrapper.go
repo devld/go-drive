@@ -24,17 +24,19 @@ const (
 type PermissionWrapperDrive struct {
 	drive   types.IDrive
 	request *http.Request
+	session types.Session
 	pm      utils.PermMap
 	signer  *utils.Signer
 }
 
-func NewPermissionWrapperDrive(request *http.Request, drive types.IDrive,
+func NewPermissionWrapperDrive(request *http.Request, session types.Session, drive types.IDrive,
 	permissions utils.PermMap, signer *utils.Signer) *PermissionWrapperDrive {
 
 	return &PermissionWrapperDrive{
 		drive:   drive,
 		request: request,
-		pm:      permissions,
+		session: session,
+		pm:      permissions.Filter(session),
 		signer:  signer,
 	}
 }
@@ -247,6 +249,12 @@ func (p *permissionWrapperEntry) Meta() types.EntryMeta {
 	if p.accessKey != "" {
 		meta.Props = utils.CopyMap(meta.Props)
 		meta.Props["accessKey"] = p.accessKey
+	}
+	if !p.p.session.HasUserGroup("admin") {
+		if p.accessKey == "" {
+			meta.Props = utils.CopyMap(meta.Props)
+		}
+		delete(meta.Props, "mountAt")
 	}
 	return meta
 }

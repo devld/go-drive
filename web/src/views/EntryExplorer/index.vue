@@ -165,12 +165,7 @@ const isCurrentDirReadonly = computed(
 
 const progressBar = (v) => store.commit('progressBar', v)
 
-const entryClicked = ({ entry, event }) => {
-  if (selectedEntries.value.length > 0) {
-    selectedEntries.value.splice(0)
-    event.preventDefault()
-    return
-  }
+const entryClicked = ({ entry }) => {
   if (entry.type === 'dir') {
     // path changed
     entries.value = null

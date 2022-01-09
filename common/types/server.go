@@ -8,6 +8,15 @@ func (s *Session) IsAnonymous() bool {
 	return s.User.Username == ""
 }
 
+func (s *Session) HasUserGroup(group string) bool {
+	for _, r := range s.User.Groups {
+		if r.Name == group {
+			return true
+		}
+	}
+	return false
+}
+
 type Token struct {
 	Token string  `json:"token"`
 	Value Session `json:"-"`

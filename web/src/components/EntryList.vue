@@ -211,7 +211,30 @@ watch(
   { immediate: true }
 )
 
-const entryClicked = (e) => emit('entry-click', e)
+const entryClicked = (e) => {
+  if (e.event.ctrlKey) {
+    // toggle selection if ctrl key is pressed
+    e.event.preventDefault()
+    if (e.entry.name === '..') return
+    toggleSelect(e.entry)
+    return
+  }
+  if (e.event.shiftKey && selected.value.length > 0) {
+    // if shift key is pressed, select range
+    e.event.preventDefault()
+    if (e.entry.name === '..') return
+    toggleSelectRange(e.entry)
+    return
+  }
+  if (selected.value.length > 0) {
+    e.event.preventDefault()
+    // if there are selections, clear it
+    selected.value = []
+    emit('update:selection', selected.value)
+    return
+  }
+  emit('entry-click', e)
+}
 
 const entryContextMenu = (e) => emit('entry-menu', e)
 
@@ -227,6 +250,19 @@ const toggleSelect = (entry) => {
     }
     selected.value.push(entry)
   }
+  emit('update:selection', selected.value)
+}
+
+const toggleSelectRange = (entry) => {
+  if (selected.value.length === 0) return
+  const index = sortedEntries.value.findIndex((e) => e.path === entry.path)
+  const lastIndex = sortedEntries.value.findIndex(
+    (e) => e.path === selected.value[selected.value.length - 1].path
+  )
+  selected.value = sortedEntries.value.slice(
+    Math.min(index, lastIndex),
+    Math.max(index, lastIndex) + 1
+  )
   emit('update:selection', selected.value)
 }
 

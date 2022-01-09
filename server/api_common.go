@@ -36,7 +36,7 @@ func InitCommonRoutes(
 	})
 
 	authR := r.Group("/", TokenAuth(tokenStore))
-	authAdmin := authR.Group("/", UserGroupRequired("admin"))
+	authAdmin := authR.Group("/", AdminGroupRequired())
 
 	// get task
 	authR.GET("/task/:id", func(c *gin.Context) {

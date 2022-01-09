@@ -48,8 +48,9 @@ func (da *Access) GetDrive(req *http.Request, session types.Session) types.IDriv
 	return NewListenerWrapper(
 		NewPermissionWrapperDrive(
 			req,
+			session,
 			da.rootDrive.Get(),
-			da.perms.Filter(session),
+			da.perms,
 			da.signer,
 		),
 		types.DriveListenerContext{

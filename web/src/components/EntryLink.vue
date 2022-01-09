@@ -1,20 +1,8 @@
 <template>
-  <router-link
-    v-if="link"
-    v-long-press
-    class="entry-link"
-    :to="link"
-    @click="entryClicked"
-    @contextmenu="entryContextMenu"
-    @long-press="entryContextMenu"
-  >
-    <slot />
-  </router-link>
   <a
-    v-else
     v-long-press
     class="entry-link"
-    href="javascript:;"
+    :href="href"
     @click="entryClicked"
     @contextmenu="entryContextMenu"
     @long-press="entryContextMenu"
@@ -24,6 +12,7 @@
 </template>
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 const props = defineProps({
   entry: {
@@ -37,6 +26,8 @@ const props = defineProps({
   },
 })
 
+const router = useRouter()
+
 const emit = defineEmits(['click', 'menu'])
 
 const link = computed(() => {
@@ -46,7 +37,14 @@ const link = computed(() => {
   } else if (typeof props.path === 'string') {
     link = props.getLink?.(props.path)
   }
-  return link || ''
+  return link
+})
+
+const href = computed(() => {
+  const routeLink = link.value
+  if (!routeLink) return 'javascript:;'
+  const route = router.resolve(routeLink)
+  return route.href
 })
 
 const entryClicked = (event) => {
@@ -56,6 +54,7 @@ const entryClicked = (event) => {
     event,
   })
 }
+
 const entryContextMenu = (event) => {
   emit('menu', {
     entry: props.entry,

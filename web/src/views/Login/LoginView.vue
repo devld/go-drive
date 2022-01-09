@@ -4,6 +4,7 @@
       <span class="form-item username">
         <input
           v-model="username"
+          v-focus
           class="value"
           type="text"
           required

@@ -6,14 +6,7 @@
       `entry-item--view-${viewMode}`,
       entry.type === 'file' ? `entry-item--ext-${ext}` : '',
     ]"
-    :title="
-      entry.name === '..'
-        ? ''
-        : `${entry.name}\n${formatTime(entry.modTime)}\n` +
-          `${
-            entry.type === 'file' ? $t('app.file') : $t('app.folder')
-          } | ${formatBytes(entry.size)}`
-    "
+    :title="entryTips"
     @click="emit('click', $event)"
   >
     <span class="entry-item__icon-wrapper">
@@ -27,7 +20,7 @@
     </span>
     <span class="entry-item__info">
       <span class="entry-item__name">
-        <i v-if="entry.meta.isMount">@</i>{{ entry.name
+        <i v-if="entry.meta.mountAt">@</i>{{ entry.name
         }}<template v-if="entry.meta.ext">.{{ entry.meta.ext }}</template>
       </span>
       <div v-if="viewMode === 'list'" class="entry-item__meta">
@@ -47,6 +40,9 @@ export default { name: 'EntryItem' }
 <script setup>
 import { filenameExt, formatBytes, formatTime } from '@/utils'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   entry: {
@@ -64,6 +60,24 @@ const props = defineProps({
   showThumbnail: {
     type: Boolean,
   },
+})
+
+const entryTips = computed(() => {
+  const entry = props.entry
+  if (entry.name === '..') return ''
+
+  let tips =
+    entry.name +
+    '\n' +
+    (entry.type === 'file' ? t('app.file') : t('app.folder')) +
+    ' | ' +
+    formatBytes(entry.size)
+
+  if (entry.meta.mountAt) {
+    tips += '\n' + t('app.mount_at', { n: entry.meta.mountAt })
+  }
+
+  return tips
 })
 
 const emit = defineEmits(['click', 'icon-click'])
