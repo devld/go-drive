@@ -33,7 +33,7 @@ func InitAdminRoutes(
 	permissionDAO *storage.PathPermissionDAO,
 	pathMountDAO *storage.PathMountDAO) error {
 
-	r = r.Group("/admin", TokenAuth(tokenStore), UserGroupRequired("admin"))
+	r = r.Group("/admin", TokenAuth(tokenStore), AdminGroupRequired())
 
 	// region user
 

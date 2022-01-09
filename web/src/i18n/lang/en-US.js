@@ -8,6 +8,7 @@ export default {
     groups: 'Groups',
     file: 'File',
     folder: 'Folder',
+    mount_at: 'Mount At: {n}',
     empty_list: 'Nothing here',
     go_back: 'Go back',
     root_path: 'Root',

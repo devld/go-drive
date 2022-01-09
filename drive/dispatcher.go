@@ -308,7 +308,7 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 				}
 				return nil, e
 			}
-			mountedMap[name] = &entryWrapper{d: d, path: path2.Join(path, name), entry: entry, isMount: true}
+			mountedMap[name] = &entryWrapper{d: d, path: path2.Join(path, name), entry: entry, mountAt: m.MountAt}
 		}
 
 		newEntries := make([]types.IEntry, 0, len(entries)+len(mountedMap))
@@ -376,7 +376,7 @@ type entryWrapper struct {
 	d       *DispatcherDrive
 	path    string
 	entry   types.IEntry
-	isMount bool
+	mountAt string
 }
 
 func (d *entryWrapper) Path() string {
@@ -393,9 +393,9 @@ func (d *entryWrapper) Size() int64 {
 
 func (d *entryWrapper) Meta() types.EntryMeta {
 	meta := d.entry.Meta()
-	if d.isMount {
+	if d.mountAt != "" {
 		meta.Props = utils.CopyMap(meta.Props)
-		meta.Props["isMount"] = true
+		meta.Props["mountAt"] = d.mountAt
 	}
 	return meta
 }

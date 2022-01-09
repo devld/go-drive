@@ -8,6 +8,7 @@ export default {
     groups: '所属组',
     file: '文件',
     folder: '文件夹',
+    mount_at: '挂载到: {n}',
     empty_list: '这里空空的',
     go_back: '返回',
     root_path: 'Root',
