@@ -88,16 +88,18 @@ type Config struct {
 	Auth      AuthConfig      `yaml:"auth"`
 
 	WebDav WebDavConfig `yaml:"web-dav"`
+
+	Search SearchConfig `yaml:"search"`
 }
 
 type DbConfig struct {
-	Type     string            `yaml:"type"`
-	Host     string            `yaml:"host"`
-	Port     int               `yaml:"port"`
-	User     string            `yaml:"user"`
-	Password string            `yaml:"password"`
-	Name     string            `yaml:"name"`
-	Config   map[string]string `yaml:"config"`
+	Type     string   `yaml:"type"`
+	Host     string   `yaml:"host"`
+	Port     int      `yaml:"port"`
+	User     string   `yaml:"user"`
+	Password string   `yaml:"password"`
+	Name     string   `yaml:"name"`
+	Config   types.SM `yaml:"config"`
 }
 
 type ThumbnailConfig struct {
@@ -123,6 +125,12 @@ type WebDavConfig struct {
 	Enabled        bool   `yaml:"enabled"`
 	Prefix         string `yaml:"prefix"`
 	AllowAnonymous bool   `yaml:"allow-anonymous"`
+}
+
+type SearchConfig struct {
+	Enabled bool     `yaml:"enabled"`
+	Type    string   `yaml:"type"`
+	Config  types.SM `yaml:"config"`
 }
 
 func InitConfig(ch *registry.ComponentsHolder) (Config, error) {

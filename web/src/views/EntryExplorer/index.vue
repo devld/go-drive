@@ -1,7 +1,10 @@
 <template>
-  <div class="entry-explorer">
+  <div
+    class="entry-explorer"
+    :class="{ 'search-disabled': !searchConfig?.enabled }"
+  >
     <!-- search panel -->
-    <div class="search-panel-wrapper">
+    <div v-if="searchConfig?.enabled" class="search-panel-wrapper">
       <search-panel :path="path" @navigate="navigateToEntry" />
     </div>
     <!-- search panel -->
@@ -151,6 +154,7 @@ const entryListEl = ref(null)
 const newEntryAreaEl = ref(null)
 
 const user = computed(() => store.state.user)
+const searchConfig = computed(() => store.state.config?.search)
 
 let readmeTask
 
@@ -443,6 +447,10 @@ onBeforeUnmount(() => {
   margin: 0 auto 40px;
   max-width: 900px;
   padding-top: 72px;
+
+  &.search-disabled {
+    padding-top: 0;
+  }
 }
 
 .search-panel-wrapper {

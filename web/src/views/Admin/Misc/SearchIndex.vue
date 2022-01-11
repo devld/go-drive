@@ -1,72 +1,109 @@
 <template>
   <div class="section">
     <h1 class="section-title">{{ $t('p.admin.misc.search_index') }}</h1>
-    <div class="search-index-submit">
-      <simple-form-item
-        v-model="indexPath"
-        :item="indexPathForm"
-        class="search-index-path"
-      />
-      <simple-button :loading="indexSubmitting" @click="submitIndex">
-        {{ $t('p.admin.misc.search_submit_index') }}
-      </simple-button>
-    </div>
 
-    <div class="search-index-tasks">
-      <table class="simple-table">
-        <thead>
-          <tr>
-            <th>{{ $t('p.admin.misc.search_th_path') }}</th>
-            <th>{{ $t('p.admin.misc.search_th_status') }}</th>
-            <th>{{ $t('p.admin.misc.search_th_created_at') }}</th>
-            <th>{{ $t('p.admin.misc.search_th_updated_at') }}</th>
-            <th>{{ $t('p.admin.misc.search_th_ops') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="task in tasks" :key="task.id">
-            <td>
-              <span
-                class="search-index-op"
-                :class="`search-index-op-${task.group.split('/')[1]}`"
-                >{{ searchIndexType[task.group] }}</span
-              >
-              <span class="search-index-op-path">{{ task.name }}</span>
-            </td>
-            <td class="center">{{ taskStatus(task) }}</td>
-            <td class="center">{{ formatTime(task.createdAt) }}</td>
-            <td class="center">{{ formatTime(task.updatedAt) }}</td>
-            <td>
-              <simple-button
-                type="danger"
-                :loading="tasks.opLoading"
-                :disabled="isTaskFinished(task)"
-                @click="stopTask(task)"
-                >{{ $t('p.admin.misc.search_index_stop') }}</simple-button
-              >
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <template v-if="searchEnabled">
+      <div class="search-index-submit">
+        <simple-form
+          ref="indexFormEl"
+          v-model="indexOptions"
+          :form="indexOptionsForm"
+        >
+          <template #submit>
+            <simple-button :loading="indexSubmitting" @click="submitIndex">
+              {{ $t('p.admin.misc.search_submit_index') }}
+            </simple-button>
+          </template>
+        </simple-form>
+      </div>
+
+      <div class="search-index-tasks">
+        <table class="simple-table">
+          <thead>
+            <tr>
+              <th>{{ $t('p.admin.misc.search_th_path') }}</th>
+              <th>{{ $t('p.admin.misc.search_th_status') }}</th>
+              <th>{{ $t('p.admin.misc.search_th_created_at') }}</th>
+              <th>{{ $t('p.admin.misc.search_th_updated_at') }}</th>
+              <th>{{ $t('p.admin.misc.search_th_ops') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="task in tasks" :key="task.id">
+              <td class="line">
+                <span
+                  class="search-index-op"
+                  :class="`search-index-op-${task.group.split('/')[1]}`"
+                  >{{ searchIndexType[task.group] }}</span
+                >
+                <span class="search-index-op-path">{{ task.name }}</span>
+              </td>
+              <td class="center line">{{ taskStatus(task) }}</td>
+              <td class="center line">{{ formatTime(task.createdAt) }}</td>
+              <td class="center line">{{ formatTime(task.updatedAt) }}</td>
+              <td class="center line">
+                <simple-button
+                  v-if="!isTaskFinished(task)"
+                  type="danger"
+                  :loading="tasks.opLoading"
+                  @click="stopTask(task)"
+                  >{{ $t('p.admin.misc.search_index_stop') }}</simple-button
+                >
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <div v-else class="search-index-disabled-tip">
+      {{ $t('p.admin.misc.search_disabled') }}
     </div>
   </div>
 </template>
 <script setup>
 import { deleteTask, getTasks } from '@/api'
-import { searchIndex } from '@/api/admin'
+import { getOption, searchIndex, setOptions } from '@/api/admin'
 import { useInterval } from '@/utils/hooks/timer'
 import { alert } from '@/utils/ui-utils'
 import { formatTime } from '@/utils'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useStore } from 'vuex'
+
+const store = useStore()
+const searchConfig = computed(() => store.state.config?.search)
+const searchEnabled = computed(() => searchConfig.value?.enabled)
+
+const filterOptionKey = 'search.filter'
 
 const { t } = useI18n()
 
-const indexPathForm = computed(() => ({
-  type: 'text',
-  placeholder: t('p.admin.misc.search_path_tips'),
-}))
-const indexPath = ref('')
+const indexFormEl = ref(null)
+const indexOptionsForm = computed(() => [
+  {
+    field: 'filters',
+    type: 'textarea',
+    label: t('p.admin.misc.search_form_filter'),
+    description: t('p.admin.misc.search_form_filter_desc'),
+    placeholder: t('p.admin.misc.search_form_filter_placeholder'),
+    validate: (v) =>
+      !v ||
+      !v
+        .split('\n')
+        .filter(Boolean)
+        .some((f) => f[0] !== '+' && f[0] !== '-') ||
+      t('p.admin.misc.search_form_filter_invalid'),
+  },
+  {
+    field: 'path',
+    type: 'text',
+    label: t('p.admin.misc.search_form_path'),
+    description: t('p.admin.misc.search_form_path_desc'),
+  },
+  { slot: 'submit', class: 'flex-align-self-end' },
+])
+const indexOptions = ref({ path: '', filters: '' })
 const indexSubmitting = ref(false)
 
 const tasks = ref([])
@@ -86,6 +123,7 @@ const taskStatus = (task) =>
 
 let tasksLoading = false
 const loadTasks = async () => {
+  if (!searchEnabled.value) return
   if (tasksLoading) return
   tasksLoading = true
   try {
@@ -114,10 +152,33 @@ const stopTask = async (task) => {
   }
 }
 
+let oldFilter
+const loadIndexFilters = async () => {
+  try {
+    oldFilter = await getOption(filterOptionKey)
+    indexOptions.value.filters = oldFilter
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+const saveIndexFilters = async () => {
+  try {
+    await indexFormEl.value.validate()
+  } catch {
+    return false
+  }
+  if (oldFilter === indexOptions.value.filters) return
+  await setOptions({ [filterOptionKey]: indexOptions.value.filters })
+  oldFilter = indexOptions.value.filters
+}
+
 const submitIndex = async () => {
   indexSubmitting.value = true
   try {
-    await searchIndex(indexPath.value)
+    if ((await saveIndexFilters()) === false) return
+    await searchIndex(indexOptions.value.path)
+    indexOptions.value.path = ''
     loadTasks()
   } catch (e) {
     alert(e.message)
@@ -133,26 +194,28 @@ useInterval(
   5000,
   true
 )
+
+loadIndexFilters()
 </script>
 <style lang="scss">
 .search-index-submit {
-  display: flex;
   margin-bottom: 16px;
-
-  .search-index-path > input.value {
-    width: 100%;
-  }
-}
-
-.search-index-path {
-  overflow: hidden;
-  flex: 1;
-  margin-bottom: 0;
-  padding-right: 16px;
 }
 
 .search-index-tasks {
+  position: relative;
   font-size: 14px;
+  overflow: auto hidden;
+
+  .simple-table {
+    width: 100%;
+  }
+
+  th:last-child,
+  td:last-child {
+    position: sticky;
+    right: 0;
+  }
 }
 
 .search-index-op,

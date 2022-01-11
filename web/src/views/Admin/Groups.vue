@@ -60,7 +60,7 @@
             </span>
           </div>
         </div>
-        <div class="form-item save-button">
+        <div class="save-button">
           <simple-button small :loading="saving" @click="saveGroup">
             {{ $t('p.admin.group.save') }}
           </simple-button>

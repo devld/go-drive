@@ -31,6 +31,7 @@ const refreshCountDown = ref(0)
 const statLoading = ref(false)
 
 const loadStats = async () => {
+  if (statLoading.value) return
   statLoading.value = true
   try {
     stats.value = await loadStatsApi()
@@ -45,6 +46,7 @@ const loadStats = async () => {
 let timer
 
 const startStatTimer = async () => {
+  if (statLoading.value) return
   refreshCountDown.value = 10
   timer = setInterval(statRefreshTimer, 1000)
 }

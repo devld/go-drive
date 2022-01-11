@@ -49,6 +49,10 @@
   }
 }
 
+.flex-align-self-end {
+  align-self: flex-end;
+}
+
 .simple-table {
   border: none;
   border-spacing: 0;
@@ -64,9 +68,6 @@
     text-align: center;
     user-select: none;
     white-space: nowrap;
-  }
-
-  thead {
     background-color: var(--thead-bg-color);
   }
 
@@ -106,7 +107,15 @@
 }
 
 .form-item {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
   margin-bottom: 16px;
+  padding-right: 16px;
+
+  &.inline {
+    display: inline-flex;
+  }
 
   .label {
     user-select: none;
@@ -116,15 +125,16 @@
 
   .description {
     display: block;
-    font-size: 14px;
+    font-size: 12px;
     color: #999;
     margin-bottom: 6px;
+    white-space: pre-wrap;
   }
 
   input[type='text'].value,
-  input[type='password'].value {
+  input[type='password'].value,
+  textarea.value {
     box-sizing: border-box;
-    width: 216px;
   }
 
   input.value,
@@ -144,8 +154,6 @@
 
   textarea.value {
     resize: none;
-    width: 100%;
-    box-sizing: border-box;
   }
 }
 

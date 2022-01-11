@@ -10,8 +10,13 @@
       :ref="addFieldsRef"
       v-model="data[item.field]"
       :item="item"
+      :class="item.class"
       @update:model-value="emitInput"
-    />
+    >
+      <template v-if="item.slot" #value>
+        <slot :name="item.slot" />
+      </template>
+    </form-item>
   </form>
 </template>
 <script>
@@ -87,7 +92,7 @@ fillDefaultValue()
 .simple-form {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
 
   .form-item {
     width: 232px;

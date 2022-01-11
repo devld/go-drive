@@ -7,6 +7,7 @@ require (
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef // indirect
 	github.com/aws/aws-sdk-go v1.34.25
 	github.com/blevesearch/bleve/v2 v2.3.0
+	github.com/bmatcuk/doublestar/v4 v4.0.2 // indirect
 	github.com/gin-gonic/gin v1.7.3
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.2 // indirect

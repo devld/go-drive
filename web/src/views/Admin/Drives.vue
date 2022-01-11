@@ -92,7 +92,7 @@
           />
         </template>
 
-        <div class="form-item save-button">
+        <div class="save-button">
           <simple-button small :loading="saving" @click="saveDrive">
             {{ $t('p.admin.drive.save') }}
           </simple-button>

@@ -56,7 +56,7 @@
             </span>
           </div>
         </div>
-        <div class="form-item save-button">
+        <div class="save-button">
           <simple-button small :loading="saving" @click="saveUser">
             {{ $t('p.admin.user.save') }}
           </simple-button>

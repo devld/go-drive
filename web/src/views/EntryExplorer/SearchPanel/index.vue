@@ -23,11 +23,10 @@
         <template v-if="searching">{{ $t('app.search.searching') }}</template>
         <template v-else-if="result.length === 0">
           <p>{{ searchError }}</p>
-          <p>
-            {{ $t('app.search.search_help') }}
-            <em>*.txt</em><em>name</em><em>type:dir</em><em>size:>10m</em
-            ><em>modTime:>"1998-04-23"</em>
-          </p>
+          <div v-if="searchExamples?.length > 0" class="search-panel__help">
+            <span>{{ $t('app.search.search_help') }}</span>
+            <em v-for="(e, i) in searchExamples" :key="i">{{ e }}</em>
+          </div>
         </template>
       </div>
 
@@ -48,12 +47,14 @@ import { debounce } from '@/utils'
 import { useHotKey } from '@/utils/hooks/hotkey'
 import { computed, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useStore } from 'vuex'
 import SearchItem from './SearchItem.vue'
 
 export default { name: 'SearchPanel' }
 </script>
 <script setup>
 const { t } = useI18n()
+const store = useStore()
 
 const props = defineProps({
   path: {
@@ -73,6 +74,8 @@ const searching = ref(false)
 const result = ref([])
 const searchError = ref('')
 const showing = ref(false)
+
+const searchExamples = computed(() => store.state.config?.search?.examples)
 
 const triggerSearch = () => {
   result.value = []
@@ -111,16 +114,6 @@ const reset = () => {
   result.value = []
   next.value = 0
   searchError.value = ''
-}
-
-const onSearchTipsClicked = (e) => {
-  if (e.target.tagName !== 'EM') return
-  const text = e.target.innerText
-  if (!text.includes(':')) return
-  queryInput.value = q.value + ' ' + text.split(':')[0] + ':'
-  setTimeout(() => {
-    qEl.value.focus()
-  }, 10)
 }
 
 const itemClicked = (e) => {
@@ -250,20 +243,26 @@ defineExpose({ setActive })
   }
 }
 
+.search-panel__help {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .search-panel__tip {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  flex-wrap: wrap;
   align-items: center;
-  white-space: pre-line;
   font-size: 14px;
-  padding: 24px 0;
+  padding: 16px 0;
   color: var(--secondary-text-color);
   text-align: center;
 
   p {
     margin: 0;
-    line-height: 26px;
+    line-height: 48px;
   }
 
   em {
@@ -271,8 +270,7 @@ defineExpose({ setActive })
     font-style: normal;
     border: solid 1px var(--secondary-text-color);
     border-radius: 4px;
-    margin: 0 6px;
-    cursor: pointer;
+    margin: 0 6px 6px;
   }
 }
 
