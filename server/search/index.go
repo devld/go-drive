@@ -1,9 +1,10 @@
 package search
 
 import (
-	"encoding/json"
 	"errors"
+	"github.com/bmatcuk/doublestar/v4"
 	"go-drive/common"
+	err "go-drive/common/errors"
 	"go-drive/common/event"
 	"go-drive/common/registry"
 	"go-drive/common/task"
@@ -13,15 +14,14 @@ import (
 	"go-drive/storage"
 	"golang.org/x/net/context"
 	"log"
-	"path"
 	"path/filepath"
-	"strconv"
+	"strings"
 )
 
 type IndexFilter = func(entry types.IEntry) bool
 
 const (
-	searchIndexName = "files.index"
+	indexBatchSize  = 1000
 	filterOptionKey = "search.filter"
 	initialPageSize = 10
 	pageSizeStep    = 10
@@ -29,7 +29,7 @@ const (
 )
 
 type Service struct {
-	es    *EntrySearcher
+	s     Searcher
 	drive *drive.RootDrive
 
 	runner  task.Runner
@@ -41,29 +41,48 @@ type Service struct {
 func NewService(ch *registry.ComponentsHolder, config common.Config, od *storage.OptionsDAO,
 	rootDrive *drive.RootDrive, runner task.Runner, bus event.Bus) (*Service, error) {
 
-	indexPath, _ := config.GetDir(searchIndexName, false)
-	searcher, e := NewEntrySearcher(indexPath)
-	if e != nil {
-		return nil, e
+	var s *Service = nil
+
+	sConfig := config.Search
+	if sConfig.Enabled {
+		sf, e := GetSearcher(sConfig.Type)
+		if e != nil {
+			return nil, e
+		}
+		searcher, e := sf(config, sConfig.Config)
+		if e != nil {
+			return nil, e
+		}
+
+		s = &Service{
+			s:       searcher,
+			drive:   rootDrive,
+			runner:  runner,
+			options: od,
+			bus:     bus,
+		}
+		s.bus.Subscribe(event.EntryUpdated, s.onUpdated)
+		s.bus.Subscribe(event.EntryDeleted, s.onDeleted)
+	} else {
+		s = &Service{}
 	}
 
-	s := &Service{
-		es:      searcher,
-		drive:   rootDrive,
-		runner:  runner,
-		options: od,
-		bus:     bus,
-	}
 	ch.Add("searchService", s)
-
-	s.bus.Subscribe(event.EntryUpdated, s.onUpdated)
-	s.bus.Subscribe(event.EntryDeleted, s.onDeleted)
-
 	return s, nil
+}
+
+func (s *Service) checkEnabled() error {
+	if s.s == nil {
+		return err.NewNotAllowedMessageError("search is not enabled")
+	}
+	return nil
 }
 
 func (s *Service) Search(ctx context.Context, path string, query string,
 	next int, perms utils.PermMap) (types.EntrySearchResult, error) {
+	if e := s.checkEnabled(); e != nil {
+		return types.EntrySearchResult{}, e
+	}
 	if next < 0 {
 		next = 0
 	}
@@ -100,6 +119,9 @@ func (s *Service) Search(ctx context.Context, path string, query string,
 }
 
 func (s *Service) TriggerIndexAll(path string, ignoreError bool) (task.Task, error) {
+	if e := s.checkEnabled(); e != nil {
+		return task.Task{}, e
+	}
 	return s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
 		e := s.indexAll(ctx, path, ignoreError)
 		if e != nil {
@@ -111,7 +133,7 @@ func (s *Service) TriggerIndexAll(path string, ignoreError bool) (task.Task, err
 
 func (s *Service) search(path, query string, from, size int,
 	perms utils.PermMap) ([]types.EntrySearchResultItem, bool, error) {
-	r, e := s.es.Search(path, query, from, size)
+	r, e := s.s.Search(path, query, from, size)
 	if e != nil {
 		return nil, false, e
 	}
@@ -130,69 +152,99 @@ func (s *Service) search(path, query string, from, size int,
 }
 
 func (s *Service) indexAll(ctx types.TaskCtx, path string, ignoreError bool) error {
-	_ = s.es.DeleteDir(ctx, path)
+	_ = s.s.DeleteDir(ctx, path)
 	ctx.Total(0, true)
 	ctx.Progress(0, true)
-	filters := s.loadFilters()
-	return s.walk(ctx, s.drive.Get(), path, ignoreError, func(entry types.IEntry) error {
+	filters, e := s.loadFilters()
+	if e != nil {
+		log.Println("[SearchService ] failed to get filter options", e.Error())
+		return e
+	}
+	if filters == nil {
+		return errors.New("no filters found")
+	}
+	items := make([]types.EntrySearchItem, 0, indexBatchSize)
+
+	doIndex := func(ctx types.TaskCtx) error {
+		if len(items) > 0 {
+			e := s.s.Index(ctx, items)
+			items = items[:0]
+			return e
+		}
+		return nil
+	}
+
+	e = s.walk(ctx, s.drive.Get(), path, ignoreError, func(entry types.IEntry) error {
+		if utils.IsRootPath(entry.Path()) {
+			return nil
+		}
 		if isEntryExcluded(entry, filters) {
 			return skip
 		}
-		return s.es.Index(s.mapEntry(entry))
-	})
-}
-
-func (s *Service) Index(entry types.IEntry) error {
-	return s.es.Index(s.mapEntry(entry))
-}
-
-func isEntryExcluded(entry types.IEntry, filter *searchFilter) bool {
-	if filter == nil {
-		// exclude all if filter is not loaded
-		return true
-	}
-	include := false
-	if filter.Includes != nil && len(filter.Includes) > 0 {
-		for _, p := range filter.Includes {
-			matched, e := path.Match(p, entry.Path())
-			if e == nil && matched {
-				include = true
-				break
-			}
+		items = append(items, s.mapEntry(entry))
+		if len(items) >= indexBatchSize {
+			return doIndex(ctx)
 		}
-	} else {
-		include = true
+		return nil
+	})
+	if e != nil {
+		return e
 	}
-	if !include {
-		return true
+	return doIndex(ctx)
+}
+
+func (s *Service) Index(ctx types.TaskCtx, entry types.IEntry) error {
+	if e := s.checkEnabled(); e != nil {
+		return e
 	}
-	if filter.Excludes != nil && len(filter.Excludes) > 0 {
-		for _, p := range filter.Excludes {
-			matched, e := path.Match(p, entry.Path())
-			if e == nil && matched {
+	return s.s.Index(ctx, []types.EntrySearchItem{s.mapEntry(entry)})
+}
+
+func isEntryExcluded(entry types.IEntry, filters []string) bool {
+	if len(filters) == 0 {
+		return false
+	}
+	path := strings.ToLower(entry.Path())
+	hasIncludes := false
+	for _, f := range filters {
+		t := f[0]
+		p := f[1:]
+		matched, e := doublestar.Match(p, path)
+		if e != nil {
+			log.Println("Warning: invalid filter pattern: ", f, e)
+		}
+		if t == '+' {
+			hasIncludes = true
+		}
+		if matched {
+			if t == '-' {
 				return true
 			}
+			if t == '+' {
+				return false
+			}
 		}
 	}
-	return !include
+	if hasIncludes {
+		// if there are including patterns, but none of them matched, then it should be excluded
+		return true
+	}
+	return false
 }
 
-func (s *Service) loadFilters() *searchFilter {
+func (s *Service) loadFilters() ([]string, error) {
 	v, e := s.options.Get(filterOptionKey)
 	if e != nil {
-		log.Printf("[SearchService ] failed to get filter options, skip all entries: %s", e.Error())
-		return nil
+		return nil, e
 	}
-	if v == "" {
-		return &searchFilter{}
+
+	filters := make([]string, 0)
+	for _, f := range strings.Split(v, "\n") {
+		if f != "" && (f[0] == '+' || f[0] == '-') {
+			filters = append(filters, strings.ToLower(f))
+		}
 	}
-	f := &searchFilter{}
-	e = json.Unmarshal([]byte(v), f)
-	if e != nil {
-		log.Printf("[SearchService ] failed to parse filter options, skip all entries: %s", e.Error())
-		return nil
-	}
-	return f
+	return filters, nil
 }
 
 func (s *Service) mapEntry(e types.IEntry) types.EntrySearchItem {
@@ -207,7 +259,7 @@ func (s *Service) mapEntry(e types.IEntry) types.EntrySearchItem {
 	}
 }
 
-var skip = errors.New("skip this dir")
+var skip = errors.New("skip")
 
 func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 	ignoreError bool, visit func(entry types.IEntry) error) error {
@@ -217,22 +269,24 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 	entry, e := d.Get(ctx, rootPath)
 	if e != nil {
 		if ignoreError {
+			log.Printf("failed to index %s: %s", utils.LogSanitize(rootPath), e)
 			return nil
 		}
 		return e
 	}
-	if e := visit(entry); e != nil {
+	if e = visit(entry); e != nil {
 		if e == skip {
 			return nil
 		}
-		if ignoreError {
-			return nil
+		log.Printf("failed to index %s: %s", utils.LogSanitize(rootPath), e)
+		if !ignoreError {
+			return e
 		}
-		return e
 	}
 	ctx.Total(1, false)
-	ctx.Progress(1, false)
-
+	if e == nil {
+		ctx.Progress(1, false)
+	}
 	if entry.Type() == types.TypeDir {
 		entries, e := d.List(ctx, rootPath)
 		if e != nil {
@@ -253,6 +307,9 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 }
 
 func (s *Service) onUpdated(_ types.DriveListenerContext, path string, includeDescendants bool) {
+	if s.checkEnabled() != nil {
+		return
+	}
 	if includeDescendants {
 		_, _ = s.TriggerIndexAll(path, true)
 	} else {
@@ -261,7 +318,7 @@ func (s *Service) onUpdated(_ types.DriveListenerContext, path string, includeDe
 			if e != nil {
 				return nil, e
 			}
-			e = s.Index(entry)
+			e = s.Index(ctx, entry)
 			if e != nil {
 				log.Printf("Error indexing %s: %s", path, e)
 			}
@@ -271,8 +328,11 @@ func (s *Service) onUpdated(_ types.DriveListenerContext, path string, includeDe
 }
 
 func (s *Service) onDeleted(_ types.DriveListenerContext, path string) {
+	if s.checkEnabled() != nil {
+		return
+	}
 	_, _ = s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
-		e := s.es.DeleteDir(ctx, path)
+		e := s.s.DeleteDir(ctx, path)
 		if e != nil {
 			log.Printf("Error deleting index %s: %s", utils.LogSanitize(path), e)
 		}
@@ -281,24 +341,32 @@ func (s *Service) onDeleted(_ types.DriveListenerContext, path string) {
 }
 
 func (s *Service) Status() (string, types.SM, error) {
-	stats, e := s.es.Stats()
+	if s.checkEnabled() != nil {
+		return "Search", types.SM{}, nil
+	}
+	stats, e := s.s.Stats()
 	if e != nil {
 		return "", nil, e
 	}
-	return "Search", types.SM{
-		"Total":      strconv.FormatUint(stats.Total, 10),
-		"Searches":   strconv.FormatUint(stats.Searches, 10),
-		"SearchTime": strconv.FormatUint(stats.SearchTime, 10),
-	}, nil
+	return "Search", stats, nil
 }
 
 func (s *Service) Dispose() error {
+	if s.checkEnabled() != nil {
+		return nil
+	}
 	s.bus.Unsubscribe(event.EntryUpdated, s.onUpdated)
 	s.bus.Unsubscribe(event.EntryDeleted, s.onDeleted)
-	return s.es.Dispose()
+	return s.s.Dispose()
 }
 
-type searchFilter struct {
-	Includes []string
-	Excludes []string
+func (s *Service) SysConfig() (string, types.M, error) {
+	var examples []string
+	if s.s != nil {
+		examples = s.s.Examples()
+	}
+	return "search", types.M{
+		"enabled":  s.checkEnabled() == nil,
+		"examples": examples,
+	}, nil
 }

@@ -61,6 +61,7 @@ export default {
     open: {
       max_items: '最多可选择 {n} 个',
       n_selected: '已选 {n} 个',
+      clear: '清除',
     },
     text: {
       yes: '是',
@@ -145,11 +146,19 @@ export default {
         refresh_in: '{n} 秒后刷新',
         invalid_path_cleaned: '已清理 {n} 个无效的路径',
         search_index: '文件索引',
-        search_path_tips: '索引的路径, 留空将索引所有文件',
+        search_disabled: '搜索功能未开启',
+        search_form_filter: '过滤器',
+        search_form_filter_desc:
+          '每行一个过滤器，以 + 开始的行表示包含，已 - 开始的行表示排除。 或者留空将包含所有文件。\n\n** 匹配零个或多个目录；\n* 匹配任意个数的非目录分隔符字符;\n? 匹配单个非目录分隔符字符。',
+        search_form_filter_placeholder:
+          '-**/node_modules/**\n+**/*.jpg\n+**/*.png',
+        search_form_filter_invalid: '无效的过滤规则',
+        search_form_path: '路径',
+        search_form_path_desc: '留空将索引所有文件',
         search_submit_index: '开始索引',
         search_th_path: '路径',
-        search_th_status: '状态 (已索引)',
-        search_th_created_at: '创建于',
+        search_th_status: '状态',
+        search_th_created_at: '开始于',
         search_th_updated_at: '更新于',
         search_th_ops: '操作',
         search_index_stop: '停止',

@@ -8,6 +8,7 @@ import { visualizer } from 'rollup-plugin-visualizer'
 export default defineConfig(({ mode }) => ({
   base: './',
   server: {
+    port: 9803,
     proxy: {
       '/api': {
         target: 'http://localhost:8089',

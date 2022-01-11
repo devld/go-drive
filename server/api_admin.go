@@ -25,6 +25,7 @@ func InitAdminRoutes(
 	rootDrive *drive.RootDrive,
 	search *search.Service,
 	tokenStore types.TokenStore,
+	optionsDAO *storage.OptionsDAO,
 	userDAO *storage.UserDAO,
 	groupDAO *storage.GroupDAO,
 	driveDAO *storage.DriveDAO,
@@ -446,6 +447,31 @@ func InitAdminRoutes(
 			_ = c.Error(e)
 			return
 		}
+	})
+
+	// set options
+	r.PUT("/options", func(c *gin.Context) {
+		options := make(map[string]string)
+		if e := c.Bind(&options); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		e := optionsDAO.Sets(options)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+	})
+
+	// get option
+	r.GET("/options/:key", func(c *gin.Context) {
+		key := c.Param("key")
+		value, e := optionsDAO.Get(key)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, value)
 	})
 
 	// endregion

@@ -16,18 +16,33 @@ func NewOptionsDAO(db *DB) *OptionsDAO {
 	return &OptionsDAO{db: db, cache: cmap.New()}
 }
 
-func (d *OptionsDAO) Set(key string, value string) error {
+func (d *OptionsDAO) Set(key, value string) error {
+	return d.set(d.db.C(), key, value)
+}
+
+func (d *OptionsDAO) Sets(options map[string]string) error {
+	return d.db.C().Transaction(func(tx *gorm.DB) error {
+		for key, value := range options {
+			if e := d.set(tx, key, value); e != nil {
+				return e
+			}
+		}
+		return nil
+	})
+}
+
+func (d *OptionsDAO) set(db *gorm.DB, key, value string) error {
 	if key == "" {
 		panic(errors.New("key is empty"))
 	}
-	o, e := d.get(key)
+	o, e := d.get(key, false)
 	if e != nil {
 		return e
 	}
 	if o.Key == "" {
-		return d.db.C().Create(&types.Option{Key: key, Value: value}).Error
+		return db.Create(&types.Option{Key: key, Value: value}).Error
 	}
-	e = d.db.C().Model(&types.Option{}).Where("key = ?", key).
+	e = db.Model(&types.Option{}).Where("key = ?", key).
 		Update("value", value).Error
 	if e == nil {
 		d.cache.Remove(key)
@@ -36,7 +51,7 @@ func (d *OptionsDAO) Set(key string, value string) error {
 }
 
 func (d *OptionsDAO) Get(key string) (string, error) {
-	o, e := d.get(key)
+	o, e := d.get(key, true)
 	if e != nil {
 		return "", e
 	}
@@ -44,7 +59,7 @@ func (d *OptionsDAO) Get(key string) (string, error) {
 }
 
 func (d *OptionsDAO) GetOrDefault(key, defVal string) (string, error) {
-	o, e := d.get(key)
+	o, e := d.get(key, true)
 	if e != nil {
 		return "", nil
 	}
@@ -54,18 +69,20 @@ func (d *OptionsDAO) GetOrDefault(key, defVal string) (string, error) {
 	return o.Value, nil
 }
 
-func (d *OptionsDAO) get(key string) (types.Option, error) {
-	o, ok := d.cache.Get(key)
-	if ok {
-		return o.(types.Option), nil
+func (d *OptionsDAO) get(key string, getCache bool) (types.Option, error) {
+	if getCache {
+		o, ok := d.cache.Get(key)
+		if ok {
+			return o.(types.Option), nil
+		}
 	}
 	var option types.Option
 	e := d.db.C().Where("key = ?", key).Take(&option).Error
-	if errors.Is(e, gorm.ErrRecordNotFound) {
-		e = nil
-	}
 	if e == nil {
 		d.cache.Set(key, option)
+	}
+	if errors.Is(e, gorm.ErrRecordNotFound) {
+		e = nil
 	}
 	return option, e
 }

@@ -99,3 +99,11 @@ export function loadStats() {
 export function searchIndex(path) {
   return axios.post(`/admin/search/index/${path}`)
 }
+
+export function setOptions(options) {
+  return axios.put('/admin/options', options)
+}
+
+export function getOption(key) {
+  return axios.get(`/admin/options/${encodeURIComponent(key)}`)
+}

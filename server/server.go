@@ -36,6 +36,7 @@ func InitServer(config common.Config,
 	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
 	runner task.Runner,
+	optionsDAO *storage.OptionsDAO,
 	userDAO *storage.UserDAO,
 	groupDAO *storage.GroupDAO,
 	driveDAO *storage.DriveDAO,
@@ -67,8 +68,8 @@ func InitServer(config common.Config,
 	if e := InitAuthRoutes(router, userAuth, tokenStore); e != nil {
 		return nil, e
 	}
-	if e := InitAdminRoutes(router, ch, bus, rootDrive, searcher, tokenStore, userDAO, groupDAO,
-		driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO); e != nil {
+	if e := InitAdminRoutes(router, ch, bus, rootDrive, searcher, tokenStore, optionsDAO,
+		userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO); e != nil {
 		return nil, e
 	}
 

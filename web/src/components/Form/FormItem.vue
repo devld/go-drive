@@ -3,10 +3,22 @@
     <span v-if="item.label" class="label">
       <span>{{ item.label }}</span>
       <span v-if="item.required" class="form-item-required">*</span>
+      <a
+        v-if="item.description"
+        class="form-item-help"
+        href="javascript:;"
+        :title="item.description"
+        @click="toggleHelpShowing"
+      >
+        <i-icon svg="#icon-help" />
+      </a>
     </span>
-    <span v-if="item.description" class="description">
+    <span v-if="helpShowing" class="description">
       {{ item.description }}
     </span>
+    <div v-if="slots.value" class="value">
+      <slot name="value" />
+    </div>
     <textarea
       v-if="item.type === 'textarea'"
       class="value"
@@ -73,7 +85,7 @@
   </div>
 </template>
 <script setup>
-import { ref } from 'vue'
+import { ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
@@ -86,16 +98,30 @@ const props = defineProps({
   },
 })
 
+const slots = useSlots()
+
 const emit = defineEmits(['update:modelValue'])
 
 const error = ref(null)
 
 const { t } = useI18n()
 
+const helpShowing = ref(false)
+const toggleHelpShowing = () => {
+  helpShowing.value = !helpShowing.value
+}
+
 const validate = async () => {
   if (props.item.required && !props.modelValue) {
     error.value = t('form.required_msg', { f: props.item.label })
     throw new Error(error.value)
+  }
+  if (typeof props.item.validate === 'function') {
+    const err = await props.item.validate(props.modelValue)
+    if (typeof err === 'string') {
+      error.value = err
+      throw new Error(error.value)
+    }
   }
   return props.modelValue
 }
@@ -138,7 +164,14 @@ const selectInput = (e) => {
 .form-item-error {
   position: absolute;
   bottom: 0;
-  right: 0;
+  right: 16px;
   color: red;
+}
+
+.form-item-help {
+  margin-left: 0.5em;
+  text-decoration: none;
+  color: inherit;
+  cursor: help;
 }
 </style>

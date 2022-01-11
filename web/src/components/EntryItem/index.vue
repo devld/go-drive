@@ -71,7 +71,9 @@ const entryTips = computed(() => {
     '\n' +
     (entry.type === 'file' ? t('app.file') : t('app.folder')) +
     ' | ' +
-    formatBytes(entry.size)
+    formatBytes(entry.size) +
+    '\n' +
+    formatTime(entry.modTime)
 
   if (entry.meta.mountAt) {
     tips += '\n' + t('app.mount_at', { n: entry.meta.mountAt })
