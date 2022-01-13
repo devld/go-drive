@@ -27,7 +27,7 @@ func NewBleveSearcher(config common.Config, searcherConfig types.SM) (Searcher, 
 	if indexName == "" {
 		indexName = "files.index"
 	}
-	indexPath, e := config.GetDir(indexName, true)
+	indexPath, e := config.GetDir(indexName, false)
 	if e != nil {
 		return nil, e
 	}
