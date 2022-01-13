@@ -17,12 +17,11 @@ export default class S3UploadTask extends ChunkUploadTask {
    */
   constructor(id, changeListener, task, config) {
     super(id, changeListener, task, config)
-    this._config = config
-    this._partSize = PART_SIZE
     /**
      * @type {{url: string, multipart?: boolean}}
      */
-    this._config = undefined
+    this._config = config
+    this._partSize = PART_SIZE
 
     /**
      * @type {string} the multipart upload id

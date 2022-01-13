@@ -364,6 +364,7 @@ onBeforeMount(() => {
 <style lang="scss">
 .new-entry-area {
   position: fixed;
+  z-index: 10;
 
   .float-button.button-new-item {
     position: fixed;
