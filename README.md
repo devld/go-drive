@@ -15,6 +15,7 @@ Doc: [https://go-drive.top](https://go-drive.top)
 - 路径挂载
 - 在 Drive 之间复制文件(夹)
 - Drive 管理界面
+- 文件搜索
 
 ## 目前支持的 Drives
 
@@ -61,6 +62,7 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 - Path mounting
 - Copy files/folders across drives
 - Drive-mapping management
+- Files searching
 
 ## Currently supported drives
 
@@ -97,4 +99,3 @@ Download binary file from the [Release](https://github.com/devld/go-drive/releas
 Just run `go-drive.exe`
 
 Default user is `admin`, its password is `123456`
-
