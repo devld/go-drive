@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go-drive/common"
@@ -16,12 +15,9 @@ import (
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
-	"html"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -85,10 +81,8 @@ func InitServer(config common.Config,
 	}
 
 	if config.WebDir != "" {
-		preprocess := func(name string, file http.File) (string, error) {
-			return processWebFiles(name, file, config)
-		}
-		s := http.StripPrefix(config.WebPath, http.FileServer(NewRootFileSystem(config.WebDir, preprocess)))
+		webFiles := newWebFiles(config.WebDir, config, optionsDAO)
+		s := http.StripPrefix(config.WebPath, webFiles)
 		engine.NoRoute(func(c *gin.Context) { s.ServeHTTP(c.Writer, c.Request) })
 	}
 
@@ -132,34 +126,6 @@ func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v interface{}) {
 	} else {
 		c.JSON(code, result)
 	}
-}
-
-func jsonStr(s string) string {
-	b, e := json.Marshal(s)
-	if e != nil {
-		panic(e)
-	}
-	return string(b)
-}
-
-func processWebFiles(name string, file http.File, config common.Config) (string, error) {
-	if name != "/index.html" && name != "/manifest.json" {
-		return "", Unprocessed
-	}
-	bytes, e := ioutil.ReadAll(file)
-	if e != nil {
-		return "", e
-	}
-	content := string(bytes)
-	switch name {
-	case "/index.html":
-		content = strings.ReplaceAll(content, "<title>Drive</title>", "<title>"+html.EscapeString(config.AppName)+"</title>")
-		content = strings.ReplaceAll(content, "/*$api_path*/", jsonStr(config.APIPath)+", //")
-		content = strings.ReplaceAll(content, "/*$app_name*/", jsonStr(config.AppName)+", //")
-	case "/manifest.json":
-		content = strings.ReplaceAll(content, "\"Drive\"", jsonStr(config.AppName))
-	}
-	return content, nil
 }
 
 func Logger() gin.HandlerFunc {

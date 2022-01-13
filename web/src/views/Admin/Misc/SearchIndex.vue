@@ -63,7 +63,7 @@
 </template>
 <script setup>
 import { deleteTask, getTasks } from '@/api'
-import { getOption, searchIndex, setOptions } from '@/api/admin'
+import { getOptions, searchIndex, setOptions } from '@/api/admin'
 import { useInterval } from '@/utils/hooks/timer'
 import { alert } from '@/utils/ui-utils'
 import { formatTime } from '@/utils'
@@ -155,7 +155,7 @@ const stopTask = async (task) => {
 let oldFilter
 const loadIndexFilters = async () => {
   try {
-    oldFilter = await getOption(filterOptionKey)
+    oldFilter = (await getOptions(filterOptionKey))[filterOptionKey]
     indexOptions.value.filters = oldFilter
   } catch (e) {
     alert(e.message)

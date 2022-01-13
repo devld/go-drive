@@ -104,6 +104,6 @@ export function setOptions(options) {
   return axios.put('/admin/options', options)
 }
 
-export function getOption(key) {
-  return axios.get(`/admin/options/${encodeURIComponent(key)}`)
+export function getOptions(...keys) {
+  return axios.get(`/admin/options/${encodeURIComponent(keys.join(','))}`)
 }

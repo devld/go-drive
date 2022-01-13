@@ -45,6 +45,7 @@ export default {
   },
   routes: {
     title: {
+      site: '站点',
       users: '用户',
       groups: '用户组',
       drives: '盘',
@@ -74,10 +75,15 @@ export default {
   p: {
     admin: {
       oauth_connected: '已连接到 {p}',
+      t_site: '站点',
       t_users: '用户',
       t_groups: '用户组',
       t_drives: '盘',
       t_misc: '其他',
+      site: {
+        app_name: '站点标题',
+        save: '保存',
+      },
       drive: {
         reload_drives: '重新加载盘',
         reload_tip: '编辑配置后，重新加载才可生效',

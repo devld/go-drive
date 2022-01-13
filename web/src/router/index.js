@@ -21,8 +21,14 @@ const routes = [
         name: 'Admin',
         path: '/admin',
         component: () => import('@/views/Admin/index.vue'),
-        redirect: '/admin/users',
+        redirect: '/admin/site',
         children: [
+          {
+            name: 'SiteConfig',
+            path: '/admin/site',
+            component: () => import('@/views/Admin/Site.vue'),
+            meta: { title: T('routes.title.site') },
+          },
           {
             name: 'UsersManager',
             path: '/admin/users',

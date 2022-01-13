@@ -45,6 +45,7 @@ export default {
   },
   routes: {
     title: {
+      site: 'Site',
       users: 'Users',
       groups: 'Groups',
       drives: 'Drives',
@@ -74,10 +75,15 @@ export default {
   p: {
     admin: {
       oauth_connected: 'Already connected to {p}',
+      t_site: 'Site',
       t_users: 'Users',
       t_groups: 'Groups',
       t_drives: 'Drives',
       t_misc: 'Misc',
+      site: {
+        app_name: 'Site Title',
+        save: 'Save',
+      },
       drive: {
         reload_drives: 'Reload drives',
         reload_tip: 'Reload drives to take effect',
@@ -150,7 +156,8 @@ export default {
         search_form_filter: 'Filters',
         search_form_filter_desc:
           'Filters line by line, line starts with + for including, line starts with - for excluding. Or leave blank to include all files.\n** matches zero or more directories;\n* matches any sequence of non-path-separators;\n? matches any single non-path-separator character.',
-        search_form_filter_placeholder: '-**/node_modules/**\n+**/*.jpg\n+**/*.png',
+        search_form_filter_placeholder:
+          '-**/node_modules/**\n+**/*.jpg\n+**/*.png',
         search_form_filter_invalid: 'Invalid filters',
         search_form_path: 'Path',
         search_form_path_desc: 'Leave blank to index all files',

@@ -28,6 +28,7 @@ const { t } = useI18n()
 const router = useRouter()
 
 const menus = [
+  { name: t('p.admin.t_site'), path: '/admin/site' },
   { name: t('p.admin.t_users'), path: '/admin/users' },
   { name: t('p.admin.t_groups'), path: '/admin/groups' },
   { name: t('p.admin.t_drives'), path: '/admin/drives' },
