@@ -1,7 +1,7 @@
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
 import { defineConfig, loadEnv } from 'vite'
-import { injectHtml } from 'vite-plugin-html'
+import { injectHtml, minifyHtml } from 'vite-plugin-html'
 import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vitejs.dev/config/
@@ -22,8 +22,12 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
     injectHtml({
-      data: loadEnv(mode, __dirname),
+      data: {
+        ...loadEnv(mode, __dirname),
+        mode,
+      },
     }),
+    minifyHtml(),
   ],
   resolve: {
     alias: {

@@ -34,7 +34,6 @@ const (
 
 	DefaultListen            = ":8089"
 	DefaultAPIPath           = ""
-	DefaultAppName           = "Drive"
 	DefaultWebPath           = ""
 	DefaultDataDir           = "./"
 	DefaultWebDir            = "./web"
@@ -48,6 +47,7 @@ const (
 	DefaultAuthValidity      = 2 * time.Hour
 	DefaultAuthAutoRefresh   = true
 	DefaultWebDavPrefix      = "/dav"
+	DefaultSearcher          = "bleve"
 
 	DefaultConfigFile = "config.yml"
 )
@@ -58,7 +58,6 @@ type Config struct {
 	Db DbConfig `yaml:"db"`
 
 	APIPath string `yaml:"api-path"`
-	AppName string `yaml:"app-name"`
 	WebPath string `yaml:"web-path"`
 
 	// all data will be stored in DataDir
@@ -90,6 +89,10 @@ type Config struct {
 	WebDav WebDavConfig `yaml:"web-dav"`
 
 	Search SearchConfig `yaml:"search"`
+
+	Version string
+	RevHash string
+	BuildAt string
 }
 
 type DbConfig struct {
@@ -137,7 +140,6 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	config := Config{
 		Listen:            DefaultListen,
 		APIPath:           DefaultAPIPath,
-		AppName:           DefaultAppName,
 		WebPath:           DefaultWebPath,
 		DataDir:           DefaultDataDir,
 		WebDir:            DefaultWebDir,
@@ -158,6 +160,13 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 			Enabled: false,
 			Prefix:  DefaultWebDavPrefix,
 		},
+		Search: SearchConfig{
+			Type: DefaultSearcher,
+		},
+
+		Version: version,
+		RevHash: revHash,
+		BuildAt: buildAt,
 	}
 
 	v := flag.Bool("v", false, "print version")

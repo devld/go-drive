@@ -58,6 +58,18 @@ func (d *OptionsDAO) Get(key string) (string, error) {
 	return o.Value, nil
 }
 
+func (d *OptionsDAO) Gets(keys ...string) (map[string]string, error) {
+	options := make(map[string]string)
+	for _, key := range keys {
+		o, e := d.get(key, true)
+		if e != nil {
+			return nil, e
+		}
+		options[key] = o.Value
+	}
+	return options, nil
+}
+
 func (d *OptionsDAO) GetOrDefault(key, defVal string) (string, error) {
 	o, e := d.get(key, true)
 	if e != nil {

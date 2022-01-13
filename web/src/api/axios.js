@@ -1,13 +1,12 @@
 import { waitPromise } from '@/utils'
 import Axios from 'axios'
 import { getLang } from '@/i18n'
-import { API_BASE } from '@/config'
 
 const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
 const MAX_RETRY = 1
 
-let apiPath = window.___config___.api || API_BASE
+let apiPath = window.___config___.api
 if (!/^https?:\/\//.test(apiPath)) {
   apiPath = location.origin + apiPath
 }

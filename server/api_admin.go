@@ -16,6 +16,7 @@ import (
 	path2 "path"
 	"regexp"
 	"sort"
+	"strings"
 )
 
 func InitAdminRoutes(
@@ -464,9 +465,9 @@ func InitAdminRoutes(
 	})
 
 	// get option
-	r.GET("/options/:key", func(c *gin.Context) {
-		key := c.Param("key")
-		value, e := optionsDAO.Get(key)
+	r.GET("/options/:keys", func(c *gin.Context) {
+		keys := strings.Split(c.Param("keys"), ",")
+		value, e := optionsDAO.Gets(keys...)
 		if e != nil {
 			_ = c.Error(e)
 			return
