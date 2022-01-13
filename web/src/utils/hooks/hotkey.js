@@ -4,6 +4,17 @@ import { onBeforeUnmount, onMounted } from 'vue'
  * @param {KeyboardEvent} e
  */
 function hotKeyHandler(e) {
+  const target = e.target
+  if (
+    (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') &&
+    !e.ctrlKey &&
+    !e.altKey &&
+    !e.shiftKey &&
+    e.key.length === 1
+  ) {
+    return
+  }
+
   for (const ev of this._hotkey.events) {
     try {
       if (ev.auxMatched(e) && ev.keyMatched(e)) {
