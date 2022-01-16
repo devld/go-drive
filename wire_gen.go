@@ -58,7 +58,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	maker, err := thumbnail.NewMaker(config, ch)
+	maker, err := thumbnail.NewMaker(config, optionsDAO, ch)
 	if err != nil {
 		return nil, err
 	}

@@ -76,10 +76,6 @@ func (i *imageTypeHandler) MimeType() string {
 	return "image/jpeg"
 }
 
-func (i *imageTypeHandler) Name() string {
-	return "image.jpg"
-}
-
 func (i *imageTypeHandler) Timeout() time.Duration {
 	return -1
 }

@@ -1,10 +1,6 @@
 # The application will listen at this address
 listen: :8089
 
-# The application name
-# Note: This change may not take effect immediately because of the PWA cache
-app-name: Drive
-
 db:
   # database type: currently supports sqlite, mysql
   type: sqlite
@@ -65,10 +61,12 @@ thumbnail:
 
   # Thumbnail generator. Available types are image, text, shell
   # file-types are supported file extensions
+  # tags are comma-separated optional tags for matching thumbnail generator
   handlers:
     # image: embed generator for image files(jpg, png, gif)
     # Notice: this have bad performance
     - type: image
+      tag:
       file-types: jpg,jpeg,png,gif
       #config:
       #  # max supported file size
@@ -83,6 +81,7 @@ thumbnail:
     # text: embed generator for text files
     # Generating a svg file by reading some content
     - type: text
+      tag:
       file-types: txt,md,xml,html,css,scss,js,json,jsx,properties,yml,yaml,ini,c,h,cpp,go,java,kt,gradle,ps1
       #config:
       #  font-size: 12
@@ -106,14 +105,13 @@ thumbnail:
     # GO_DRIVE_ENTRY_MOD_TIME: timestamp, modTime of this entry
     # GO_DRIVE_ENTRY_READABLE: true|false. If it's false, the stdin is empty
     #- type: shell
+    #  tag:
     #  file-types: mp4,avi
     #  config:
     #    # the command to generating thumbnail
     #    shell: ffmpeg.exe -hide_banner -loglevel error -i - -frames:v 1 -vf scale=220:-1 -f mjpeg -
     #    # the output file mime-type
     #    mime-type: image/jpeg
-    #    # the output filename
-    #    filename: image.jpg
     #    # whether writing file content to stdin
     #    write-content: true
     #    # max supported file size, if <= 0, no limitation

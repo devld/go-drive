@@ -1,76 +1,56 @@
 package thumbnail
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"github.com/Jeffail/tunny"
+	"github.com/bmatcuk/doublestar/v4"
 	"go-drive/common"
+	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"go-drive/storage"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
 
-type Thumbnail interface {
-	io.ReadSeeker
-	io.Closer
-	ModTime() time.Time
-	Size() int64
-	MimeType() string
-	Name() string
-}
-
 const FolderType = "/"
 
-const localSuffix = ".lock"
+const (
+	lockSuffix           = ".lock"
+	optKeyHandlerMapping = "thumbnail.handlersMapping"
+)
 
 var errMaking = errors.New("making")
 
-var typeHandlerFactories = make(map[string]TypeHandlerFactory, 0)
-
-func RegisterTypeHandler(name string, thf TypeHandlerFactory) {
-	if _, ok := typeHandlerFactories[name]; ok {
-		panic("TypeHandlerFactory " + name + " already registered")
-	}
-	typeHandlerFactories[name] = thf
-}
-
-type TypeHandlerFactory = func(config types.SM) (TypeHandler, error)
-
-type TypeHandler interface {
-	// CreateThumbnail creates thumbnail for entry, and writes to dest
-	CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error
-	// MimeType returns the mime-type of this TypeHandler can generating
-	MimeType() string
-	// Name returns the thumbnail filename of this TypeHandler generated
-	Name() string
-	// Timeout returns the timeout when generating thumbnail,
-	// it wont timeout when negative value returned
-	Timeout() time.Duration
-}
-
 type Maker struct {
-	// handlers is a registry for TypeHandler, which the key is like 'jpg'
-	handlers map[string]TypeHandler
+	// handlers is a registry for TypeHandler, map[extension]map[handlerName]TypeHandler
+	handlers map[string]map[string]TypeHandler
 
 	cacheDir string
 
-	pool *tunny.Pool
+	pool    *tunny.Pool
+	options *storage.OptionsDAO
 
 	validity    time.Duration
 	stopCleaner func()
 }
 
-func NewMaker(config common.Config, ch *registry.ComponentsHolder) (*Maker, error) {
+func NewMaker(config common.Config, optionsDAO *storage.OptionsDAO,
+	ch *registry.ComponentsHolder) (*Maker, error) {
 	dir, e := config.GetDir("thumbnails", true)
 	if e != nil {
 		return nil, e
@@ -83,12 +63,13 @@ func NewMaker(config common.Config, ch *registry.ComponentsHolder) (*Maker, erro
 
 	m := &Maker{
 		handlers: handlers,
+		options:  optionsDAO,
 		cacheDir: dir,
 		validity: config.Thumbnail.TTL,
 	}
 
 	_ = filepath.Walk(m.cacheDir, func(path string, info os.FileInfo, e error) error {
-		if e == nil && !info.IsDir() && strings.HasSuffix(info.Name(), localSuffix) {
+		if e == nil && !info.IsDir() && strings.HasSuffix(info.Name(), lockSuffix) {
 			_ = os.Remove(filepath.Join(m.cacheDir, info.Name()))
 		}
 		return nil
@@ -100,8 +81,8 @@ func NewMaker(config common.Config, ch *registry.ComponentsHolder) (*Maker, erro
 	return m, nil
 }
 
-func createHandlers(items []common.ThumbnailHandlerItem) (map[string]TypeHandler, error) {
-	hs := make(map[string]TypeHandler, len(items))
+func createHandlers(items []common.ThumbnailHandlerItem) (map[string]map[string]TypeHandler, error) {
+	hs := make(map[string]map[string]TypeHandler)
 	if items != nil {
 		for _, item := range items {
 			factory, ok := typeHandlerFactories[item.Type]
@@ -120,7 +101,18 @@ func createHandlers(items []common.ThumbnailHandlerItem) (map[string]TypeHandler
 			}
 			for _, ext := range strings.Split(item.FileTypes, ",") {
 				ext = strings.ToLower(strings.TrimSpace(ext))
-				hs[ext] = h
+				extHs, ok := hs[ext]
+				if !ok {
+					extHs = make(map[string]TypeHandler)
+					hs[ext] = extHs
+				}
+				for _, tag := range strings.Split(item.Tags, ",") {
+					if v, _ := regexp.Match("^[A-z0-9-_]*$", []byte(tag)); !v {
+						return nil, errors.New("invalid handler tag: " + tag)
+					}
+					tag = strings.ToLower(strings.TrimSpace(tag))
+					extHs[tag] = h
+				}
 			}
 		}
 	}
@@ -128,6 +120,24 @@ func createHandlers(items []common.ThumbnailHandlerItem) (map[string]TypeHandler
 }
 
 func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error) {
+	entry = drive_util.GetIEntry(entry, func(e types.IEntry) bool {
+		_, ok := e.(types.IDispatcherEntry)
+		return ok
+	})
+
+	itemPath := m.getItem(entry)
+	t, e := m.tryToGetFromCache(entry, itemPath)
+	if e != nil {
+		return nil, e
+	}
+	if t != nil {
+		return t, nil
+	}
+
+	return m.doMake(ctx, entry, itemPath)
+}
+
+func (m *Maker) resolveHandler(entry types.IEntry) (TypeHandler, error) {
 	fType := ""
 	if entry.Type().IsDir() {
 		fType = FolderType
@@ -135,40 +145,75 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 		fType = utils.PathExt(entry.Path())
 	}
 
-	h, ok := m.handlers[fType]
+	hs, ok := m.handlers[fType]
 	if !ok {
 		return nil, err.NewNotFoundError()
 	}
-
-	file, e := m.getItem(entry)
+	mappingStr, e := m.options.Get(optKeyHandlerMapping)
 	if e != nil {
 		return nil, e
 	}
-	exists, e := utils.FileExists(file)
+	for _, m := range strings.Split(mappingStr, "\n") {
+		if m == "" {
+			continue
+		}
+		temp := strings.SplitN(m, ":", 2)
+		if len(temp) != 2 {
+			log.Println("invalid handler mapping:", m)
+			continue
+		}
+		if ok, e := doublestar.Match(temp[1], entry.Path()); ok && e == nil {
+			tags := strings.Split(temp[0], ",")
+			for _, tag := range tags {
+				if h, ok := hs[tag]; ok {
+					return h, nil
+				}
+			}
+		}
+	}
+
+	for _, h := range hs {
+		return h, nil
+	}
+
+	panic("no handlers found")
+}
+
+func (m *Maker) tryToGetFromCache(entry types.IEntry, path string) (Thumbnail, error) {
+	exists, e := utils.FileExists(path)
 	if e != nil {
 		return nil, e
 	}
 	if exists {
-		expired, e := m.isThumbnailExpired(entry, file)
+		f, e := os.Open(path)
 		if e != nil {
 			return nil, e
 		}
-		if expired {
-			if e := m.remove(file); e != nil {
+		meta, headerSize, e := m.readItemMeta(f)
+		if e != nil || m.isThumbnailExpired(entry, *meta) {
+			_ = f.Close()
+			if e := m.remove(path); e != nil {
 				return nil, e
 			}
 		} else {
-			return m.openFile(file, h.MimeType(), h.Name())
+			return m.openFile("", f, meta, headerSize)
 		}
 	}
+	return nil, nil
+}
 
-	task := &taskWrapper{h: h, entry: entry, dest: file}
+func (m *Maker) doMake(ctx context.Context, entry types.IEntry, path string) (Thumbnail, error) {
+	h, e := m.resolveHandler(entry)
+	if e != nil {
+		return nil, e
+	}
+	task := &taskWrapper{h: h, entry: entry, dest: path}
 
 	c := make(chan error)
 	go func() {
 		taskErr := m.pool.Process(task)
 		if taskErr == errMaking {
-			c <- waitPendingTask(ctx, task.dest, task.dest+localSuffix)
+			c <- waitPendingTask(ctx, task.dest, task.dest+lockSuffix)
 			return
 		}
 		if taskErr == nil {
@@ -187,7 +232,7 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 		}
 	}
 
-	return m.openFile(file, h.MimeType(), h.Name())
+	return m.openFile(path, nil, nil, 0)
 }
 
 func (m *Maker) executeTask(v interface{}) interface{} {
@@ -200,7 +245,7 @@ func (m *Maker) executeTask(v interface{}) interface{} {
 		return nil
 	}
 
-	lockFile := task.dest + localSuffix
+	lockFile := task.dest + lockSuffix
 	exists, e = utils.FileExists(lockFile)
 	if e != nil {
 		return e
@@ -209,7 +254,7 @@ func (m *Maker) executeTask(v interface{}) interface{} {
 		return errMaking
 	}
 
-	item, e := m.createItem(task.entry, lockFile)
+	item, e := m.createItem(task.entry, lockFile, task.h.MimeType())
 	if e != nil {
 		return e
 	}
@@ -275,49 +320,46 @@ func waitPendingTask(ctx context.Context, path string, lock string) error {
 	return nil
 }
 
-// fileOffset is the start of thumbnail file
-// | isDir(1) | modTime(8) | size(8) |
-const fileOffset = 1 + 8 + 8
-
-func (m *Maker) openFile(path, mimeType, name string) (Thumbnail, error) {
-	file, e := os.Open(path)
-	if e != nil {
-		return nil, e
+func (m *Maker) openFile(path string, file *os.File, meta *itemMeta, headerSize uint32) (Thumbnail, error) {
+	var e error
+	if file == nil {
+		file, e = os.Open(path)
+		if e != nil {
+			return nil, e
+		}
+		meta, headerSize, e = m.readItemMeta(file)
+		if e != nil {
+			_ = file.Close()
+			return nil, e
+		}
 	}
-	f, e := newThumbnailFile(fileOffset, file)
+
+	f, e := newThumbnailFile(int64(headerSize), file, meta.MimeType)
 	if e != nil {
 		_ = file.Close()
 		return nil, e
 	}
-	f.mimeType = mimeType
-	f.name = name
 	return f, nil
 }
 
-func (m *Maker) isThumbnailExpired(entry types.IEntry, path string) (bool, error) {
-	file, e := os.Open(path)
-	if e != nil {
-		return false, e
-	}
-	defer func() { _ = file.Close() }()
-	var isDir bool
-	var modTime, size int64
-	e = binary.Read(file, binary.LittleEndian, &isDir)
-	if e != nil {
-		return false, e
-	}
-	e = binary.Read(file, binary.LittleEndian, &modTime)
-	if e != nil {
-		return false, e
-	}
-	e = binary.Read(file, binary.LittleEndian, &size)
-	if e != nil {
-		return false, e
-	}
-	return entry.Type().IsDir() != isDir || entry.ModTime() != modTime || entry.Size() != size, nil
+func (m *Maker) isThumbnailExpired(entry types.IEntry, meta itemMeta) bool {
+	return entry.Type().IsDir() != meta.IsDir ||
+		entry.ModTime() != meta.ModTime ||
+		entry.Size() != meta.Size
 }
 
-func (m *Maker) createItem(entry types.IEntry, path string) (io.WriteCloser, error) {
+func (m *Maker) readItemMeta(file *os.File) (*itemMeta, uint32, error) {
+	var meta itemMeta
+	r := bufio.NewReader(file)
+	var headerSize uint32
+	if e := binary.Read(r, binary.LittleEndian, &headerSize); e != nil {
+		return nil, headerSize, e
+	}
+	e := gob.NewDecoder(io.LimitReader(r, int64(headerSize))).Decode(&meta)
+	return &meta, 4 + headerSize, e
+}
+
+func (m *Maker) createItem(entry types.IEntry, path, mimeType string) (io.WriteCloser, error) {
 	file, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
 	if e != nil {
 		return nil, e
@@ -328,20 +370,24 @@ func (m *Maker) createItem(entry types.IEntry, path string) (io.WriteCloser, err
 			_ = os.Remove(file.Name())
 		}
 	}()
-	e = binary.Write(file, binary.LittleEndian, entry.Type().IsDir())
-	if e != nil {
+	buf := bytes.NewBuffer(nil)
+	if e := gob.NewEncoder(buf).Encode(itemMeta{
+		IsDir:    entry.Type().IsDir(),
+		Size:     entry.Size(),
+		ModTime:  entry.ModTime(),
+		MimeType: mimeType,
+	}); e != nil {
 		return nil, e
 	}
-	e = binary.Write(file, binary.LittleEndian, entry.ModTime())
-	if e != nil {
+	headerSize := uint32(buf.Len())
+	if e := binary.Write(file, binary.LittleEndian, headerSize); e != nil {
 		return nil, e
 	}
-	e = binary.Write(file, binary.LittleEndian, entry.Size())
-	if e != nil {
+	if _, e = file.Write(buf.Bytes()); e != nil {
 		return nil, e
 	}
 
-	f, e := newThumbnailFile(fileOffset, file)
+	f, e := newThumbnailFile(int64(4+headerSize), file, mimeType)
 	if e != nil {
 		return nil, e
 	}
@@ -353,9 +399,9 @@ func (m *Maker) remove(path string) error {
 	return os.Remove(path)
 }
 
-func (m *Maker) getItem(entry types.IEntry) (string, error) {
+func (m *Maker) getItem(entry types.IEntry) string {
 	key := md5.Sum([]byte(entry.Path()))
-	return filepath.Join(m.cacheDir, fmt.Sprintf("%x", key)), nil
+	return filepath.Join(m.cacheDir, fmt.Sprintf("%x", key))
 }
 
 func (m *Maker) clean() {
@@ -397,13 +443,20 @@ func (m *Maker) SysConfig() (string, types.M, error) {
 	}, nil
 }
 
+type itemMeta struct {
+	IsDir    bool
+	Size     int64
+	ModTime  int64
+	MimeType string
+}
+
 type taskWrapper struct {
 	h     TypeHandler
 	entry types.IEntry
 	dest  string
 }
 
-func newThumbnailFile(start int64, file *os.File) (*thumbnailFile, error) {
+func newThumbnailFile(start int64, file *os.File, mimeType string) (*thumbnailFile, error) {
 	stat, e := os.Stat(file.Name())
 	if e != nil {
 		return nil, e
@@ -417,6 +470,8 @@ func newThumbnailFile(start int64, file *os.File) (*thumbnailFile, error) {
 		size:    stat.Size() - start,
 		modTime: stat.ModTime(),
 		file:    file,
+
+		mimeType: mimeType,
 	}, nil
 }
 
@@ -428,7 +483,6 @@ type thumbnailFile struct {
 	current int64
 
 	mimeType string
-	name     string
 }
 
 func (l *thumbnailFile) Read(p []byte) (n int, err error) {
@@ -471,8 +525,4 @@ func (l *thumbnailFile) Size() int64 {
 
 func (l *thumbnailFile) MimeType() string {
 	return l.mimeType
-}
-
-func (l *thumbnailFile) Name() string {
-	return l.name
 }

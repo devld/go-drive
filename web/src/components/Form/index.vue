@@ -11,6 +11,9 @@
       v-model="data[item.field]"
       :item="item"
       :class="item.class"
+      :style="{
+        width: typeof item.width === 'string' ? item.width : item.width,
+      }"
       @update:model-value="emitInput"
     >
       <template v-if="item.slot" #value>

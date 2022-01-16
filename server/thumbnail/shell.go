@@ -51,14 +51,12 @@ type shellThumbnailTypeHandler struct {
 	maxSize int64
 
 	mimeType string
-	name     string
 	timeout  time.Duration
 }
 
 func newShellThumbnailTypeHandler(c types.SM) (TypeHandler, error) {
 	shell := c["shell"]
 	mimeType := c["mime-type"]
-	name := c["filename"]
 	writeContent := c.GetBool("write-content")
 	args := make([]string, 0)
 	for _, s := range strings.Split(shell, " ") {
@@ -73,9 +71,6 @@ func newShellThumbnailTypeHandler(c types.SM) (TypeHandler, error) {
 	if mimeType == "" {
 		return nil, errors.New("mime-type must be specified")
 	}
-	if name == "" {
-		return nil, errors.New("filename must be specified")
-	}
 
 	return &shellThumbnailTypeHandler{
 		command:      args[0],
@@ -83,7 +78,6 @@ func newShellThumbnailTypeHandler(c types.SM) (TypeHandler, error) {
 		writeContent: writeContent,
 		maxSize:      c.GetInt64("max-size", -1),
 		mimeType:     mimeType,
-		name:         name,
 		timeout:      c.GetDuration("timeout", -1),
 	}, nil
 }
@@ -142,10 +136,6 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry t
 
 func (s *shellThumbnailTypeHandler) MimeType() string {
 	return s.mimeType
-}
-
-func (s *shellThumbnailTypeHandler) Name() string {
-	return s.name
 }
 
 func (s *shellThumbnailTypeHandler) Timeout() time.Duration {

@@ -76,6 +76,12 @@ type IEntryWrapper interface {
 	GetIEntry() IEntry
 }
 
+// IDispatcherEntry is for dispatcher.go to get the dispatched drive
+type IDispatcherEntry interface {
+	// GetDispatchedDrive returns the dispatched drive
+	GetDispatchedDrive() IDrive
+}
+
 // DriveMeta is the metadata of drive
 type DriveMeta struct {
 	// Writable indicates is this drive writable
