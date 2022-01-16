@@ -13,7 +13,7 @@ const i18n = createI18n({
 function loadLanguage(lang) {
   if (i18n.locale === lang) return lang
   if (loadedLanguages.includes(lang)) return _setLang(lang)
-  import(/* @vite-ignore */ `./lang/${lang}.js`).then((msgs) => {
+  import(/* @vite-ignore */ `./lang/${lang}/index.js`).then((msgs) => {
     i18n.global.setLocaleMessage(lang, msgs.default)
     loadedLanguages.push(lang)
     return _setLang(lang)

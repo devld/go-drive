@@ -1,6 +1,7 @@
 <template>
   <div class="misc-settings">
     <root-permissions />
+    <thumbnail />
     <search-index />
     <clean-invalid />
     <clean-cache />
@@ -16,6 +17,7 @@ import CleanInvalid from './CleanInvalid.vue'
 import CleanCache from './CleanCache.vue'
 import SysStats from './SysStats.vue'
 import SearchIndex from './SearchIndex.vue'
+import Thumbnail from './Thumbnail.vue'
 </script>
 <style lang="scss">
 .misc-settings {

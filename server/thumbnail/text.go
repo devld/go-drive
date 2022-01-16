@@ -94,10 +94,6 @@ func (t *textTypeHandler) MimeType() string {
 	return "image/svg+xml"
 }
 
-func (t *textTypeHandler) Name() string {
-	return "text.svg"
-}
-
 func (t *textTypeHandler) Timeout() time.Duration {
 	return -1
 }

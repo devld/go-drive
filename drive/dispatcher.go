@@ -430,6 +430,10 @@ func (d *entryWrapper) GetIEntry() types.IEntry {
 	return d.entry
 }
 
+func (d *entryWrapper) GetDispatchedDrive() types.IDrive {
+	return d.entry.Drive()
+}
+
 type driveEntry struct {
 	d    *DispatcherDrive
 	path string

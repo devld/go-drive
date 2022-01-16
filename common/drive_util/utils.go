@@ -123,8 +123,10 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 			proxy := httputil.ReverseProxy{Director: func(r *http.Request) {
 				r.URL = dest
 				r.Host = dest.Host
+				r.Header.Del("Origin")
 				r.Header.Del("Referer")
 				r.Header.Del("Authorization")
+				r.Header.Del("Cookie")
 				if u.Header != nil {
 					for k, v := range u.Header {
 						r.Header.Set(k, v)

@@ -87,6 +87,7 @@ const indexOptionsForm = computed(() => [
     label: t('p.admin.misc.search_form_filter'),
     description: t('p.admin.misc.search_form_filter_desc'),
     placeholder: t('p.admin.misc.search_form_filter_placeholder'),
+    width: '100%',
     validate: (v) =>
       !v ||
       !v

@@ -112,6 +112,8 @@ type ThumbnailConfig struct {
 }
 
 type ThumbnailHandlerItem struct {
+	// Name is the unique name of the thumbnail handler
+	Tags string `yaml:"tags"`
 	// Type is handler type, available type are image, text, shell
 	Type string `yaml:"type"`
 	// FileTypes is supported file extensions separate by comm, folder type is /
