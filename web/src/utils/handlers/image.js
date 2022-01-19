@@ -15,7 +15,7 @@ export default {
       import('@/views/HandlerViews/ImageView.vue')
     ),
   },
-  supports: (entry) =>
+  supports: (ctx, entry) =>
     entry.type === 'file' &&
     ['jpg', 'jpeg', 'png', 'gif'].includes(filenameExt(entry.name)),
 }

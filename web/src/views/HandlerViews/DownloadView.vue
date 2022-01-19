@@ -14,7 +14,7 @@
           class="download-button"
           target="_blank"
           :download="filename(singleEntry.path)"
-          :href="fileUrl(singleEntry.path, singleEntry.meta.accessKey)"
+          :href="fileUrl(ctx, singleEntry.path, singleEntry.meta.accessKey)"
         >
           {{ $t('hv.download.download') }}
           <span v-if="singleEntry.size >= 0" class="file-size">{{
@@ -39,9 +39,9 @@
   </div>
 </template>
 <script setup>
-import { filename, formatBytes } from '@/utils'
 import { fileUrl } from '@/api'
-import { computed, ref } from 'vue'
+import { filename, formatBytes } from '@/utils'
+import { computed, inject, ref } from 'vue'
 
 const props = defineProps({
   entry: {
@@ -51,6 +51,8 @@ const props = defineProps({
   entries: { type: Array },
 })
 const emit = defineEmits(['close'])
+
+const ctx = inject('ctx')
 
 const linksEl = ref(null)
 
@@ -65,7 +67,9 @@ const singleEntry = computed(() => {
 
 const downloadLinks = computed(() => {
   if (singleEntry.value) return ''
-  return props.entry.map((e) => fileUrl(e.path, e.meta.accessKey)).join('\n')
+  return props.entry
+    .map((e) => fileUrl(ctx.value, e.path, e.meta.accessKey))
+    .join('\n')
 })
 
 const downloadLinksFocus = () => {
@@ -77,7 +81,7 @@ const downloadLinksFocus = () => {
 const downloadFiles = () => {
   props.entry.forEach((f) => {
     const a = document.createElement('a')
-    a.href = fileUrl(f.path, f.meta.accessKey)
+    a.href = fileUrl(ctx.value, f.path, f.meta.accessKey)
     a.download = filename(f.path)
     a.click()
   })

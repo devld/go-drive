@@ -17,7 +17,14 @@
       @update:sort="emit('update:sort', $event)"
       @update:selection="emit('update:selection', $event)"
       @update:view-mode="emit('update:viewMode', $event)"
-    />
+    >
+      <template v-if="slots['pathBarRoot']" #pathBarRoot="data">
+        <slot name="pathBarRoot" v-bind="data" />
+      </template>
+      <template v-if="slots['pathBarItem']" #pathBarItem="data">
+        <slot name="pathBarItem" v-bind="data" />
+      </template>
+    </entry-list>
     <error-view v-else :status="error.status" :message="error.message" />
   </div>
 </template>
@@ -26,7 +33,7 @@ export default { name: 'EntryListView' }
 </script>
 <script setup>
 import { listEntries } from '@/api'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, inject, useSlots } from 'vue'
 
 const props = defineProps({
   path: {
@@ -68,6 +75,10 @@ const emit = defineEmits([
   'error',
 ])
 
+const slots = useSlots()
+
+const ctx = inject('ctx')
+
 const currentPath = ref(null)
 const loadedPath = ref('')
 const entries = ref([])
@@ -97,7 +108,7 @@ const loadEntries = async () => {
   emit('loading', true)
   try {
     const path = currentPath.value
-    task = listEntries(path)
+    task = listEntries(ctx.value, path)
     const loadedEntries = await task
     const thisEntry = loadedEntries[0]
     entries.value = loadedEntries.slice(1)

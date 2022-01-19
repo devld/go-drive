@@ -11,77 +11,155 @@ import (
 )
 
 type Chroot struct {
-	d    types.IDrive
-	root string
+	Root       string
+	NameFilter map[string]struct{}
 }
 
-func NewChroot(d types.IDrive, root string) *Chroot {
-	return &Chroot{d: d, root: root}
+func NewChroot(root string, entries []string) *Chroot {
+	var em map[string]struct{} = nil
+	if entries != nil && len(entries) > 0 {
+		em = make(map[string]struct{})
+		for _, e := range entries {
+			em[e] = struct{}{}
+		}
+	}
+	return &Chroot{Root: root, NameFilter: em}
 }
 
-func (c *Chroot) getPath(path string) string {
-	return path2.Join(c.root, path)
+func (c *Chroot) WrapPath(path string) (string, error) {
+	firstNode := path
+	index := strings.Index(firstNode, "/")
+	if index >= 0 {
+		firstNode = firstNode[:index]
+	}
+	if c.NameFilter != nil && !utils.IsRootPath(path) {
+		if _, ok := c.NameFilter[firstNode]; !ok {
+			return "", err.NewNotFoundError()
+		}
+	}
+	return path2.Join(c.Root, path), nil
 }
 
-func (c *Chroot) Meta(ctx context.Context) types.DriveMeta {
+func (c *Chroot) UnwrapPath(path string) string {
+	if !strings.HasPrefix(path, c.Root) {
+		return path
+	}
+	return utils.CleanPath(path[len(c.Root):])
+}
+
+func (c *Chroot) IsExists(path string) bool {
+	if c.NameFilter == nil {
+		return true
+	}
+	path = c.UnwrapPath(path)
+	_, ok := c.NameFilter[utils.PathBase(path)]
+	return ok
+}
+
+type ChrootWrapper struct {
+	d types.IDrive
+	*Chroot
+}
+
+func NewChrootWrapper(d types.IDrive, chroot *Chroot) *ChrootWrapper {
+	return &ChrootWrapper{d: d, Chroot: chroot}
+}
+
+func (c *ChrootWrapper) Meta(ctx context.Context) types.DriveMeta {
 	return c.d.Meta(ctx)
 }
 
-func (c *Chroot) Get(ctx context.Context, path string) (types.IEntry, error) {
-	entry, e := c.d.Get(ctx, c.getPath(path))
+func (c *ChrootWrapper) Get(ctx context.Context, path string) (types.IEntry, error) {
+	p, e := c.WrapPath(path)
+	if e != nil {
+		return nil, e
+	}
+	entry, e := c.d.Get(ctx, p)
 	return c.wrapEntry(entry), e
 }
 
-func (c *Chroot) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
-	entry, e := c.d.Save(ctx, c.getPath(path), size, override, reader)
+func (c *ChrootWrapper) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
+	p, e := c.WrapPath(path)
+	if e != nil {
+		return nil, e
+	}
+	entry, e := c.d.Save(ctx, p, size, override, reader)
 	return c.wrapEntry(entry), e
 }
 
-func (c *Chroot) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	entry, e := c.d.MakeDir(ctx, c.getPath(path))
+func (c *ChrootWrapper) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
+	p, e := c.WrapPath(path)
+	if e != nil {
+		return nil, e
+	}
+	entry, e := c.d.MakeDir(ctx, p)
 	return c.wrapEntry(entry), e
 }
 
-func (c *Chroot) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	entry, e := c.d.Copy(ctx, from, c.getPath(to), override)
+func (c *ChrootWrapper) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+	toP, e := c.WrapPath(to)
+	if e != nil {
+		return nil, e
+	}
+	entry, e := c.d.Copy(ctx, from, toP, override)
 	return c.wrapEntry(entry), e
 }
 
-func (c *Chroot) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	entry, e := c.d.Move(ctx, from, c.getPath(to), override)
+func (c *ChrootWrapper) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+	toP, e := c.WrapPath(to)
+	if e != nil {
+		return nil, e
+	}
+	entry, e := c.d.Move(ctx, from, toP, override)
 	return c.wrapEntry(entry), e
 }
 
-func (c *Chroot) List(ctx context.Context, path string) ([]types.IEntry, error) {
-	entries, e := c.d.List(ctx, c.getPath(path))
+func (c *ChrootWrapper) List(ctx context.Context, path string) ([]types.IEntry, error) {
+	p, e := c.WrapPath(path)
+	if e != nil {
+		return nil, e
+	}
+	entries, e := c.d.List(ctx, p)
+	if c.NameFilter != nil && utils.IsRootPath(path) {
+		var filtered []types.IEntry
+		for _, entry := range entries {
+			if c.IsExists(entry.Path()) {
+				filtered = append(filtered, entry)
+			}
+		}
+		entries = filtered
+	}
 	return c.wrapEntries(entries), e
 }
 
-func (c *Chroot) Delete(ctx types.TaskCtx, path string) error {
-	return c.d.Delete(ctx, c.getPath(path))
+func (c *ChrootWrapper) Delete(ctx types.TaskCtx, path string) error {
+	p, e := c.WrapPath(path)
+	if e != nil {
+		return e
+	}
+	return c.d.Delete(ctx, p)
 }
 
-func (c *Chroot) Upload(ctx context.Context, path string, size int64, override bool, config types.SM) (*types.DriveUploadConfig, error) {
-	return c.d.Upload(ctx, c.getPath(path), size, override, config)
+func (c *ChrootWrapper) Upload(ctx context.Context, path string, size int64, override bool, config types.SM) (*types.DriveUploadConfig, error) {
+	p, e := c.WrapPath(path)
+	if e != nil {
+		return nil, e
+	}
+	return c.d.Upload(ctx, p, size, override, config)
 }
 
-func (c *Chroot) wrapEntry(e types.IEntry) types.IEntry {
+func (c *ChrootWrapper) wrapEntry(e types.IEntry) types.IEntry {
 	if e == nil {
 		return nil
 	}
-	path := e.Path()
-	if !strings.HasPrefix(path, c.root) {
-		panic("unexpected path: " + path + ", but the chroot is: " + c.root)
-	}
-	path = utils.CleanPath(path[len(c.root):])
 	return &chrootEntry{
 		entry: e,
-		path:  path,
+		path:  c.UnwrapPath(e.Path()),
 		c:     c,
 	}
 }
 
-func (c *Chroot) wrapEntries(es []types.IEntry) []types.IEntry {
+func (c *ChrootWrapper) wrapEntries(es []types.IEntry) []types.IEntry {
 	if es == nil {
 		return nil
 	}
@@ -95,7 +173,7 @@ func (c *Chroot) wrapEntries(es []types.IEntry) []types.IEntry {
 type chrootEntry struct {
 	entry types.IEntry
 	path  string
-	c     *Chroot
+	c     *ChrootWrapper
 }
 
 func (c *chrootEntry) Path() string {

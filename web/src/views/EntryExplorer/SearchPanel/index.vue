@@ -45,7 +45,7 @@
 import { searchEntries } from '@/api'
 import { debounce } from '@/utils'
 import { useHotKey } from '@/utils/hooks/hotkey'
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, inject, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 import SearchItem from './SearchItem.vue'
@@ -64,6 +64,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['navigate'])
+
+const ctx = inject('ctx')
 
 const thisEl = ref(null)
 const qEl = ref(null)
@@ -96,7 +98,7 @@ const doSearch = async () => {
   searchError.value = ''
   let res
   try {
-    res = await searchEntries(props.path, q.value, next.value)
+    res = await searchEntries(ctx.value, props.path, q.value, next.value)
   } catch (e) {
     searchError.value = e.message
     return

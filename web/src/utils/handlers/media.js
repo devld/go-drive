@@ -13,7 +13,7 @@ export default {
     name: 'MediaView',
     component: MediaView,
   },
-  supports: (entry) =>
+  supports: (ctx, entry) =>
     entry.type === 'file' &&
     ['mp4', 'mp3', 'm4a', 'ogg'].includes(filenameExt(entry.name)),
 }

@@ -16,17 +16,18 @@ const createHandler = (isMove) => {
     },
     multiple: true,
     supports: isMove
-      ? (entry, parentEntry) =>
+      ? (ctx, entry, parentEntry) =>
           (Array.isArray(entry)
             ? !entry.some((e) => !e.meta.writable)
             : entry.meta.writable) &&
           parentEntry &&
           parentEntry.meta.writable
       : () => true,
-    handler: (entries, { confirm, alert, loading, open }) => {
+    handler: (ctx, entries, { confirm, alert, loading, open }) => {
       if (!Array.isArray(entries)) entries = [entries]
       return new Promise((resolve) => {
         open({
+          ctx,
           title: T(
             isMove
               ? 'handler.copy_move.move_open_title'
@@ -66,24 +67,27 @@ const createHandler = (isMove) => {
                   ),
                 })
                 const copyOrMove = isMove ? moveEntry : copyEntry
-                await taskDone(copyOrMove(entry.path, dest, override), (t) => {
-                  if (canceled) return false
-                  task = t
-                  loading({
-                    text: T(
-                      isMove
-                        ? 'handler.copy_move.moving'
-                        : 'handler.copy_move.copying',
-                      {
-                        n: entry.name,
-                        p: `${formatBytes(task.progress.loaded)}/${formatBytes(
-                          task.progress.total
-                        )}`,
-                      }
-                    ),
-                    onCancel,
-                  })
-                })
+                await taskDone(
+                  copyOrMove(ctx, entry.path, dest, override),
+                  (t) => {
+                    if (canceled) return false
+                    task = t
+                    loading({
+                      text: T(
+                        isMove
+                          ? 'handler.copy_move.moving'
+                          : 'handler.copy_move.copying',
+                        {
+                          n: entry.name,
+                          p: `${formatBytes(
+                            task.progress.loaded
+                          )}/${formatBytes(task.progress.total)}`,
+                        }
+                      ),
+                      onCancel,
+                    })
+                  }
+                )
               }
               resolve({ update: true })
             } catch (e) {

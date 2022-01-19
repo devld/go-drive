@@ -1,10 +1,10 @@
 <template>
   <div
     class="entry-explorer"
-    :class="{ 'search-disabled': !searchConfig?.enabled }"
+    :class="{ 'search-disabled': !searchPanelShowing }"
   >
     <!-- search panel -->
-    <div v-if="searchConfig?.enabled" class="search-panel-wrapper">
+    <div v-if="searchPanelShowing" class="search-panel-wrapper">
       <search-panel :path="path" @navigate="navigateToEntry" />
     </div>
     <!-- search panel -->
@@ -24,7 +24,15 @@
         @entry-click="entryClicked"
         @entry-menu="showEntryMenu"
         @loading="progressBar($event)"
-      />
+        @error="onEntriesLoadError"
+      >
+        <template v-if="slots['pathBarRoot']" #pathBarRoot="data">
+          <slot name="pathBarRoot" v-bind="data" />
+        </template>
+        <template v-if="slots['pathBarItem']" #pathBarItem="data">
+          <slot name="pathBarItem" v-bind="data" />
+        </template>
+      </entry-list-view>
     </div>
     <!-- file list main area -->
 
@@ -90,7 +98,7 @@ import {
 } from '@/utils/handlers'
 import uiUtils, { confirm } from '@/utils/ui-utils'
 import EntryListView from '@/views/EntryListView/index.vue'
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, provide, ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
@@ -121,7 +129,13 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  ctx: { type: Object },
 })
+
+const slots = useSlots()
+
+const ctx = computed(() => props.ctx)
+provide('ctx', ctx)
 
 const {
   getDirLink,
@@ -129,7 +143,7 @@ const {
   getLink,
   resolveHandlerByRoute,
   resolvePath,
-} = useEntryExplorer(props.basePath)
+} = useEntryExplorer(ctx.value, props.basePath)
 
 const path = computed(() =>
   decodeURIComponent(resolvePath(router.currentRoute.value))
@@ -156,6 +170,12 @@ const newEntryAreaEl = ref(null)
 const user = computed(() => store.state.user)
 const searchConfig = computed(() => store.state.config?.search)
 
+const error = ref()
+
+const searchPanelShowing = computed(
+  () => !error.value && searchConfig.value?.enabled
+)
+
 let readmeTask
 
 const entryHandlerViewShowing = computed(
@@ -176,7 +196,12 @@ const entryClicked = ({ entry }) => {
     currentDirEntry.value = null
     return
   }
-  const handlers = resolveEntryHandler(entry, currentDirEntry.value, user.value)
+  const handlers = resolveEntryHandler(
+    ctx.value,
+    entry,
+    currentDirEntry.value,
+    user.value
+  )
   if (handlers.length > 0) {
     executeEntryHandler(handlers[0], entry)
   }
@@ -208,7 +233,7 @@ const menuClicked = ({ entry, menu }) => {
 const executeEntryHandler = async (handler, entry) => {
   if (typeof handler.handler === 'function' && !handler.view) {
     try {
-      const r = await handler.handler(entry, uiUtils)
+      const r = await handler.handler(ctx, entry, uiUtils)
       if (r && r.update) reloadEntryList()
     } catch (e) {
       console.error('entry handler error', e)
@@ -220,7 +245,12 @@ const showEntryMenu = ({ entry, event }) => {
   if (selectedEntries.value.length > 0) {
     entry = [...selectedEntries.value] // selected entries
   }
-  const handlers = resolveEntryHandler(entry, currentDirEntry.value, user.value)
+  const handlers = resolveEntryHandler(
+    ctx.value,
+    entry,
+    currentDirEntry.value,
+    user.value
+  )
   if (handlers.length === 0) return
 
   event && event.preventDefault()
@@ -242,6 +272,8 @@ const entriesLoaded = ({
   path: path_,
   entry: thisEntry,
 }) => {
+  error.value = undefined
+
   setTitle(path_)
 
   if (path_ !== path.value) {
@@ -261,6 +293,10 @@ const entriesLoaded = ({
 
     setTitle(`${entryHandlerView.value.entryName}`)
   }
+}
+
+const onEntriesLoadError = (e) => {
+  error.value = e
 }
 
 const resolveRouteAndHandleEntry = (to) => {
@@ -387,7 +423,7 @@ const loadReadme = async (entry) => {
   readmeContent.value = `<p style="text-align: center">${t(
     'p.home.readme_loading'
   )}</p>`
-  readmeTask = getContent(entry.path, entry.meta.accessKey)
+  readmeTask = getContent(ctx.value, entry.path, entry.meta.accessKey)
   try {
     content = await readmeTask
   } catch (e) {

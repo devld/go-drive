@@ -10,14 +10,14 @@ export default {
     type: 'danger',
     icon: '#icon-delete',
   },
-  supports: (entry, parentEntry) =>
+  supports: (ctx, entry, parentEntry) =>
     (Array.isArray(entry)
       ? !entry.some((e) => !e.meta.writable)
       : entry.meta.writable) &&
     parentEntry &&
     parentEntry.meta.writable,
   multiple: true,
-  handler: async (entries, { confirm, alert, loading }) => {
+  handler: async (ctx, entries, { confirm, alert, loading }) => {
     if (!Array.isArray(entries)) entries = [entries]
     try {
       await confirm({
@@ -41,7 +41,7 @@ export default {
       for (const entry of entries) {
         if (canceled) break
         loading({ text: T('handler.delete.deleting', { n: entry.name }) })
-        await taskDone(deleteEntry(entry.path), (t) => {
+        await taskDone(deleteEntry(ctx, entry.path), (t) => {
           if (canceled) return false
           task = t
           loading({

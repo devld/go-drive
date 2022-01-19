@@ -8,7 +8,14 @@
         :path="path"
         :get-link="getLink"
         @path-change="emit('update:path', $event)"
-      />
+      >
+        <template v-if="slots['pathBarRoot']" #root="data">
+          <slot name="pathBarRoot" v-bind="data" />
+        </template>
+        <template v-if="slots['pathBarItem']" #item="data">
+          <slot name="pathBarItem" v-bind="data" />
+        </template>
+      </path-bar>
       <div v-if="showToggles" class="entry-list__toggles">
         <button
           class="plain-button view-model-toggle"
@@ -91,7 +98,7 @@
 <script setup>
 import { isRootPath as isRootPathFn, mapOf, pathClean, pathJoin } from '@/utils'
 import { useHotKey } from '@/utils/hooks/hotkey'
-import { computed, nextTick, onBeforeUpdate, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUpdate, ref, useSlots, watch } from 'vue'
 import IIcon from './IIcon.vue'
 
 const SORTS_METHOD = {
@@ -156,6 +163,8 @@ const emit = defineEmits([
   'update:selection',
   'update:sort',
 ])
+
+const slots = useSlots()
 
 const selected = ref([])
 const sortDropdownShowing = ref(false)

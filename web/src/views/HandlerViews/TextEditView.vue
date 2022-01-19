@@ -30,12 +30,20 @@
   </div>
 </template>
 <script setup>
-import { filename as filenameFn } from '@/utils'
 import { getContent } from '@/api'
-import TextEditor from '@/components/TextEditor/index.vue'
 import uploadManager from '@/api/upload-manager'
+import TextEditor from '@/components/TextEditor/index.vue'
+import { filename as filenameFn } from '@/utils'
 import { alert } from '@/utils/ui-utils'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+computed,
+inject,
+nextTick,
+onBeforeUnmount,
+onMounted,
+ref,
+watch
+} from 'vue'
 
 const props = defineProps({
   entry: {
@@ -46,6 +54,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'save-state'])
+
+const ctx = inject('ctx')
 
 const error = ref(null)
 const inited = ref(false)
@@ -74,7 +84,12 @@ const loadFile = async () => {
 }
 
 const loadFileContent = async () => {
-  content.value = await getContent(path.value, props.entry.meta.accessKey, true)
+  content.value = await getContent(
+    ctx.value,
+    path.value,
+    props.entry.meta.accessKey,
+    true
+  )
   nextTick(() => {
     changeSaveState(true)
   })

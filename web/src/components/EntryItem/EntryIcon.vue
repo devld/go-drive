@@ -11,11 +11,11 @@
   </span>
 </template>
 <script setup>
-import { getIconSVG } from './file-icon'
 import { fileThumbnail } from '@/api'
 import { filenameExt } from '@/utils'
-import { ref, computed } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useStore } from 'vuex'
+import { getIconSVG } from './file-icon'
 
 const props = defineProps({
   entry: {
@@ -33,6 +33,8 @@ const props = defineProps({
 
 const emit = defineEmits(['click'])
 
+const ctx = inject('ctx')
+
 const err = ref(null)
 
 const store = useStore()
@@ -48,7 +50,7 @@ const thumbnail = computed(
   () =>
     props.entry.meta.thumbnail ||
     (supportThumbnail.value &&
-      fileThumbnail(props.entry.path, props.entry.meta.accessKey))
+      fileThumbnail(ctx.value, props.entry.path, props.entry.meta.accessKey))
 )
 
 const onError = (e) => (err.value = e)

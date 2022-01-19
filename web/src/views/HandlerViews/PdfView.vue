@@ -12,7 +12,7 @@
     </h1>
 
     <iframe
-      :src="fileUrl(entry.path, entry.meta.accessKey)"
+      :src="fileUrl(ctx, entry.path, entry.meta.accessKey)"
       frameborder="0"
       class="pdf-view-page__iframe"
     ></iframe>
@@ -20,6 +20,7 @@
 </template>
 <script setup>
 import { fileUrl } from '@/api'
+import { inject } from 'vue'
 
 defineProps({
   entry: {
@@ -30,6 +31,8 @@ defineProps({
 })
 
 const emit = defineEmits(['close'])
+
+const ctx = inject('ctx')
 </script>
 <style lang="scss">
 .pdf-view-page {

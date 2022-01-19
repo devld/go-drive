@@ -13,6 +13,6 @@ export default {
     name: 'PdfView',
     component: PdfView,
   },
-  supports: (entry) =>
+  supports: (ctx, entry) =>
     entry.type === 'file' && filenameExt(entry.name) === 'pdf',
 }

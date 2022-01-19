@@ -1,6 +1,6 @@
 import { mountPaths } from '@/api/admin'
 import { T } from '@/i18n'
-import { isAdmin } from '..'
+import { isAdmin, isShared } from '..'
 
 export default {
   name: 'mount',
@@ -9,13 +9,14 @@ export default {
     description: T('handler.mount.desc'),
     icon: '#icon-path',
   },
-  supports: (entry, parentEntry, user) =>
+  supports: (ctx, entry, parentEntry, user) =>
+    !isShared(ctx) &&
     isAdmin(user) &&
     (Array.isArray(entry)
       ? !entry.some((e) => e.meta.mountAt)
       : !entry.meta.mountAt),
   multiple: true,
-  async handler(entries, { open, loading }) {
+  async handler(ctx, entries, { open, loading }) {
     if (!Array.isArray(entries)) entries = [entries]
     open({
       title: T('handler.mount.open_title'),

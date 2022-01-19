@@ -133,6 +133,9 @@ export default {
     readme_failed: '加载 README 失败',
     unsaved_confirm: '尚未保存，确认离开？',
   },
+  share: {
+    root_path: '共享文件夹',
+  },
   new_entry: {
     new_item: '新建',
     create_file: '创建空文件',

@@ -20,8 +20,8 @@
   </div>
 </template>
 <script setup>
-import EntryListView from '@/views/EntryListView/index.vue'
 import { filenameExt } from '@/utils'
+import EntryListView from '@/views/EntryListView/index.vue'
 import { ref, unref, watch } from 'vue'
 
 /// file,dir,<1024,.js,write

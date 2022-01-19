@@ -1,6 +1,6 @@
 import { T } from '@/i18n'
 import { defineAsyncComponent } from 'vue'
-import { isAdmin } from '..'
+import { isAdmin, isShared } from '..'
 
 export default {
   name: 'permission',
@@ -15,5 +15,5 @@ export default {
       import('@/views/HandlerViews/PermissionsView.vue')
     ),
   },
-  supports: (entry, parentEntry, user) => isAdmin(user),
+  supports: (ctx, entry, parentEntry, user) => !isShared(ctx) && isAdmin(user),
 }

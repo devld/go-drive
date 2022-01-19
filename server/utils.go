@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -14,13 +15,11 @@ const (
 	keyToken   = "token"
 	keySession = "session"
 	keyResult  = "apiResult"
-
-	headerAuth = "Authorization"
 )
 
 func TokenAuth(tokenStore types.TokenStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenKey := c.GetHeader(headerAuth)
+		tokenKey := c.GetHeader(common.HeaderAuth)
 		token, e := tokenStore.Validate(tokenKey)
 		if e != nil {
 			_ = c.Error(e)

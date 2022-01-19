@@ -27,6 +27,13 @@ var (
 )
 
 const (
+	HeaderAuth = "Authorization"
+
+	SignatureQueryKey    = "_k"
+	SharedFolderQueryKey = "_s"
+)
+
+const (
 	DbFilename = "data.db"
 	LocalFsDir = "local"
 

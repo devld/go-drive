@@ -10,11 +10,12 @@
         <i-icon svg="#icon-close" />
       </button>
     </h1>
-    <video :src="fileUrl(entry.path, entry.meta.accessKey)" controls />
+    <video :src="fileUrl(ctx, entry.path, entry.meta.accessKey)" controls />
   </div>
 </template>
 <script setup>
 import { fileUrl } from '@/api'
+import { inject } from 'vue'
 
 defineProps({
   entry: {
@@ -25,6 +26,8 @@ defineProps({
 })
 
 const emit = defineEmits(['close'])
+
+const ctx = inject('ctx')
 </script>
 <style lang="scss">
 .media-view-page {

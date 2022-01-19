@@ -133,6 +133,9 @@ export default {
     readme_failed: 'Failed to load README.',
     unsaved_confirm: 'You have some unsaved changes, are you sure to leave?',
   },
+  share: {
+    root_path: 'Shared Folder',
+  },
   new_entry: {
     new_item: 'New item',
     create_file: 'Create empty file',

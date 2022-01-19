@@ -79,17 +79,17 @@
   </div>
 </template>
 <script setup>
-import TaskManager from './TaskManager/index.vue'
 import { makeDir } from '@/api'
-import { dir, pathClean, pathJoin } from '@/utils'
 import { UploadManager } from '@/api/upload-manager'
 // eslint-disable-next-line no-unused-vars
-import { UploadTaskItem, STATUS_COMPLETED } from '@/api/upload-manager/task'
-import { createDialog } from '@/utils/ui-utils/base-dialog'
-import FileExistsDialogInner from './FileExistsConfirmDialog.vue'
+import { STATUS_COMPLETED, UploadTaskItem } from '@/api/upload-manager/task'
+import { dir, pathClean, pathJoin } from '@/utils'
 import { alert, confirm, dialog, input } from '@/utils/ui-utils'
-import { onBeforeMount, onBeforeUnmount, ref } from 'vue'
+import { createDialog } from '@/utils/ui-utils/base-dialog'
+import { inject, onBeforeMount, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import FileExistsDialogInner from './FileExistsConfirmDialog.vue'
+import TaskManager from './TaskManager/index.vue'
 
 const FileExistsDialog = createDialog('FileExistsDialog', FileExistsDialogInner)
 
@@ -125,6 +125,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update'])
+
+const ctx = inject('ctx')
 
 const floatMenuShowing = ref(false)
 
@@ -217,7 +219,7 @@ const createDir = () => {
     },
     onOk: async (text) => {
       try {
-        await makeDir(pathClean(pathJoin(props.path, text)))
+        await makeDir(ctx.value, pathClean(pathJoin(props.path, text)))
         emit('update')
       } catch (e) {
         alert(e.message).catch(() => {})

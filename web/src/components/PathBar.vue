@@ -6,14 +6,20 @@
         :path="s.path"
         :get-link="getLink"
         @click="pathChange"
-        >{{ s.name }}</entry-link
       >
+        <slot v-if="isRootPath(s.path)" name="root" :item="s">{{
+          $t('app.root_path')
+        }}</slot>
+        <slot v-else name="item" :item="s">
+          {{ s.name }}
+        </slot>
+      </entry-link>
     </li>
   </ul>
 </template>
 <script setup>
+import { isRootPath } from '@/utils'
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
   path: {
@@ -25,13 +31,11 @@ const props = defineProps({
   },
 })
 
-const { t } = useI18n()
-
 const emit = defineEmits(['update:path'])
 
 const segments = computed(() => {
   const ss = props.path.replace(/\/+/g, '/').split('/').filter(Boolean)
-  const pathSegments = [{ name: t('app.root_path'), path: '' }]
+  const pathSegments = [{ name: '', path: '' }]
   ss.forEach((s, i) => {
     pathSegments.push({ name: s, path: ss.slice(0, i + 1).join('/') })
   })

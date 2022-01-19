@@ -1,20 +1,29 @@
 import AppWrapper from '@/views/AppWrapper/index.vue'
 
 import Home from '@/views/Home.vue'
+import SharedFolder from '@/views/SharedFolder.vue'
+
 import { setTitle } from '@/utils'
 import { T } from '@/i18n'
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { HOME_ROUTE_PREFIX, SHARED_FOLDER_ROUTE_PREFIX } from '@/config'
 
 const routes = [
   {
     component: AppWrapper,
     path: '/',
-    redirect: '/_/',
+    redirect: `${HOME_ROUTE_PREFIX}/`,
     children: [
       {
         name: 'Home',
-        path: '/_/:path(.*)',
+        path: `${HOME_ROUTE_PREFIX}/:path(.*)`,
         component: Home,
+        props: true,
+      },
+      {
+        name: 'SharedFolder',
+        path: `${SHARED_FOLDER_ROUTE_PREFIX}/:sharedId/:path(.*)`,
+        component: SharedFolder,
         props: true,
       },
       {

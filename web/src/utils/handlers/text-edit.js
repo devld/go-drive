@@ -25,7 +25,7 @@ export default {
       import('@/views/HandlerViews/TextEditView.vue')
     ),
   },
-  supports: (entry) =>
+  supports: (ctx, entry) =>
     entry.type === 'file' &&
     [
       'txt',

@@ -56,6 +56,24 @@ export function formatPercent(n, based) {
   return (n * 100).toFixed(1) + '%'
 }
 
+export function buildQuery(qs) {
+  if (typeof qs !== 'object' || qs === null) return ''
+  return Object.keys(qs)
+    .map(
+      (k) =>
+        `${encodeURIComponent(k)}=${
+          qs[k] === undefined || qs[k] === null ? '' : encodeURIComponent(qs[k])
+        }`
+    )
+    .join('&')
+}
+
+export function buildURL(url, qs) {
+  const queryString = buildQuery(qs)
+  if (!queryString) return url
+  return url + (url.lastIndexOf('?') === -1 ? '?' : '&') + queryString
+}
+
 export function dir(path) {
   if (!path) return ''
   const i = path.lastIndexOf('/')
@@ -203,6 +221,10 @@ export function val(val, defVal) {
 
 export function isRootPath(path) {
   return path === ''
+}
+
+export function isShared(ctx) {
+  return !!ctx?.sharedId
 }
 
 export function isAdmin(user) {

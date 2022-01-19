@@ -9,9 +9,9 @@ export default {
     description: T('handler.rename.desc'),
     icon: '#icon-rename',
   },
-  supports: (entry, parentEntry) =>
+  supports: (ctx, entry, parentEntry) =>
     entry.meta.writable && parentEntry && parentEntry.meta.writable,
-  handler: (entry, { input, alert }) => {
+  handler: (ctx, entry, { input, alert }) => {
     return new Promise((resolve) => {
       input({
         title: T('handler.rename.input_title'),
@@ -24,7 +24,11 @@ export default {
           if (text === entry.name) return
           try {
             await taskDone(
-              moveEntry(entry.path, pathClean(pathJoin(dir(entry.path), text)))
+              moveEntry(
+                ctx,
+                entry.path,
+                pathClean(pathJoin(dir(entry.path), text))
+              )
             )
             resolve({ update: true })
           } catch (e) {

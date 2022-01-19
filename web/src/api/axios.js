@@ -1,8 +1,8 @@
+import { AUTH_HEADER } from '@/config'
+import { getLang } from '@/i18n'
 import { waitPromise } from '@/utils'
 import Axios from 'axios'
-import { getLang } from '@/i18n'
 
-const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
 const MAX_RETRY = 1
 

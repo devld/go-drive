@@ -73,10 +73,10 @@
 </template>
 <script setup>
 import { fileUrl } from '@/api'
+import { dir, filename as filenameFn, filenameExt, pathJoin } from '@/utils'
 import PhotoSwipe from 'photoswipe'
 import PhotoSwipeUIDefault from 'photoswipe/dist/photoswipe-ui-default'
-import { filenameExt, filename as filenameFn, dir, pathJoin } from '@/utils'
-import { computed, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
 
 function isSupportedImageExt(ext) {
   return ['jpg', 'jpeg', 'png', 'gif'].includes(ext)
@@ -94,6 +94,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'entry-change'])
+
+const ctx = inject('ctx')
 
 const images = computed(() =>
   props.entries.filter(
@@ -116,7 +118,7 @@ const initPhotoSwipe = () => {
     psEl.value,
     PhotoSwipeUIDefault,
     images.value.map((i) => ({
-      src: fileUrl(pathJoin(basePath, i.name), i.meta.accessKey),
+      src: fileUrl(ctx.value, pathJoin(basePath, i.name), i.meta.accessKey),
       w: 0,
       h: 0,
     })),

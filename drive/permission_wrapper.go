@@ -2,6 +2,7 @@ package drive
 
 import (
 	"context"
+	"go-drive/common"
 	"go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -48,7 +49,7 @@ func (p *PermissionWrapperDrive) Meta(ctx context.Context) types.DriveMeta {
 func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	canRead := false
 	if p.signer != nil {
-		canRead = utils.CheckSignature(p.signer, p.request, path)
+		canRead = checkSignature(p.signer, p.request, path)
 	}
 	var permission = types.PermissionRead
 	if !canRead {
@@ -64,7 +65,7 @@ func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IE
 	}
 	ak := ""
 	if p.signer != nil {
-		ak = utils.SignPathRequest(p.signer, p.request, path, time.Now().Add(accessKeyValidity))
+		ak = signPathRequest(p.signer, p.request, path, time.Now().Add(accessKeyValidity))
 	}
 	return &permissionWrapperEntry{
 		p:          p,
@@ -155,7 +156,7 @@ func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types
 		if per.Readable() {
 			accessKey := ""
 			if e.Type().IsFile() && p.signer != nil {
-				accessKey = utils.SignPathRequest(p.signer, p.request, e.Path(), time.Now().Add(accessKeyValidity))
+				accessKey = signPathRequest(p.signer, p.request, e.Path(), time.Now().Add(accessKeyValidity))
 			}
 			result = append(
 				result,
@@ -287,4 +288,16 @@ func (p *permissionWrapperEntry) GetURL(ctx context.Context) (*types.ContentURL,
 
 func (p *permissionWrapperEntry) GetIEntry() types.IEntry {
 	return p.entry
+}
+
+func getSignPayload(req *http.Request, path string) string {
+	return req.Host + "." + path
+}
+
+func signPathRequest(signer *utils.Signer, req *http.Request, path string, notAfter time.Time) string {
+	return signer.Sign(getSignPayload(req, path), notAfter)
+}
+
+func checkSignature(signer *utils.Signer, req *http.Request, path string) bool {
+	return signer.Validate(getSignPayload(req, path), req.URL.Query().Get(common.SignatureQueryKey))
 }

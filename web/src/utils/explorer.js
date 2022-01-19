@@ -1,3 +1,4 @@
+import { DEFAULT_ENTRY_QUERY_KEY, DEFAULT_HANDLER_QUERY_KEY } from '@/config'
 import { resolveEntryHandler } from '@/utils/handlers'
 import { dir, pathClean } from '.'
 import { getHandler } from './handlers'
@@ -6,9 +7,10 @@ import { getHandler } from './handlers'
  * @param {string} routeBasePath
  */
 export const useEntryExplorer = (
+  ctx,
   routeBasePath,
-  queryHandler = 'h',
-  queryEntry = 'e'
+  queryHandler = DEFAULT_HANDLER_QUERY_KEY,
+  queryEntry = DEFAULT_ENTRY_QUERY_KEY
 ) => {
   const getDirLink = (path) => `${routeBasePath}/${path}`
 
@@ -24,7 +26,7 @@ export const useEntryExplorer = (
 
     if (entry.type === 'dir') return getDirLink(entry.path)
     if (entry.type === 'file') {
-      const handler = resolveEntryHandler(entry)[0]
+      const handler = resolveEntryHandler(ctx, entry)[0]
       if (handler && handler.view) {
         return getHandlerLink(handler.name, entry.name, dir(entry.path))
       }
