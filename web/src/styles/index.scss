@@ -22,6 +22,14 @@
   @import 'highlight.js/scss/agate.scss';
 }
 
+img,
+picture,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
 .iconfont {
   font-size: inherit;
 }
