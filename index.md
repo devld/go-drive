@@ -181,7 +181,7 @@ BUILD_VERSION=version make all
 
 ## 开始使用
 
-通过上述方式运行后，访问 [http://localhost:8089](http://localhost:8089)，如需在子路径运行，比如 `http://example.com/drive，请参考 [如何使用 Nginx 反向代理 go-drive？](#如何使用 Nginx 反向代理 go-drive？)。
+通过上述方式运行后，访问 [http://localhost:8089](http://localhost:8089)，如需在子路径运行，比如 `http://example.com/drive，请参考 [如何使用 Nginx 反向代理 go-drive？](#如何使用-nginx-反向代理-go-drive)。
 
 
 
@@ -203,7 +203,7 @@ BUILD_VERSION=version make all
 
 如：数据目录为 `/home/me/go-drive/data`，则新建名为 `test` 的本地文件映射，需要提前新建 `/home/me/go-drive/data/local/test` 目录。
 
-如需去除该限制，请参考[创建“本地文件”类型的映射时，显示“路径不存在”](#创建“本地文件”类型的映射时，显示“路径不存在”)。
+如需去除该限制，请参考[创建“本地文件”类型的映射时，显示“路径不存在”](#创建本地文件类型的映射时显示路径不存在)。
 
 #### FTP
 
