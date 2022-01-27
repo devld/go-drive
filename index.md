@@ -229,10 +229,10 @@ BUILD_VERSION=version make all
 
 跨域配置中，需要允许如下的方法和请求头：
 
-|   来源   | 允许的 Methods |             允许的 Headers             |
-| :------: | :------------: | :------------------------------------: |
-| 你的域名 |      PUT       | `content-type`, `x-amz-content-sha256` |
-| 你的域名 |   GET, HEAD    |                                        |
+|   来源   | 允许的 Methods |             允许的 Headers             | 暴露的 Headers |
+| :------: | :------------: | :------------------------------------: | :------------: |
+| 你的域名 |   PUT, POST    | `content-type`, `x-amz-content-sha256` |     `etag`     |
+| 你的域名 |   GET, HEAD    |                                        |                |
 
 
 
@@ -242,9 +242,9 @@ BUILD_VERSION=version make all
 [
     {
         "AllowedHeaders": ["content-type", "x-amz-content-sha256"],
-        "AllowedMethods": ["PUT"],
+        "AllowedMethods": ["PUT", "POST"],
         "AllowedOrigins": ["http://example.com"],
-        "ExposeHeaders": []
+        "ExposeHeaders": ["etag"]
     },
     {
         "AllowedHeaders": [],
