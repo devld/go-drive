@@ -23,6 +23,7 @@ func InitAdminRoutes(
 	r gin.IRouter,
 	ch *registry.ComponentsHolder,
 	bus event.Bus,
+	access *drive.Access,
 	rootDrive *drive.RootDrive,
 	search *search.Service,
 	tokenStore types.TokenStore,
@@ -316,8 +317,7 @@ func InitAdminRoutes(
 			return
 		}
 		// permissions updated
-		da := ch.Get("driveAccess").(*drive.Access)
-		if e := da.ReloadPerm(); e != nil {
+		if e := access.ReloadPerm(); e != nil {
 			_ = c.Error(e)
 			return
 		}
@@ -384,11 +384,14 @@ func InitAdminRoutes(
 			return
 		}
 		paths := make(map[string]bool)
+		var reloadPermission, reloadMount bool
 		for _, p := range pps {
 			paths[*p.Path] = true
+			reloadPermission = true
 		}
 		for _, m := range ms {
 			paths[m.MountAt] = true
+			reloadMount = true
 		}
 		for p := range paths {
 			_, e := root.Get(c.Request.Context(), p)
@@ -415,6 +418,12 @@ func InitAdminRoutes(
 				return
 			}
 			n++
+		}
+		if reloadMount {
+			_ = rootDrive.ReloadMounts()
+		}
+		if reloadPermission {
+			_ = access.ReloadPerm()
 		}
 		SetResult(c, n)
 	})
