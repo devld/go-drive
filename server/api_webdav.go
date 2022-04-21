@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"errors"
-	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
@@ -11,13 +10,15 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
-	"golang.org/x/net/webdav"
+	"go-drive/server/webdav"
 	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 var webdavHTTPMethods = []string{
@@ -354,6 +355,24 @@ func (w *webdavFile) Write(p []byte) (n int, err error) {
 		w.modified = true
 	}
 	return
+}
+
+func (w *webdavFile) GetURL(ctx context.Context) (string, error) {
+	if !w.e.Type().IsFile() {
+		return "", os.ErrInvalid
+	}
+	c, ok := w.e.(types.IContent)
+	if !ok {
+		return "", nil
+	}
+	u, e := c.GetURL(ctx)
+	if e != nil {
+		return "", e
+	}
+	if u.Proxy {
+		return "", nil
+	}
+	return u.URL, nil
 }
 
 func entryToFileInfo(e types.IEntry) fs.FileInfo {
