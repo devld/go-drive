@@ -3,9 +3,8 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"go-drive/common"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -17,6 +16,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 const minChunkSize = 5 * 1024 * 1024
@@ -26,7 +27,7 @@ type ChunkUploader struct {
 }
 
 func NewChunkUploader(config common.Config) (*ChunkUploader, error) {
-	dir, e := config.GetDir("upload_temp", true)
+	dir, e := config.GetTempDir("upload", true)
 	if e != nil {
 		return nil, e
 	}

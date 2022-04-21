@@ -6,10 +6,6 @@ import (
 	"fmt"
 	"go-drive/common/registry"
 	"go-drive/common/types"
-	"gopkg.in/yaml.v2"
-	"gorm.io/driver/mysql"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"io/ioutil"
 	"math"
 	"net/url"
@@ -18,6 +14,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"gopkg.in/yaml.v2"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var (
@@ -281,6 +282,18 @@ func (c Config) GetDB() gorm.Dialector {
 
 func (c Config) GetDir(name string, create bool) (string, error) {
 	name = filepath.Join(c.DataDir, name)
+	if create {
+		if _, e := os.Stat(name); os.IsNotExist(e) {
+			if e := os.Mkdir(name, 0755); e != nil {
+				return "", e
+			}
+		}
+	}
+	return name, nil
+}
+
+func (c Config) GetTempDir(name string, create bool) (string, error) {
+	name = filepath.Join(c.TempDir, name)
 	if create {
 		if _, e := os.Stat(name); os.IsNotExist(e) {
 			if e := os.Mkdir(name, 0755); e != nil {
