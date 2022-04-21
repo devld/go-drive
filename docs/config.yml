@@ -27,9 +27,11 @@ db:
 # - sessions: The user sessions
 # - temp: Temp dir
 # - thumbnails: Thumbnail cache dir
-# - upload_temp: Temp dir for file uploading
 # - data.db: SQLite database file
 data-dir: ./
+
+# Temp dir. Default is data-dir/temp
+temp-dir: ""
 
 # Web static files dir.
 web-dir: ./web
