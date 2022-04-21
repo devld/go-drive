@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common/drive_util"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/req"
 	"go-drive/common/types"
@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -252,7 +251,7 @@ func (o *OneDrive) List(ctx context.Context, path string) ([]types.IEntry, error
 		return cached, nil
 	}
 	entries := make([]types.IEntry, 0)
-	reqPath := pathURL(path) + "/children?$expand=thumbnails&$top=5"
+	reqPath := pathURL(path) + "/children?$expand=thumbnails"
 	for {
 		res := driveItems{}
 		resp, e := o.c.Get(ctx, reqPath, nil)
@@ -272,8 +271,6 @@ func (o *OneDrive) List(ctx context.Context, path string) ([]types.IEntry, error
 		if reqPath == "" {
 			break
 		}
-
-		reqPath = strings.TrimPrefix(reqPath, o.reqPrefix)
 	}
 	_ = o.cache.PutChildren(path, entries, o.cacheTTL)
 	return entries, nil
