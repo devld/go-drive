@@ -13,10 +13,12 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"regexp"
 	"sync"
 )
 
 const maxReadableBodySize int64 = 10 * 1024 * 1024 // 10MB
+var absoluteURLPattern = regexp.MustCompile("(?i)^https?://")
 
 var defaultClient = &http.Client{
 	CheckRedirect: func(*http.Request, []*http.Request) error {
@@ -55,6 +57,9 @@ func NewClient(
 }
 
 func (h *Client) BuildURL(requestUrl string) (string, error) {
+	if absoluteURLPattern.MatchString(requestUrl) {
+		return requestUrl, nil
+	}
 	if h.baseURL == nil {
 		return requestUrl, nil
 	}
