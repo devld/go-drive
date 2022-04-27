@@ -2,7 +2,7 @@ package drive
 
 import (
 	"context"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -154,7 +154,7 @@ func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types
 		per := p.pm.ResolvePath(e.Path())
 		if per.Readable() {
 			accessKey := ""
-			if e.Type().IsFile() && p.signer != nil {
+			if p.signer != nil {
 				accessKey = utils.SignPathRequest(p.signer, p.request, e.Path(), time.Now().Add(accessKeyValidity))
 			}
 			result = append(

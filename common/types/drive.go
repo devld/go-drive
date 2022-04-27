@@ -44,18 +44,22 @@ type ContentURL struct {
 	Proxy bool
 }
 
-// IContent is the extension of IEntry for file
-type IContent interface {
-	// Name is filename of this entry
-	Name() string
-	Size() int64
-	ModTime() int64
-
+type IContentReader interface {
 	// GetReader gets the reader of this entry
 	GetReader(context.Context) (io.ReadCloser, error)
 	// GetURL gets the download url of this entry.
 	// This API is optional, returns err.NewUnsupportedError if not supported.
 	GetURL(context.Context) (*ContentURL, error)
+}
+
+// IContent is the extension of IEntry for file
+type IContent interface {
+	IContentReader
+
+	// Name is filename of this entry
+	Name() string
+	Size() int64
+	ModTime() int64
 }
 
 // IEntry is the abstraction of file and directory

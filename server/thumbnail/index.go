@@ -9,8 +9,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/Jeffail/tunny"
-	"github.com/bmatcuk/doublestar/v4"
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
@@ -25,6 +23,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/Jeffail/tunny"
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 const FolderType = "/"
@@ -51,7 +52,7 @@ type Maker struct {
 
 func NewMaker(config common.Config, optionsDAO *storage.OptionsDAO,
 	ch *registry.ComponentsHolder) (*Maker, error) {
-	dir, e := config.GetDir("thumbnails", true)
+	dir, e := config.GetTempDir("thumbnails", true)
 	if e != nil {
 		return nil, e
 	}
@@ -120,6 +121,8 @@ func createHandlers(items []common.ThumbnailHandlerItem) (map[string]map[string]
 }
 
 func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error) {
+	// we need to use the absolute path of this entry to generate thumbnail cache key
+	// so we get the wrapped IDispatcherEntry here
 	entry = drive_util.GetIEntry(entry, func(e types.IEntry) bool {
 		_, ok := e.(types.IDispatcherEntry)
 		return ok
@@ -138,6 +141,10 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 }
 
 func (m *Maker) resolveHandler(entry types.IEntry) (TypeHandler, error) {
+	te := GetWrappedThumbnailEntry(entry)
+	if te != nil {
+		return entrySelfThumbnailTypeHandler, nil
+	}
 	fType := ""
 	if entry.Type().IsDir() {
 		fType = FolderType
