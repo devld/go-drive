@@ -2,7 +2,7 @@ package drive_util
 
 import (
 	"context"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -80,7 +80,7 @@ func CopyReaderToTempFile(ctx types.TaskCtx, reader io.Reader, tempDir string) (
 	return file, nil
 }
 
-func GetIContentReader(ctx context.Context, content types.IContent) (io.ReadCloser, error) {
+func GetIContentReader(ctx context.Context, content types.IContentReader) (io.ReadCloser, error) {
 	u, e := content.GetURL(ctx)
 	if e == nil {
 		return GetURL(ctx, u.URL, u.Header)
@@ -88,7 +88,7 @@ func GetIContentReader(ctx context.Context, content types.IContent) (io.ReadClos
 	return content.GetReader(ctx)
 }
 
-func CopyIContent(ctx types.TaskCtx, content types.IContent, dst io.Writer) error {
+func CopyIContent(ctx types.TaskCtx, content types.IContentReader, dst io.Writer) error {
 	reader, e := GetIContentReader(ctx, content)
 	if e != nil {
 		return e
@@ -100,7 +100,7 @@ func CopyIContent(ctx types.TaskCtx, content types.IContent, dst io.Writer) erro
 	return e
 }
 
-func CopyIContentToTempFile(ctx types.TaskCtx, content types.IContent, tempDir string) (*os.File, error) {
+func CopyIContentToTempFile(ctx types.TaskCtx, content types.IContentReader, tempDir string) (*os.File, error) {
 	reader, e := GetIContentReader(ctx, content)
 	if e != nil {
 		return nil, e
@@ -164,8 +164,10 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 			readSeeker)
 		return nil
 	}
-
-	w.Header().Set("Content-Length", strconv.FormatInt(content.Size(), 10))
+	size := content.Size()
+	if size >= 0 {
+		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	}
 	if req.Method != http.MethodHead {
 		_, e = io.Copy(w, reader)
 	}

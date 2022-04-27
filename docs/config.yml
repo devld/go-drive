@@ -68,7 +68,7 @@ thumbnail:
     # image: embed generator for image files(jpg, png, gif)
     # Notice: this have bad performance
     - type: image
-      tag:
+      tags:
       file-types: jpg,jpeg,png,gif
       #config:
       #  # max supported file size
@@ -83,7 +83,7 @@ thumbnail:
     # text: embed generator for text files
     # Generating a svg file by reading some content
     - type: text
-      tag:
+      tags:
       file-types: txt,md,xml,html,css,scss,js,json,jsx,properties,yml,yaml,ini,c,h,cpp,go,java,kt,gradle,ps1
       #config:
       #  font-size: 12
