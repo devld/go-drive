@@ -366,6 +366,9 @@ func (w *webdavFile) GetURL(ctx context.Context) (string, error) {
 		return "", nil
 	}
 	u, e := c.GetURL(ctx)
+	if err.IsUnsupportedError(e) {
+		return "", nil
+	}
 	if e != nil {
 		return "", e
 	}
