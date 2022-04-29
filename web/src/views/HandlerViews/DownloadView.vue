@@ -13,6 +13,7 @@
         <a
           class="download-button"
           target="_blank"
+          rel="noreferrer noopener nofollow"
           :download="filename(singleEntry.path)"
           :href="fileUrl(singleEntry.path, singleEntry.meta.accessKey)"
         >
@@ -77,6 +78,7 @@ const downloadLinksFocus = () => {
 const downloadFiles = () => {
   props.entry.forEach((f) => {
     const a = document.createElement('a')
+    a.rel = 'noreferrer noopener nofollow'
     a.href = fileUrl(f.path, f.meta.accessKey)
     a.download = filename(f.path)
     a.click()
