@@ -20,6 +20,12 @@ const siteConfigSaving = ref(false)
 const siteConfig = ref({})
 const siteConfigForm = computed(() => [
   { field: 'app.name', label: t('p.admin.site.app_name'), type: 'text' },
+  {
+    field: 'proxy.maxSize',
+    label: t('p.admin.site.proxy_max'),
+    description: t('p.admin.site.proxy_max_desc'),
+    type: 'text',
+  },
 ])
 
 const loadConfig = async () => {

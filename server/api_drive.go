@@ -13,6 +13,7 @@ import (
 	"go-drive/drive"
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
+	"go-drive/storage"
 	"net/http"
 	"os"
 	"strconv"
@@ -20,6 +21,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+)
+
+const (
+	maxProxySizeKey = "proxy.maxSize"
 )
 
 func InitDriveRoutes(
@@ -31,7 +36,8 @@ func InitDriveRoutes(
 	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
 	runner task.Runner,
-	tokenStore types.TokenStore) error {
+	tokenStore types.TokenStore,
+	optionsDAO *storage.OptionsDAO) error {
 
 	dr := driveRoute{
 		config:        config,
@@ -41,6 +47,7 @@ func InitDriveRoutes(
 		thumbnail:     thumbnail,
 		runner:        runner,
 		signer:        signer,
+		options:       optionsDAO,
 	}
 
 	// get file content
@@ -90,6 +97,8 @@ type driveRoute struct {
 	thumbnail     *thumbnail.Maker
 	runner        task.Runner
 	signer        *utils.Signer
+
+	options *storage.OptionsDAO
 }
 
 func (dr *driveRoute) getDrive(c *gin.Context) types.IDrive {
@@ -246,7 +255,9 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 	}
 	if content, ok := file.(types.IContent); ok {
 		useProxy := c.Query("proxy")
-		if dr.config.ProxyMaxSize > 0 && file.Size() > dr.config.ProxyMaxSize {
+		proxyMaxSize := dr.options.GetValue(maxProxySizeKey).DataSize(-1)
+
+		if proxyMaxSize > 0 && file.Size() > proxyMaxSize {
 			useProxy = ""
 		}
 		if e := drive_util.DownloadIContent(c.Request.Context(), content, c.Writer, c.Request, useProxy != ""); e != nil {

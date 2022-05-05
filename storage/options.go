@@ -2,8 +2,9 @@ package storage
 
 import (
 	"errors"
-	cmap "github.com/orcaman/concurrent-map"
 	"go-drive/common/types"
+
+	cmap "github.com/orcaman/concurrent-map"
 	"gorm.io/gorm"
 )
 
@@ -48,6 +49,11 @@ func (d *OptionsDAO) set(db *gorm.DB, key, value string) error {
 		d.cache.Remove(key)
 	}
 	return e
+}
+
+func (d *OptionsDAO) GetValue(key string) types.SV {
+	v, _ := d.Get(key)
+	return types.SV(v)
 }
 
 func (d *OptionsDAO) Get(key string) (string, error) {

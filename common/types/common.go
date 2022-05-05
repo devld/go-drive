@@ -2,7 +2,7 @@ package types
 
 import (
 	"context"
-	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -10,6 +10,8 @@ import (
 
 type M map[string]interface{}
 type SM map[string]string
+
+type SV string
 
 type TaskCtx interface {
 	context.Context
@@ -55,58 +57,118 @@ type FormItem struct {
 	Secret string `json:"-"`
 }
 
-func (c SM) GetInt(key string, defVal int) int {
-	v, e := strconv.Atoi(c[key])
+func (s SV) Int(defVal int) int {
+	v, e := strconv.ParseInt(string(s), 10, 32)
 	if e != nil {
 		return defVal
 	}
-	return v
+	return int(v)
 }
 
-func (c SM) GetUint(key string, defVal uint) uint {
-	v := c.GetInt(key, -1)
-	if v < 0 || uint(v) > uint(math.MaxUint) {
+func (s SV) Uint(defVal uint) uint {
+	v, e := strconv.ParseUint(string(s), 10, 32)
+	if e != nil {
 		return defVal
 	}
 	return uint(v)
 }
 
-func (c SM) GetInt64(key string, defVal int64) int64 {
-	v, e := strconv.ParseInt(c[key], 10, 64)
+func (s SV) Int64(defVal int64) int64 {
+	v, e := strconv.ParseInt(string(s), 10, 64)
 	if e != nil {
 		return defVal
 	}
 	return v
 }
 
-func (c SM) GetUint64(key string, defVal uint64) uint64 {
-	v := c.GetInt64(key, -1)
-	if v < 0 || uint64(v) > uint64(math.MaxUint64) {
+func (s SV) Uint64(defVal uint64) uint64 {
+	v, e := strconv.ParseInt(string(s), 10, 64)
+	if e != nil {
 		return defVal
 	}
 	return uint64(v)
 }
 
-func (c SM) GetDuration(key string, defVal time.Duration) time.Duration {
-	dur, e := time.ParseDuration(c[key])
+func (s SV) Float64(defVal float64) float64 {
+	v, e := strconv.ParseFloat(string(s), 64)
+	if e != nil {
+		return defVal
+	}
+	return v
+}
+
+func (s SV) Duration(defVal time.Duration) time.Duration {
+	dur, e := time.ParseDuration(string(s))
 	if e != nil {
 		dur = defVal
 	}
 	return dur
 }
 
-func (c SM) GetUnixTime(key string, defVal *time.Time) time.Time {
+func (s SV) UnixTime(defVal *time.Time) time.Time {
 	if defVal == nil {
 		defVal = &time.Time{}
 	}
-	t := c.GetInt64(key, -1)
+	t := s.Int64(-1)
 	if t == -1 {
 		return *defVal
 	}
 	return time.Unix(t, 0)
 }
 
+var sizeRegexp = regexp.MustCompile("^([0-9]+)([bkmgtBKMGT]?)$")
+var sizeMultiplier = map[string]float64{
+	"":  1,
+	"b": 1,
+	"k": 1024,
+	"m": 1024 * 1024,
+	"g": 1024 * 1024 * 1024,
+	"t": 1024 * 1024 * 1024 * 1024,
+}
+
+func (s SV) DataSize(defVal int64) int64 {
+	m := sizeRegexp.FindStringSubmatch(string(s))
+	if m == nil {
+		return defVal
+	}
+	size := SV(m[1]).Float64(0)
+	unit := strings.ToLower(m[2])
+	return int64(sizeMultiplier[unit] * size)
+}
+
+func (s SV) Bool() bool {
+	v := strings.ToLower(strings.TrimSpace(string(s)))
+	return s != "" && v != "false"
+}
+
+func (c SM) GetInt(key string, defVal int) int {
+	return SV(c[key]).Int(defVal)
+}
+
+func (c SM) GetUint(key string, defVal uint) uint {
+	return SV(c[key]).Uint(defVal)
+}
+
+func (c SM) GetInt64(key string, defVal int64) int64 {
+	return SV(c[key]).Int64(defVal)
+}
+
+func (c SM) GetUint64(key string, defVal uint64) uint64 {
+	return SV(c[key]).Uint64(defVal)
+}
+
+func (c SM) GetDuration(key string, defVal time.Duration) time.Duration {
+	return SV(c[key]).Duration(defVal)
+}
+
+func (c SM) GetUnixTime(key string, defVal *time.Time) time.Time {
+	return SV(c[key]).UnixTime(defVal)
+}
+
 func (c SM) GetBool(key string) bool {
-	v := strings.ToLower(strings.TrimSpace(c[key]))
-	return c[key] != "" && v != "false"
+	return SV(c[key]).Bool()
+}
+
+func (c SM) GetDataSize(key string, defVal int64) int64 {
+	return SV(c[key]).DataSize(defVal)
 }

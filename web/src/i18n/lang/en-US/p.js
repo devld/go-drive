@@ -8,6 +8,9 @@ export default {
     t_misc: 'Misc',
     site: {
       app_name: 'Site Title',
+      proxy_max: 'Max Proxy Size',
+      proxy_max_desc:
+        'Maximum allowed file size for downloading via proxy. Units: b, k, m, g, t',
       save: 'Save',
     },
     drive: {

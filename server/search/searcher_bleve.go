@@ -1,9 +1,6 @@
 package search
 
 import (
-	"github.com/blevesearch/bleve/v2"
-	"github.com/blevesearch/bleve/v2/mapping"
-	"github.com/blevesearch/bleve/v2/search"
 	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -12,6 +9,10 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/blevesearch/bleve/v2"
+	"github.com/blevesearch/bleve/v2/mapping"
+	"github.com/blevesearch/bleve/v2/search"
 )
 
 func init() {
@@ -64,8 +65,8 @@ var sizePattern = regexp.MustCompile("(size:)([>=<]*)(([0-9]+)([bkmgtBKMGT])?)")
 func (s *BleveSearcher) processQuery(query string) string {
 	query = sizePattern.ReplaceAllStringFunc(query, func(s string) string {
 		g := sizePattern.FindStringSubmatch(s)
-		size, e := utils.DataSizeToBytes(g[3])
-		if e != nil {
+		size := types.SV(g[3]).DataSize(-1)
+		if size < 0 {
 			return ""
 		}
 		return g[1] + g[2] + strconv.FormatInt(size, 10)
