@@ -2,9 +2,8 @@ package server
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"go-drive/common"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/event"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
@@ -19,6 +18,8 @@ import (
 	"reflect"
 	"runtime"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func InitServer(config common.Config,
@@ -70,7 +71,7 @@ func InitServer(config common.Config,
 	}
 
 	if e := InitDriveRoutes(router, driveAccess, searcher, config, thumbnail,
-		signer, chunkUploader, runner, tokenStore); e != nil {
+		signer, chunkUploader, runner, tokenStore, optionsDAO); e != nil {
 		return nil, e
 	}
 

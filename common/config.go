@@ -41,7 +41,6 @@ const (
 	DefaultLangDir           = "./lang"
 	DefaultLang              = "en-US"
 	DefaultOAuthRedirectURI  = "https://go-drive.top/oauth_callback"
-	DefaultProxyMaxSize      = 1 * 1024 * 1024 // 1M
 	DefaultMaxConcurrentTask = 100
 	DefaultFreeFs            = false
 	DefaultThumbnailTTL      = 30 * 24 * time.Hour
@@ -73,12 +72,7 @@ type Config struct {
 
 	OAuthRedirectURI string `yaml:"oauth-redirect-uri"`
 
-	// ProxyMaxSize is the maximum file size can be proxied when
-	// the API call explicitly specifies
-	// that it needs to be proxied.
-	// The size is unlimited when maxProxySize is <= 0
-	ProxyMaxSize      int64 `yaml:"proxy-max-size"`
-	MaxConcurrentTask int   `yaml:"max-concurrent-task"`
+	MaxConcurrentTask int `yaml:"max-concurrent-task"`
 
 	// unlimited fs drive path,
 	// fs drive path will be limited in dataDir/local if freeFs is false
@@ -149,7 +143,6 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		LangDir:           DefaultLangDir,
 		DefaultLang:       DefaultLang,
 		OAuthRedirectURI:  DefaultOAuthRedirectURI,
-		ProxyMaxSize:      DefaultProxyMaxSize,
 		MaxConcurrentTask: DefaultMaxConcurrentTask,
 		FreeFs:            DefaultFreeFs,
 		Thumbnail: ThumbnailConfig{

@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"go-drive/common/types"
 	"math"
@@ -130,19 +129,11 @@ func Time(millisecond int64) time.Time {
 }
 
 func ToInt64(s string, def int64) int64 {
-	v, e := strconv.ParseInt(s, 10, 64)
-	if e != nil {
-		return def
-	}
-	return v
+	return types.SV(s).Int64(def)
 }
 
 func ToInt(s string, def int) int {
-	v, e := strconv.ParseInt(s, 10, 32)
-	if e != nil {
-		return def
-	}
-	return int(v)
+	return types.SV(s).Int(def)
 }
 
 func FlattenStringMap(m map[string]interface{}, separator string) map[string]string {
@@ -238,27 +229,6 @@ func BuildURL(pattern string, variables ...string) string {
 		j++
 	}
 	return pattern
-}
-
-var sizeRegexp = regexp.MustCompile("^([0-9]+)([bkmgtBKMGT]?)$")
-var invalidSizeErr = errors.New("invalid size")
-var sizeMultiplier = map[string]int64{
-	"":  1,
-	"b": 1,
-	"k": 1024,
-	"m": 1024 * 1024,
-	"g": 1024 * 1024 * 1024,
-	"t": 1024 * 1024 * 1024 * 1024,
-}
-
-func DataSizeToBytes(s string) (int64, error) {
-	m := sizeRegexp.FindStringSubmatch(s)
-	if m == nil {
-		return 0, invalidSizeErr
-	}
-	size := ToInt64(m[1], 0)
-	unit := strings.ToLower(m[2])
-	return sizeMultiplier[unit] * size, nil
 }
 
 func LogSanitize(s string) string {

@@ -41,11 +41,6 @@ lang-dir: ./lang
 # If the client's language is not supported, then this language will be used
 default-lang: en-US
 
-# The maximum file size can be proxied when
-# the API call explicitly specifies that it needs to be proxied.
-# The size is unlimited when maxProxySize is <= 0
-proxy-max-size: 1048576 # 1M
-
 # Concurrent task. eg. copy, move, delete
 max-concurrent-task: 100
 

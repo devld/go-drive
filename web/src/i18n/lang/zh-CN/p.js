@@ -8,6 +8,8 @@ export default {
     t_misc: '其他',
     site: {
       app_name: '站点标题',
+      proxy_max: '最大代理大小',
+      proxy_max_desc: '最大允许通过代理下载的文件大小，可使用 b, k, m, g, t 单位',
       save: '保存',
     },
     drive: {
