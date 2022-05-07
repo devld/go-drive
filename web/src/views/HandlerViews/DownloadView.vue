@@ -15,7 +15,7 @@
           target="_blank"
           rel="noreferrer noopener nofollow"
           :download="filename(singleEntry.path)"
-          :href="fileUrl(singleEntry.path, singleEntry.meta.accessKey)"
+          :href="fileUrl(singleEntry.path, singleEntry.meta)"
         >
           {{ $t('hv.download.download') }}
           <span v-if="singleEntry.size >= 0" class="file-size">{{
@@ -66,7 +66,7 @@ const singleEntry = computed(() => {
 
 const downloadLinks = computed(() => {
   if (singleEntry.value) return ''
-  return props.entry.map((e) => fileUrl(e.path, e.meta.accessKey)).join('\n')
+  return props.entry.map((e) => fileUrl(e.path, e.meta)).join('\n')
 })
 
 const downloadLinksFocus = () => {
@@ -79,7 +79,7 @@ const downloadFiles = () => {
   props.entry.forEach((f) => {
     const a = document.createElement('a')
     a.rel = 'noreferrer noopener nofollow'
-    a.href = fileUrl(f.path, f.meta.accessKey)
+    a.href = fileUrl(f.path, f.meta)
     a.download = filename(f.path)
     a.click()
   })

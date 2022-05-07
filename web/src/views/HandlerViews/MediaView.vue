@@ -10,7 +10,10 @@
         <i-icon svg="#icon-close" />
       </button>
     </h1>
-    <video :src="fileUrl(entry.path, entry.meta.accessKey)" controls />
+    <video
+      :src="fileUrl(entry.path, entry.meta, { useProxy: 'referrer' })"
+      controls
+    />
   </div>
 </template>
 <script setup>

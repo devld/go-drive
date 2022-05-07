@@ -74,7 +74,9 @@ const loadFile = async () => {
 }
 
 const loadFileContent = async () => {
-  content.value = await getContent(path.value, props.entry.meta.accessKey, true)
+  content.value = await getContent(path.value, props.entry.meta, {
+    noCache: true,
+  })
   nextTick(() => {
     changeSaveState(true)
   })

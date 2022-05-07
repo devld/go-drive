@@ -116,7 +116,9 @@ const initPhotoSwipe = () => {
     psEl.value,
     PhotoSwipeUIDefault,
     images.value.map((i) => ({
-      src: fileUrl(pathJoin(basePath, i.name), i.meta.accessKey),
+      src: fileUrl(pathJoin(basePath, i.name), i.meta, {
+        useProxy: 'referrer',
+      }),
       w: 0,
       h: 0,
     })),
