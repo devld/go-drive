@@ -93,6 +93,33 @@ export function pathClean(path) {
   return paths.join('/')
 }
 
+export function encodeQuery(q) {
+  if (!q || typeof q !== 'object') return
+  return Object.keys(q)
+    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(q[k]) || ''}`)
+    .join('&')
+}
+
+export function buildURL(url, q) {
+  if (typeof url !== 'string') return
+  q = encodeQuery(q) || ''
+  const m = /^([^?#]*)(\?([^#]*))?(#(.*))?$/.exec(url)
+  url = m[1] || ''
+  let qs = ''
+  if (m[3] || q) {
+    qs = m[3] || ''
+    if (qs && !qs.endsWith('&') && q) {
+      qs += '&'
+    }
+    qs += q
+  }
+  if (qs) url += '?' + qs
+  if (m[5]) {
+    url += '#' + (m[5] || '')
+  }
+  return url
+}
+
 /**
  * remove element from array
  * @param {Array} array

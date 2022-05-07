@@ -48,8 +48,9 @@ const thumbnail = computed(() => {
   const t = props.entry.meta.thumbnail
   if (typeof t === 'string') return t
   if (supportThumbnail.value || t === true) {
-    return fileThumbnail(props.entry.path, props.entry.meta.accessKey)
+    return fileThumbnail(props.entry.path, props.entry.meta)
   }
+  return undefined
 })
 
 const onError = (e) => (err.value = e)

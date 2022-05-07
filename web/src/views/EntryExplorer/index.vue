@@ -387,7 +387,7 @@ const loadReadme = async (entry) => {
   readmeContent.value = `<p style="text-align: center">${t(
     'p.home.readme_loading'
   )}</p>`
-  readmeTask = getContent(entry.path, entry.meta.accessKey)
+  readmeTask = getContent(entry.path, entry.meta)
   try {
     content = await readmeTask
   } catch (e) {
