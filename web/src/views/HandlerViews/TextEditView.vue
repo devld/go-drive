@@ -206,8 +206,6 @@ loadFile()
     font-size: 24px;
     text-transform: uppercase;
     user-select: none;
-
-    animation: text-spacing 1s ease-in infinite alternate;
   }
 }
 

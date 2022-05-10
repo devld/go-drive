@@ -1,6 +1,6 @@
+import { wrapAsyncComponent } from '@/components/async'
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
-import { defineAsyncComponent } from 'vue'
 
 const TEXT_EDITOR_MAX_FILE_SIZE = 128 * 1024 // 128kb
 
@@ -21,7 +21,7 @@ export default {
   }),
   view: {
     name: 'TextEditView',
-    component: defineAsyncComponent(() =>
+    component: wrapAsyncComponent(() =>
       import('@/views/HandlerViews/TextEditView.vue')
     ),
   },
