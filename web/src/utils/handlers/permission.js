@@ -1,5 +1,5 @@
+import { wrapAsyncComponent } from '@/components/async'
 import { T } from '@/i18n'
-import { defineAsyncComponent } from 'vue'
 import { isAdmin } from '..'
 
 export default {
@@ -11,7 +11,7 @@ export default {
   },
   view: {
     name: 'PermissionsView',
-    component: defineAsyncComponent(() =>
+    component: wrapAsyncComponent(() =>
       import('@/views/HandlerViews/PermissionsView.vue')
     ),
   },

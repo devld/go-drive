@@ -1,6 +1,6 @@
+import { wrapAsyncComponent } from '@/components/async'
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
-import { defineAsyncComponent } from 'vue'
 
 export default {
   name: 'image',
@@ -11,7 +11,7 @@ export default {
   },
   view: {
     name: 'ImageView',
-    component: defineAsyncComponent(() =>
+    component: wrapAsyncComponent(() =>
       import('@/views/HandlerViews/ImageView.vue')
     ),
   },
