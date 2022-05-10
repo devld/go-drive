@@ -1,4 +1,6 @@
 import { resolveEntryHandler } from '@/utils/handlers'
+import { computed } from 'vue'
+import { useStore } from 'vuex'
 import { dir, pathClean } from '.'
 import { getHandler } from './handlers'
 
@@ -10,6 +12,13 @@ export const useEntryExplorer = (
   queryHandler = 'h',
   queryEntry = 'e'
 ) => {
+  const store = useStore()
+
+  const handlerCtx = computed(() => ({
+    user: store.state.user,
+    config: store.state.config,
+  }))
+
   const getDirLink = (path) => `${routeBasePath}/${path}`
 
   const getHandlerLink = (handlerName, entryName, dirPath) => {
@@ -24,7 +33,7 @@ export const useEntryExplorer = (
 
     if (entry.type === 'dir') return getDirLink(entry.path)
     if (entry.type === 'file') {
-      const handler = resolveEntryHandler(entry)[0]
+      const handler = resolveEntryHandler(entry, undefined, handlerCtx.value)[0]
       if (handler && handler.view) {
         return getHandlerLink(handler.name, entry.name, dir(entry.path))
       }
@@ -44,6 +53,7 @@ export const useEntryExplorer = (
     pathClean(route.path.replace(routeBasePath, ''))
 
   return {
+    handlerCtx,
     getDirLink,
     getLink,
     getHandlerLink,

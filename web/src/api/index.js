@@ -153,6 +153,10 @@ export function getUser() {
   return axiosWrapper.get('/auth/user')
 }
 
-export function getConfig() {
-  return axiosWrapper.get('/config')
+export function getConfig(optKeys) {
+  return axiosWrapper.get('/config', {
+    params: {
+      opts: optKeys?.join(','),
+    },
+  })
 }

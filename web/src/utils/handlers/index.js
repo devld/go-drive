@@ -34,12 +34,12 @@ export function getHandler(name) {
   return HANDLERS_MAP[name] && HANDLERS_MAP[name]
 }
 
-export function resolveEntryHandler(entry, parentEntry, user) {
+export function resolveEntryHandler(entry, parentEntry, ctx) {
   const matches = []
   const isMultiple = Array.isArray(entry)
   for (const h of HANDLERS) {
     if (isMultiple && !h.multiple) continue
-    if (h.supports(entry, parentEntry, user)) matches.push(h)
+    if (h.supports(entry, parentEntry, ctx)) matches.push(h)
   }
   return matches
 }

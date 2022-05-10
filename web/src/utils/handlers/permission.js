@@ -15,5 +15,5 @@ export default {
       import('@/views/HandlerViews/PermissionsView.vue')
     ),
   },
-  supports: (entry, parentEntry, user) => isAdmin(user),
+  supports: (entry, parentEntry, { user }) => isAdmin(user),
 }

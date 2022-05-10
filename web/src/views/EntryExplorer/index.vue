@@ -41,6 +41,7 @@
         v-if="entryHandlerViewShowing"
         :entry="entryHandlerView.entry"
         :entries="entries"
+        :ctx="handlerCtx"
         @update="reloadEntryList"
         @close="closeEntryHandlerView"
         @entry-change="entryHandlerViewChange"
@@ -124,6 +125,7 @@ const props = defineProps({
 })
 
 const {
+  handlerCtx,
   getDirLink,
   getHandlerLink,
   getLink,
@@ -153,7 +155,6 @@ const sortBy = ref(undefined)
 const entryListEl = ref(null)
 const newEntryAreaEl = ref(null)
 
-const user = computed(() => store.state.user)
 const searchConfig = computed(() => store.state.config?.search)
 
 let readmeTask
@@ -176,7 +177,11 @@ const entryClicked = ({ entry }) => {
     currentDirEntry.value = null
     return
   }
-  const handlers = resolveEntryHandler(entry, currentDirEntry.value, user.value)
+  const handlers = resolveEntryHandler(
+    entry,
+    currentDirEntry.value,
+    handlerCtx.value
+  )
   if (handlers.length > 0) {
     executeEntryHandler(handlers[0], entry)
   }
@@ -208,7 +213,7 @@ const menuClicked = ({ entry, menu }) => {
 const executeEntryHandler = async (handler, entry) => {
   if (typeof handler.handler === 'function' && !handler.view) {
     try {
-      const r = await handler.handler(entry, uiUtils)
+      const r = await handler.handler(entry, uiUtils, handlerCtx.value)
       if (r && r.update) reloadEntryList()
     } catch (e) {
       console.error('entry handler error', e)
@@ -220,7 +225,11 @@ const showEntryMenu = ({ entry, event }) => {
   if (selectedEntries.value.length > 0) {
     entry = [...selectedEntries.value] // selected entries
   }
-  const handlers = resolveEntryHandler(entry, currentDirEntry.value, user.value)
+  const handlers = resolveEntryHandler(
+    entry,
+    currentDirEntry.value,
+    handlerCtx.value
+  )
   if (handlers.length === 0) return
 
   event && event.preventDefault()
