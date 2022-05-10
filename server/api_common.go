@@ -1,11 +1,12 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
 	err "go-drive/common/errors"
 	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
+
+	"github.com/gin-gonic/gin"
 )
 
 func InitCommonRoutes(
@@ -36,7 +37,6 @@ func InitCommonRoutes(
 	})
 
 	authR := r.Group("/", TokenAuth(tokenStore))
-	authAdmin := authR.Group("/", AdminGroupRequired())
 
 	// get task
 	authR.GET("/task/:id", func(c *gin.Context) {
@@ -51,6 +51,19 @@ func InitCommonRoutes(
 		SetResult(c, t)
 	})
 
+	// cancel and delete task
+	authR.DELETE("/task/:id", func(c *gin.Context) {
+		_, e := runner.StopTask(c.Param("id"))
+		if e != nil && e == task.ErrorNotFound {
+			e = err.NewNotFoundMessageError(e.Error())
+		}
+		if e != nil {
+			_ = c.Error(e)
+		}
+	})
+
+	authAdmin := authR.Group("/", AdminGroupRequired())
+
 	// get tasks
 	authAdmin.GET("/tasks", func(c *gin.Context) {
 		group := c.Query("group")
@@ -60,17 +73,6 @@ func InitCommonRoutes(
 			return
 		}
 		SetResult(c, tasks)
-	})
-
-	// cancel and delete task
-	authAdmin.DELETE("/task/:id", func(c *gin.Context) {
-		_, e := runner.StopTask(c.Param("id"))
-		if e != nil && e == task.ErrorNotFound {
-			e = err.NewNotFoundMessageError(e.Error())
-		}
-		if e != nil {
-			_ = c.Error(e)
-		}
 	})
 
 	return nil
