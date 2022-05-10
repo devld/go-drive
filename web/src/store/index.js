@@ -2,6 +2,8 @@ import { getConfig, getUser } from '@/api'
 import { isAdmin } from '@/utils'
 import { createStore } from 'vuex'
 
+const configOptions = []
+
 export default createStore({
   state: {
     user: null,
@@ -45,7 +47,7 @@ export default createStore({
       return user
     },
     async getConfig(context) {
-      const config = await getConfig()
+      const config = await getConfig(configOptions)
       context.commit('setConfig', config)
       return config
     },

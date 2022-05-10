@@ -59,7 +59,7 @@ func InitServer(config common.Config,
 
 	router := engine.Group(config.APIPath)
 
-	if e := InitCommonRoutes(ch, router, tokenStore, runner); e != nil {
+	if e := InitCommonRoutes(ch, router, optionsDAO, tokenStore, runner); e != nil {
 		return nil, e
 	}
 	if e := InitAuthRoutes(router, userAuth, tokenStore); e != nil {

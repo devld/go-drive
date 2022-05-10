@@ -9,7 +9,7 @@ export default {
     description: T('handler.mount.desc'),
     icon: '#icon-path',
   },
-  supports: (entry, parentEntry, user) =>
+  supports: (entry, parentEntry, { user }) =>
     isAdmin(user) &&
     (Array.isArray(entry)
       ? !entry.some((e) => e.meta.mountAt)

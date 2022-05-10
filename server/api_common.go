@@ -5,13 +5,20 @@ import (
 	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/storage"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+)
+
+var (
+	allowedOptionPrefix = []string{"web."}
 )
 
 func InitCommonRoutes(
 	ch *registry.ComponentsHolder,
 	r gin.IRouter,
+	options *storage.OptionsDAO,
 	tokenStore types.TokenStore,
 	runner task.Runner) error {
 
@@ -32,6 +39,21 @@ func InitCommonRoutes(
 			}
 			configMap[name] = m
 		}
+
+		optionsMap := make(map[string]string)
+		for _, key := range strings.Split(c.Query("opts"), ",") {
+			for _, prefix := range allowedOptionPrefix {
+				if strings.HasPrefix(key, prefix) {
+					value, e := options.Get(key)
+					if e != nil {
+						_ = c.Error(e)
+						return
+					}
+					optionsMap[key] = value
+				}
+			}
+		}
+		configMap["options"] = optionsMap
 
 		SetResult(c, configMap)
 	})
