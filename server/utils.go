@@ -2,12 +2,13 @@ package server
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -77,7 +78,7 @@ func UserGroupRequired(group string) gin.HandlerFunc {
 }
 
 func AdminGroupRequired() gin.HandlerFunc {
-	return UserGroupRequired("admin")
+	return UserGroupRequired(types.AdminUserGroup)
 }
 
 func SetResult(c *gin.Context, result interface{}) {

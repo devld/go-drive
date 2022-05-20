@@ -250,7 +250,7 @@ func (p *permissionWrapperEntry) Meta() types.EntryMeta {
 		meta.Props = utils.CopyMap(meta.Props)
 		meta.Props["accessKey"] = p.accessKey
 	}
-	if !p.p.session.HasUserGroup("admin") {
+	if !p.p.session.HasUserGroup(types.AdminUserGroup) {
 		if p.accessKey == "" {
 			meta.Props = utils.CopyMap(meta.Props)
 		}

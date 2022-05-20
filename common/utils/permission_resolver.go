@@ -7,6 +7,22 @@ import (
 	"strings"
 )
 
+var rootPath = ""
+
+var privilegedPermMap = PermMap{
+	types.AnySubject: map[string]*PathPermItem{
+		rootPath: {
+			PathPermission: types.PathPermission{
+				ID:         0,
+				Path:       &rootPath,
+				Subject:    types.AnySubject,
+				Permission: types.PermissionReadWrite,
+				Policy:     types.PolicyAccept,
+			},
+		},
+	},
+}
+
 // PermMap is map of [subject][path]
 type PermMap map[string]map[string]*PathPermItem
 
@@ -66,6 +82,9 @@ func (pm PermMap) filter(subjects []string) PermMap {
 }
 
 func (pm PermMap) Filter(session types.Session) PermMap {
+	if session.HasUserGroup(types.AdminUserGroup) {
+		return privilegedPermMap
+	}
 	return pm.filter(makeSubjects(session))
 }
 

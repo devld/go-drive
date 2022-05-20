@@ -5,11 +5,12 @@ import (
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var initSQL = []string{
@@ -17,7 +18,6 @@ var initSQL = []string{
 	"INSERT INTO groups(name) VALUES ('admin')",
 	"INSERT INTO user_groups(username, group_name) VALUES ('admin', 'admin')",
 	"INSERT INTO path_permissions(path, subject, permission, policy) VALUES ('', 'ANY', 1, 1)",
-	"INSERT INTO path_permissions(path, subject, permission, policy) VALUES ('', 'g:admin', 3, 1)",
 }
 
 func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
