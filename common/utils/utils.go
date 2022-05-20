@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/base64"
 	"fmt"
 	"go-drive/common/types"
 	"math"
@@ -229,6 +230,18 @@ func BuildURL(pattern string, variables ...string) string {
 		j++
 	}
 	return pattern
+}
+
+func Base64URLEncode(v []byte) string {
+	s := base64.URLEncoding.EncodeToString(v)
+	return strings.TrimRight(s, "=")
+}
+
+func Base64URLDecode(s string) ([]byte, error) {
+	if len(s)%4 != 0 {
+		s += strings.Repeat("=", 4-len(s)%4)
+	}
+	return base64.URLEncoding.DecodeString(s)
 }
 
 func LogSanitize(s string) string {

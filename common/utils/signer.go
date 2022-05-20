@@ -2,7 +2,6 @@ package utils
 
 import (
 	"crypto"
-	"encoding/base64"
 	"encoding/binary"
 	"math/rand"
 	"time"
@@ -35,7 +34,7 @@ func (s *Signer) sign(v string, notAfter int64, r uint32) string {
 	copy(result[:], buf[:12])
 	copy(result[12:], signature)
 
-	return base64.URLEncoding.EncodeToString(result)
+	return Base64URLEncode(result)
 }
 
 func (s *Signer) Sign(v string, notAfter time.Time) string {
@@ -44,7 +43,7 @@ func (s *Signer) Sign(v string, notAfter time.Time) string {
 }
 
 func (s *Signer) Validate(v string, signature string) bool {
-	buf, e := base64.URLEncoding.DecodeString(signature)
+	buf, e := Base64URLDecode(signature)
 	if e != nil || len(buf) != (4+8+32) {
 		return false
 	}
