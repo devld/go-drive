@@ -42,9 +42,9 @@ export default {
       name: 'Gallery',
       desc: 'View images',
     },
-    pdf: {
+    office: {
       name: 'View',
-      desc: 'View PDF',
+      desc: 'Preview Office File',
     },
     media: {
       name: 'Play',

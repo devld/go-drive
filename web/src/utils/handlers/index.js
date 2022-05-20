@@ -3,6 +3,7 @@ import deleteEntry from './delete'
 import download from './download'
 import image from './image'
 import media from './media'
+import office from './office-preview'
 import permission from './permission'
 import textEdit from './text-edit'
 import { copy, move } from './copy-move'
@@ -13,7 +14,10 @@ export const HANDLERS = Object.freeze([
   textEdit,
   image,
   media,
+  office,
+
   download,
+
   deleteEntry,
   rename,
   copy,

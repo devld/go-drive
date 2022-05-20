@@ -1,23 +1,17 @@
 <template>
   <div class="permissions-view">
-    <h1 class="filename">
-      <simple-button
-        class="header-button save-button"
-        :loading="saving"
-        :disabled="!canSave"
-        @click="savePermissions"
-      >
-        {{ $t('hv.permission.save') }}
-      </simple-button>
-      <span :title="filename">{{ filename }}</span>
-      <button
-        class="header-button close-button plain-button"
-        title="Close"
-        @click="emit('close')"
-      >
-        <i-icon svg="#icon-close" />
-      </button>
-    </h1>
+    <handler-title-bar :title="filename" @close="emit('close')">
+      <template #actions>
+        <simple-button
+          :loading="saving"
+          :disabled="!canSave"
+          @click="savePermissions"
+        >
+          {{ $t('hv.permission.save') }}
+        </simple-button>
+      </template>
+    </handler-title-bar>
+
     <permissions-editor
       ref="editorEl"
       v-model="permissions"
@@ -29,6 +23,7 @@
 <script setup>
 import { filename as filenameFn } from '@/utils'
 import PermissionsEditor from '@/views/Admin/PermissionsEditor.vue'
+import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { alert } from '@/utils/ui-utils'
 import { computed, ref, watch } from 'vue'
 
@@ -81,42 +76,16 @@ watch(
   overflow-x: hidden;
   overflow-y: auto;
   width: 340px;
-  padding-top: 60px;
+  padding-top: 48px;
   height: 300px;
   background-color: var(--secondary-bg-color);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 
-  .filename {
+  .handler-title-bar {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    margin: 0;
-    text-align: center;
-    border-bottom: 1px solid #eaecef;
-    border-color: var(--border-color);
-    padding: 10px 2.5em;
-    font-size: 20px;
-    font-weight: normal;
-    z-index: 10;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .header-button {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  .save-button {
-    left: 1em;
-  }
-
-  .close-button {
-    right: 0.5em;
   }
 
   .permissions {

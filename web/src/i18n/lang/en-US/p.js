@@ -11,6 +11,9 @@ export default {
       proxy_max: 'Max Proxy Size',
       proxy_max_desc:
         'Maximum allowed file size for downloading via proxy. Units: b, k, m, g, t',
+      office_preview_enabled: 'Office Preview',
+      office_preview_enabled_desc:
+        'Enable office files preview via online services provided by Microsoft and Google',
       save: 'Save',
     },
     drive: {
