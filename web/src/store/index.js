@@ -2,7 +2,7 @@ import { getConfig, getUser } from '@/api'
 import { isAdmin } from '@/utils'
 import { createStore } from 'vuex'
 
-const configOptions = []
+const configOptions = ['web.officePreviewEnabled']
 
 export default createStore({
   state: {

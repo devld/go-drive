@@ -17,6 +17,7 @@ export const useEntryExplorer = (
   const handlerCtx = computed(() => ({
     user: store.state.user,
     config: store.state.config,
+    options: store.state.config.options,
   }))
 
   const getDirLink = (path) => `${routeBasePath}/${path}`

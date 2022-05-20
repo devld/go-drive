@@ -42,9 +42,9 @@ export default {
       name: '画廊',
       desc: '查看图片',
     },
-    pdf: {
+    office: {
       name: '预览',
-      desc: '预览 PDF',
+      desc: '预览 Office 文件',
     },
     media: {
       name: '播放',

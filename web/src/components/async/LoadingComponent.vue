@@ -5,6 +5,6 @@
 .component-loading {
   background-color: var(--secondary-bg-color);
   padding: 16px;
+  user-select: none;
 }
 </style>
-

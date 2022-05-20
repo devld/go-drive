@@ -26,6 +26,12 @@ const siteConfigForm = computed(() => [
     description: t('p.admin.site.proxy_max_desc'),
     type: 'text',
   },
+  {
+    field: 'web.officePreviewEnabled',
+    label: t('p.admin.site.office_preview_enabled'),
+    description: t('p.admin.site.office_preview_enabled_desc'),
+    type: 'checkbox',
+  },
 ])
 
 const loadConfig = async () => {

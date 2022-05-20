@@ -9,7 +9,11 @@ export default {
     site: {
       app_name: '站点标题',
       proxy_max: '最大代理大小',
-      proxy_max_desc: '最大允许通过代理下载的文件大小，可使用 b, k, m, g, t 单位',
+      proxy_max_desc:
+        '最大允许通过代理下载的文件大小，可使用 b, k, m, g, t 单位',
+      office_preview_enabled: 'Office 预览',
+      office_preview_enabled_desc:
+        '通过微软和谷歌提供的在线服务来预览 Office 文件',
       save: '保存',
     },
     drive: {

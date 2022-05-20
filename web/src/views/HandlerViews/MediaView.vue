@@ -1,15 +1,6 @@
 <template>
   <div class="media-view-page">
-    <h1 class="filename">
-      <span :title="entry.name">{{ entry.name }}</span>
-      <button
-        class="close-button plain-button"
-        title="Close"
-        @click="emit('close')"
-      >
-        <i-icon svg="#icon-close" />
-      </button>
-    </h1>
+    <handler-title-bar :title="entry.name" @close="emit('close')" />
     <video
       :src="fileUrl(entry.path, entry.meta, { useProxy: 'referrer' })"
       controls
@@ -18,6 +9,7 @@
 </template>
 <script setup>
 import { fileUrl } from '@/api'
+import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 
 defineProps({
   entry: {
@@ -39,32 +31,12 @@ const emit = defineEmits(['close'])
   padding-top: 48px;
   background-color: var(--secondary-bg-color);
 
-  .filename {
+  .handler-title-bar {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    margin: 0;
-    text-align: center;
-    border-bottom: 1px solid;
-    border-color: var(--border-color);
-    padding: 10px 2.5em;
-    font-size: 20px;
-    font-weight: normal;
-    z-index: 10;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
-
-  .close-button {
-    position: absolute;
-    top: 50%;
-    right: 0.5em;
-    transform: translateY(-50%);
-  }
-
   video {
     max-width: 90vw;
     max-height: 70vh;

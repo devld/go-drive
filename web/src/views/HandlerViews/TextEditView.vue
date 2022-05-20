@@ -1,23 +1,12 @@
 <template>
   <div ref="el" class="text-edit-view" @keydown="onKeyDown">
-    <h1 class="filename">
-      <simple-button
-        v-if="!readonly"
-        class="header-button save-button"
-        :loading="saving"
-        @click="saveFile"
-      >
-        {{ $t('hv.text_edit.save') }}
-      </simple-button>
-      <span :title="filename">{{ filename }}</span>
-      <button
-        class="header-button close-button plain-button"
-        title="Close"
-        @click="emit('close')"
-      >
-        <i-icon svg="#icon-close" />
-      </button>
-    </h1>
+    <handler-title-bar :title="filename" @close="emit('close')">
+      <template #actions>
+        <simple-button v-if="!readonly" :loading="saving" @click="saveFile">
+          {{ $t('hv.text_edit.save') }}
+        </simple-button>
+      </template>
+    </handler-title-bar>
     <text-editor
       v-if="!error"
       v-model="content"
@@ -33,6 +22,7 @@
 import { filename as filenameFn } from '@/utils'
 import { getContent } from '@/api'
 import TextEditor from '@/components/TextEditor/index.vue'
+import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import uploadManager from '@/api/upload-manager'
 import { alert } from '@/utils/ui-utils'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -144,43 +134,17 @@ loadFile()
   position: relative;
   width: 800px;
   height: calc(100vh - 64px);
-  padding-top: 60px;
+  padding-top: 48px;
   background-color: var(--secondary-bg-color);
   overflow: hidden;
   box-sizing: border-box;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 
-  .filename {
+  .handler-title-bar {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    margin: 0;
-    text-align: center;
-    border-bottom: 1px solid #eaecef;
-    border-color: var(--border-color);
-    padding: 10px 4em;
-    font-size: 28px;
-    font-weight: normal;
-    z-index: 10;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .header-button {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  .save-button {
-    left: 2em;
-  }
-
-  .close-button {
-    right: 1em;
   }
 
   .text-editor {
