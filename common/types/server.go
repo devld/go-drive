@@ -1,5 +1,9 @@
 package types
 
+const (
+	AdminUserGroup = "admin"
+)
+
 type Session struct {
 	User User
 }
