@@ -46,6 +46,10 @@ export default {
       name: 'View',
       desc: 'Preview Office File',
     },
+    pdf: {
+      name: 'View',
+      desc: 'Preview PDF File',
+    },
     media: {
       name: 'Play',
       desc: 'Play media',
