@@ -4,6 +4,7 @@ import download from './download'
 import image from './image'
 import media from './media'
 import office from './office-preview'
+import pdf from './pdf-preview'
 import permission from './permission'
 import textEdit from './text-edit'
 import { copy, move } from './copy-move'
@@ -15,6 +16,7 @@ export const HANDLERS = Object.freeze([
   image,
   media,
   office,
+  pdf,
 
   download,
 

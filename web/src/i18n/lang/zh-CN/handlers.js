@@ -46,6 +46,10 @@ export default {
       name: '预览',
       desc: '预览 Office 文件',
     },
+    pdf: {
+      name: '预览',
+      desc: '预览 PDF 文件',
+    },
     media: {
       name: '播放',
       desc: '播放媒体',
