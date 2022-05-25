@@ -2,5 +2,5 @@
 .idea/
 *.iml
 
-build/
-run/
+/build/
+/run/
