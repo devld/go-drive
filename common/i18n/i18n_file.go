@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"go-drive/common"
 	"go-drive/common/utils"
-	"golang.org/x/text/language"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/text/language"
+	"gopkg.in/yaml.v3"
 )
 
 type FileMessageSource struct {
