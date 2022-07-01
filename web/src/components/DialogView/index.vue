@@ -1,12 +1,17 @@
 <template>
   <div
-    v-if="overlayShowing"
+    v-if="eager || overlayShowing"
+    v-show="overlayShowing"
     ref="overlayEl"
     class="dialog-view dialog-view__overlay"
     @click="overlayClicked"
   >
-    <transition :name="transition" @after-leave="onDialogClosed">
-      <div v-if="contentShowing" class="dialog-view__content">
+    <Transition :name="transition" @after-leave="onDialogClosed">
+      <div
+        v-if="eager || contentShowing"
+        v-show="contentShowing"
+        class="dialog-view__content"
+      >
         <div v-if="$slots.header || title" class="dialog-view__header">
           <slot name="header">
             <span>{{ title }}</span>
@@ -16,7 +21,7 @@
             class="dialog-view__close-button plain-button"
             @click="closeButtonClicked"
           >
-            <i-icon svg="#icon-close" />
+            <Icon svg="#icon-close" />
           </button>
         </div>
         <div class="dialog-view__body">
@@ -26,13 +31,13 @@
           <slot name="footer" />
         </div>
       </div>
-    </transition>
+    </Transition>
   </div>
 </template>
-<script>
+<script lang="ts">
 export default { name: 'DialogView' }
 </script>
-<script setup>
+<script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watchEffect } from 'vue'
 import { addScrollLockedCount, getScrollLockedCount } from './state'
 
@@ -41,7 +46,7 @@ const props = defineProps({
     type: Boolean,
   },
   title: {
-    type: [String, Object],
+    type: [String, Object] as PropType<I18nText>,
   },
   transition: {
     type: String,
@@ -57,20 +62,26 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  eager: {
+    type: Boolean,
+  },
   lockScroll: {
     type: Boolean,
     default: true,
   },
 })
 
-const emit = defineEmits(['closed', 'update:show'])
+const emit = defineEmits<{
+  (e: 'closed'): void
+  (e: 'update:show', show: boolean): void
+}>()
 
 const overlayShowing = ref(false)
 const contentShowing = ref(false)
 const overlayEl = ref(null)
-let scrollLocked
+let scrollLocked = false
 
-const overlayClicked = (e) => {
+const overlayClicked = (e: MouseEvent) => {
   if (!props.overlayClose) return
   if (props.closeable && e.target === overlayEl.value) {
     close()
@@ -79,7 +90,7 @@ const overlayClicked = (e) => {
 const close = () => emit('update:show', false)
 const closeButtonClicked = () => close()
 
-const onKeyDown = (e) => {
+const onKeyDown = (e: KeyboardEvent) => {
   if (!props.escClose) return
   if (props.closeable && e.key === 'Escape' && props.show) {
     close()
@@ -100,7 +111,7 @@ const removeEvents = () => {
   window.removeEventListener('keydown', onKeyDown)
 }
 
-const onDialogVisibleChanged = (showing) => {
+const onDialogVisibleChanged = (showing: boolean) => {
   if (!props.lockScroll) return
   if (showing) {
     if (scrollLocked) return

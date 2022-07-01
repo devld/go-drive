@@ -10,25 +10,25 @@
           {{ $t('app.login') }}
         </button>
 
-        <router-link
+        <RouterLink
           v-for="m in navMenus"
           :key="m.to"
           class="plain-button small nav-button"
           :to="m.to"
         >
           {{ m.name }}
-        </router-link>
+        </RouterLink>
 
         <span v-if="isLoggedIn" class="user-info">
           <span
             class="username"
             :title="
               `
-              ${$t('app.username')}: ${user.username}\n` +
-              `${$t('app.groups')}: ${user.groups.map((g) => g.name).join(', ')}
+              ${$t('app.username')}: ${user!.username}\n` +
+              `${$t('app.groups')}: ${user!.groups.map((g) => g.name).join(', ')}
             `
             "
-            >{{ user.username }}</span
+            >{{ user!.username }}</span
           >
           <button class="plain-button small logout-button" @click="logout">
             {{ $t('app.logout') }}
@@ -37,47 +37,47 @@
       </div>
     </header>
 
-    <router-view />
+    <RouterView />
 
     <!-- login dialog -->
-    <dialog-view
+    <DialogView
       v-model:show="loginDialogShowing"
       overlay-close
       esc-close
       transition="flip-fade"
       :title="$t('app.login')"
     >
-      <login-view @success="afterLogin" />
-    </dialog-view>
+      <LoginView @success="afterLogin" />
+    </DialogView>
     <!-- login dialog -->
 
-    <progress-bar :show="progressBarValue" />
+    <ProgressBar :show="progressBarValue" />
   </div>
 </template>
-<script>
+<script lang="ts">
 export default { name: 'AppWrapper' }
 </script>
-<script setup>
+<script setup lang="ts">
 import LoginView from '@/views/Login/LoginView.vue'
 
 import { logout as logoutApi } from '@/api'
-import { useStore } from 'vuex'
 import { alert, loading } from '@/utils/ui-utils'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useAppStore } from '@/store'
 
-const store = useStore()
+const store = useAppStore()
 const { t } = useI18n()
 
 const loginDialogShowing = computed({
-  get: () => store.state.showLogin,
-  set: (v) => store.commit('showLogin', v),
+  get: () => store.showLogin,
+  set: (v) => store.toggleLogin(v),
 })
-const user = computed(() => store.state.user)
-const progressBarValue = computed(() => store.state.progressBar)
+const user = computed(() => store.user)
+const progressBarValue = computed(() => store.progressBar)
 
 const isLoggedIn = computed(() => !!user.value)
-const isAdmin = computed(() => store.getters.isAdmin)
+const isAdmin = computed(() => store.isAdmin)
 
 const navMenus = computed(() => {
   const menus = [{ name: t('app.home'), to: '/' }]
@@ -88,16 +88,16 @@ const navMenus = computed(() => {
 })
 
 const login = () => {
-  store.commit('showLogin', true)
+  store.toggleLogin(true)
 }
 
 const logout = async () => {
   loading(true)
   try {
     await logoutApi()
-    await store.dispatch('getUser')
+    await store.getUser()
     location.reload()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     loading(false)

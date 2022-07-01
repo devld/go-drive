@@ -1,10 +1,12 @@
 <template>
   <div class="text-dialog__inner">{{ opts.message }}</div>
 </template>
-<script setup>
+<script setup lang="ts">
+import type { TextDialogOptions } from '.'
+
 defineProps({
   opts: {
-    type: Object,
+    type: Object as PropType<TextDialogOptions>,
     required: true,
   },
 })

@@ -7,14 +7,14 @@
     >
       <slot />
     </span>
-    <transition :name="transition">
+    <Transition :name="transition">
       <div v-show="active" class="simple-dropdown__dropdown">
         <slot name="dropdown" />
       </div>
-    </transition>
+    </Transition>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { ref, watchEffect } from 'vue'
 
 const props = defineProps({
@@ -26,7 +26,7 @@ const props = defineProps({
     default: 'top-fade',
   },
 })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 
 const active = ref(false)
 

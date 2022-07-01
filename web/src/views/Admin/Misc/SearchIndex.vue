@@ -4,17 +4,17 @@
 
     <template v-if="searchEnabled">
       <div class="search-index-submit">
-        <simple-form
+        <SimpleForm
           ref="indexFormEl"
           v-model="indexOptions"
           :form="indexOptionsForm"
         >
           <template #submit>
-            <simple-button :loading="indexSubmitting" @click="submitIndex">
+            <SimpleButton :loading="indexSubmitting" @click="submitIndex">
               {{ $t('p.admin.misc.search_submit_index') }}
-            </simple-button>
+            </SimpleButton>
           </template>
-        </simple-form>
+        </SimpleForm>
       </div>
 
       <div class="search-index-tasks">
@@ -42,12 +42,12 @@
               <td class="center line">{{ formatTime(task.createdAt) }}</td>
               <td class="center line">{{ formatTime(task.updatedAt) }}</td>
               <td class="center line">
-                <simple-button
+                <SimpleButton
                   v-if="!isTaskFinished(task)"
                   type="danger"
-                  :loading="tasks.opLoading"
+                  :loading="task.opLoading"
                   @click="stopTask(task)"
-                  >{{ $t('p.admin.misc.search_index_stop') }}</simple-button
+                  >{{ $t('p.admin.misc.search_index_stop') }}</SimpleButton
                 >
               </td>
             </tr>
@@ -61,7 +61,7 @@
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { deleteTask, getTasks } from '@/api'
 import { getOptions, searchIndex, setOptions } from '@/api/admin'
 import { useInterval } from '@/utils/hooks/timer'
@@ -69,18 +69,24 @@ import { alert } from '@/utils/ui-utils'
 import { formatTime } from '@/utils'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useStore } from 'vuex'
+import { useAppStore } from '@/store'
+import { FormItem, Task as Task_ } from '@/types'
 
-const store = useStore()
-const searchConfig = computed(() => store.state.config?.search)
+interface Task extends Task_<void> {
+  opLoading?: boolean
+}
+
+const store = useAppStore()
+
+const searchConfig = computed(() => store.config?.search)
 const searchEnabled = computed(() => searchConfig.value?.enabled)
 
 const filterOptionKey = 'search.filter'
 
 const { t } = useI18n()
 
-const indexFormEl = ref(null)
-const indexOptionsForm = computed(() => [
+const indexFormEl = ref<InstanceType<SimpleFormType> | null>(null)
+const indexOptionsForm = computed<FormItem[]>(() => [
   {
     field: 'filters',
     type: 'textarea',
@@ -88,7 +94,7 @@ const indexOptionsForm = computed(() => [
     description: t('p.admin.misc.search_form_filter_desc'),
     placeholder: t('p.admin.misc.search_form_filter_placeholder'),
     width: '100%',
-    validate: (v) =>
+    validate: (v: string) =>
       !v ||
       !v
         .split('\n')
@@ -107,20 +113,21 @@ const indexOptionsForm = computed(() => [
 const indexOptions = ref({ path: '', filters: '' })
 const indexSubmitting = ref(false)
 
-const tasks = ref([])
+const tasks = ref<Task[]>([])
 
-const searchIndexType = {
+const searchIndexType: O<any> = {
   'search/index': t('p.admin.misc.search_op_index'),
   'search/delete': t('p.admin.misc.search_op_delete'),
 }
 
-const isTaskFinished = (task) =>
+const isTaskFinished = (task: Task) =>
   ['done', 'error', 'canceled'].includes(task.status)
 
-const taskStatus = (task) =>
-  `${t(`app.task_status_${task.status}`)} (${task.progress.loaded}/${
-    task.progress.total || '-'
-  })`
+const taskStatus = (task: Task) =>
+  `${t(`app.task_status_${task.status}`)}` +
+  (task.progress
+    ? ` (${task.progress.loaded}/${task.progress.total || '-'})`
+    : '')
 
 let tasksLoading = false
 const loadTasks = async () => {
@@ -128,44 +135,44 @@ const loadTasks = async () => {
   if (tasksLoading) return
   tasksLoading = true
   try {
-    const ts = await getTasks('search')
+    const ts = (await getTasks('search')) as Task[]
     ts.forEach((task) => {
       task.opLoading = false
     })
     ts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     tasks.value = ts
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     tasksLoading = false
   }
 }
 
-const stopTask = async (task) => {
+const stopTask = async (task: Task) => {
   task.opLoading = true
   try {
     await deleteTask(task.id)
     loadTasks()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     task.opLoading = false
   }
 }
 
-let oldFilter
+let oldFilter: string
 const loadIndexFilters = async () => {
   try {
     oldFilter = (await getOptions(filterOptionKey))[filterOptionKey]
     indexOptions.value.filters = oldFilter
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
 
 const saveIndexFilters = async () => {
   try {
-    await indexFormEl.value.validate()
+    await indexFormEl.value!.validate()
   } catch {
     return false
   }
@@ -181,7 +188,7 @@ const submitIndex = async () => {
     await searchIndex(indexOptions.value.path)
     indexOptions.value.path = ''
     loadTasks()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     indexSubmitting.value = false

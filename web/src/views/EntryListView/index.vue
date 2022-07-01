@@ -1,6 +1,6 @@
 <template>
   <div class="entry-list-view">
-    <entry-list
+    <EntryList
       v-if="!error"
       ref="entryListEl"
       :path="loadedPath"
@@ -18,78 +18,82 @@
       @update:selection="emit('update:selection', $event)"
       @update:view-mode="emit('update:viewMode', $event)"
     />
-    <error-view v-else :status="error.status" :message="error.message" />
+    <ErrorView v-else :status="error.status" :message="error.message" />
   </div>
 </template>
-<script>
+<script lang="ts">
 export default { name: 'EntryListView' }
 </script>
-<script setup>
+<script setup lang="ts">
 import { listEntries } from '@/api'
+import { ApiError, RequestTask } from '@/utils/http'
+import { EntryEventData, GetLinkFn, ListViewMode } from '@/components/entry'
+import { Entry } from '@/types'
 import { ref, computed, watch } from 'vue'
+import { EntriesLoadData } from './types'
 
 const props = defineProps({
   path: {
     type: String,
   },
   filter: {
-    type: Function,
+    type: Function as PropType<Fn1<Entry, boolean>>,
   },
   sort: {
     type: String,
   },
   selection: {
-    type: Array,
+    type: Array as PropType<Entry[]>,
   },
   selectable: {
-    type: [Boolean, Function],
+    type: [Boolean, Function] as PropType<boolean | Fn1<Entry, boolean>>,
     default: true,
   },
   viewMode: {
-    type: String,
+    type: String as PropType<ListViewMode>,
   },
   showToggles: {
     type: Boolean,
   },
   getLink: {
-    type: Function,
+    type: Function as PropType<GetLinkFn>,
   },
 })
 
-const emit = defineEmits([
-  'entry-click',
-  'entry-menu',
-  'update:path',
-  'update:sort',
-  'update:selection',
-  'update:viewMode',
-  'loading',
-  'entries-load',
-  'error',
-])
+const emit = defineEmits<{
+  (e: 'entry-click', v: EntryEventData): void
+  (e: 'entry-menu', v: EntryEventData): void
+  (e: 'update:path', v: EntryEventData): void
+  (e: 'update:sort', v: string): void
+  (e: 'update:selection', v: Entry[]): void
+  (e: 'update:viewMode', v: ListViewMode): void
+  (e: 'loading', v: boolean): void
+  (e: 'entries-load', v: EntriesLoadData): void
+  (e: 'error', v: any): void
+}>()
 
-const currentPath = ref(null)
+const currentPath = ref<string | null>(null)
 const loadedPath = ref('')
-const entries = ref([])
-const error = ref(null)
-const entryListEl = ref(null)
-let task
-let lastEntry
+const entries = ref<Entry[]>([])
+const error = ref<ApiError | null>(null)
+const entryListEl = ref<InstanceType<EntryListType> | null>(null)
+let task: RequestTask<Entry[]>
+let lastEntry: string | undefined
 
 const filteredEntries = computed(() =>
   props.filter ? entries.value.filter(props.filter) : entries.value
 )
 
-const focusOnEntry = (name, later) => {
+const focusOnEntry = (name: string, later?: boolean) => {
   if (later) {
     lastEntry = name
     return
   }
-  entryListEl.value.focusOnEntry(name)
+  entryListEl.value!.focusOnEntry(name)
 }
-const setViewMode = (mode) => entryListEl.value.setViewMode(mode)
-const toggleViewMode = (mode) => entryListEl.value.toggleViewMode(mode)
-const setSortBy = (sort) => entryListEl.value.setSortBy(sort)
+const setViewMode = (mode: ListViewMode) => entryListEl.value!.setViewMode(mode)
+const toggleViewMode = () => entryListEl.value!.toggleViewMode()
+const setSortBy = (sort: string) => entryListEl.value!.setSortBy(sort)
 
 const loadEntries = async () => {
   if (task) task.cancel()
@@ -97,11 +101,11 @@ const loadEntries = async () => {
   emit('loading', true)
   try {
     const path = currentPath.value
-    task = listEntries(path)
+    task = listEntries(path!)
     const loadedEntries = await task
     const thisEntry = loadedEntries[0]
     entries.value = loadedEntries.slice(1)
-    loadedPath.value = path
+    loadedPath.value = path!
     emit('entries-load', {
       entries: entries.value,
       entry: thisEntry,
@@ -110,9 +114,9 @@ const loadEntries = async () => {
 
     if (lastEntry) {
       focusOnEntry(lastEntry)
-      lastEntry = null
+      lastEntry = undefined
     }
-  } catch (e) {
+  } catch (e: any) {
     if (e.isCancel) return
     error.value = e
     emit('error', e)
@@ -127,11 +131,11 @@ const commitPathChange = (path = '') => {
   loadEntries()
 }
 
-const tryRecoverState = (newPath, oldPath) => {
+const tryRecoverState = (newPath: string, oldPath: string) => {
   if (!oldPath.startsWith(newPath)) return
   // navigate back
   // entry name
-  const path = oldPath.substr(newPath ? newPath.length + 1 : newPath.length)
+  const path = oldPath.substring(newPath ? newPath.length + 1 : newPath.length)
   focusOnEntry(path, true)
 }
 
@@ -150,7 +154,7 @@ defineExpose({
 watch(
   () => props.path,
   (path, oldPath) => {
-    tryRecoverState(path, oldPath)
+    tryRecoverState(path!, oldPath!)
     commitPathChange(path)
   }
 )

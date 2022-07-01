@@ -6,7 +6,7 @@
       :style="{ width: `${progress * 100}%` }"
     ></div>
     <span class="upload-task-item__filename" :title="filename">
-      <entry-icon
+      <EntryIcon
         class="upload-task-item__icon"
         :entry="entry"
         :show-thumbnail="false"
@@ -15,17 +15,17 @@
     </span>
     <span
       class="upload-task-item__size"
-      :title="formatBytes(task.task.size, 1)"
-      >{{ formatBytes(task.task.size, 1) }}</span
+      :title="formatBytes(task.task.size!, 1)"
+      >{{ formatBytes(task.task.size!, 1) }}</span
     >
     <span class="upload-task-item__location">
-      <entry-link
+      <EntryLink
         :path="dir"
         :get-link="getLink"
         @click="emit('navigate', $event)"
       >
         {{ filenameFn(dir) }}
-      </entry-link>
+      </EntryLink>
     </span>
     <span class="upload-task-item__status">{{ statusText }}</span>
     <span class="upload-task-item__ops">
@@ -35,7 +35,7 @@
         :title="t('p.task.start')"
         @click="emit('start')"
       >
-        <i-icon svg="#icon-play" />
+        <Icon svg="#icon-play" />
       </button>
       <button
         v-if="showPause"
@@ -43,7 +43,7 @@
         :title="t('p.task.pause')"
         @click="emit('pause')"
       >
-        <i-icon svg="#icon-pause" />
+        <Icon svg="#icon-pause" />
       </button>
       <button
         v-if="showStop"
@@ -51,7 +51,7 @@
         :title="t('p.task.stop')"
         @click="emit('stop')"
       >
-        <i-icon svg="#icon-stop" />
+        <Icon svg="#icon-stop" />
       </button>
       <button
         v-if="showRemove"
@@ -59,12 +59,12 @@
         :title="t('p.task.remove')"
         @click="emit('remove')"
       >
-        <i-icon svg="#icon-close" />
+        <Icon svg="#icon-close" />
       </button>
     </span>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import {
   filename as filenameFn,
   dir as dirFn,
@@ -82,28 +82,39 @@ import {
   STATUS_MASK_CAN_PAUSE,
   STATUS_MASK_CAN_STOP,
   STATUS_STARTING,
+  UploadTaskItem,
 } from '@/api/upload-manager/task'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { EntryEventData, GetLinkFn } from '@/components/entry'
+import { Entry } from '@/types'
 
 const { t } = useI18n()
 
 const props = defineProps({
   task: {
-    type: Object,
+    type: Object as PropType<UploadTaskItem>,
     required: true,
   },
   getLink: {
-    type: Function,
+    type: Function as PropType<GetLinkFn>,
   },
 })
 
-const emit = defineEmits(['navigate', 'start', 'remove', 'stop', 'pause'])
+const emit = defineEmits<{
+  (e: 'navigate', v: EntryEventData): void
+  (e: 'start'): void
+  (e: 'remove'): void
+  (e: 'stop'): void
+  (e: 'pause'): void
+}>()
 
-const entry = computed(() => ({
+const entry = computed<Entry>(() => ({
   type: 'file',
   name: filenameFn(props.task.task.path),
   path: props.task.task.path,
+  size: -1,
+  modTime: -1,
   meta: {},
 }))
 
@@ -120,7 +131,7 @@ const statusText = computed(() => {
     case STATUS_PAUSED:
       return t('p.task.s_paused')
     case STATUS_UPLOADING:
-      return formatPercent(progress.value)
+      return formatPercent(progress.value!)
     case STATUS_STOPPED:
       return t('p.task.s_stopped')
     case STATUS_ERROR:

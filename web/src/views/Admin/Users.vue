@@ -2,7 +2,7 @@
   <div class="users-manager" :class="{ editing: !!user }">
     <div class="users-list">
       <div class="actions">
-        <simple-button
+        <SimpleButton
           icon="#icon-add"
           :title="$t('p.admin.user.add_user')"
           @click="addUser"
@@ -19,13 +19,13 @@
           <tr v-for="u in users" :key="u.username">
             <td class="center">{{ u.username }}</td>
             <td class="center line">
-              <simple-button
+              <SimpleButton
                 :title="$t('p.admin.user.edit')"
                 small
                 icon="#icon-edit"
                 @click="editUser(u)"
               />
-              <simple-button
+              <SimpleButton
                 :title="$t('p.admin.user.delete')"
                 type="danger"
                 small
@@ -46,7 +46,7 @@
         }}
       </div>
       <div class="user-form">
-        <simple-form ref="formEl" v-model="user" :form="userForm" />
+        <SimpleForm ref="formEl" v-model="user" :form="userForm" />
         <div class="form-item">
           <span class="label">{{ $t('p.admin.user.groups') }}</span>
           <div class="value">
@@ -57,24 +57,24 @@
           </div>
         </div>
         <div class="save-button">
-          <simple-button small :loading="saving" @click="saveUser">
+          <SimpleButton small :loading="saving" @click="saveUser">
             {{ $t('p.admin.user.save') }}
-          </simple-button>
-          <simple-button small type="info" @click="user = null">
+          </SimpleButton>
+          <SimpleButton small type="info" @click="user = null">
             {{ $t('p.admin.user.cancel') }}
-          </simple-button>
+          </SimpleButton>
         </div>
       </div>
     </div>
     <div v-else class="edit-tips">
-      <simple-button icon="#icon-add" title="Add user" small @click="addUser">
+      <SimpleButton icon="#icon-add" title="Add user" small @click="addUser">
         {{ $t('p.admin.user.add') }}
-      </simple-button>
+      </SimpleButton>
       {{ $t('p.admin.user.or_edit') }}
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import {
   createUser,
   deleteUser as deleteUserApi,
@@ -83,22 +83,23 @@ import {
   getUsers,
   updateUser,
 } from '@/api/admin'
+import { FormItem, Group, User } from '@/types'
 import { alert, confirm } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-const users = ref([])
-const groups = ref([])
+const users = ref<User[]>([])
+const groups = ref<Group[]>([])
 
-const user = ref(null)
+const user = ref<O | null>(null)
 const edit = ref(false)
 const saving = ref(false)
 
-const formEl = ref(null)
+const formEl = ref<InstanceType<SimpleFormType> | null>(null)
 
-const userForm = computed(() => [
+const userForm = computed<FormItem[]>(() => [
   {
     field: 'username',
     label: t('p.admin.user.f_username'),
@@ -117,7 +118,7 @@ const userForm = computed(() => [
 const loadUsers = async () => {
   try {
     users.value = await getUsers()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
@@ -125,7 +126,7 @@ const loadUsers = async () => {
 const loadGroups = async () => {
   try {
     groups.value = await getGroups()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
@@ -139,18 +140,18 @@ const addUser = () => {
   edit.value = false
 }
 
-const editUser = async (user_) => {
+const editUser = async (user_: User) => {
   try {
-    const u = await getUser(user_.username)
-    u.groups = u.groups.map((g) => g.name)
+    const u: O = await getUser(user_.username)
+    u.groups = u.groups.map((g: Group) => g.name)
     user.value = u
     edit.value = true
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
 
-const deleteUser = async (user_) => {
+const deleteUser = async (user_: User) => {
   confirm({
     title: t('p.admin.user.delete_user'),
     message: t('p.admin.user.confirm_delete', { n: user_.username }),
@@ -174,14 +175,14 @@ const deleteUser = async (user_) => {
 
 const saveUser = async () => {
   try {
-    await formEl.value.validate()
+    await formEl.value!.validate()
   } catch {
     return
   }
   const data = {
-    username: user.value.username,
-    password: user.value.password,
-    groups: user.value.groups.map((name) => ({ name })),
+    username: user.value!.username,
+    password: user.value!.password,
+    groups: user.value!.groups.map((name: string) => ({ name })),
   }
   saving.value = true
   try {
@@ -192,7 +193,7 @@ const saveUser = async () => {
       edit.value = true
     }
     loadUsers()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     saving.value = false

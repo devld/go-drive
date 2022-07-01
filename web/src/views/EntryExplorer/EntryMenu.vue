@@ -1,8 +1,8 @@
 <template>
   <div class="entry-menu">
     <h2 v-if="!multiple" class="entry-menu__entry">
-      <entry-icon :entry="entry" />
-      <span class="entry-menu__entry-name">{{ entry.name }}</span>
+      <EntryIcon :entry="(entry as Entry)" />
+      <span class="entry-menu__entry-name">{{ (entry as Entry).name }}</span>
     </h2>
     <ul class="entry-menu__menus">
       <li
@@ -10,32 +10,35 @@
         :key="i"
         class="entry-menu__menu-item"
         :class="m.display.type && `entry-menu__menu-item-${m.display.type}`"
-        :title="m.display.description"
+        :title="s(m.display.description)"
         @click="emit('click', { entry, menu: m })"
       >
         <span class="entry-menu__icon">
-          <i-icon v-if="m.display.icon" :svg="m.display.icon" />
+          <Icon v-if="m.display.icon" :svg="m.display.icon" />
         </span>
         <span class="entry-menu__text">{{ m.display.name }}</span>
       </li>
     </ul>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
+import { EntryHandlerMenuItem } from '@/handlers/types'
+import { Entry } from '@/types'
 import { computed } from 'vue'
+import { EntryMenuClickData } from './types'
 
 const props = defineProps({
   menus: {
-    type: Array,
+    type: Array as PropType<EntryHandlerMenuItem[]>,
     required: true,
   },
   entry: {
-    type: [Object, Array],
+    type: [Object, Array] as PropType<Entry | Entry[]>,
     required: true,
   },
 })
 
-const emit = defineEmits(['click'])
+const emit = defineEmits<{ (e: 'click', v: EntryMenuClickData): void }>()
 
 const multiple = computed(() => Array.isArray(props.entry))
 </script>

@@ -4,51 +4,54 @@
     :autocomplete="noAutoComplete ? 'off' : 'on'"
     @submit="onSubmit"
   >
-    <form-item
-      v-for="item in form"
-      :key="item.field"
-      :ref="addFieldsRef"
-      v-model="data[item.field]"
-      :item="item"
-      :class="item.class"
-      :style="{
-        width: typeof item.width === 'string' ? item.width : item.width,
-      }"
-      @update:model-value="emitInput"
-    >
-      <template v-if="item.slot" #value>
-        <slot :name="item.slot" />
-      </template>
-    </form-item>
+    <template v-for="item in form" :key="item.field">
+      <FormItem
+        v-if="item.field"
+        :ref="addFieldsRef"
+        v-model="data[item.field!]"
+        :item="item"
+        :class="item.class"
+        :style="{
+          width:
+            typeof item.width === 'number' ? `${item.width}px` : item.width,
+        }"
+        @update:model-value="emitInput"
+      >
+        <template v-if="item.slot" #value>
+          <slot :name="item.slot" />
+        </template>
+      </FormItem>
+    </template>
   </form>
 </template>
-<script>
+<script lang="ts">
 export default { name: 'FormView' }
 </script>
-<script setup>
-import { onBeforeUpdate, ref, watch } from 'vue'
+<script setup lang="ts">
+import { FormItem as FormItemType } from '@/types'
+import { ComponentPublicInstance, onBeforeUpdate, ref, watch } from 'vue'
 import FormItem from './FormItem.vue'
 
 const props = defineProps({
   form: {
-    type: Array,
+    type: Array as PropType<FormItemType[]>,
     required: true,
   },
   modelValue: {
-    type: Object,
+    type: Object as PropType<O>,
   },
   noAutoComplete: {
     type: Boolean,
   },
 })
 
-const data = ref({})
-let fields = []
+const data = ref<O>({})
+let fields: InstanceType<typeof FormItem>[] = []
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{ (e: 'update:modelValue', v: O): void }>()
 
-const addFieldsRef = (el) => {
-  if (el) fields.push(el)
+const addFieldsRef = (el: Element | ComponentPublicInstance | null) => {
+  if (el) fields.push(el as InstanceType<typeof FormItem>)
 }
 onBeforeUpdate(() => {
   fields = []
@@ -75,15 +78,17 @@ const clearError = () => {
 
 defineExpose({ validate, clearError })
 
-const onSubmit = (e) => e.preventDefault()
+const onSubmit = (e: Event) => e.preventDefault()
 
 const emitInput = () => emit('update:modelValue', data.value)
 
 const fillDefaultValue = () => {
   if (props.modelValue) return
-  const dat = {}
+  const dat = {} as O
   for (const f of props.form) {
-    dat[f.field] = f.defaultValue || null
+    if (f.field) {
+      dat[f.field] = f.defaultValue || null
+    }
   }
   data.value = dat
   emitInput()

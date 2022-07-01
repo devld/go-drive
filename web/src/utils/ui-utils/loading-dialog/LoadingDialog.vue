@@ -1,35 +1,37 @@
 <template>
-  <dialog-view v-model:show="showing" class="loading-dialog" transition="none">
+  <DialogView v-model:show="showing" class="loading-dialog" transition="none">
     <div class="loading-dialog__content">
-      <i-icon class="loading-dialog__icon" svg="#icon-loading" />
+      <Icon class="loading-dialog__icon" svg="#icon-loading" />
       <span class="loading-dialog__text">{{ text }}</span>
-      <simple-button
+      <SimpleButton
         v-if="cancelText"
         class="loading-dialog__cancel"
         :type="cancelType"
         :loading="cancelLoading"
         @click="cancel"
-        >{{ cancelText }}</simple-button
+        >{{ cancelText }}</SimpleButton
       >
     </div>
-  </dialog-view>
+  </DialogView>
 </template>
-<script setup>
+<script setup lang="ts">
+import { SimpleButtonType } from '@/components/SimpleButton'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import type { LoadingOptions } from '.'
 
 const showing = ref(false)
-const text = ref('')
-const cancelText = ref('')
-const cancelType = ref('')
+const text = ref<I18nText>('')
+const cancelText = ref<I18nText>('')
+const cancelType = ref<SimpleButtonType | undefined>(undefined)
 const cancelLoading = ref(false)
 
 const { t } = useI18n()
 
-let cancelCallback
+let cancelCallback: (() => PromiseValue<void>) | undefined
 
-const show = (opts = {}) => {
-  text.value = opts.text || ''
+const show = (opts: LoadingOptions = {}) => {
+  text.value = opts.text ?? ''
 
   cancelCallback = opts.onCancel
 
@@ -48,9 +50,9 @@ const hide = () => {
 const cancel = async () => {
   cancelLoading.value = true
   try {
-    await cancelCallback()
+    cancelCallback && (await cancelCallback())
     hide()
-  } catch (e) {
+  } catch (e: any) {
     /* nothing */
   } finally {
     cancelLoading.value = false

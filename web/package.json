@@ -1,36 +1,54 @@
 {
   "name": "go-drive-web",
   "version": "0.0.0",
+  "description": "Web Application for go-drive",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "vue-tsc --noEmit && eslint"
   },
   "dependencies": {
     "axios": "^0.25.0",
-    "codemirror": "^5.65.0",
-    "codemirror-github-light": "^0.4.2",
-    "dompurify": "^2.3.4",
+    "codemirror": "^6.0.0",
+    "dompurify": "^2.3.8",
     "github-markdown-css": "^5.1.0",
     "hammerjs": "^2.0.8",
-    "highlight.js": "^11.3.1",
-    "marked": "^4.0.10",
+    "highlight.js": "^11.5.1",
+    "marked": "^4.0.17",
     "photoswipe": "^4.1.3",
-    "vue": "^3.2.26",
-    "vue-i18n": "^9.2.0-beta.26",
-    "vue-router": "^4.0.12",
-    "vuex": "^4.0.2"
+    "pinia": "^2.0.14",
+    "vue": "^3.2.37",
+    "vue-i18n": "^9.1.10",
+    "vue-router": "^4.0.16"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^2.0.0",
-    "eslint": "^8.6.0",
+    "@intlify/vite-plugin-vue-i18n": "^3.4.0",
+    "@types/codemirror": "^5.60.5",
+    "@types/dompurify": "^2.3.3",
+    "@types/hammerjs": "^2.0.41",
+    "@types/marked": "^4.0.3",
+    "@types/node": "^18.0.0",
+    "@types/photoswipe": "^4.1.2",
+    "@typescript-eslint/eslint-plugin": "^5.28.0",
+    "@typescript-eslint/parser": "^5.28.0",
+    "@vitejs/plugin-vue": "^2.3.3",
+    "@vue/eslint-config-typescript": "^11.0.0",
+    "eslint": "^8.18.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-vue": "^8.2.0",
+    "eslint-plugin-vue": "^9.1.1",
     "rollup-plugin-visualizer": "^5.5.2",
     "sass": "^1.45.2",
-    "vite": "^2.7.2",
-    "vite-plugin-html": "^2.1.2"
+    "typescript": "^4.5.4",
+    "vite": "^2.9.9",
+    "vite-plugin-html": "^2.1.2",
+    "vue-tsc": "^0.38.2"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devld/go-drive.git"
+  },
+  "license": "MIT",
   "prettier": {
     "semi": false,
     "singleQuote": true,

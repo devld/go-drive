@@ -1,19 +1,20 @@
 <template>
   <ul class="path-bar">
     <li v-for="s in segments" :key="s.path" class="path-bar__segment">
-      <entry-link
+      <EntryLink
         class="path-bar__path"
         :path="s.path"
         :get-link="getLink"
         @click="pathChange"
-        >{{ s.name }}</entry-link
+        >{{ s.name }}</EntryLink
       >
     </li>
   </ul>
 </template>
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { EntryEventData, GetLinkFn } from './entry'
 
 const props = defineProps({
   path: {
@@ -21,13 +22,13 @@ const props = defineProps({
     required: true,
   },
   getLink: {
-    type: Function,
+    type: Function as PropType<GetLinkFn>,
   },
 })
 
 const { t } = useI18n()
 
-const emit = defineEmits(['update:path'])
+const emit = defineEmits<{ (e: 'update:path', data: EntryEventData): void }>()
 
 const segments = computed(() => {
   const ss = props.path.replace(/\/+/g, '/').split('/').filter(Boolean)
@@ -38,7 +39,7 @@ const segments = computed(() => {
   return pathSegments
 })
 
-const pathChange = (e) => emit('update:path', e)
+const pathChange = (e: EntryEventData) => emit('update:path', e)
 </script>
 <style lang="scss">
 .path-bar {

@@ -1,10 +1,10 @@
 <template>
-  <entry-explorer base-path="/_" />
+  <EntryExplorer base-path="/_" />
 </template>
-<script>
+<script lang="ts">
 export default { name: 'HomePage' }
 </script>
-<script setup>
+<script setup lang="ts">
 import EntryExplorer from '@/views/EntryExplorer/index.vue'
 
 defineProps({

@@ -7,18 +7,18 @@
         class="menu-item"
         :class="{ active: currentMenu === m.path }"
       >
-        <router-link class="menu-link" :to="m.path">{{ m.name }}</router-link>
+        <RouterLink class="menu-link" :to="m.path">{{ m.name }}</RouterLink>
       </li>
     </ul>
     <div class="menu-content">
-      <router-view />
+      <RouterView />
     </div>
   </div>
 </template>
-<script>
+<script lang="ts">
 export default { name: 'AdminPage' }
 </script>
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
