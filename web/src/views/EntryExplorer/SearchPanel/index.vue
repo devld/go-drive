@@ -15,15 +15,11 @@
       <span class="search-panel__search-input-key">F</span>
     </div>
     <div v-if="showing" class="search-panel__result" @scroll="onResultScroll">
-      <div
-        v-if="result.length === 0"
-        class="search-panel__tip"
-        @mousedown="onSearchTipsClicked"
-      >
+      <div v-if="result.length === 0" class="search-panel__tip">
         <template v-if="searching">{{ $t('app.search.searching') }}</template>
         <template v-else-if="result.length === 0">
           <p>{{ searchError }}</p>
-          <div v-if="searchExamples?.length > 0" class="search-panel__help">
+          <div v-if="searchExamples?.length" class="search-panel__help">
             <span>{{ $t('app.search.search_help') }}</span>
             <em v-for="(e, i) in searchExamples" :key="i">{{ e }}</em>
           </div>
@@ -31,7 +27,7 @@
       </div>
 
       <ul class="search-panel__items">
-        <search-item
+        <SearchItem
           v-for="item in result"
           :key="item.entry.path"
           :item="item"
@@ -41,20 +37,22 @@
     </div>
   </div>
 </template>
-<script>
+<script lang="ts">
 import { searchEntries } from '@/api'
+import { EntryEventData } from '@/components/entry'
+import { useAppStore } from '@/store'
+import { Entry, SearchHitItem } from '@/types'
 import { debounce } from '@/utils'
 import { useHotKey } from '@/utils/hooks/hotkey'
 import { computed, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useStore } from 'vuex'
 import SearchItem from './SearchItem.vue'
 
 export default { name: 'SearchPanel' }
 </script>
-<script setup>
+<script setup lang="ts">
 const { t } = useI18n()
-const store = useStore()
+const store = useAppStore()
 
 const props = defineProps({
   path: {
@@ -63,19 +61,19 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['navigate'])
+const emit = defineEmits<{ (e: 'navigate', v: Entry): void }>()
 
-const thisEl = ref(null)
-const qEl = ref(null)
+const thisEl = ref<HTMLElement | null>(null)
+const qEl = ref<HTMLInputElement | null>(null)
 const queryInput = ref('')
 const q = computed(() => queryInput.value.trim())
 const next = ref(0)
 const searching = ref(false)
-const result = ref([])
+const result = ref<SearchHitItem[]>([])
 const searchError = ref('')
 const showing = ref(false)
 
-const searchExamples = computed(() => store.state.config?.search?.examples)
+const searchExamples = computed(() => store.config?.search?.examples)
 
 const triggerSearch = () => {
   result.value = []
@@ -97,7 +95,7 @@ const doSearch = async () => {
   let res
   try {
     res = await searchEntries(props.path, q.value, next.value)
-  } catch (e) {
+  } catch (e: any) {
     searchError.value = e.message
     return
   } finally {
@@ -116,8 +114,8 @@ const reset = () => {
   searchError.value = ''
 }
 
-const itemClicked = (e) => {
-  emit('navigate', e.entry)
+const itemClicked = (e: EntryEventData) => {
+  emit('navigate', e.entry!)
   setActive(false)
 }
 
@@ -129,15 +127,15 @@ const onInputFocus = () => {
   setActive(true)
 }
 
-const onResultScroll = (e) => {
-  const target = e.target
+const onResultScroll = (e: UIEvent) => {
+  const target = e.target as HTMLElement
   if (target.scrollHeight - target.scrollTop - target.clientHeight < 100) {
     loadNextPage()
   }
 }
 
 let eventAttached = false
-const setActive = (active) => {
+const setActive = (active: boolean) => {
   showing.value = !!active
   if (active) qEl.value?.focus()
   else qEl.value?.blur()
@@ -161,14 +159,14 @@ useHotKey(
     setActive(false)
   },
   'Escape',
-  { el: () => qEl.value }
+  { el: () => qEl.value! }
 )
 
-const onDocumentTouched = (e) => {
-  let target = e.target
+const onDocumentTouched = (e: MouseEvent) => {
+  let target = e.target as HTMLElement | null
   do {
     if (target === thisEl.value) break
-  } while ((target = target.parentElement))
+  } while ((target = target!.parentElement))
   if (target) return
   if (showing.value) e.stopPropagation()
   setActive(false)

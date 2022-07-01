@@ -2,18 +2,18 @@
   <div class="error-view">
     <span class="error-code" :title="message">{{ status || 'ERROR' }}</span>
     <span class="error-message">{{
-      (ERROR_MESSAGES[status] && $t(ERROR_MESSAGES[status], { status })) ||
+      (ERROR_MESSAGES[status!] && $t(ERROR_MESSAGES[status!], { status })) ||
       message
     }}</span>
     <div class="back-button">
-      <simple-button @click="$router.go(-1)">{{
+      <SimpleButton @click="$router.go(-1)">{{
         $t('app.go_back')
-      }}</simple-button>
+      }}</SimpleButton>
     </div>
   </div>
 </template>
-<script setup>
-const ERROR_MESSAGES = {
+<script setup lang="ts">
+const ERROR_MESSAGES: Record<number | string, string> = {
   403: 'error.not_allowed',
   404: 'error.not_found',
   500: 'error.server_error',

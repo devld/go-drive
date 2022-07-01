@@ -1,6 +1,6 @@
 <template>
   <div class="open-dialog__inner">
-    <entry-list-view
+    <EntryListView
       v-model:selection="selection"
       :path="path"
       :filter="filterEntries"
@@ -19,36 +19,40 @@
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import EntryListView from '@/views/EntryListView/index.vue'
 import { filenameExt } from '@/utils'
 import { ref, unref, watch } from 'vue'
+import { Entry } from '@/types'
+import { EntryEventData } from '@/components/entry'
+import type { OpenDialogOptions } from '.'
 
 /// file,dir,<1024,.js,write
-function createFilter(filter) {
+function createFilter(filter?: string) {
   if (typeof filter !== 'string') return () => true
   const filters = filter
     .split(',')
     .map((f) => f.trim())
     .filter(Boolean)
   if (!filters.length) return () => true
-  let allowFile, allowDir
+  let allowFile = false
+  let allowDir = false
   let maxSize = Number.POSITIVE_INFINITY
-  let allowedExt = {}
-  let writable
+  let allowedExt: O<boolean> | undefined = {}
+  let writable = false
   filters.forEach((f) => {
     if (f === 'file') allowFile = true
     if (f === 'dir') allowDir = true
     if (f === 'write') writable = true
-    if (f.startsWith('.')) allowedExt[f.substring(1).toLowerCase()] = true
+    if (f.startsWith('.')) allowedExt![f.substring(1).toLowerCase()] = true
     if (f.startsWith('<')) maxSize = parseInt(f.substring(1))
   })
   if (!allowDir && !allowFile) {
     allowDir = true
     allowFile = true
   }
-  if (Object.keys(allowedExt).length === 0) allowedExt = null
-  return (entry) => {
+  if (Object.keys(allowedExt).length === 0) allowedExt = undefined
+  return (entry: Entry) => {
     if (!allowFile && entry.type === 'file') return false
     if (!allowDir && entry.type === 'dir') return false
     if (allowedExt && !allowedExt[filenameExt(entry.name)]) return false
@@ -64,60 +68,59 @@ const props = defineProps({
     required: true,
   },
   opts: {
-    type: Object,
+    type: Object as PropType<OpenDialogOptions>,
     required: true,
   },
 })
 
-const emit = defineEmits(['confirm-disabled'])
+const emit = defineEmits<{ (e: 'confirm-disabled', v: boolean): void }>()
 
 const dirMode = ref(false)
 const path = ref('')
-const message = ref('')
-const selection = ref([])
+const selection = ref<Entry[]>([])
 const max = ref(0)
-let filter
+let filter: (e: Entry) => boolean
 
 const beforeConfirm = () => {
   if (dirMode.value) return path.value
-  return [...selection.value]
+  return [...selection.value] as Entry[]
 }
 
 const selectionChanged = () => {
   confirmDisabled(!selection.value.length)
 }
 
-const isEntrySelectable = (entry) => {
+const isEntrySelectable = (entry: Entry) => {
   if (max.value > 0 && selection.value.length >= max.value) return false
   return filter(entry)
 }
 
-const entriesLoaded = ({ entry }) => {
+const entriesLoaded = ({ entry }: { entry: Entry }) => {
   if (!dirMode.value) return
   confirmDisabled(!filter(entry))
 }
 
-const entryClicked = ({ entry, event }) => {
-  event.preventDefault()
+const entryClicked = ({ entry, event }: EntryEventData) => {
+  event?.preventDefault()
   if (!dirMode.value) {
-    if (entry.type === 'file') {
-      if (selection.value.findIndex((e) => e.path === entry.path) === -1) {
-        selection.value.push(entry)
+    if (entry!.type === 'file') {
+      if (selection.value.findIndex((e) => e.path === entry!.path) === -1) {
+        selection.value.push(entry!)
       }
       return
     }
   }
-  path.value = entry.path
+  path.value = entry!.path
   confirmDisabled(true)
 }
 
-const pathChanged = ({ path: path_, event }) => {
-  event.preventDefault()
-  path.value = path_
+const pathChanged = ({ path: path_, event }: EntryEventData) => {
+  event?.preventDefault()
+  path.value = path_!
   confirmDisabled(true)
 }
 
-const filterEntries = (entry) => {
+const filterEntries = (entry: Entry) => {
   if (entry.type === 'dir') return true
   if (dirMode.value) return false
   return filter(entry)
@@ -127,7 +130,7 @@ const clearSelection = () => {
   selection.value.splice(0)
 }
 
-const confirmDisabled = (disabled) => {
+const confirmDisabled = (disabled: boolean) => {
   emit('confirm-disabled', disabled)
 }
 
@@ -147,11 +150,9 @@ if (typeof props.opts.filter === 'function') {
   filter = createFilter(props.opts.filter)
 }
 // max selection
-let tempMax = +props.opts.max
+let tempMax = props.opts.max ?? -1
 if (tempMax <= 0) tempMax = 0
 max.value = tempMax
-
-message.value = props.opts.message || ''
 
 confirmDisabled(true)
 

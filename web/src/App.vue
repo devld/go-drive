@@ -1,17 +1,17 @@
 <template>
   <div class="app">
-    <router-view />
+    <RouterView />
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { alert } from '@/utils/ui-utils'
-import { useStore } from 'vuex'
+import { useAppStore } from './store'
 
-useStore()
-  .dispatch('init')
-  .catch((e) => {
-    alert(e.message)
-  })
+const store = useAppStore()
+
+store.init().catch((e) => {
+  alert(e.message)
+})
 </script>
 
 <style lang="scss">

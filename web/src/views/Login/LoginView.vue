@@ -1,6 +1,6 @@
 <template>
   <div class="login-view">
-    <form action @submit="onSubmit">
+    <form action="" @submit="onSubmit">
       <span class="form-item username">
         <input
           v-model="username"
@@ -21,36 +21,37 @@
         />
       </span>
       <span class="form-item submit">
-        <simple-button native-type="submit" class="submit" :loading="loading">
+        <SimpleButton native-type="submit" class="submit" :loading="loading">
           {{ $t('p.login.login') }}
-        </simple-button>
+        </SimpleButton>
       </span>
     </form>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { login } from '@/api'
+import { useAppStore } from '@/store'
+import { User } from '@/types'
 import { alert } from '@/utils/ui-utils'
 import { ref } from 'vue'
-import { useStore } from 'vuex'
 
-const emit = defineEmits(['success'])
+const emit = defineEmits<{ (e: 'success', v?: User): void }>()
 
-const store = useStore()
+const store = useAppStore()
 
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
 
-const onSubmit = async (e) => {
+const onSubmit = async (e: Event) => {
   e.preventDefault()
   if (loading.value) return
   loading.value = true
   try {
     await login(username.value, password.value)
-    const user = await store.dispatch('getUser')
+    const user = await store.getUser()
     emit('success', user)
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     loading.value = false

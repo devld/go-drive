@@ -2,9 +2,9 @@
   <div class="section">
     <h1 class="section-title">
       {{ $t('p.admin.misc.statistics') }}
-      <simple-button :loading="statLoading" @click="loadStats">
+      <SimpleButton :loading="statLoading" @click="loadStats">
         {{ $t('p.admin.misc.refresh_in', { n: refreshCountDown }) }}
-      </simple-button>
+      </SimpleButton>
     </h1>
     <div class="statistics">
       <table v-for="(s, i) in stats" :key="i" class="stat-item simple-table">
@@ -21,12 +21,13 @@
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
 import { loadStats as loadStatsApi } from '@/api/admin'
 import { alert } from '@/utils/ui-utils'
+import { ServiceStatsItem } from '@/types'
 
-const stats = ref([])
+const stats = ref<ServiceStatsItem[]>([])
 const refreshCountDown = ref(0)
 const statLoading = ref(false)
 
@@ -35,7 +36,7 @@ const loadStats = async () => {
   statLoading.value = true
   try {
     stats.value = await loadStatsApi()
-  } catch (e) {
+  } catch (e: any) {
     await alert(e.message)
   } finally {
     statLoading.value = false
@@ -43,12 +44,12 @@ const loadStats = async () => {
   }
 }
 
-let timer
+let timer: number
 
 const startStatTimer = async () => {
   if (statLoading.value) return
   refreshCountDown.value = 10
-  timer = setInterval(statRefreshTimer, 1000)
+  timer = setInterval(statRefreshTimer, 1000) as unknown as number
 }
 
 const stopStatTimer = () => {

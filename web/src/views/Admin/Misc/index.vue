@@ -1,17 +1,17 @@
 <template>
   <div class="misc-settings">
-    <root-permissions />
-    <thumbnail />
-    <search-index />
-    <clean-invalid />
-    <clean-cache />
-    <sys-stats />
+    <RootPermissions />
+    <Thumbnail />
+    <SearchIndex />
+    <CleanInvalid />
+    <CleanCache />
+    <SysStats />
   </div>
 </template>
-<script>
+<script lang="ts">
 export default { name: 'MiscSettings' }
 </script>
-<script setup>
+<script setup lang="ts">
 import RootPermissions from './RootPermissions.vue'
 import CleanInvalid from './CleanInvalid.vue'
 import CleanCache from './CleanCache.vue'

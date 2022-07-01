@@ -2,7 +2,7 @@
   <div class="groups-manager" :class="{ editing: !!group }">
     <div class="groups-list">
       <div class="actions">
-        <simple-button
+        <SimpleButton
           icon="#icon-add"
           :title="$t('p.admin.group.add_group')"
           @click="addGroup"
@@ -19,13 +19,13 @@
           <tr v-for="g in groups" :key="g.name">
             <td class="center">{{ g.name }}</td>
             <td class="center line">
-              <simple-button
+              <SimpleButton
                 :title="$t('p.admin.group.edit')"
                 small
                 icon="#icon-edit"
                 @click="editGroup(g)"
               />
-              <simple-button
+              <SimpleButton
                 :title="$t('p.admin.group.delete')"
                 type="danger"
                 small
@@ -46,7 +46,7 @@
         }}
       </div>
       <div class="group-form">
-        <simple-form ref="formEl" v-model="group" :form="groupForm" />
+        <SimpleForm ref="formEl" v-model="group" :form="groupForm" />
         <div class="form-item">
           <span class="label">{{ $t('p.admin.group.users') }}</span>
           <div class="value">
@@ -61,29 +61,29 @@
           </div>
         </div>
         <div class="save-button">
-          <simple-button small :loading="saving" @click="saveGroup">
+          <SimpleButton small :loading="saving" @click="saveGroup">
             {{ $t('p.admin.group.save') }}
-          </simple-button>
-          <simple-button small type="info" @click="group = null">
+          </SimpleButton>
+          <SimpleButton small type="info" @click="group = null">
             {{ $t('p.admin.group.cancel') }}
-          </simple-button>
+          </SimpleButton>
         </div>
       </div>
     </div>
     <div v-else class="edit-tips">
-      <simple-button
+      <SimpleButton
         icon="#icon-add"
         :title="$t('p.admin.group.add_group')"
         small
         @click="addGroup"
       >
         {{ $t('p.admin.group.add') }}
-      </simple-button>
+      </SimpleButton>
       {{ $t('p.admin.group.or_edit') }}
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import {
   createGroup,
   deleteGroup as deleteGroupApi,
@@ -92,19 +92,20 @@ import {
   getUsers,
   updateGroup,
 } from '@/api/admin'
+import { FormItem, Group, User } from '@/types'
 import { alert, confirm } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-const users = ref([])
-const groups = ref([])
-const group = ref(null)
+const users = ref<User[]>([])
+const groups = ref<Group[]>([])
+const group = ref<O | null>(null)
 const edit = ref(false)
 const saving = ref(false)
 
-const groupForm = computed(() => [
+const groupForm = computed<FormItem[]>(() => [
   {
     field: 'name',
     label: t('p.admin.group.f_name'),
@@ -114,19 +115,19 @@ const groupForm = computed(() => [
   },
 ])
 
-const formEl = ref(null)
+const formEl = ref<InstanceType<SimpleFormType> | null>(null)
 
 const loadUsers = async () => {
   try {
     users.value = await getUsers()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
 const loadGroups = async () => {
   try {
     groups.value = await getGroups()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
@@ -137,17 +138,17 @@ const addGroup = () => {
   }
   edit.value = false
 }
-const editGroup = async (group_) => {
+const editGroup = async (group_: Group) => {
   try {
-    const g = await getGroup(group_.name)
-    g.users = g.users.map((g) => g.username)
+    const g: O = await getGroup(group_.name)
+    g.users = g.users!.map((g: User) => g.username)
     group.value = g
     edit.value = true
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
-const deleteGroup = async (g) => {
+const deleteGroup = async (g: Group) => {
   confirm({
     title: t('p.admin.group.delete_group'),
     message: t('p.admin.group.delete_group', { n: g.name }),
@@ -171,24 +172,24 @@ const deleteGroup = async (g) => {
 
 const saveGroup = async () => {
   try {
-    await formEl.value.validate()
+    await formEl.value!.validate()
   } catch {
     return
   }
   const g = {
-    name: group.value.name,
-    users: group.value.users.map((username) => ({ username })),
+    name: group.value!.name,
+    users: group.value!.users.map((username: string) => ({ username })),
   }
   saving.value = true
   try {
     if (edit.value) {
-      await updateGroup(group.value.name, g)
+      await updateGroup(group.value!.name, g)
     } else {
       await createGroup(g)
     }
     edit.value = true
     loadGroups()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     saving.value = false

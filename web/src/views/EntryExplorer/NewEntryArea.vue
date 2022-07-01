@@ -1,6 +1,6 @@
 <template>
   <div class="new-entry-area">
-    <float-button
+    <FloatButton
       v-if="!readonly"
       v-model="floatMenuShowing"
       class="button-new-item"
@@ -25,14 +25,14 @@
       @click="newButtonClicked"
     >
       <span class="icon-new-item" :class="{ active: floatMenuShowing }">
-        <i-icon svg="#icon-add1" />
+        <Icon svg="#icon-add1" />
       </span>
-      <template #new-file><i-icon svg="#icon-new-file" /></template>
-      <template #upload-file><i-icon svg="#icon-upload-file" /></template>
-      <template #new-folder><i-icon svg="#icon-new-folder" /></template>
-    </float-button>
+      <template #new-file><Icon svg="#icon-new-file" /></template>
+      <template #upload-file><Icon svg="#icon-upload-file" /></template>
+      <template #new-folder><Icon svg="#icon-new-folder" /></template>
+    </FloatButton>
 
-    <dialog-view
+    <DialogView
       v-model:show="taskManagerShowing"
       :title="t('p.new_entry.upload_tasks')"
       esc-close
@@ -40,7 +40,7 @@
       transition="tm-dialog"
       @closed="taskManagerClosed"
     >
-      <task-manager
+      <TaskManager
         class="task-manager"
         :tasks="tasks"
         @navigate="hideTaskManager"
@@ -49,7 +49,7 @@
         @stop="stopTask"
         @remove="removeTask"
       />
-    </dialog-view>
+    </DialogView>
 
     <button
       v-if="taskManagerButtonShowing"
@@ -78,32 +78,34 @@
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import TaskManager from './TaskManager/index.vue'
 import { makeDir } from '@/api'
 import { dir, pathClean, pathJoin } from '@/utils'
-import { UploadManager } from '@/api/upload-manager'
-// eslint-disable-next-line no-unused-vars
+import { UploadManager, UploadMangerEvents } from '@/api/upload-manager'
 import { UploadTaskItem, STATUS_COMPLETED } from '@/api/upload-manager/task'
 import { createDialog } from '@/utils/ui-utils/base-dialog'
 import FileExistsDialogInner from './FileExistsConfirmDialog.vue'
 import { alert, confirm, dialog, input } from '@/utils/ui-utils'
 import { onBeforeMount, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Entry } from '@/types'
+import { FloatButtonItem } from '@/components/FloatButton'
 
 const FileExistsDialog = createDialog('FileExistsDialog', FileExistsDialogInner)
 
 const uploadManager = new UploadManager({ concurrent: 3 })
 
-function getFiles(dataTransfer) {
+function getFiles(dataTransfer: DataTransfer) {
   if (!dataTransfer || !dataTransfer.items) return
   const files = []
-  for (const f of dataTransfer.items) {
+  for (let i = 0; i < dataTransfer.items.length; i++) {
+    const f = dataTransfer.items[i]
     if (typeof f.webkitGetAsEntry === 'function') {
       const entry = f.webkitGetAsEntry()
       if (!entry || !entry.isFile) continue
     }
-    files.push(f.getAsFile())
+    files.push(f.getAsFile()!)
   }
   return files.length === 0 ? undefined : files
 }
@@ -116,15 +118,14 @@ const props = defineProps({
     required: true,
   },
   entries: {
-    type: null,
-    required: true,
+    type: Array as PropType<Entry[]>,
   },
   readonly: {
     type: Boolean,
   },
 })
 
-const emit = defineEmits(['update'])
+const emit = defineEmits<{ (e: 'update'): void }>()
 
 const floatMenuShowing = ref(false)
 
@@ -133,31 +134,28 @@ const taskManagerButtonShowing = ref(true)
 
 const uploadStatus = ref({ completed: 0, total: 0 })
 
-/**
- * @type {import('vue').Ref<import('vue').UnwrapRef<Array.<UploadTaskItem>>>}
- */
-const tasks = ref([])
+const tasks = ref<UploadTaskItem[]>([])
 
 const dropZoneActive = ref(false)
 
-const fileEl = ref(null)
+const fileEl = ref<HTMLInputElement | null>(null)
 
-const onItemsDropped = (e) => {
+const onItemsDropped = (e: DragEvent) => {
   toggleDropZoneActive(false)
   e.preventDefault()
-  const files = getFiles(e.dataTransfer)
+  const files = getFiles(e.dataTransfer!)
   if (files) {
     submitUploadTasks(files)
   }
 }
 
 const onFilesChosen = () => {
-  const files = [...fileEl.value.files]
-  fileEl.value.value = null
+  const files = Array.from(fileEl.value!.files!)
+  fileEl.value!.value = ''
   submitUploadTasks(files)
 }
 
-const submitUploadTasks = async (files) => {
+const submitUploadTasks = async (files: File[]) => {
   if (!files.length) return
   let applyAll, override
   for (const file of files) {
@@ -179,7 +177,7 @@ const submitUploadTasks = async (files) => {
 }
 
 const uploadFile = () => {
-  fileEl.value.click()
+  fileEl.value!.click()
 }
 
 const createEmptyFile = () => {
@@ -194,14 +192,16 @@ const createEmptyFile = () => {
         await uploadManager.upload(
           {
             path: pathClean(pathJoin(props.path, text)),
-            file: '',
+            file: new Blob([''], { type: 'text/plain' }),
             override: false,
           },
           true
         )
         emit('update')
-      } catch (e) {
-        alert(e.message).catch(() => {})
+      } catch (e: any) {
+        alert(e.message).catch(() => {
+          /* ignore */
+        })
         throw e
       }
     },
@@ -219,33 +219,38 @@ const createDir = () => {
       try {
         await makeDir(pathClean(pathJoin(props.path, text)))
         emit('update')
-      } catch (e) {
-        alert(e.message).catch(() => {})
+      } catch (e: any) {
+        alert(e.message).catch(() => {
+          /* ignore */
+        })
         throw e
       }
     },
   })
 }
 
-const onTasksChanged = ({ tasks: tasks_, task }) => {
+const onTasksChanged = ({
+  tasks: tasks_,
+  task,
+}: UploadMangerEvents['taskChanged']) => {
   tasks.value = tasks_
   updateTasksSummary()
-  if (task && task.status === STATUS_COMPLETED) {
+  if (task?.status === STATUS_COMPLETED) {
     if (props.path === dir(task.task.path)) {
       emit('update')
     }
   }
 }
 
-const startTask = (task) => {
+const startTask = (task: UploadTaskItem) => {
   uploadManager.startTask(task.id)
 }
 
-const pauseTask = (task) => {
+const pauseTask = (task: UploadTaskItem) => {
   uploadManager.pauseTask(task.id)
 }
 
-const stopTask = async (task) => {
+const stopTask = async (task: UploadTaskItem) => {
   try {
     await confirm(t('p.new_entry.confirm_stop_task'))
   } catch {
@@ -254,7 +259,7 @@ const stopTask = async (task) => {
   uploadManager.stopTask(task.id)
 }
 
-const removeTask = async (task) => {
+const removeTask = async (task: UploadTaskItem) => {
   try {
     await confirm({
       message: t('p.new_entry.confirm_remove_task'),
@@ -273,7 +278,7 @@ const updateTasksSummary = () => {
   uploadStatus.value = { completed, total: tasks.value.length }
 }
 
-const confirmFileExists = async (file) => {
+const confirmFileExists = async (file: File) => {
   try {
     const all = (
       await dialog(FileExistsDialog, {
@@ -285,18 +290,20 @@ const confirmFileExists = async (file) => {
       })
     ).all
     return { all, override: false }
-  } catch (e) {
+  } catch (e: any) {
     if (!e) return { all: false, override: false }
     return { all: e.all, override: true }
   }
 }
 
-const newButtonClicked = ({ button }) => {
-  ;({
-    createDir,
-    uploadFile,
-    createEmptyFile,
-  }[button.fn]())
+const newButtonClicked = ({ button }: { button: FloatButtonItem }) => {
+  ;((
+    {
+      createDir,
+      uploadFile,
+      createEmptyFile,
+    } as any
+  )[button.fn]())
 }
 
 const showTaskManager = () => {
@@ -312,31 +319,31 @@ const hideTaskManager = () => {
   taskManagerShowing.value = false
 }
 
-const onWindowUnload = (e) => {
+const onWindowUnload = (e: BeforeUnloadEvent) => {
   if (uploadStatus.value.completed < uploadStatus.value.total) {
     e.preventDefault()
     e.returnValue = ''
   }
 }
 
-let dragLeaveTimeout
+let dragLeaveTimeout: number
 
-const onDragEnter = (e) => {
+const onDragEnter = (e: DragEvent) => {
   if (props.readonly) return
   e.preventDefault()
   clearTimeout(dragLeaveTimeout)
   toggleDropZoneActive(true)
 }
 
-const onDragLeave = (e) => {
+const onDragLeave = (e: DragEvent) => {
   e.preventDefault()
   clearTimeout(dragLeaveTimeout)
   dragLeaveTimeout = setTimeout(() => {
     toggleDropZoneActive(false)
-  }, 100)
+  }, 100) as unknown as number
 }
 
-const toggleDropZoneActive = (active) => {
+const toggleDropZoneActive = (active: boolean) => {
   dropZoneActive.value = active
 }
 

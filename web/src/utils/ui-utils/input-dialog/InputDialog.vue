@@ -5,7 +5,7 @@
       v-model="text"
       v-focus
       class="input-dialog__input"
-      :placeholder="placeholder"
+      :placeholder="s(placeholder)"
       :disabled="!!loading"
     ></textarea>
     <input
@@ -13,7 +13,7 @@
       v-model="text"
       v-focus
       class="input-dialog__input"
-      :placeholder="placeholder"
+      :placeholder="s(placeholder)"
       type="text"
       :disabled="!!loading"
     />
@@ -22,17 +22,11 @@
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
+import { s } from '@/i18n'
 import { val } from '@/utils'
 import { ref, unref, watch } from 'vue'
-
-/**
- * @typedef Validator
- * @property {string} trigger 'ok' or 'change'(default)
- * @property {Function} validate validate function
- * @property {RegExp} pattern pattern
- * @property {string} message message to display when pattern violated
- */
+import { InputDialogOptions, InputDialogValidateFunc } from '.'
 
 const props = defineProps({
   loading: {
@@ -40,23 +34,23 @@ const props = defineProps({
     required: true,
   },
   opts: {
-    type: Object,
+    type: Object as PropType<InputDialogOptions>,
     required: true,
   },
 })
 
-const emit = defineEmits(['loading'])
+const emit = defineEmits<{ (e: 'loading', v?: boolean): void }>()
 
 const text = ref(props.opts.text || '')
 const placeholder = ref(props.opts.placeholder || '')
 const multipleLine = ref(val(props.opts.multipleLine, false))
-const validationError = ref('')
+const validationError = ref<string | null>('')
 
-let validator = unref(props.opts.validator)
+const validator = unref(props.opts.validator)
 
-let _t
+let _t: number
 
-const doValidateCallback = (validate) => {
+const doValidateCallback = (validate: InputDialogValidateFunc) => {
   const r = validate(text.value)
   if (r && typeof r.then === 'function') {
     emit('loading', true)
@@ -68,7 +62,7 @@ const doValidateCallback = (validate) => {
         emit('loading')
         return true
       },
-      (e) => {
+      (e: string | Error) => {
         validationResult(e, token)
         emit('loading')
         return false
@@ -88,7 +82,7 @@ const doValidate = () => {
   }
   if (v.pattern instanceof RegExp) {
     if (!v.pattern.test(text.value)) {
-      validationResult(v.message || 'Invalid input')
+      validationResult(s(v.message) || 'Invalid input')
       return false
     }
   }
@@ -99,7 +93,7 @@ const beforeConfirm = async () => {
   return (await doValidate()) ? text.value : Promise.reject()
 }
 
-const validationResult = (message, token) => {
+const validationResult = (message: string | Error | null, token?: number) => {
   if (token !== undefined && token !== _t) return
   if (!message) {
     clearValidationResult()

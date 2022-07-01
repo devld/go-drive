@@ -1,12 +1,12 @@
 <template>
   <div class="section">
     <h1 class="section-title">{{ $t('p.admin.misc.clean_invalid') }}</h1>
-    <simple-button :loading="cleaning" @click="cleanPermissionsAndMounts">
+    <SimpleButton :loading="cleaning" @click="cleanPermissionsAndMounts">
       {{ $t('p.admin.misc.clean') }}
-    </simple-button>
+    </SimpleButton>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { cleanPermissionsAndMounts as cleanPermissionsAndMountsApi } from '@/api/admin'
 import { alert } from '@/utils/ui-utils'
 import { ref } from 'vue'
@@ -21,7 +21,7 @@ const cleanPermissionsAndMounts = async () => {
   try {
     const n = await cleanPermissionsAndMountsApi()
     alert(t('p.admin.misc.invalid_path_cleaned', { n: n }))
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     cleaning.value = false

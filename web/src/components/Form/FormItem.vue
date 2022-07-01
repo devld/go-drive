@@ -7,10 +7,10 @@
         v-if="item.description"
         class="form-item-help"
         href="javascript:;"
-        :title="item.description"
+        :title="s(item.description)"
         @click="toggleHelpShowing"
       >
-        <i-icon svg="#icon-help" />
+        <Icon svg="#icon-help" />
       </a>
     </span>
     <span v-if="helpShowing" class="description">
@@ -24,7 +24,7 @@
       class="value"
       :name="item.field"
       :value="modelValue"
-      :placeholder="item.placeholder"
+      :placeholder="s(item.placeholder)"
       :required="item.required"
       :disabled="item.disabled"
       rows="4"
@@ -36,7 +36,7 @@
       type="text"
       :name="item.field"
       :value="modelValue"
-      :placeholder="item.placeholder"
+      :placeholder="s(item.placeholder)"
       :required="item.required"
       :disabled="item.disabled"
       @input="textInput"
@@ -47,7 +47,7 @@
       type="password"
       :name="item.field"
       :value="modelValue"
-      :placeholder="item.placeholder"
+      :placeholder="s(item.placeholder)"
       :required="item.required"
       :disabled="item.disabled"
       @input="textInput"
@@ -75,7 +75,7 @@
         v-for="o in item.options"
         :key="o.value"
         :value="o.value"
-        :title="o.title"
+        :title="s(o.title)"
         :disabled="o.disabled"
       >
         {{ o.name }}
@@ -84,7 +84,8 @@
     <span v-if="error" class="form-item-error">{{ error }}</span>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
+import { FormItem } from '@/types'
 import { ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -93,16 +94,18 @@ const props = defineProps({
     type: [String, Number],
   },
   item: {
-    type: Object,
+    type: Object as PropType<FormItem>,
     required: true,
   },
 })
 
 const slots = useSlots()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  (e: 'update:modelValue', v: string | number): void
+}>()
 
-const error = ref(null)
+const error = ref<I18nText | null>(null)
 
 const { t } = useI18n()
 
@@ -132,18 +135,18 @@ const clearError = () => {
 
 defineExpose({ clearError, validate })
 
-const textInput = (e) => {
-  emit('update:modelValue', e.target.value)
+const textInput = (e: Event) => {
+  emit('update:modelValue', (e.target as HTMLInputElement).value)
   clearError()
 }
 
-const checkboxInput = (e) => {
-  emit('update:modelValue', e.target.checked ? '1' : '')
+const checkboxInput = (e: Event) => {
+  emit('update:modelValue', (e.target as HTMLInputElement).checked ? '1' : '')
   clearError()
 }
 
-const selectInput = (e) => {
-  emit('update:modelValue', e.target.value)
+const selectInput = (e: Event) => {
+  emit('update:modelValue', (e.target as HTMLSelectElement).value)
   clearError()
 }
 </script>

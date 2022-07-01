@@ -1,5 +1,5 @@
 <template>
-  <dialog-view
+  <DialogView
     v-focus
     class="base-dialog"
     :title="title"
@@ -19,29 +19,31 @@
 
     <template #footer>
       <div class="base-dialog__footer">
-        <simple-button
+        <SimpleButton
           v-if="cancelText"
           class="base-dialog__button-cancel"
           :loading="loading === 'cancel'"
           :type="cancelType"
           :disabled="!!loading"
           @click="emit('cancel')"
-          >{{ cancelText }}</simple-button
+          >{{ cancelText }}</SimpleButton
         >
-        <simple-button
+        <SimpleButton
           ref="confirmButton"
           class="base-dialog__button-ok"
           :loading="loading === 'confirm'"
           :type="confirmType"
           :disabled="!!loading || confirmDisabled"
           @click="emit('confirm')"
-          >{{ confirmText }}</simple-button
+          >{{ confirmText }}</SimpleButton
         >
       </div>
     </template>
-  </dialog-view>
+  </DialogView>
 </template>
-<script setup>
+<script setup lang="ts">
+import { SimpleButtonType } from '@/components/SimpleButton'
+
 defineProps({
   showing: {
     type: Boolean,
@@ -52,24 +54,24 @@ defineProps({
     required: true,
   },
   title: {
-    type: [String, Object],
+    type: [String, Object] as PropType<I18nText>,
     required: true,
   },
   confirmText: {
-    type: [String, Object],
+    type: [String, Object] as PropType<I18nText>,
     required: true,
   },
   confirmType: {
-    type: String,
+    type: String as PropType<SimpleButtonType>,
   },
   confirmDisabled: {
     type: Boolean,
   },
   cancelText: {
-    type: [String, Object],
+    type: [String, Object] as PropType<I18nText>,
   },
   cancelType: {
-    type: String,
+    type: String as PropType<SimpleButtonType>,
     default: 'info',
   },
   transition: {
@@ -82,7 +84,12 @@ defineProps({
     type: Boolean,
   },
 })
-const emit = defineEmits(['close', 'closed', 'confirm', 'cancel'])
+const emit = defineEmits<{
+  (e: 'close'): void
+  (e: 'closed'): void
+  (e: 'confirm'): void
+  (e: 'cancel'): void
+}>()
 </script>
 <style lang="scss">
 .base-dialog__content-wrapper {

@@ -1,22 +1,22 @@
 <template>
   <div ref="editorEl" class="text-editor" />
 </template>
-<script>
+<script lang="ts">
 export default { name: 'TextEditor' }
 </script>
-<script setup>
+<script setup lang="ts">
 import { watch, onMounted, onBeforeUnmount, ref } from 'vue'
-import CodeMirror, { loadMode } from './codemirror'
-import { filenameExt } from '@/utils'
 import {
   addPreferColorListener,
   isDarkMode,
   removePreferColorListener,
 } from '@/utils/theme'
 
-function getThemeName() {
-  return isDarkMode() ? 'material-darker' : 'github-light'
-}
+import { basicSetup, EditorView } from 'codemirror'
+import { Compartment, EditorState } from '@codemirror/state'
+
+import themeLight from './theme-light'
+import themeDark from './theme-dark'
 
 const props = defineProps({
   modelValue: {
@@ -25,101 +25,94 @@ const props = defineProps({
   filename: {
     type: String,
   },
-  lineNumbers: {
-    type: Boolean,
-  },
   disabled: {
     type: Boolean,
   },
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
 
-const editorEl = ref(null)
-let editor
-let currentContent
+const editorEl = ref<HTMLDivElement | null>(null)
 
-const setEditorContent = (content) => {
+let editor: EditorView
+const readOnlyCompartment = new Compartment()
+const themeCompartment = new Compartment()
+
+let currentContent: string
+
+const setEditorContent = (content: string) => {
   if (currentContent === content) return
   currentContent = content
   if (editor) {
-    editor.setValue(currentContent)
+    editor.dispatch({
+      changes: { from: 0, to: editor.state.doc.length, insert: content },
+    })
   }
 }
 
-const setEditorOption = (name, value) => {
-  if (editor) editor.setOption(name, value)
-}
+const prefersColorChanged = () => {
+  const isDark = isDarkMode()
 
-const prefersColorChanged = () => setEditorOption('theme', getThemeName())
+  editor.dispatch({
+    effects: themeCompartment.reconfigure(isDark ? themeDark : themeLight),
+  })
+}
 
 const initEditor = () => {
-  editor = CodeMirror(editorEl.value, {
-    theme: getThemeName(),
-    value: currentContent || '',
-    lineNumbers: props.lineNumbers,
-    readOnly: props.disabled ? 'nocursor' : false,
-  })
-  setEditorMode()
-  editor.on('change', () => {
-    currentContent = editor.getValue()
-    emit('update:modelValue', currentContent)
+  editor = new EditorView({
+    parent: editorEl.value!,
+    extensions: [
+      basicSetup,
+      readOnlyCompartment.of(EditorState.readOnly.of(props.disabled)),
+      themeCompartment.of([]),
+
+      EditorView.updateListener.of(() => {
+        currentContent = editor.state.doc.toString()
+        emit('update:modelValue', currentContent)
+      }),
+    ],
   })
 }
 
-const setEditorMode = async () => {
-  const ext = filenameExt(props.filename)
-  try {
-    const mode = CodeMirror.findModeByExtension(ext)
-    if (!mode) throw new Error(`mode ${mode.mode} not found`)
-    await loadMode(mode)
-    setEditorOption('mode', mode.mode)
-  } catch (e) {
-    console.warn(`[CodeMirror] failed to load language mode of '${ext}'`, e)
-  }
-}
-
-watch(
-  () => props.filename,
-  (val) => {
-    if (val) setEditorMode()
-  }
-)
-
-watch(
-  () => props.modelValue,
-  (val) => setEditorContent(val),
-  { immediate: true }
-)
-watch(
-  () => props.lineNumbers,
-  (val) => setEditorOption('lineNumbers', val)
-)
 watch(
   () => props.disabled,
-  (val) => setEditorOption('readOnly', val ? 'nocursor' : false)
+  (val) => {
+    editor.dispatch({
+      effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(val)),
+    })
+  }
 )
 
 onMounted(() => {
   initEditor()
   addPreferColorListener(prefersColorChanged)
+
+  watch(
+    () => props.modelValue,
+    (val) => setEditorContent(val ?? ''),
+    { immediate: true }
+  )
+  prefersColorChanged()
 })
 onBeforeUnmount(() => {
   removePreferColorListener(prefersColorChanged)
+  editor.destroy()
 })
 </script>
 <style lang="scss">
-@import url('codemirror/lib/codemirror.css');
-
-@import url('codemirror-github-light/lib/codemirror-github-light-theme.css');
-@import 'codemirror/theme/material-darker.css';
-
 .text-editor {
-  .CodeMirror {
-    height: unset;
+  overflow: hidden;
+
+  .cm-editor {
+    height: 100%;
+
+    &.cm-focused {
+      outline: none;
+    }
   }
 
-  .CodeMirror-scroll {
+  .cm-scroller {
+    overflow: auto;
     min-height: 300px;
   }
 }

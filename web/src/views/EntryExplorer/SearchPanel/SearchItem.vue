@@ -1,7 +1,7 @@
 <template>
   <li class="search-panel__item" tabindex="-1">
-    <entry-link :entry="entry" @click="itemClicked">
-      <entry-icon :entry="entry" :show-thumbnail="false" />
+    <EntryLink :entry="entry" @click="itemClicked">
+      <EntryIcon :entry="entry" :show-thumbnail="false" />
       <div class="search-panel__item-info">
         <div class="search-panel__item-info-primary">
           <span class="search-panel__item-name">{{ entry.name }}</span>
@@ -16,25 +16,31 @@
           }}</span>
         </div>
       </div>
-    </entry-link>
+    </EntryLink>
   </li>
 </template>
-<script setup>
+<script setup lang="ts">
+import { EntryEventData } from '@/components/entry'
+import { Entry, SearchHitItem } from '@/types'
 import { dir as dirFn, formatBytes, formatTime } from '@/utils'
 import { computed } from 'vue'
 
 const props = defineProps({
   item: {
-    type: Object,
+    type: Object as PropType<SearchHitItem>,
     required: true,
   },
 })
 
-const emit = defineEmits(['click'])
+const emit = defineEmits<{ (e: 'click', v: EntryEventData): void }>()
 
-const entry = computed(() => ({ ...props.item.entry, meta: {} }))
+const entry = computed<Entry>(() => ({
+  ...props.item.entry,
+  modTime: new Date(props.item.entry.modTime).getTime(),
+  meta: {},
+}))
 
-const itemClicked = (e) => emit('click', e)
+const itemClicked = (e: EntryEventData) => emit('click', e)
 </script>
 <style lang="scss">
 .search-panel__item {

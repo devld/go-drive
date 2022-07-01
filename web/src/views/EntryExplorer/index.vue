@@ -5,13 +5,13 @@
   >
     <!-- search panel -->
     <div v-if="searchConfig?.enabled" class="search-panel-wrapper">
-      <search-panel :path="path" @navigate="navigateToEntry" />
+      <SearchPanel :path="path" @navigate="navigateToEntry" />
     </div>
     <!-- search panel -->
 
     <!-- file list main area -->
     <div class="files-list">
-      <entry-list-view
+      <EntryListView
         ref="entryListEl"
         v-model:selection="selectedEntries"
         v-model:sort="sortBy"
@@ -21,7 +21,7 @@
         :get-link="getLink"
         @update:view-mode="onViewModeChanged"
         @entries-load="entriesLoaded"
-        @entry-click="entryClicked"
+        @entry-click="onEntryClicked"
         @entry-menu="showEntryMenu"
         @loading="progressBar($event)"
       />
@@ -29,45 +29,27 @@
     <!-- file list main area -->
 
     <!-- README -->
-    <div v-if="readmeContent" class="page-footer">
-      <div v-markdown="readmeContent" class="markdown-body"></div>
-    </div>
+    <ReadmeContent class="page-footer" :path="path" :entries="entries" />
     <!-- README -->
 
-    <!-- entry handler view dialog -->
-    <dialog-view class="entry-handler-dialog" :show="entryHandlerViewShowing">
-      <component
-        :is="HANDLER_COMPONENTS[entryHandlerView.component]"
-        v-if="entryHandlerViewShowing"
-        :entry="entryHandlerView.entry"
-        :entries="entries"
-        :ctx="handlerCtx"
-        @update="reloadEntryList"
-        @close="closeEntryHandlerView"
-        @entry-change="entryHandlerViewChange"
-        @save-state="entryHandlerViewSaveStateChange"
-      />
-    </dialog-view>
-    <!-- entry handler view dialog -->
-
     <!-- entry menu -->
-    <dialog-view
+    <DialogView
       v-model:show="entryMenuShowing"
       overlay-close
       esc-close
       transition="top-fade"
     >
-      <entry-menu
+      <EntryMenu
         v-if="entryMenuData"
         :menus="entryMenuData.menus"
         :entry="entryMenuData.entry"
-        @click="menuClicked"
+        @click="onEntryMenuClicked"
       />
-    </dialog-view>
+    </DialogView>
     <!-- entry menu -->
 
     <!-- new entry menu -->
-    <new-entry-area
+    <NewEntryArea
       ref="newEntryAreaEl"
       :path="path"
       :entries="entries"
@@ -77,29 +59,33 @@
     <!-- new entry menu -->
   </div>
 </template>
-<script>
+<script lang="ts">
 export default { name: 'EntryExplorer' }
 </script>
-<script setup>
-import { getContent } from '@/api'
+<script setup lang="ts">
+import { EntryEventData, ListViewMode } from '@/components/entry'
+import { EntryHandler, EntryHandlersMenu } from '@/handlers/types'
+import { useAppStore } from '@/store'
+import { Entry } from '@/types'
 import { debounce, dir, filename, setTitle } from '@/utils'
-import { useEntryExplorer } from '@/utils/explorer'
-import {
-  getHandler,
-  HANDLER_COMPONENTS,
-  resolveEntryHandler,
-} from '@/utils/handlers'
-import uiUtils, { confirm } from '@/utils/ui-utils'
+import { confirm } from '@/utils/ui-utils'
 import EntryListView from '@/views/EntryListView/index.vue'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { onBeforeRouteLeave, onBeforeRouteUpdate, useRouter } from 'vue-router'
-import { useStore } from 'vuex'
+import {
+  onBeforeRouteLeave,
+  onBeforeRouteUpdate,
+  RouteLocationNormalized,
+  useRouter,
+} from 'vue-router'
+import { EntriesLoadData } from '../EntryListView/types'
 import EntryMenu from './EntryMenu.vue'
+import { useEntryExplorer, useEntryHandler } from './explorer'
 import NewEntryArea from './NewEntryArea.vue'
+import ReadmeContent from './ReadmeContent.vue'
 import SearchPanel from './SearchPanel/index.vue'
+import { EntryMenuClickData } from './types'
 
-const README_FILENAME = 'readme.md'
 const VIEW_MODE_STORAGE_KEY = 'entries-list-view-mode'
 
 const HISTORY_FLAG = '_h'
@@ -114,7 +100,7 @@ const getHistoryFlag = () => {
 
 const { t } = useI18n()
 
-const store = useStore()
+const store = useAppStore()
 const router = useRouter()
 
 const props = defineProps({
@@ -124,6 +110,38 @@ const props = defineProps({
   },
 })
 
+/** current path */
+const path = computed(() => resolvePath(router.currentRoute.value)!)
+
+const currentDirEntry = ref<Entry | undefined>()
+const entries = ref<Entry[] | undefined>()
+
+const selectedEntries = ref<Entry[]>([])
+
+const entryMenuData = ref<EntryHandlersMenu | undefined>()
+const entryMenuShowing = ref(false)
+
+const viewMode = ref<ListViewMode>(
+  (localStorage.getItem(VIEW_MODE_STORAGE_KEY) as ListViewMode) || 'list'
+)
+const onViewModeChanged = debounce((mode) => {
+  viewMode.value = mode
+  localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
+}, 500)
+
+const sortBy = ref(undefined)
+
+const entryListEl = ref<InstanceType<typeof EntryListView> | null>(null)
+const newEntryAreaEl = ref<InstanceType<typeof NewEntryArea> | null>(null)
+
+const searchConfig = computed(() => store.config?.search)
+
+const isCurrentDirReadonly = computed(
+  () => !currentDirEntry.value || !currentDirEntry.value.meta.writable
+)
+
+let currentTempRoute: RouteLocationNormalized | undefined
+
 const {
   handlerCtx,
   getDirLink,
@@ -131,118 +149,123 @@ const {
   getLink,
   resolveHandlerByRoute,
   resolvePath,
+  isRouteForHandlerView,
 } = useEntryExplorer(props.basePath)
 
-const path = computed(() =>
-  decodeURIComponent(resolvePath(router.currentRoute.value))
+onBeforeRouteUpdate((to, from, next) => {
+  if (!resolveHandlerByRoute(from) && resolveHandlerByRoute(to)) {
+    setHistoryFlag()
+  }
+  confirmUnsavedState().then(
+    () => {
+      next()
+      currentTempRoute = to
+      onRouteChanged(currentTempRoute)
+    },
+    () => {
+      next(false)
+    }
+  )
+})
+
+onBeforeRouteLeave((_to, _from, next) => {
+  progressBar(false)
+  next()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('beforeunload', onWindowUnload)
+})
+
+const reloadEntryList = debounce(() => {
+  selectedEntries.value.splice(0)
+  entryListEl.value!.reload()
+}, 500)
+
+const onHandlerBeingExecute = (
+  handler: EntryHandler,
+  entry: Entry | Entry[]
+) => {
+  if (handler.view && !Array.isArray(entry)) {
+    if (
+      currentTempRoute &&
+      isRouteForHandlerView(currentTempRoute, handler.name, entry.name)
+    ) {
+      return
+    }
+
+    router.push(getHandlerLink(path.value, handler.name, entry.name))
+  }
+}
+
+const onHandlerBeingHide = async (entry: Entry | Entry[]) => {
+  await confirmUnsavedState()
+
+  setTitle(path.value)
+  if (!Array.isArray(entry)) {
+    focusOnEntry(entry.name)
+  }
+  removeHandlerRoute()
+}
+
+const onHandlerEntryBeingChanged = async (path: string, handler: string) => {
+  await confirmUnsavedState()
+
+  const dirPath = dir(path)
+  const name = filename(path)
+
+  if (
+    !isRouteForHandlerView(router.currentRoute.value, handler, name, dirPath)
+  ) {
+    router.replace(getHandlerLink(dirPath, handler, name))
+  }
+}
+
+const {
+  getEntryMenus,
+  executeHandler,
+  onRouteChanged,
+  getViewHandlerSavedState,
+  getViewHandlerShowing,
+  hideViewHandler,
+} = useEntryHandler(
+  currentDirEntry,
+  entries,
+  handlerCtx,
+  resolveHandlerByRoute,
+  reloadEntryList,
+  onHandlerBeingExecute,
+  onHandlerBeingHide,
+  onHandlerEntryBeingChanged
 )
 
-const readmeContent = ref('')
+const progressBar = (v?: number | boolean) => store.setProgressBar(v)
 
-const entryHandlerView = ref(null)
-
-const entryMenuData = ref(null)
-const entryMenuShowing = ref(false)
-
-const entries = ref(null)
-const selectedEntries = ref([])
-
-const currentDirEntry = ref(null)
-
-const viewMode = ref(localStorage.getItem(VIEW_MODE_STORAGE_KEY) || 'list')
-const sortBy = ref(undefined)
-
-const entryListEl = ref(null)
-const newEntryAreaEl = ref(null)
-
-const searchConfig = computed(() => store.state.config?.search)
-
-let readmeTask
-
-const entryHandlerViewShowing = computed(
-  () =>
-    !!(entryHandlerView.value && entries.value && entryHandlerView.value.entry)
-)
-
-const isCurrentDirReadonly = computed(
-  () => !currentDirEntry.value || !currentDirEntry.value.meta.writable
-)
-
-const progressBar = (v) => store.commit('progressBar', v)
-
-const entryClicked = ({ entry }) => {
+const onEntryClicked = ({ entry }: EntryEventData) => {
+  if (!entry) return
   if (entry.type === 'dir') {
     // path changed
-    entries.value = null
-    currentDirEntry.value = null
+    entries.value = undefined
+    currentDirEntry.value = undefined
     return
   }
-  const handlers = resolveEntryHandler(
-    entry,
-    currentDirEntry.value,
-    handlerCtx.value
-  )
-  if (handlers.length > 0) {
-    executeEntryHandler(handlers[0], entry)
-  }
+  // route change
 }
 
-const menuClicked = ({ entry, menu }) => {
+const onEntryMenuClicked = ({ entry, menu }: EntryMenuClickData) => {
   entryMenuShowing.value = false
-  const handler = getHandler(menu.name)
-  if (!handler) return
-
-  if (handler.view) {
-    if (Array.isArray(entry)) {
-      // selected entries
-      entryHandlerView.value = {
-        handler: handler.name,
-        component: handler.view?.name,
-        entry,
-        savedState: true,
-      }
-    } else {
-      router.push(getHandlerLink(handler.name, entry.name, path.value))
-    }
-    return
-  }
-  // execute handler
-  executeEntryHandler(handler, entry)
+  executeHandler(menu.name, entry)
 }
 
-const executeEntryHandler = async (handler, entry) => {
-  if (typeof handler.handler === 'function' && !handler.view) {
-    try {
-      const r = await handler.handler(entry, uiUtils, handlerCtx.value)
-      if (r && r.update) reloadEntryList()
-    } catch (e) {
-      console.error('entry handler error', e)
-    }
-  }
-}
-
-const showEntryMenu = ({ entry, event }) => {
-  if (selectedEntries.value.length > 0) {
-    entry = [...selectedEntries.value] // selected entries
-  }
-  const handlers = resolveEntryHandler(
-    entry,
-    currentDirEntry.value,
-    handlerCtx.value
+const showEntryMenu = ({ entry, event }: EntryEventData) => {
+  const menu = getEntryMenus(
+    selectedEntries.value.length > 0 ? [...selectedEntries.value] : entry!
   )
-  if (handlers.length === 0) return
+  if (!menu) return
 
   event && event.preventDefault()
-
-  entryMenuData.value = {
-    entry,
-    menus: handlers
-      .filter((h) => h.display)
-      .map((h) => ({
-        name: h.name,
-        display: typeof h.display === 'function' ? h.display(entry) : h.display,
-      })),
-  }
+  entryMenuData.value = menu
   entryMenuShowing.value = true
 }
 
@@ -250,116 +273,50 @@ const entriesLoaded = ({
   entries: entries_,
   path: path_,
   entry: thisEntry,
-}) => {
+}: EntriesLoadData) => {
   setTitle(path_)
 
   if (path_ !== path.value) {
     router.push(getDirLink(path_))
   }
-  tryLoadReadme(entries_)
 
   entries.value = entries_
   currentDirEntry.value = thisEntry
 
   selectedEntries.value.splice(0)
-
-  if (entryHandlerView.value?.entryName) {
-    entryHandlerView.value.entry = entries_.find(
-      (e) => e.name === entryHandlerView.value.entryName
-    )
-
-    setTitle(`${entryHandlerView.value.entryName}`)
-  }
-}
-
-const resolveRouteAndHandleEntry = (to) => {
-  to = to || router.currentRoute.value
-  const matched = resolveHandlerByRoute(to)
-  if (!matched) {
-    entryHandlerView.value = null
-    return false
-  }
-  const { handler, entryName } = matched
-  const entry = entries.value?.find((e) => e.name === entryName)
-
-  if (handler.view) {
-    // handler view dialog
-    entryHandlerView.value = {
-      handler: handler.name,
-      component: handler.view?.name,
-      entryName,
-      entry,
-      savedState: true,
-    }
-
-    setTitle(`${entryName}`)
-  }
-}
-
-const closeEntryHandlerView = () => {
-  setTitle(path.value)
-
-  if (!entryHandlerView.value) return
-  if (entryHandlerView.value.entryName) {
-    focusOnEntry(entryHandlerView.value.entryName)
-  }
-  if (!replaceHandlerRoute()) {
-    entryHandlerView.value = null
-  }
-}
-
-const entryHandlerViewChange = async (path) => {
-  try {
-    await confirmUnsavedState()
-  } catch {
-    return
-  }
-  const dirPath = dir(path)
-  const name = filename(path)
-  const newPath = getHandlerLink(entryHandlerView.value.handler, name, dirPath)
-  if (
-    decodeURIComponent(router.currentRoute.value.fullPath) !==
-    decodeURIComponent(newPath)
-  ) {
-    router.replace(newPath)
-  }
-}
-
-const entryHandlerViewSaveStateChange = (saved) => {
-  entryHandlerView.value.savedState = saved
+  onRouteChanged(router.currentRoute.value)
 }
 
 const confirmUnsavedState = () => {
-  if (!entryHandlerView.value || entryHandlerView.value.savedState) {
-    return Promise.resolve()
-  }
+  if (getViewHandlerSavedState()) return Promise.resolve()
   return confirm(t('p.home.unsaved_confirm'))
 }
 
-const onWindowUnload = (e) => {
-  if (!entryHandlerView.value || entryHandlerView.value.savedState) return
+const onWindowUnload = (e: BeforeUnloadEvent) => {
+  if (getViewHandlerSavedState()) return
   e.preventDefault()
   e.returnValue = ''
 }
 
-const replaceHandlerRoute = () => {
+const removeHandlerRoute = () => {
   if (getHistoryFlag()) {
     router.go(-1)
     return true
   } else {
     const route = router.currentRoute.value
-    if (route.fullPath !== route.path) {
-      router.replace(route.path)
+    const dirRoute = getDirLink(path.value)
+    if (route.fullPath !== dirRoute) {
+      router.replace(dirRoute)
       return true
     }
   }
 }
 
-const focusOnEntry = (name, later) => {
-  entryListEl.value.focusOnEntry(name, later)
+const focusOnEntry = (name: string, later?: boolean) => {
+  entryListEl.value!.focusOnEntry(name, later)
 }
 
-const navigateToEntry = (entry) => {
+const navigateToEntry = (entry: Entry) => {
   const targetPath = dir(entry.path)
   if (targetPath !== path.value) {
     router.push(getDirLink(targetPath))
@@ -369,86 +326,20 @@ const navigateToEntry = (entry) => {
   }
 }
 
-const onViewModeChanged = debounce((mode) => {
-  viewMode.value = mode
-  localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
-}, 500)
-
-const tryLoadReadme = async (entries) => {
-  let readmeFound
-  for (const e of entries) {
-    if (e.type !== 'file') continue
-    if (README_FILENAME.toLowerCase() === e.name.toLowerCase()) {
-      readmeFound = e
-      break
-    }
-  }
-  if (readmeFound) {
-    await loadReadme(readmeFound)
-  } else {
-    readmeContent.value = ''
-  }
-}
-
-const loadReadme = async (entry) => {
-  readmeTask?.cancel()
-  let content
-  readmeContent.value = `<p style="text-align: center">${t(
-    'p.home.readme_loading'
-  )}</p>`
-  readmeTask = getContent(entry.path, entry.meta)
-  try {
-    content = await readmeTask
-  } catch (e) {
-    if (e.isCancel) return
-    content = `<p style="text-align: center;">${t('p.home.readme_failed')}</p>`
-  }
-  if (path.value === dir(entry.path)) {
-    readmeContent.value = content
-  }
-}
-
-const reloadEntryList = debounce(() => {
-  selectedEntries.value.splice(0)
-  entryListEl.value.reload()
-}, 500)
-
-const onKeyDown = (e) => {
+const onKeyDown = async (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
-    closeEntryHandlerView()
+    if (!getViewHandlerShowing()) return
     e.stopPropagation()
     e.preventDefault()
+
+    if (await hideViewHandler()) {
+      removeHandlerRoute()
+    }
   }
 }
-
-onBeforeRouteUpdate((to, from, next) => {
-  if (!resolveHandlerByRoute(from) && resolveHandlerByRoute(to)) {
-    setHistoryFlag()
-  }
-  confirmUnsavedState().then(
-    () => {
-      next()
-      resolveRouteAndHandleEntry(to)
-    },
-    () => {
-      next(false)
-    }
-  )
-})
-
-onBeforeRouteLeave((to, from, next) => {
-  progressBar(false)
-  next()
-})
 
 window.addEventListener('beforeunload', onWindowUnload)
 window.addEventListener('keydown', onKeyDown)
-resolveRouteAndHandleEntry()
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKeyDown)
-  window.removeEventListener('beforeunload', onWindowUnload)
-})
 </script>
 <style lang="scss">
 .entry-explorer {

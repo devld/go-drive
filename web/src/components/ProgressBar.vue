@@ -7,7 +7,7 @@
     ></div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { ref, watchEffect } from 'vue'
 
 const FAKE_START = 10
@@ -20,10 +20,10 @@ const props = defineProps({
   },
 })
 
-const progress = ref(0)
+const progress = ref<number | null>(0)
 
-let timer
-let timer1
+let timer: number | undefined
+let timer1: number | undefined
 
 const clearTimer = () => {
   clearTimeout(timer1)
@@ -33,10 +33,10 @@ const clearTimer = () => {
 const setTimer = () => {
   clearTimer()
   timer = setInterval(() => {
-    if (progress.value <= FAKE_FREEZE) {
-      progress.value += 1
+    if (progress.value! <= FAKE_FREEZE) {
+      progress.value! += 1
     }
-  }, 100)
+  }, 100) as unknown as number
 }
 
 const startFakeProgress = () => {
@@ -49,7 +49,7 @@ const completeFakeProgress = () => {
   progress.value = 100
   timer1 = setTimeout(() => {
     progress.value = null
-  }, 400)
+  }, 400) as unknown as number
 }
 
 watchEffect(() => {

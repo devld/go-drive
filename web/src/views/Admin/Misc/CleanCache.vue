@@ -1,30 +1,31 @@
 <template>
   <div class="section">
     <h1 class="section-title">{{ $t('p.admin.misc.clean_cache') }}</h1>
-    <simple-form-item
+    <SimpleFormItem
       v-model="cacheSelectedDrive"
       class="cache-clean-form-item"
       :item="drivesForm"
     />
-    <simple-button
+    <SimpleButton
       :loading="cacheCleaning"
       :disabled="!cacheSelectedDrive"
       @click="cleanDriveCache"
     >
       {{ $t('p.admin.misc.clean') }}
-    </simple-button>
+    </SimpleButton>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { getDrives, cleanDriveCache as cleanDriveCacheApi } from '@/api/admin'
+import { Drive, FormItem } from '@/types'
 import { alert } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
 
-const cacheSelectedDrive = ref(null)
-const drives = ref([])
+const cacheSelectedDrive = ref('')
+const drives = ref<Drive[]>([])
 const cacheCleaning = ref(false)
 
-const drivesForm = computed(() => ({
+const drivesForm = computed<FormItem>(() => ({
   type: 'select',
   options: [
     { name: '', value: '' },
@@ -35,7 +36,7 @@ const drivesForm = computed(() => ({
 const loadDrives = async () => {
   try {
     drives.value = await getDrives()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
@@ -44,7 +45,7 @@ const cleanDriveCache = async () => {
   cacheCleaning.value = true
   try {
     await cleanDriveCacheApi(cacheSelectedDrive.value)
-  } catch (e) {
+  } catch (e: any) {
     await alert(e.message)
   } finally {
     cacheCleaning.value = false

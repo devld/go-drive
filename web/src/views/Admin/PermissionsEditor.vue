@@ -10,7 +10,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(p, i) in permissions" :key="p.subject">
+        <tr v-for="(p, i) in permissions" :key="p.subject ?? ''">
           <td class="center">
             <select v-model="p.subject">
               <option
@@ -32,23 +32,27 @@
             <input v-model="p.permission.write" type="checkbox" />
           </td>
           <td class="center">
-            <simple-button
+            <SimpleButton
               :title="$t('p.admin.p_edit.reject')"
               icon="#icon-reject"
               small
-              :type="p.policy === 0 ? 'danger' : 'info'"
-              @click="p.policy = 0"
+              :type="
+                p.policy === PathPermissionPolicy.REJECTED ? 'danger' : 'info'
+              "
+              @click="p.policy = PathPermissionPolicy.REJECTED"
             />
-            <simple-button
+            <SimpleButton
               :title="$t('p.admin.p_edit.accept')"
               icon="#icon-accept"
               small
-              :type="p.policy === 1 ? '' : 'info'"
-              @click="p.policy = 1"
+              :type="
+                p.policy === PathPermissionPolicy.ACCEPTED ? undefined : 'info'
+              "
+              @click="p.policy = PathPermissionPolicy.ACCEPTED"
             />
           </td>
           <td>
-            <simple-button
+            <SimpleButton
               type="danger"
               icon="#icon-delete"
               small
@@ -58,47 +62,56 @@
         </tr>
         <tr>
           <td class="center" colspan="4">
-            <simple-button icon="#icon-add" small @click="addPermission" />
+            <SimpleButton icon="#icon-add" small @click="addPermission" />
           </td>
         </tr>
       </tbody>
     </table>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import {
   getGroups,
   getPermissions,
   getUsers,
   savePermissions,
 } from '@/api/admin'
+import { PathPermissionPerm, PathPermissionPolicy } from '@/types'
 import { mapOf } from '@/utils'
 import { alert } from '@/utils/ui-utils'
 import { computed, nextTick, ref, watch, watchEffect } from 'vue'
 
-const PERMISSION_EMPTY = 0
-const PERMISSION_READ = 1 << 0
-const PERMISSION_WRITE = 1 << 1
+interface PermissionSubject {
+  type: 'any' | 'user' | 'group'
+  name: string
+  subject: string
+}
+
+interface EditPathPermission {
+  subject: null | string
+  permission: { read: boolean; write: boolean }
+  policy: PathPermissionPolicy
+}
 
 const props = defineProps({
   path: {
     type: String,
     required: true,
   },
-  modelValue: {
-    type: Array,
-  },
 })
 
-const emit = defineEmits(['update:modelValue', 'save-state'])
+const emit = defineEmits<{
+  (e: 'savable', v: boolean): void
+  (e: 'save-state', v: boolean): void
+}>()
 
-const permissions = ref([])
-const subjects = ref([])
+const permissions = ref<EditPathPermission[]>([])
+const subjects = ref<PermissionSubject[]>([])
 
 const selectedSubjects = computed(() =>
   mapOf(
     permissions.value,
-    (p) => p.subject,
+    (p) => p.subject!,
     () => true
   )
 )
@@ -119,7 +132,7 @@ const addPermission = () => {
     policy: 0,
   })
 }
-const removePermission = (i) => {
+const removePermission = (i: number) => {
   permissions.value.splice(i, 1)
 }
 
@@ -129,15 +142,18 @@ const loadPermissions = async () => {
     permissions.value = data.map((p) => ({
       subject: p.subject,
       permission: {
-        read: (p.permission & PERMISSION_READ) === PERMISSION_READ,
-        write: (p.permission & PERMISSION_WRITE) === PERMISSION_WRITE,
+        read:
+          (p.permission & PathPermissionPerm.Read) === PathPermissionPerm.Read,
+        write:
+          (p.permission & PathPermissionPerm.Write) ===
+          PathPermissionPerm.Write,
       },
       policy: p.policy,
     }))
     nextTick(() => {
       setSaveState(true)
     })
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
@@ -148,8 +164,12 @@ const save = async () => {
     permissions.value.map((p) => ({
       subject: p.subject,
       permission:
-        (p.permission.read ? PERMISSION_READ : PERMISSION_EMPTY) |
-        (p.permission.write ? PERMISSION_WRITE : PERMISSION_EMPTY),
+        (p.permission.read
+          ? PathPermissionPerm.Read
+          : PathPermissionPerm.Empty) |
+        (p.permission.write
+          ? PathPermissionPerm.Write
+          : PathPermissionPerm.Empty),
       policy: p.policy,
     }))
   )
@@ -161,39 +181,35 @@ const loadSubjects = async () => {
     const res = await Promise.all([getUsers(), getGroups()])
     subjects.value = [
       { type: 'any', name: '*', subject: 'ANY' },
-      ...res[0].map((u) => ({
-        type: 'user',
-        name: u.username,
-        subject: `u:${u.username}`,
-      })),
-      ...res[1].map((g) => ({
-        type: 'group',
-        name: g.name,
-        subject: `g:${g.name}`,
-      })),
+      ...res[0].map(
+        (u) =>
+          ({
+            type: 'user',
+            name: u.username,
+            subject: `u:${u.username}`,
+          } as PermissionSubject)
+      ),
+      ...res[1].map(
+        (g) =>
+          ({
+            type: 'group',
+            name: g.name,
+            subject: `g:${g.name}`,
+          } as PermissionSubject)
+      ),
     ]
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
-const setSaveState = (saved) => {
+const setSaveState = (saved: boolean) => {
   emit('save-state', saved)
 }
-
-watch(
-  () => props.modelValue,
-  (val) => {
-    if (val === permissions.value) return
-    permissions.value = [...(val || [])]
-  },
-  { immediate: true }
-)
 
 watch(
   () => permissions.value,
   () => {
     setSaveState(false)
-    emit('update:modelValue', permissions.value)
   }
 )
 
@@ -202,6 +218,10 @@ watchEffect(() => {
 })
 
 loadSubjects()
+
+watch(permissions, () => {
+  emit('savable', validate())
+})
 
 defineExpose({ validate, save })
 </script>

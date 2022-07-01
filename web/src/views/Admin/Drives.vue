@@ -2,20 +2,20 @@
   <div class="drives-manager" :class="{ editing: !!drive }">
     <div class="drives-list">
       <div class="actions">
-        <simple-button
+        <SimpleButton
           class="add-button"
           icon="#icon-add"
           :title="$t('p.admin.drive.add_drive')"
           @click="addDrive"
         />
-        <simple-button
+        <SimpleButton
           icon="#icon-refresh2"
           :title="$t('p.admin.drive.reload_tip')"
           :loading="reloading"
           @click="reloadDrives"
         >
           {{ $t('p.admin.drive.reload_drives') }}
-        </simple-button>
+        </SimpleButton>
       </div>
       <table class="simple-table">
         <thead>
@@ -34,13 +34,13 @@
             <td class="center">{{ d.name }}</td>
             <td class="center">{{ d.type }}</td>
             <td class="center line">
-              <simple-button
+              <SimpleButton
                 :title="$t('p.admin.drive.edit')"
                 small
                 icon="#icon-edit"
                 @click="editDrive(d)"
               />
-              <simple-button
+              <SimpleButton
                 :title="$t('p.admin.drive.delete')"
                 type="danger"
                 small
@@ -62,7 +62,7 @@
       </div>
 
       <div class="drive-form">
-        <simple-form
+        <SimpleForm
           ref="baseFormEl"
           v-model="drive"
           :form="baseForm"
@@ -83,7 +83,7 @@
             ></div>
           </details>
 
-          <simple-form
+          <SimpleForm
             ref="configFormEl"
             :key="drive.type"
             v-model="drive.config"
@@ -93,12 +93,12 @@
         </template>
 
         <div class="save-button">
-          <simple-button small :loading="saving" @click="saveDrive">
+          <SimpleButton small :loading="saving" @click="saveDrive">
             {{ $t('p.admin.drive.save') }}
-          </simple-button>
-          <simple-button small type="info" @click="cancelEdit">
+          </SimpleButton>
+          <SimpleButton small type="info" @click="cancelEdit">
             {{ $t('p.admin.drive.cancel') }}
-          </simple-button>
+          </SimpleButton>
         </div>
       </div>
       <div v-if="drive && driveInit" class="drive-init">
@@ -114,7 +114,7 @@
             }}</span
           >
         </div>
-        <o-auth-configure
+        <OAuthConfigure
           v-if="driveInit.oauth"
           :key="drive.name"
           :configured="driveInit.configured"
@@ -123,26 +123,26 @@
           @refresh="getDriveInitConfigInfo"
         />
         <div v-if="driveInit.form" class="drive-init-form">
-          <simple-form
+          <SimpleForm
             ref="initFormEl"
             v-model="driveInitForm"
             :form="driveInit.form"
           />
-          <simple-button small @click="saveDriveConfig">
+          <SimpleButton small @click="saveDriveConfig">
             {{ $t('p.admin.drive.start_configure') }}
-          </simple-button>
+          </SimpleButton>
         </div>
       </div>
     </div>
     <div v-else class="edit-tips">
-      <simple-button icon="#icon-add" title="Add drive" small @click="addDrive">
+      <SimpleButton icon="#icon-add" title="Add drive" small @click="addDrive">
         {{ $t('p.admin.drive.add') }}
-      </simple-button>
+      </SimpleButton>
       {{ $t('p.admin.drive.or_edit') }}
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import {
   createDrive,
   deleteDrive as deleteDriveApi,
@@ -159,27 +159,28 @@ import OAuthConfigure from './drive-configure/OAuth.vue'
 import { mapOf } from '@/utils'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Drive, DriveFactoryConfig, DriveInitConfig, FormItem } from '@/types'
 
 const { t } = useI18n()
 
-const drives = ref([])
-const drive = ref(null)
+const drives = ref<Drive[]>([])
+const drive = ref<O | null>(null)
 const edit = ref(false)
 const saving = ref(false)
-const driveInit = ref(null)
-const driveInitForm = ref({})
+const driveInit = ref<DriveInitConfig | null>(null)
+const driveInitForm = ref<O<string>>({})
 const reloading = ref(false)
-const driveFactories = ref([])
+const driveFactories = ref<DriveFactoryConfig[]>([])
 
 const driveFactoriesMap = computed(() =>
   mapOf(driveFactories.value, (f) => f.type)
 )
 
-const baseFormEl = ref(null)
-const configFormEl = ref(null)
-const initFormEl = ref(null)
+const baseFormEl = ref<InstanceType<SimpleFormType> | null>(null)
+const configFormEl = ref<InstanceType<SimpleFormType> | null>(null)
+const initFormEl = ref<InstanceType<SimpleFormType> | null>(null)
 
-const baseForm = computed(() => [
+const baseForm = computed<FormItem[]>(() => [
   {
     field: 'name',
     label: t('p.admin.drive.f_name'),
@@ -216,7 +217,7 @@ const loadDrives = async () => {
   try {
     driveFactories.value = await getDriveFactories()
     drives.value = await getDrives()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
@@ -226,12 +227,12 @@ const addDrive = () => {
     name: '',
     enabled: '1',
     type: '',
-    config: null,
+    config: '',
   }
   edit.value = false
 }
 
-const editDrive = (drive_) => {
+const editDrive = (drive_: Drive) => {
   drive.value = {
     name: drive_.name,
     enabled: drive_.enabled ? '1' : '',
@@ -242,7 +243,7 @@ const editDrive = (drive_) => {
   getDriveInitConfigInfo()
 }
 
-const deleteDrive = (drive_) => {
+const deleteDrive = (drive_: Drive) => {
   confirm({
     title: t('p.admin.drive.delete_drive'),
     message: t('p.admin.drive.confirm_delete', { n: drive_.name }),
@@ -267,7 +268,7 @@ const deleteDrive = (drive_) => {
 const saveDrive = async () => {
   try {
     await Promise.all([
-      baseFormEl.value.validate(),
+      baseFormEl.value?.validate(),
       configFormEl.value?.validate(),
     ])
   } catch {
@@ -275,22 +276,22 @@ const saveDrive = async () => {
   }
 
   const d = {
-    name: drive.value.name,
-    enabled: !!drive.value.enabled,
-    type: drive.value.type,
-    config: JSON.stringify(drive.value.config),
+    name: drive.value!.name,
+    enabled: !!drive.value!.enabled,
+    type: drive.value!.type,
+    config: JSON.stringify(drive.value!.config),
   }
   saving.value = true
   try {
     if (edit.value) {
-      await updateDrive(drive.value.name, d)
+      await updateDrive(drive.value!.name, d)
     } else {
       await createDrive(d)
     }
     edit.value = true
 
     showReloadingTips()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
     return
   } finally {
@@ -309,9 +310,9 @@ const cancelEdit = () => {
 const getDriveInitConfigInfo = async () => {
   loading(true)
   try {
-    driveInit.value = await getDriveInitConfig(drive.value.name)
+    driveInit.value = await getDriveInitConfig(drive.value!.name)
     driveInitForm.value = driveInit.value?.value || {}
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     loading()
@@ -320,15 +321,15 @@ const getDriveInitConfigInfo = async () => {
 
 const saveDriveConfig = async () => {
   try {
-    await initFormEl.value.validate()
+    await initFormEl.value!.validate()
   } catch {
     return
   }
   loading(true)
   try {
-    await initDrive(drive.value.name, driveInitForm.value)
+    await initDrive(drive.value!.name, driveInitForm.value)
     showReloadingTips()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
     return
   } finally {
@@ -341,7 +342,7 @@ const reloadDrives = async () => {
   reloading.value = true
   try {
     await reloadDrivesApi()
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     reloading.value = false

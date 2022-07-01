@@ -12,11 +12,11 @@
       title="Close"
       @click="emit('close')"
     >
-      <i-icon svg="#icon-close" />
+      <Icon svg="#icon-close" />
     </button>
   </h1>
 </template>
-<script setup>
+<script setup lang="ts">
 const props = defineProps({
   title: {
     type: String,
@@ -27,7 +27,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ (e: 'close'): void }>()
 </script>
 <style lang="scss">
 .handler-title-bar {

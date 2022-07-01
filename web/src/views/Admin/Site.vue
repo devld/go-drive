@@ -1,15 +1,16 @@
 <template>
   <div class="site-config">
     <div class="site-config-form">
-      <simple-form v-model="siteConfig" :form="siteConfigForm" />
-      <simple-button :loading="siteConfigSaving" @click="saveSiteConfig">{{
+      <SimpleForm v-model="siteConfig" :form="siteConfigForm" />
+      <SimpleButton :loading="siteConfigSaving" @click="saveSiteConfig">{{
         $t('p.admin.site.save')
-      }}</simple-button>
+      }}</SimpleButton>
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { getOptions, setOptions } from '@/api/admin'
+import { FormItem } from '@/types'
 import { alert } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -18,7 +19,7 @@ const { t } = useI18n()
 
 const siteConfigSaving = ref(false)
 const siteConfig = ref({})
-const siteConfigForm = computed(() => [
+const siteConfigForm = computed<FormItem[]>(() => [
   { field: 'app.name', label: t('p.admin.site.app_name'), type: 'text' },
   {
     field: 'proxy.maxSize',
@@ -36,9 +37,9 @@ const siteConfigForm = computed(() => [
 
 const loadConfig = async () => {
   try {
-    const opts = await getOptions(...siteConfigForm.value.map((f) => f.field))
+    const opts = await getOptions(...siteConfigForm.value.map((f) => f.field!))
     Object.assign(siteConfig.value, opts)
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   }
 }
@@ -47,7 +48,7 @@ const saveSiteConfig = async () => {
   siteConfigSaving.value = true
   try {
     await setOptions(siteConfig.value)
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
   } finally {
     siteConfigSaving.value = false

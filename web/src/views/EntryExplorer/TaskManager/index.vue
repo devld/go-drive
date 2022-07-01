@@ -1,6 +1,6 @@
 <template>
   <div class="upload-task-manager">
-    <upload-task-item
+    <UploadTaskItemComponent
       v-for="task of tasks"
       :key="task.id"
       :task="task"
@@ -15,20 +15,28 @@
     </div>
   </div>
 </template>
-<script>
+<script lang="ts">
 export default { name: 'TaskManager' }
 </script>
-<script setup>
-import UploadTaskItem from './TaskItem.vue'
+<script setup lang="ts">
+import { UploadTaskItem } from '@/api/upload-manager/task'
+import { EntryEventData } from '@/components/entry'
+import UploadTaskItemComponent from './TaskItem.vue'
 
 defineProps({
   tasks: {
-    type: Array,
+    type: Array as PropType<UploadTaskItem[]>,
     required: true,
   },
 })
 
-const emit = defineEmits(['navigate', 'start', 'pause', 'stop', 'remove'])
+const emit = defineEmits<{
+  (e: 'navigate', v: EntryEventData): void
+  (e: 'start', v: UploadTaskItem): void
+  (e: 'remove', v: UploadTaskItem): void
+  (e: 'stop', v: UploadTaskItem): void
+  (e: 'pause', v: UploadTaskItem): void
+}>()
 </script>
 <style lang="scss">
 .upload-task-manager {

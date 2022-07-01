@@ -1,13 +1,14 @@
 <template>
   <div class="oauth-configure">
-    <simple-button @click="doOauth">{{ data.text }}</simple-button>
+    <SimpleButton @click="doOauth">{{ data.text }}</SimpleButton>
     <div v-if="data.principal" class="oauth-principal">
       {{ $t('p.admin.oauth_connected', { p: data.principal }) }}
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { initDrive } from '@/api/admin'
+import { DriveInitOAuth } from '@/types'
 import { alert, loading } from '@/utils/ui-utils'
 import { onBeforeMount, onBeforeUnmount } from 'vue'
 
@@ -17,7 +18,7 @@ const props = defineProps({
     required: true,
   },
   data: {
-    type: null,
+    type: Object as PropType<DriveInitOAuth>,
     required: true,
   },
   drive: {
@@ -26,22 +27,22 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['refresh'])
+const emit = defineEmits<{ (e: 'refresh'): void }>()
 
-let w
+let w: Window | null = null
 
 const doOauth = () => {
   w?.close()
 
   const win = window.open(
     props.data.url,
-    props.data.title,
+    undefined,
     'width=400,height=600,menubar=0,toolbar=0'
   )
   w = win
 }
 
-const authorized = async ({ data }) => {
+const authorized = async ({ data }: any) => {
   if (!data.oauth) return
   w?.close()
 
@@ -54,7 +55,7 @@ const authorized = async ({ data }) => {
   loading(true)
   try {
     await initDrive(props.drive.name, data.data)
-  } catch (e) {
+  } catch (e: any) {
     alert(e.message)
     return
   } finally {
