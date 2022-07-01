@@ -146,10 +146,10 @@ func FlattenStringMap(m map[string]interface{}, separator string) map[string]str
 }
 
 func flattenStringMap(prefix string, val interface{}, separator string, result map[string]string) {
-	m, isMap := val.(map[interface{}]interface{})
+	m, isMap := val.(map[string]interface{})
 	if isMap {
 		for k, v := range m {
-			flattenStringMap(prefix+separator+k.(string), v, separator, result)
+			flattenStringMap(prefix+separator+k, v, separator, result)
 		}
 		return
 	}
