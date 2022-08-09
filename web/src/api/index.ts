@@ -73,19 +73,18 @@ export function fileThumbnail(path: string, meta: EntryMeta) {
   return buildURL(`${API_PATH}/thumbnail/${path}`, query)!
 }
 
-export async function getContent(
+export function getContent(
   path: string,
   meta: EntryMeta,
   params?: FileURLParams
 ) {
-  const res = await defaultHttp.get(
+  return defaultHttp.get(
     fileUrl(path, meta, {
       ...params,
       useProxy: 'cors',
     })!,
     { transformResponse: [] }
-  )
-  return res.data
+  ).then(res => res.data)
 }
 
 export function makeDir(path: string) {
