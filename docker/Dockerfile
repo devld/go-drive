@@ -2,7 +2,7 @@ FROM golang:1.17.3-alpine3.14 AS golang
 
 FROM alpine:3.14 AS builder
 
-ARG BRANCH=master
+ARG REF=heads/master
 ARG BUILD_VERSION
 
 WORKDIR /work
@@ -13,11 +13,11 @@ RUN apk update && \
 COPY --from=golang /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-ADD https://api.github.com/repos/devld/go-drive/git/refs/heads/${BRANCH} /tmp/branch-info
+ADD https://api.github.com/repos/devld/go-drive/git/refs/${REF} /tmp/ref-info
 
 RUN git clone https://github.com/devld/go-drive.git && \
     cd go-drive && \
-    git checkout ${BRANCH} && \
+    git reset --hard ${REF} && \
     make target_name=go-drive_docker BUILD_VERSION=${BUILD_VERSION} all
 
 FROM alpine:3.14

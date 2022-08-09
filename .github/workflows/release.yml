@@ -7,32 +7,54 @@ on:
       - v*
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
-
       - name: Install build-essential
         run: sudo apt-get install zip build-essential gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-mingw-w64-x86-64
 
-      - name: Setup corss-build environment
+      - name: Cache downloaded cross-build environment
+        id: cache-cross-build-env
+        uses: actions/cache@v3
+        with:
+          path: /tmp/cross-build-env
+          key: aarch64_arm_amd64
+
+      - name: Download cross-build environment
+        if: steps.cache-cross-build-env.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          mkdir -p /tmp/cross-build-env
+
+          pkg_file=/tmp/cross-build-env/packages
+
+          echo aarch64-linux-musl-cross >> $pkg_file
+          echo arm-linux-musleabihf-cross >> $pkg_file
+          echo x86_64-linux-musl-cross >> $pkg_file
+
+          base_url=https://github.com/devld/go-drive/releases/download/musl-building-toolchain/
+
+          for i in `cat ${pkg_file}`; do
+            url="${base_url}${i}.tgz"
+            echo "downloading ${i} from ${url}"
+            curl -s -L -o "/tmp/cross-build-env/${i}.tgz" "${url}"
+          done
+
+      - name: Setup cross-build environment
         run: |
           set -e
 
-          base_url=https://musl.cc/
-          files=(aarch64-linux-musl-cross arm-linux-musleabihf-cross x86_64-linux-musl-cross)
+          pkg_file=/tmp/cross-build-env/packages
 
-          for i in "${files[@]}"; do
-            url="${base_url}${i}.tgz"
-            curl -L -o "${i}.tgz" "${url}"
-            sudo tar xf "${i}.tgz" --strip-components 1 -C /usr/local
+          for i in `cat ${pkg_file}`; do
+            sudo tar xf "/tmp/cross-build-env/${i}.tgz" --strip-components 1 -C /usr/local
           done
 
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: '^1.17.3'
+          go-version: "^1.17.3"
 
       - name: Setup Node.js environment
         uses: actions/setup-node@v2.1.2
