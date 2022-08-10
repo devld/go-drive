@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => ({
     minifyHtml(),
     vueI18n({
       include: path.resolve(__dirname, './src/i18n/lang/**'),
+      runtimeOnly: false,
     }),
   ],
   resolve: {
