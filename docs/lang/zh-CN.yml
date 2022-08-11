@@ -210,13 +210,17 @@ drive:
         description: ""
       port:
         label: 端口号
-        description: ""
+        description: "默认为 22"
       user:
         label: 用户
         description: 用户名
       password:
         label: 密码
-        description: 密码
+        description: 用于登录认证的密码，密码和私钥必须任选其一
+      priv_key:
+        label: 私钥
+        description: | 
+          用于登录认证的私钥，如 -----BEGIN RSA PRIVATE KEY-----，暂不支持加密的私钥，私钥和密码必须任选其一
       host_key:
         label: HostKey
         description: 用于主机身份校验(可选)

@@ -210,13 +210,17 @@ drive:
         description: ""
       port:
         label: Port
-        description: ""
+        description: "Default is 22"
       user:
         label: User
         description: User name
       password:
         label: Password
-        description: User password
+        description: Password for login authentication, password and private key must be either
+      priv_key:
+        label: Private Key
+        description: | 
+          The private key used for login authentication, such as -----BEGIN RSA PRIVATE KEY-----, encrypted private key is not supported for now, the private key and password must be either one of them
       host_key:
         label: HostKey
         description: The host key for verifying the server's identity(optional)

@@ -30,10 +30,11 @@ func init() {
 		README:      t("readme"),
 		ConfigForm: []types.FormItem{
 			{Label: t("form.host.label"), Type: "text", Field: "host", Required: true, Description: t("form.host.description")},
-			{Label: t("form.port.label"), Type: "text", Field: "port", Required: true, Description: t("form.port.description"), DefaultValue: "22"},
+			{Label: t("form.port.label"), Type: "text", Field: "port", Description: t("form.port.description"), DefaultValue: "22"},
 			{Label: t("form.user.label"), Type: "text", Field: "user", Required: true, Description: t("form.user.description")},
-			{Label: t("form.password.label"), Type: "textarea", Field: "password", Required: true, Secret: "-------HIDDEN-------", Description: t("form.password.description")},
-			{Label: t("form.host_key.label"), Type: "text", Field: "host_key", Description: t("form.host_key.description")},
+			{Label: t("form.password.label"), Type: "password", Field: "password", Secret: "-------HIDDEN-------", Description: t("form.password.description")},
+			{Label: t("form.priv_key.label"), Type: "textarea", Field: "priv_key", Secret: "-------HIDDEN-------", Description: t("form.priv_key.description")},
+			{Label: t("form.host_key.label"), Type: "textarea", Field: "host_key", Description: t("form.host_key.description")},
 			{Label: t("form.root_path.label"), Type: "text", Field: "root_path", Description: t("form.root_path.description")},
 			{Label: t("form.cache_ttl.label"), Type: "text", Field: "cache_ttl", Description: t("form.cache_ttl.description")},
 		},
@@ -41,23 +42,55 @@ func init() {
 	})
 }
 
+func createAuthMethods(config types.SM) ([]ssh.AuthMethod, error) {
+	auth := make([]ssh.AuthMethod, 0, 2)
+
+	privKeyStr := config["priv_key"]
+	if privKeyStr != "" {
+		privKey := []byte(privKeyStr)
+		s, e := ssh.ParsePrivateKey(privKey)
+		if e != nil {
+			return nil, e
+		}
+		auth = append(auth, ssh.PublicKeys(s))
+	}
+
+	passwordStr := config["password"]
+	if passwordStr != "" {
+		auth = append(auth, ssh.Password(passwordStr))
+	}
+	return auth, nil
+}
+
 func NewDrive(_ context.Context, config types.SM, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
 	cacheTTL := config.GetDuration("cache_ttl", -1)
 	hostKey := config["host_key"]
-	rootPath := path2.Clean(config["root_path"])
+	rootPath := config["root_path"]
+	if rootPath == "" {
+		rootPath = "/"
+	}
+	host := config["host"]
+	port := config["port"]
+	if port == "" {
+		port = "22"
+	}
+
 	if !strings.HasPrefix(rootPath, "/") {
 		return nil, errors.New(t("invalid_root_path"))
+	}
+
+	auth, e := createAuthMethods(config)
+	if e != nil {
+		return nil, e
 	}
 
 	s := &Drive{
 		cacheTTL: cacheTTL,
 		rootPath: rootPath,
-		addr:     fmt.Sprintf("%s:%s", config["host"], config["port"]),
+		addr:     fmt.Sprintf("%s:%s", host, port),
 		sshConfig: &ssh.ClientConfig{
 			User: config["user"],
-			Auth: []ssh.AuthMethod{
-				ssh.Password(config["password"]),
-			},
+			Auth: auth,
 			HostKeyCallback: ssh.HostKeyCallback(func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 				if hostKey == "" {
 					return nil
@@ -76,7 +109,7 @@ func NewDrive(_ context.Context, config types.SM, driveUtils drive_util.DriveUti
 		s.cache = driveUtils.CreateCache(s.deserializeEntry, nil)
 	}
 
-	_, e := s.getClient()
+	_, e = s.getClient()
 	if e != nil {
 		return nil, e
 	}
