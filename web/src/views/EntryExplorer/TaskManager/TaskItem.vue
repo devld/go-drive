@@ -22,6 +22,7 @@
       <EntryLink
         :path="dir"
         :get-link="getLink"
+        :title="dir"
         @click="emit('navigate', $event)"
       >
         {{ filenameFn(dir) }}

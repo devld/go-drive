@@ -67,7 +67,6 @@ const props = defineProps({
   },
   lockScroll: {
     type: Boolean,
-    default: true,
   },
 })
 
@@ -139,7 +138,7 @@ watchEffect(() => {
     setupEvents()
   } else {
     contentShowing.value = false
-    if (!props.transition) {
+    if (props.transition === 'none') {
       overlayShowing.value = false
     }
     removeEvents()

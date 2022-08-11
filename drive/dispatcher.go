@@ -4,7 +4,7 @@ import (
 	"context"
 	"go-drive/common"
 	"go-drive/common/drive_util"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -162,6 +162,9 @@ func (d *DispatcherDrive) Save(ctx types.TaskCtx, path string, size int64,
 	if e != nil {
 		return nil, e
 	}
+	if e := d.ensureDir(ctx, drive, utils.PathParent(realPath)); e != nil {
+		return nil, e
+	}
 	save, e := drive.Save(ctx, realPath, size, override, reader)
 	if e != nil {
 		return nil, e
@@ -169,9 +172,37 @@ func (d *DispatcherDrive) Save(ctx types.TaskCtx, path string, size int64,
 	return d.mapDriveEntry(path, save), nil
 }
 
+func (d *DispatcherDrive) ensureDir(ctx context.Context, drive types.IDrive, path string) error {
+	path = utils.CleanPath(path)
+	if utils.IsRootPath(path) {
+		return nil
+	}
+	segments := strings.Split(path, "/")
+	path = ""
+	for _, s := range segments {
+		path = path2.Join(path, s)
+		_, e := drive.Get(ctx, path)
+		if e == nil {
+			continue
+		}
+		if err.IsNotFoundError(e) {
+			_, e := drive.MakeDir(ctx, path)
+			if e != nil {
+				return e
+			}
+		} else {
+			return e
+		}
+	}
+	return nil
+}
+
 func (d *DispatcherDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
 	drive, realPath, e := d.resolve(path)
 	if e != nil {
+		return nil, e
+	}
+	if e := d.ensureDir(ctx, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
 	dir, e := drive.MakeDir(ctx, realPath)

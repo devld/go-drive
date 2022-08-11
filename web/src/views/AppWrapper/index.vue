@@ -44,7 +44,7 @@
       v-model:show="loginDialogShowing"
       overlay-close
       esc-close
-      transition="flip-fade"
+      transition="scale-opacity"
       :title="$t('app.login')"
     >
       <LoginView @success="afterLogin" />

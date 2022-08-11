@@ -60,6 +60,12 @@ export function formatPercent(n: number, based?: number) {
   return (n * 100).toFixed(1) + '%'
 }
 
+export function isParentPath(path: string, parent: string) {
+  if (isRootPath(path)) return false
+  if (isRootPath(parent)) return true
+  return path.startsWith(`${parent}/`)
+}
+
 export function dir(path: string) {
   if (!path) return ''
   const i = path.lastIndexOf('/')
@@ -232,7 +238,7 @@ export function waitPromise<T = any>(fn: Fnn) {
   }
 }
 
-export const IDENTICAL = (e: any, _i: number, _a: Readonly<any[]>) => e
+export const IDENTICAL = (e: any) => e
 
 export function mapOf<T, R = T>(
   list: Readonly<T[]>,

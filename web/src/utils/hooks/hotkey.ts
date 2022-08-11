@@ -12,6 +12,7 @@ interface HotKey_ {
 type HotKeyHTMLElement = HTMLElement & { _hotkey?: HotKey_ }
 
 function hotKeyHandler(this: HotKeyHTMLElement, e: KeyboardEvent) {
+  if (!e.key) return
   const target = e.target as HotKeyHTMLElement
   if (
     (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') &&

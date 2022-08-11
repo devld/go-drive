@@ -39,50 +39,14 @@ export function createDialog(name: string, component: any) {
         escClose: false,
         overlayClose: false,
 
-        _onClose: undefined as (() => void) | undefined,
-        _callback: undefined as
+        onClose_: undefined as (() => void) | undefined,
+        callback_: undefined as
           | { onOk?: (v?: any) => any; onCancel?: (v?: any) => any }
           | undefined,
-        _promise: undefined as
+        promise_: undefined as
           | { resolve: (v?: any) => any; reject: (v?: any) => any }
           | undefined,
       }
-    },
-    render() {
-      return h(
-        BaseDialog as any,
-        {
-          ref: 'bd',
-          showing: this.showing,
-          loading: this.loading,
-          title: this.title,
-          confirmText: this.confirmText,
-          confirmType: this.confirmType,
-          confirmDisabled: this.confirmDisabled,
-          cancelText: this.cancelText,
-          cancelType: this.cancelType,
-          transition: this.transition,
-          escClose: this.escClose,
-          overlayClose: this.overlayClose,
-          onClose: () => this.close(),
-          onClosed: () => this._onClose?.(),
-          onConfirm: () => this.onConfirmOrCancel(true),
-          onCancel: () => this.onConfirmOrCancel(false),
-        },
-        {
-          default: () =>
-            h(component, {
-              ref: 'inner',
-              loading: this.loading,
-              opts: this.opts,
-              onLoading: (v: string | boolean) => this.toggleLoading(v),
-              onConfirm: () => this.onConfirmOrCancel(true),
-              onCancel: () => this.onConfirmOrCancel(false),
-              onConfirmDisabled: (disabled: any) =>
-                (this.confirmDisabled = !!disabled),
-            }),
-        }
-      )
     },
     methods: {
       show(opts: BaseDialogOptions) {
@@ -101,14 +65,14 @@ export function createDialog(name: string, component: any) {
           typeof opts.onOk === 'function' ||
           typeof opts.onCancel === 'function'
         ) {
-          this._callback = { onOk: opts.onOk, onCancel: opts.onCancel }
+          this.callback_ = { onOk: opts.onOk, onCancel: opts.onCancel }
         }
 
         this.showing = true
 
-        if (!this._callback) {
+        if (!this.callback_) {
           return new Promise((resolve, reject) => {
-            this._promise = { resolve, reject }
+            this.promise_ = { resolve, reject }
           })
         }
       },
@@ -134,14 +98,14 @@ export function createDialog(name: string, component: any) {
           this.toggleLoading()
         }
 
-        if (this._callback) {
+        if (this.callback_) {
           t = setTimeout(() => this.toggleLoading(confirm), 0)
           try {
-            if (confirm && this._callback.onOk) {
-              await this._callback.onOk(val)
+            if (confirm && this.callback_.onOk) {
+              await this.callback_.onOk(val)
             }
-            if (!confirm && this._callback.onCancel) {
-              await this._callback.onCancel(val || 'cancel')
+            if (!confirm && this.callback_.onCancel) {
+              await this.callback_.onCancel(val || 'cancel')
             }
           } catch (e: any) {
             console.warn('dialog callback error', e)
@@ -153,9 +117,9 @@ export function createDialog(name: string, component: any) {
           this.close()
         }
 
-        if (this._promise) {
-          if (confirm) this._promise.resolve(val)
-          else this._promise.reject(val || 'cancel')
+        if (this.promise_) {
+          if (confirm) this.promise_.resolve(val)
+          else this.promise_.reject(val || 'cancel')
           this.close()
         }
       },
@@ -172,17 +136,53 @@ export function createDialog(name: string, component: any) {
       },
       close() {
         this.toggleLoading()
-        this._callback && this._callback.onCancel && this._callback.onCancel()
-        this._callback = undefined
+        this.callback_ && this.callback_.onCancel && this.callback_.onCancel()
+        this.callback_ = undefined
 
-        this._promise && this._promise.reject()
-        this._promise = undefined
+        this.promise_ && this.promise_.reject()
+        this.promise_ = undefined
 
         this.showing = false
       },
       onClose(fn: () => void) {
-        this._onClose = fn
+        this.onClose_ = fn
       },
+    },
+    render() {
+      return h(
+        BaseDialog as any,
+        {
+          ref: 'bd',
+          showing: this.showing,
+          loading: this.loading,
+          title: this.title,
+          confirmText: this.confirmText,
+          confirmType: this.confirmType,
+          confirmDisabled: this.confirmDisabled,
+          cancelText: this.cancelText,
+          cancelType: this.cancelType,
+          transition: this.transition,
+          escClose: this.escClose,
+          overlayClose: this.overlayClose,
+          onClose: () => this.close(),
+          onClosed: () => this.onClose_?.(),
+          onConfirm: () => this.onConfirmOrCancel(true),
+          onCancel: () => this.onConfirmOrCancel(false),
+        },
+        {
+          default: () =>
+            h(component, {
+              ref: 'inner',
+              loading: this.loading,
+              opts: this.opts,
+              onLoading: (v: string | boolean) => this.toggleLoading(v),
+              onConfirm: () => this.onConfirmOrCancel(true),
+              onCancel: () => this.onConfirmOrCancel(false),
+              onConfirmDisabled: (disabled: any) =>
+                (this.confirmDisabled = !!disabled),
+            }),
+        }
+      )
     },
     _base_dialog: true,
   })
