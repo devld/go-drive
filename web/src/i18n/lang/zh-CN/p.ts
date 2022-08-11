@@ -133,8 +133,6 @@ export default {
     s_completed: '已完成',
   },
   home: {
-    file_exists: "'{n}' 已存在，覆盖还是跳过？",
-    apply_all: '记住选择',
     readme_loading: '加载 README...',
     readme_failed: '加载 README 失败',
     unsaved_confirm: '尚未保存，确认离开？',
@@ -151,9 +149,9 @@ export default {
     invalid_folder_name: '无效的文件夹名称',
     confirm_stop_task: '确认停止该任务？',
     confirm_remove_task: '确认移除该任务，不可恢复？',
-    file_exists: '文件已存在',
-    skip: '跳过',
-    override: '覆盖',
+    resolve_file: '{n} 个文件/文件夹...',
+    override_confirm: '已存在时是否覆盖？',
+    upload_clipboard: '上传来自剪贴板的文件？',
   },
   login: {
     username: '用户名',

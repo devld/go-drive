@@ -27,9 +27,15 @@
       <span class="icon-new-item" :class="{ active: floatMenuShowing }">
         <Icon svg="#icon-add1" />
       </span>
-      <template #new-file><Icon svg="#icon-new-file" /></template>
-      <template #upload-file><Icon svg="#icon-upload-file" /></template>
-      <template #new-folder><Icon svg="#icon-new-folder" /></template>
+      <template #new-file>
+        <Icon svg="#icon-new-file" />
+      </template>
+      <template #upload-file>
+        <Icon svg="#icon-upload-file" />
+      </template>
+      <template #new-folder>
+        <Icon svg="#icon-new-folder" />
+      </template>
     </FloatButton>
 
     <DialogView
@@ -79,36 +85,26 @@
   </div>
 </template>
 <script setup lang="ts">
-import TaskManager from './TaskManager/index.vue'
 import { makeDir } from '@/api'
-import { dir, pathClean, pathJoin } from '@/utils'
 import { UploadManager, UploadMangerEvents } from '@/api/upload-manager'
-import { UploadTaskItem, STATUS_COMPLETED } from '@/api/upload-manager/task'
-import { createDialog } from '@/utils/ui-utils/base-dialog'
-import FileExistsDialogInner from './FileExistsConfirmDialog.vue'
-import { alert, confirm, dialog, input } from '@/utils/ui-utils'
+import { STATUS_COMPLETED, UploadTaskItem } from '@/api/upload-manager/task'
+import { FloatButtonItem } from '@/components/FloatButton'
+import { Entry } from '@/types'
+import { dir, isParentPath, pathClean, pathJoin } from '@/utils'
+import {
+  getDataTransferFiles,
+  getFileEntries,
+  isDataTransferHasFiles,
+  ResolvedEntry,
+  resolveEntries,
+  wrapFile,
+} from '@/utils/file'
+import { alert, confirm, input, loading } from '@/utils/ui-utils'
 import { onBeforeMount, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Entry } from '@/types'
-import { FloatButtonItem } from '@/components/FloatButton'
-
-const FileExistsDialog = createDialog('FileExistsDialog', FileExistsDialogInner)
+import TaskManager from './TaskManager/index.vue'
 
 const uploadManager = new UploadManager({ concurrent: 3 })
-
-function getFiles(dataTransfer: DataTransfer) {
-  if (!dataTransfer || !dataTransfer.items) return
-  const files = []
-  for (let i = 0; i < dataTransfer.items.length; i++) {
-    const f = dataTransfer.items[i]
-    if (typeof f.webkitGetAsEntry === 'function') {
-      const entry = f.webkitGetAsEntry()
-      if (!entry || !entry.isFile) continue
-    }
-    files.push(f.getAsFile()!)
-  }
-  return files.length === 0 ? undefined : files
-}
 
 const { t } = useI18n()
 
@@ -140,40 +136,65 @@ const dropZoneActive = ref(false)
 
 const fileEl = ref<HTMLInputElement | null>(null)
 
-const onItemsDropped = (e: DragEvent) => {
-  toggleDropZoneActive(false)
-  e.preventDefault()
-  const files = getFiles(e.dataTransfer!)
-  if (files) {
-    submitUploadTasks(files)
-  }
-}
-
 const onFilesChosen = () => {
   const files = Array.from(fileEl.value!.files!)
   fileEl.value!.value = ''
-  submitUploadTasks(files)
+  submitUploadTasks(files.map(wrapFile))
 }
 
-const submitUploadTasks = async (files: File[]) => {
-  if (!files.length) return
-  let applyAll, override
-  for (const file of files) {
-    if (props.entries?.find((e) => e.name === file.name)) {
-      if (!applyAll) {
-        const { override: override_, all } = await confirmFileExists(file)
-        applyAll = all
-        override = override_
-      }
-    }
-    if (override === false) continue
+const submitUploadTasks = async (files: ResolvedEntry[]) => {
+  const flattenFiles = getFileEntries(files)
+  if (!flattenFiles.length) return
+
+  let override = true
+  try {
+    await confirm({
+      message: t('p.new_entry.override_confirm'),
+      confirmType: 'danger',
+    })
+  } catch {
+    override = false
+  }
+
+  for (const file of flattenFiles) {
     uploadManager.submitTask({
-      path: pathClean(pathJoin(props.path, file.name)),
-      file,
+      path: pathClean(pathJoin(props.path, file.path)),
+      file: file.file,
       override,
     })
   }
   showTaskManager()
+}
+
+const handleDataTransfer = async (
+  dt: DataTransfer,
+  before?: () => Promise<void>
+) => {
+  try {
+    const files = getDataTransferFiles(dt)
+
+    await before?.()
+
+    loading(true)
+    let p: Promise<void> = Promise.resolve()
+
+    const entries = await resolveEntries(files, (total) => {
+      loading({
+        text: t('p.new_entry.resolve_file', { n: total }),
+        cancelType: 'warning',
+        onCancel: () => {
+          p = Promise.reject()
+        },
+      })
+      return p
+    })
+
+    submitUploadTasks(entries)
+  } catch {
+    // ignore
+  } finally {
+    loading()
+  }
 }
 
 const uploadFile = () => {
@@ -236,7 +257,11 @@ const onTasksChanged = ({
   tasks.value = tasks_
   updateTasksSummary()
   if (task?.status === STATUS_COMPLETED) {
-    if (props.path === dir(task.task.path)) {
+    if (
+      props.path === dir(task.task.path) ||
+      (isParentPath(task.task.path, props.path) &&
+        !props.entries?.find((e) => isParentPath(task.task.path, e.path)))
+    ) {
       emit('update')
     }
   }
@@ -278,24 +303,6 @@ const updateTasksSummary = () => {
   uploadStatus.value = { completed, total: tasks.value.length }
 }
 
-const confirmFileExists = async (file: File) => {
-  try {
-    const all = (
-      await dialog(FileExistsDialog, {
-        title: t('p.new_entry.file_exists'),
-        confirmText: t('p.new_entry.skip'),
-        cancelText: t('p.new_entry.override'),
-        cancelType: 'danger',
-        filename: file.name,
-      })
-    ).all
-    return { all, override: false }
-  } catch (e: any) {
-    if (!e) return { all: false, override: false }
-    return { all: e.all, override: true }
-  }
-}
-
 const newButtonClicked = ({ button }: { button: FloatButtonItem }) => {
   ;((
     {
@@ -330,6 +337,10 @@ let dragLeaveTimeout: number
 
 const onDragEnter = (e: DragEvent) => {
   if (props.readonly) return
+
+  if (!e.dataTransfer) return
+  if (!isDataTransferHasFiles(e.dataTransfer)) return
+
   e.preventDefault()
   clearTimeout(dragLeaveTimeout)
   toggleDropZoneActive(true)
@@ -343,6 +354,24 @@ const onDragLeave = (e: DragEvent) => {
   }, 100) as unknown as number
 }
 
+const onItemsDropped = (e: DragEvent) => {
+  toggleDropZoneActive(false)
+  if (e.dataTransfer) {
+    e.preventDefault()
+    handleDataTransfer(e.dataTransfer)
+  }
+}
+
+const onPaste = (e: ClipboardEvent) => {
+  if (!e.clipboardData) return
+  if (!isDataTransferHasFiles(e.clipboardData)) return
+  e.preventDefault()
+
+  handleDataTransfer(e.clipboardData, () =>
+    confirm(t('p.new_entry.upload_clipboard'))
+  )
+}
+
 const toggleDropZoneActive = (active: boolean) => {
   dropZoneActive.value = active
 }
@@ -354,6 +383,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('dragover', onDragEnter)
   window.removeEventListener('dragleave', onDragLeave)
   window.removeEventListener('drop', onItemsDropped)
+
+  document.removeEventListener('paste', onPaste)
 })
 
 onBeforeMount(() => {
@@ -366,6 +397,8 @@ onBeforeMount(() => {
   window.addEventListener('dragover', onDragEnter)
   window.addEventListener('dragleave', onDragLeave)
   window.addEventListener('drop', onItemsDropped)
+
+  document.addEventListener('paste', onPaste)
 })
 </script>
 <style lang="scss">
@@ -466,6 +499,7 @@ onBeforeMount(() => {
     bottom: 0;
     opacity: 0;
   }
+
   to {
     right: 50vw;
     bottom: 50vh;

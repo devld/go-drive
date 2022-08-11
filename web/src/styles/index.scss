@@ -194,16 +194,6 @@ svg {
   }
 }
 
-@keyframes text-spacing {
-  from {
-    letter-spacing: 0;
-  }
-
-  to {
-    letter-spacing: 1em;
-  }
-}
-
 @keyframes spinning {
   from {
     transform: rotate(0);
@@ -459,21 +449,22 @@ svg {
   animation: scale-fade-in 0.3s reverse;
 }
 
-@keyframes flip-fade-in {
+@keyframes scale-opacity-in {
   from {
     opacity: 0;
-    transform: perspective(100px) translateY(-154px) rotateX(20deg);
+    transform: scale(1.1);
   }
 
   to {
     opacity: 1;
+    transform: scale(1);
   }
 }
 
-.flip-fade-enter-active {
-  animation: flip-fade-in 0.3s cubic-bezier(0, 0.01, 0.77, 1.79);
+.scale-opacity-enter-active {
+  animation: scale-opacity-in 0.3s;
 }
 
-.flip-fade-leave-active {
-  animation: flip-fade-in 0.3s reverse;
+.scale-opacity-leave-active {
+  animation: scale-opacity-in 0.3s reverse;
 }

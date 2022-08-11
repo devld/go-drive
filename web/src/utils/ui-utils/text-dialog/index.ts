@@ -14,7 +14,7 @@ export function showAlertDialog(opts: TextDialogOptions | I18nText) {
   }
   return showBaseDialog<void>(TextDialog, {
     ...opts,
-    transition: opts.transition || 'flip-fade',
+    transition: opts.transition || 'scale-opacity',
   })
 }
 
@@ -24,7 +24,7 @@ export function showConfirmDialog(opts: TextDialogOptions | I18nText) {
   }
   return showBaseDialog<void>(TextDialog, {
     ...opts,
-    transition: opts.transition || 'flip-fade',
+    transition: opts.transition || 'scale-opacity',
     confirmText: opts.confirmText || T('dialog.text.yes'),
     cancelText: opts.cancelText || T('dialog.text.no'),
   })
