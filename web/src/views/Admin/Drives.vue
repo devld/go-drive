@@ -360,6 +360,7 @@ loadDrives()
   }
 
   .drives-list {
+    flex-shrink: 0;
     padding: 16px;
   }
 

@@ -39,7 +39,7 @@ const currentMenu = computed(() => router.currentRoute.value.path)
 </script>
 <style lang="scss">
 .admin-page {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 16px auto 0;
   background-color: var(--primary-bg-color);
   border-radius: 16px;
