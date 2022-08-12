@@ -164,7 +164,9 @@ onBeforeUnmount(() => {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  height: 100%;
+  min-height: -webkit-fill-available;
+  max-height: -webkit-fill-available;
   overflow: hidden;
   background-color: var(--dialog-overlay-bg-color);
   z-index: 1000;
