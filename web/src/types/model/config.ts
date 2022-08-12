@@ -16,7 +16,7 @@ export interface VersionConfig {
 export interface Config {
   version: VersionConfig
   thumbnail: ThumbnailConfig
-  options: O<string>
+  options: O
 
   search?: SearchConfig
 }

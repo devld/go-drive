@@ -93,5 +93,6 @@ defineExpose({ show, hide })
   width: 10vw;
   height: 10vw;
   animation: spinning 1s linear infinite;
+  color: var(--secondary-text-color);
 }
 </style>

@@ -14,6 +14,12 @@ export default {
       office_preview_enabled: 'Office 预览',
       office_preview_enabled_desc:
         '通过微软和谷歌提供的在线服务来预览 Office 文件',
+      text_file_exts: '文本文件后缀名',
+      text_file_exts_desc: '支持查看和编辑的文本文件后缀名列表，用英文逗号隔开',
+      image_file_exts: '图片文件后缀名',
+      image_file_exts_desc: '支持查看的图片文件后缀名列表，用英文逗号隔开',
+      media_file_exts: '媒体文件后缀名',
+      media_file_exts_desc: '支持查看的媒体文件后缀名列表，用英文逗号隔开',
       save: '保存',
     },
     drive: {

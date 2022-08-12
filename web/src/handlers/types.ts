@@ -53,7 +53,7 @@ export interface EntryHandlerView {
 export interface EntryHandlerContext {
   user?: User
   config: Config
-  options: O<string>
+  options: O
 }
 
 export interface EntryHandlerSupportsParams<A = Entry | Entry[]> {
