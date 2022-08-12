@@ -69,7 +69,7 @@ export const useEntryExplorer = (
     const dir = resolvePath(route)
     const handler = getHandler(getRouteQuery(route.query, queryHandler) ?? '')
     const entryName = getRouteQuery(route.query, queryEntry)
-    if (!dir || !handler || !entryName) return
+    if (dir === undefined || !handler || !entryName) return
     return { dir, handler, entryName }
   }
 
