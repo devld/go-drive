@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+var EmptySearchResult = types.EntrySearchResult{Next: -1}
+
 var searcherRegistry = make(map[string]SearcherFactory)
 
 func RegisterSearcher(name string, factory SearcherFactory) {

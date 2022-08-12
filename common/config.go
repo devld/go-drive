@@ -28,6 +28,11 @@ var (
 )
 
 const (
+	HeaderAuth        = "Authorization"
+	SignatureQueryKey = "_k"
+)
+
+const (
 	DbFilename = "data.db"
 	LocalFsDir = "local"
 
