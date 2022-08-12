@@ -2,9 +2,8 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"go-drive/common/drive_util"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/event"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
@@ -17,6 +16,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 func InitAdminRoutes(
@@ -499,7 +500,7 @@ type statItem struct {
 	Data types.SM `json:"data"`
 }
 
-var driveNamePattern = regexp.MustCompile("^[^/\\\\0:*\"<>|]+$")
+var driveNamePattern = regexp.MustCompile("^[^/\\\x00:*\"<>|]+$")
 
 func checkDriveName(name string) error {
 	if name == "" || name == "." || name == ".." || !driveNamePattern.MatchString(name) {
