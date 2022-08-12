@@ -1,9 +1,8 @@
 import { wrapAsyncComponent } from '@/components/async'
+import { DEFAULT_TEXT_FILE_EXTS, TEXT_EDITOR_MAX_FILE_SIZE } from '@/config'
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
-
-const TEXT_EDITOR_MAX_FILE_SIZE = 128 * 1024 // 128kb
 
 export default {
   name: 'editor',
@@ -24,31 +23,10 @@ export default {
     name: 'TextEditView',
     component: wrapAsyncComponent(() => import('./TextEditView.vue')),
   },
-  supports: ({ entry }) =>
+  supports: ({ entry }, { options }) =>
     entry.type === 'file' &&
-    [
-      'txt',
-      'md',
-      'xml',
-      'html',
-      'css',
-      'scss',
-      'js',
-      'json',
-      'jsx',
-      'ts',
-      'properties',
-      'yml',
-      'yaml',
-      'ini',
-      'c',
-      'h',
-      'cpp',
-      'go',
-      'java',
-      'kt',
-      'gradle',
-      'ps1',
-    ].includes(filenameExt(entry.name)) &&
+    (options['web.textFileExts'] || DEFAULT_TEXT_FILE_EXTS).includes(
+      filenameExt(entry.name)
+    ) &&
     entry.size <= TEXT_EDITOR_MAX_FILE_SIZE,
 } as EntryHandler

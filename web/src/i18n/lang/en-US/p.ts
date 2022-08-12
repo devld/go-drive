@@ -14,6 +14,15 @@ export default {
       office_preview_enabled: 'Office Preview',
       office_preview_enabled_desc:
         'Enable office files preview via online services provided by Microsoft and Google',
+      text_file_exts: 'Text file extensions',
+      text_file_exts_desc:
+        'List of text file extensions supported for viewing and editing, separated by comma',
+      image_file_exts: 'Image file extensions',
+      image_file_exts_desc:
+        'List of supported image file extensions, separated by comma',
+      media_file_exts: 'Media file extensions',
+      media_file_exts_desc:
+        'List of supported media file extensions, separated by comma',
       save: 'Save',
     },
     drive: {

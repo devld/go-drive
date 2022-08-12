@@ -1,4 +1,5 @@
 import { wrapAsyncComponent } from '@/components/async'
+import { DEFAULT_IMAGE_FILE_EXTS } from '@/config'
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
@@ -14,7 +15,9 @@ export default {
     name: 'ImageView',
     component: wrapAsyncComponent(() => import('./ImageView.vue')),
   },
-  supports: ({ entry }) =>
+  supports: ({ entry }, { options }) =>
     entry.type === 'file' &&
-    ['jpg', 'jpeg', 'png', 'gif'].includes(filenameExt(entry.name)),
+    (options['web.imageFileExts'] || DEFAULT_IMAGE_FILE_EXTS).includes(
+      filenameExt(entry.name)
+    ),
 } as EntryHandler

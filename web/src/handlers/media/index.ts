@@ -1,3 +1,4 @@
+import { DEFAULT_MEDIA_FILE_EXTS } from '@/config'
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
@@ -14,7 +15,9 @@ export default {
     name: 'MediaView',
     component: MediaView,
   },
-  supports: ({ entry }) =>
+  supports: ({ entry }, { options }) =>
     entry.type === 'file' &&
-    ['mp4', 'mp3', 'm4a', 'ogg'].includes(filenameExt(entry.name)),
+    (options['web.mediaFileExts'] || DEFAULT_MEDIA_FILE_EXTS).includes(
+      filenameExt(entry.name)
+    ),
 } as EntryHandler

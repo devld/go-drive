@@ -1,9 +1,33 @@
 import { getConfig, getUser } from '@/api'
 import { Config, User } from '@/types'
-import { isAdmin } from '@/utils'
+import { isAdmin, mapOf } from '@/utils'
 import { createPinia, defineStore } from 'pinia'
 
-const configOptions = ['web.officePreviewEnabled']
+const stringList = (v?: string) => {
+  v = v?.trim()
+  if (!v) return
+  const l = Object.freeze((v || '').split(',').map((e) => e.trim()))
+  return l.length === 0 ? undefined : l
+}
+
+const configOptions = mapOf(
+  [
+    { key: 'web.officePreviewEnabled', process: (v?: string) => !!v },
+    {
+      key: 'web.textFileExts',
+      process: stringList,
+    },
+    {
+      key: 'web.imageFileExts',
+      process: stringList,
+    },
+    {
+      key: 'web.mediaFileExts',
+      process: stringList,
+    },
+  ],
+  (e) => e.key
+)
 
 interface AppState {
   user?: User
@@ -48,7 +72,13 @@ export const useAppStore = defineStore('app', {
       return user
     },
     async getConfig() {
-      const config = Object.freeze(await getConfig(configOptions))
+      const config = Object.freeze(await getConfig(Object.keys(configOptions)))
+      Object.keys(config.options).forEach((key) => {
+        if (configOptions[key]) {
+          config.options[key] = configOptions[key].process(config.options[key])
+        }
+      })
+      Object.freeze(config.options)
       this.config = config
       return config
     },

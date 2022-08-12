@@ -18,7 +18,7 @@ export interface FormItemOption {
   disabled?: boolean
 }
 
-export interface BaseFormItem {
+export interface BaseFormItem extends O {
   label?: I18nText
   type?: FormItemType
   field?: string
