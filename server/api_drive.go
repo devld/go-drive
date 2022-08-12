@@ -101,13 +101,32 @@ type driveRoute struct {
 	options *storage.OptionsDAO
 }
 
-func (dr *driveRoute) getDrive(c *gin.Context) types.IDrive {
-	return dr.access.GetDrive(c.Request, GetSession(c))
+func (dr *driveRoute) getChroot(c *gin.Context) (*drive.Chroot, error) {
+	// make chroot
+	return nil, nil
+}
+
+func (dr *driveRoute) getDrive(c *gin.Context) (types.IDrive, error) {
+	d := dr.access.GetDrive(c.Request, GetSession(c))
+
+	chroot, e := dr.getChroot(c)
+	if e != nil {
+		return nil, e
+	}
+	if chroot != nil {
+		d = drive.NewChrootWrapper(d, chroot)
+	}
+
+	return d, nil
 }
 
 func (dr *driveRoute) list(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	d := dr.getDrive(c)
+	d, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 
 	entry, e := d.Get(c.Request.Context(), path)
 	if e != nil {
@@ -129,7 +148,12 @@ func (dr *driveRoute) list(c *gin.Context) {
 
 func (dr *driveRoute) get(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	entry, e := dr.getDrive(c).Get(c.Request.Context(), path)
+	d, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	entry, e := d.Get(c.Request.Context(), path)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -139,7 +163,12 @@ func (dr *driveRoute) get(c *gin.Context) {
 
 func (dr *driveRoute) makeDir(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	entry, e := dr.getDrive(c).MakeDir(c.Request.Context(), path)
+	d, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	entry, e := d.MakeDir(c.Request.Context(), path)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -148,7 +177,11 @@ func (dr *driveRoute) makeDir(c *gin.Context) {
 }
 
 func (dr *driveRoute) copyEntry(c *gin.Context) {
-	drive_ := dr.getDrive(c)
+	drive_, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	from := utils.CleanPath(c.Query("from"))
 	fromEntry, e := drive_.Get(c.Request.Context(), from)
 	if e != nil {
@@ -177,7 +210,11 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 }
 
 func (dr *driveRoute) move(c *gin.Context) {
-	drive_ := dr.getDrive(c)
+	drive_, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	from := utils.CleanPath(c.Query("from"))
 	fromEntry, e := drive_.Get(c.Request.Context(), from)
 	if e != nil {
@@ -217,8 +254,13 @@ func checkCopyOrMove(from, to string) error {
 
 func (dr *driveRoute) deleteEntry(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
+	d, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
-		return nil, dr.getDrive(c).Delete(ctx, path)
+		return nil, d.Delete(ctx, path)
 	}, 2*time.Second, task.WithNameGroup(path, "drive/delete"))
 	if e != nil {
 		_ = c.Error(e)
@@ -236,7 +278,12 @@ func (dr *driveRoute) upload(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	config, e := dr.getDrive(c).Upload(c.Request.Context(), path, size, override != "", request)
+	d, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	config, e := d.Upload(c.Request.Context(), path, size, override != "", request)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -248,7 +295,12 @@ func (dr *driveRoute) upload(c *gin.Context) {
 
 func (dr *driveRoute) getContent(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	file, e := dr.getDrive(c).Get(c.Request.Context(), path)
+	d, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	file, e := d.Get(c.Request.Context(), path)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -271,11 +323,12 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 
 func (dr *driveRoute) getThumbnail(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	if !utils.CheckSignature(dr.signer, c.Request, path) {
-		_ = c.Error(err.NewNotFoundError())
+	d, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
 		return
 	}
-	entry, e := dr.getDrive(c).Get(c.Request.Context(), path)
+	entry, e := d.Get(c.Request.Context(), path)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -299,6 +352,11 @@ func (dr *driveRoute) getThumbnail(c *gin.Context) {
 
 func (dr *driveRoute) writeContent(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
+	d, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	override := c.Query("override")
 	size := utils.ToInt64(c.GetHeader("Content-Length"), -1)
 	defer func() { _ = c.Request.Body.Close() }()
@@ -326,7 +384,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 			_ = tempFile.Close()
 			_ = os.Remove(tempFile.Name())
 		}()
-		return dr.getDrive(c).Save(ctx, path, size, override != "", tempFile)
+		return d.Save(ctx, path, size, override != "", tempFile)
 	}, 2*time.Second, task.WithNameGroup(path, "drive/write"))
 	if e != nil {
 		_ = c.Error(e)
@@ -363,6 +421,11 @@ func (dr *driveRoute) chunkUpload(c *gin.Context) {
 }
 
 func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
+	d, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	path := utils.CleanPath(c.Param("path"))
 	id := c.Query("id")
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
@@ -377,13 +440,13 @@ func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 		}
 		ctx.Progress(0, true)
 		tempFile := utils.NewTempFile(file)
-		entry, e := dr.getDrive(c).Save(ctx, path, stat.Size(), true, tempFile)
+		entry, e := d.Save(ctx, path, stat.Size(), true, tempFile)
 		if e != nil {
 			_ = tempFile.Close()
 			return nil, e
 		}
 		_ = tempFile.Close()
-		e = dr.chunkUploader.DeleteUpload(id)
+		_ = dr.chunkUploader.DeleteUpload(id)
 		return newEntryJson(entry), nil
 	}, 2*time.Second, task.WithNameGroup(path, "drive/chunk-merge"))
 	if e != nil {
@@ -405,6 +468,24 @@ func (dr *driveRoute) search(c *gin.Context) {
 	query := c.Query("q")
 	next := utils.ToInt(c.Query("next"), 0)
 
+	chroot, e := dr.getChroot(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	if chroot != nil {
+		var e error
+		root, e = chroot.WrapPath(root)
+		if e != nil {
+			if err.IsNotFoundError(e) {
+				SetResult(c, search.EmptySearchResult)
+				return
+			}
+			_ = c.Error(e)
+			return
+		}
+	}
+
 	r, e := dr.searcher.Search(
 		c.Request.Context(), root, query, next,
 		dr.access.GetPerms().Filter(GetSession(c)),
@@ -413,6 +494,14 @@ func (dr *driveRoute) search(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
+
+	if chroot != nil {
+		for i := range r.Items {
+			item := &r.Items[i]
+			item.Entry.Path = chroot.UnwrapPath(item.Entry.Path)
+		}
+	}
+
 	SetResult(c, r)
 }
 

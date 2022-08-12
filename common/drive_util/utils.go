@@ -2,6 +2,7 @@ package drive_util
 
 import (
 	"context"
+	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
@@ -126,6 +127,7 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 				r.Header.Del("Origin")
 				r.Header.Del("Referer")
 				r.Header.Del("Authorization")
+				r.Header.Del(common.HeaderAuth)
 				r.Header.Del("Cookie")
 				if u.Header != nil {
 					for k, v := range u.Header {
@@ -363,10 +365,8 @@ func GetURL(ctx context.Context, u string, header types.SM) (io.ReadCloser, erro
 	if e != nil {
 		return nil, e
 	}
-	if header != nil {
-		for k, v := range header {
-			req.Header.Set(k, v)
-		}
+	for k, v := range header {
+		req.Header.Set(k, v)
 	}
 	resp, e := http.DefaultClient.Do(req)
 	if e != nil {
