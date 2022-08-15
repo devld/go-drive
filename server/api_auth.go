@@ -1,8 +1,9 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
 	"go-drive/common/types"
+
+	"github.com/gin-gonic/gin"
 )
 
 func InitAuthRoutes(r gin.IRouter, ua *UserAuth, tokenStore types.TokenStore) error {
@@ -60,6 +61,7 @@ func (a *authRoute) getUser(c *gin.Context) {
 	if !s.IsAnonymous() {
 		u := s.User
 		u.Password = ""
+		u.RootPath = ""
 		SetResult(c, u)
 	}
 }

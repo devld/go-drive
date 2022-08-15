@@ -24,7 +24,8 @@ import (
 )
 
 const (
-	maxProxySizeKey = "proxy.maxSize"
+	maxProxySizeKey      = "proxy.maxSize"
+	anonymousRootPathKey = "anonymous.rootPath"
 )
 
 func InitDriveRoutes(
@@ -102,8 +103,21 @@ type driveRoute struct {
 }
 
 func (dr *driveRoute) getChroot(c *gin.Context) (*drive.Chroot, error) {
-	// make chroot
-	return nil, nil
+	s := GetSession(c)
+	rootPath := ""
+	if s.IsAnonymous() {
+		p, e := dr.options.Get(anonymousRootPathKey)
+		if e != nil {
+			return nil, e
+		}
+		rootPath = p
+	} else {
+		rootPath = s.User.RootPath
+	}
+	if rootPath == "" {
+		return nil, nil
+	}
+	return drive.NewChroot(rootPath, nil), nil
 }
 
 func (dr *driveRoute) getDrive(c *gin.Context) (types.IDrive, error) {
