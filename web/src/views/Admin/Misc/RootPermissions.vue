@@ -7,7 +7,7 @@
         :disabled="!permissionsCanSave"
         @click="savePermissions"
       >
-        {{ $t('p.admin.misc.save') }}
+        {{ $t('p.admin.save') }}
       </SimpleButton>
     </h1>
     <PermissionsEditor

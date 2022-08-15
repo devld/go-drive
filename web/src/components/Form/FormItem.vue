@@ -13,74 +13,79 @@
         <Icon svg="#icon-help" />
       </a>
     </span>
-    <span v-if="helpShowing" class="description">
+    <span
+      v-if="item.description && (!item.label || helpShowing)"
+      class="description"
+    >
       {{ item.description }}
     </span>
-    <div v-if="slots.value" class="value">
-      <slot name="value" />
-    </div>
-    <textarea
-      v-if="item.type === 'textarea'"
-      class="value"
-      :name="item.field"
-      :value="modelValue"
-      :placeholder="s(item.placeholder)"
-      :required="item.required"
-      :disabled="item.disabled"
-      rows="4"
-      @input="textInput"
-    />
-    <input
-      v-if="item.type === 'text'"
-      class="value"
-      type="text"
-      :name="item.field"
-      :value="modelValue"
-      :placeholder="s(item.placeholder)"
-      :required="item.required"
-      :disabled="item.disabled"
-      @input="textInput"
-    />
-    <input
-      v-if="item.type === 'password'"
-      class="value"
-      type="password"
-      :name="item.field"
-      :value="modelValue"
-      :placeholder="s(item.placeholder)"
-      :required="item.required"
-      :disabled="item.disabled"
-      @input="textInput"
-    />
-    <input
-      v-if="item.type === 'checkbox'"
-      class="value"
-      type="checkbox"
-      :name="item.field"
-      :checked="!!modelValue"
-      :required="item.required"
-      :disabled="item.disabled"
-      @input="checkboxInput"
-    />
-    <select
-      v-if="item.type === 'select'"
-      class="value"
-      :name="item.field"
-      :value="modelValue"
-      :required="item.required"
-      :disabled="item.disabled"
-      @input="selectInput"
-    >
-      <option
-        v-for="o in item.options"
-        :key="o.value"
-        :value="o.value"
-        :title="s(o.title)"
-        :disabled="o.disabled"
+    <div class="value-wrapper">
+      <div v-if="slots.value" class="value full-width">
+        <slot name="value" />
+      </div>
+      <textarea
+        v-if="item.type === 'textarea'"
+        class="value full-width"
+        :name="item.field"
+        :value="modelValue"
+        :placeholder="s(item.placeholder)"
+        :required="item.required"
+        :disabled="item.disabled"
+        rows="4"
+        @input="textInput"
+      />
+      <input
+        v-if="item.type === 'text'"
+        class="value full-width"
+        type="text"
+        :name="item.field"
+        :value="modelValue"
+        :placeholder="s(item.placeholder)"
+        :required="item.required"
+        :disabled="item.disabled"
+        @input="textInput"
+      />
+      <input
+        v-if="item.type === 'password'"
+        class="value full-width"
+        type="password"
+        :name="item.field"
+        :value="modelValue"
+        :placeholder="s(item.placeholder)"
+        :required="item.required"
+        :disabled="item.disabled"
+        @input="textInput"
+      />
+      <input
+        v-if="item.type === 'checkbox'"
+        class="value"
+        type="checkbox"
+        :name="item.field"
+        :checked="!!modelValue"
+        :required="item.required"
+        :disabled="item.disabled"
+        @input="checkboxInput"
+      />
+      <select
+        v-if="item.type === 'select'"
+        class="value full-width"
+        :name="item.field"
+        :value="modelValue"
+        :required="item.required"
+        :disabled="item.disabled"
+        @input="selectInput"
       >
-        {{ o.name }}
-      </option>
-    </select>
+        <option
+          v-for="o in item.options"
+          :key="o.value"
+          :value="o.value"
+          :title="s(o.title)"
+          :disabled="o.disabled"
+        >
+          {{ o.name }}
+        </option>
+      </select>
+    </div>
     <span v-if="error" class="form-item-error">{{ error }}</span>
   </div>
 </template>
@@ -157,6 +162,16 @@ const selectInput = (e: Event) => {
 
   .value {
     border: solid 1px red;
+  }
+}
+
+.form-item {
+  .value-wrapper {
+    align-self: stretch;
+  }
+
+  .full-width {
+    width: 100%;
   }
 }
 

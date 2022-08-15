@@ -113,6 +113,12 @@ const userForm = computed<FormItem[]>(() => [
     type: 'text',
     required: !edit.value,
   },
+  {
+    field: 'rootPath',
+    label: t('p.admin.user.f_rootPath'),
+    description: t('p.admin.user.f_rootPath_desc'),
+    type: 'text'
+  }
 ])
 
 const loadUsers = async () => {
@@ -135,6 +141,7 @@ const addUser = () => {
   user.value = {
     username: '',
     password: '',
+    rootPath: '',
     groups: [],
   }
   edit.value = false
@@ -182,6 +189,7 @@ const saveUser = async () => {
   const data = {
     username: user.value!.username,
     password: user.value!.password,
+    rootPath: user.value!.rootPath,
     groups: user.value!.groups.map((name: string) => ({ name })),
   }
   saving.value = true

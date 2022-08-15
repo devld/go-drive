@@ -2,10 +2,11 @@ package storage
 
 import (
 	"errors"
-	cmap "github.com/orcaman/concurrent-map"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
+
+	cmap "github.com/orcaman/concurrent-map"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -58,7 +59,9 @@ func (u *UserDAO) AddUser(user types.User) (types.User, error) {
 }
 
 func (u *UserDAO) UpdateUser(username string, user types.User) error {
-	data := map[string]interface{}{}
+	data := map[string]interface{}{
+		"root_path": user.RootPath,
+	}
 	if user.Password != "" {
 		encoded, e := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 		if e != nil {
@@ -66,7 +69,7 @@ func (u *UserDAO) UpdateUser(username string, user types.User) error {
 		}
 		data["password"] = string(encoded)
 	}
-	u.cache.Remove(username)
+	defer u.cache.Remove(username)
 	return u.db.C().Transaction(func(tx *gorm.DB) error {
 		if len(data) > 0 {
 			s := tx.Model(&types.User{}).Where("username = ?", username).Updates(data)

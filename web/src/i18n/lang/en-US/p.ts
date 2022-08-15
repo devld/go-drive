@@ -6,24 +6,9 @@ export default {
     t_groups: 'Groups',
     t_drives: 'Drives',
     t_misc: 'Misc',
+    save: 'Save',
     site: {
       app_name: 'Site Title',
-      proxy_max: 'Max Proxy Size',
-      proxy_max_desc:
-        'Maximum allowed file size for downloading via proxy. Units: b, k, m, g, t',
-      office_preview_enabled: 'Office Preview',
-      office_preview_enabled_desc:
-        'Enable office files preview via online services provided by Microsoft and Google',
-      text_file_exts: 'Text file extensions',
-      text_file_exts_desc:
-        'List of text file extensions supported for viewing and editing, separated by comma',
-      image_file_exts: 'Image file extensions',
-      image_file_exts_desc:
-        'List of supported image file extensions, separated by comma',
-      media_file_exts: 'Media file extensions',
-      media_file_exts_desc:
-        'List of supported media file extensions, separated by comma',
-      save: 'Save',
     },
     drive: {
       reload_drives: 'Reload drives',
@@ -64,6 +49,8 @@ export default {
       or_edit: ' or edit user',
       f_username: 'Username',
       f_password: 'Password',
+      f_rootPath: 'Root Path',
+      f_rootPath_desc: 'Restrict the user to access resources in this directory only, with paths that do not start with /',
       delete_user: 'Delete user',
       confirm_delete: 'Are you sure to delete user {n}?',
     },
@@ -85,13 +72,30 @@ export default {
     },
     misc: {
       permission_of_root: 'Permission of root',
+      anonymous_root_path: 'Anonymous Root Path',
+      anonymous_root_path_desc: 'Restrict non-logged-in users to access resources in this directory only, with paths that do not start with /',
+      file_preview_config: 'File Preview config',
+      office_preview_enabled: 'Office Preview',
+      office_preview_enabled_desc:
+        'Enable office files preview via online services provided by Microsoft and Google',
+      text_file_exts: 'Text file extensions',
+      text_file_exts_desc:
+        'List of text file extensions supported for viewing and editing, separated by comma',
+      image_file_exts: 'Image file extensions',
+      image_file_exts_desc:
+        'List of supported image file extensions, separated by comma',
+      media_file_exts: 'Media file extensions',
+      media_file_exts_desc:
+        'List of supported media file extensions, separated by comma',
       thumbnail_config: 'Thumbnail config',
       thumbnail_mapping: 'Thumbnail Generator Mapping',
       thumbnail_mapping_tips:
         'Configure the tag used to match thumbnails generator in a path, one rule per line. The format is: tag1,tag2:path-pattern\nThe mounted path and chrooted path will be resolved to an absolute path for matching\n\n** matches zero or more directories;\n* matches any sequence of non-path-separators;\n? matches any single non-path-separator character.',
       thumbnail_mapping_placeholder: 'Example: a,b:Pictures/**/*.jpg',
       thumbnail_mapping_invalid: 'Invalid mapping pattern',
-      save: 'Save',
+      proxy_max: 'Max Proxy Size',
+      proxy_max_desc:
+        'Maximum allowed file size for downloading via proxy. Units: b, k, m, g, t',
       clean: 'Clean',
       clean_invalid: 'Clean Invalid Permissions and Mounts',
       clean_cache: 'Clean Cache',

@@ -11,6 +11,7 @@ type Option struct {
 type User struct {
 	Username string  `gorm:"column:username;primaryKey;not null;type:string;size:32" json:"username" binding:"required"`
 	Password string  `gorm:"column:password;not null;type:string;size:64" json:"password,omitempty"`
+	RootPath string  `gorm:"column:root_path;type:string;size:4096" json:"rootPath,omitempty"`
 	Groups   []Group `gorm:"many2many:user_groups;joinForeignKey:username;foreignKey:username" json:"groups"`
 }
 
@@ -34,7 +35,7 @@ type PathMount struct {
 	ID      uint    `gorm:"column:id;primaryKey;autoIncrement"`
 	Path    *string `gorm:"column:path;not null;type:string;size:4096" json:"path"`
 	Name    string  `gorm:"column:name;not null;type:string;size:255" json:"name"`
-	MountAt string  `gorm:"column:mount_at;not null;type:string;size:4096" json:"mount_at"`
+	MountAt string  `gorm:"column:mount_at;not null;type:string;size:4096" json:"mountAt"`
 }
 
 func (PathMount) TableName() string {

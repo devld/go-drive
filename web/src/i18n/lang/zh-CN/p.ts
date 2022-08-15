@@ -6,21 +6,9 @@ export default {
     t_groups: '用户组',
     t_drives: '盘',
     t_misc: '其他',
+    save: '保存',
     site: {
       app_name: '站点标题',
-      proxy_max: '最大代理大小',
-      proxy_max_desc:
-        '最大允许通过代理下载的文件大小，可使用 b, k, m, g, t 单位',
-      office_preview_enabled: 'Office 预览',
-      office_preview_enabled_desc:
-        '通过微软和谷歌提供的在线服务来预览 Office 文件',
-      text_file_exts: '文本文件后缀名',
-      text_file_exts_desc: '支持查看和编辑的文本文件后缀名列表，用英文逗号隔开',
-      image_file_exts: '图片文件后缀名',
-      image_file_exts_desc: '支持查看的图片文件后缀名列表，用英文逗号隔开',
-      media_file_exts: '媒体文件后缀名',
-      media_file_exts_desc: '支持查看的媒体文件后缀名列表，用英文逗号隔开',
-      save: '保存',
     },
     drive: {
       reload_drives: '重新加载盘',
@@ -61,6 +49,8 @@ export default {
       or_edit: ' 或编辑用户',
       f_username: '用户名',
       f_password: '密码',
+      f_rootPath: '根目录',
+      f_rootPath_desc: '限制用户只能访问这个目录下的资源，路径不以 / 开头',
       delete_user: '删除用户',
       confirm_delete: '确认删除 {n}？',
     },
@@ -82,13 +72,28 @@ export default {
     },
     misc: {
       permission_of_root: '根路径权限',
+      anonymous_root_path: '匿名用户根路径',
+      anonymous_root_path_desc:
+        '限制未登录的用户只能访问这个目录下的资源，路径不以 / 开头',
+      office_preview_enabled: 'Office 预览',
+      office_preview_enabled_desc:
+        '通过微软和谷歌提供的在线服务来预览 Office 文件',
+      text_file_exts: '文本文件后缀名',
+      text_file_exts_desc: '支持查看和编辑的文本文件后缀名列表，用英文逗号隔开',
+      image_file_exts: '图片文件后缀名',
+      image_file_exts_desc: '支持查看的图片文件后缀名列表，用英文逗号隔开',
+      media_file_exts: '媒体文件后缀名',
+      media_file_exts_desc: '支持查看的媒体文件后缀名列表，用英文逗号隔开',
+      file_preview_config: '文件预览配置',
       thumbnail_config: '缩略图配置',
       thumbnail_mapping: '缩略图生成器映射',
       thumbnail_mapping_tips:
         '配置某个路径中生成缩略图所使用的生成器 tag，每行一个规则。\n格式为: tag1,tag2:路径匹配规则\n其中，挂载路径和 chroot 路径将会被解析为绝对路径来进行匹配\n\n** 匹配零个或多个目录；\n* 匹配任意个数的非目录分隔符字符;\n? 匹配单个非目录分隔符字符。',
       thumbnail_mapping_placeholder: '例如: a,b:Pictures/**/*.jpg',
       thumbnail_mapping_invalid: '无效的映射规则',
-      save: '保存',
+      proxy_max: '最大代理大小',
+      proxy_max_desc:
+        '最大允许通过代理下载的文件大小，可使用 b, k, m, g, t 单位',
       clean: '清除',
       clean_invalid: '清理无效的权限项/挂载项',
       clean_cache: '清除缓存',
