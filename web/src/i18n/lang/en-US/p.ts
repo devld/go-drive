@@ -84,9 +84,12 @@ export default {
       image_file_exts: 'Image file extensions',
       image_file_exts_desc:
         'List of supported image file extensions, separated by comma',
-      media_file_exts: 'Media file extensions',
-      media_file_exts_desc:
-        'List of supported media file extensions, separated by comma',
+      audio_file_exts: 'Audio file extensions',
+      audio_file_exts_desc:
+        'List of supported audio file extensions, separated by comma',
+      video_file_exts: 'Video file extensions',
+      video_file_exts_desc:
+        'List of supported video file extensions, separated by comma',
       thumbnail_config: 'Thumbnail config',
       thumbnail_mapping: 'Thumbnail Generator Mapping',
       thumbnail_mapping_tips:

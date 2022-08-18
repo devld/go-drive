@@ -38,8 +38,9 @@ import { FormItem } from '@/types'
 import { useI18n } from 'vue-i18n'
 import {
   DEFAULT_IMAGE_FILE_EXTS,
-  DEFAULT_MEDIA_FILE_EXTS,
+  DEFAULT_VIDEO_FILE_EXTS,
   DEFAULT_TEXT_FILE_EXTS,
+  DEFAULT_AUDIO_FILE_EXTS,
 } from '@/config'
 
 const { t } = useI18n()
@@ -80,11 +81,19 @@ const handlerExtsForm = ref<FormItem[]>([
     fillDefaultIfEmpty: true,
   },
   {
-    field: 'web.mediaFileExts',
-    label: t('p.admin.misc.media_file_exts'),
-    description: t('p.admin.misc.media_file_exts_desc'),
+    field: 'web.audioFileExts',
+    label: t('p.admin.misc.audio_file_exts'),
+    description: t('p.admin.misc.audio_file_exts_desc'),
     type: 'textarea',
-    defaultValue: DEFAULT_MEDIA_FILE_EXTS.join(','),
+    defaultValue: DEFAULT_AUDIO_FILE_EXTS.join(','),
+    fillDefaultIfEmpty: true,
+  },
+  {
+    field: 'web.videoFileExts',
+    label: t('p.admin.misc.video_file_exts'),
+    description: t('p.admin.misc.video_file_exts_desc'),
+    type: 'textarea',
+    defaultValue: DEFAULT_VIDEO_FILE_EXTS.join(','),
     fillDefaultIfEmpty: true,
   },
   {

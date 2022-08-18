@@ -50,9 +50,13 @@ export default {
       name: 'View',
       desc: 'Preview PDF File',
     },
-    media: {
+    audio: {
       name: 'Play',
-      desc: 'Play media',
+      desc: 'Play music'
+    },
+    video: {
+      name: 'Play',
+      desc: 'Play video',
     },
     mount: {
       name: 'Mount to',

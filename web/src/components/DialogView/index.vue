@@ -67,6 +67,7 @@ const props = defineProps({
   },
   lockScroll: {
     type: Boolean,
+    default: true,
   },
 })
 

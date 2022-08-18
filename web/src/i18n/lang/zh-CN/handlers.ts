@@ -50,9 +50,13 @@ export default {
       name: '预览',
       desc: '预览 PDF 文件',
     },
-    media: {
+    audio: {
       name: '播放',
-      desc: '播放媒体',
+      desc: '播放音乐'
+    },
+    video: {
+      name: '播放',
+      desc: '播放视频',
     },
     mount: {
       name: '挂载到',
