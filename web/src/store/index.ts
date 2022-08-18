@@ -22,7 +22,7 @@ const configOptions = mapOf(
       process: stringList,
     },
     {
-      key: 'web.mediaFileExts',
+      key: 'web.videoFileExts',
       process: stringList,
     },
   ],

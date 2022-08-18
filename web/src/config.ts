@@ -27,4 +27,6 @@ export const DEFAULT_TEXT_FILE_EXTS = [
 
 export const DEFAULT_IMAGE_FILE_EXTS = ['jpg', 'jpeg', 'png', 'gif']
 
-export const DEFAULT_MEDIA_FILE_EXTS = ['mp4', 'mp3', 'm4a', 'ogg']
+export const DEFAULT_AUDIO_FILE_EXTS = ['mp3', 'm4a', 'flac']
+
+export const DEFAULT_VIDEO_FILE_EXTS = ['mp4', 'ogg']

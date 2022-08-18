@@ -80,6 +80,13 @@ export function filename(path: string) {
   return path.substring(i + 1)
 }
 
+export function filenameBase(filename?: string) {
+  if (!filename) return ''
+  const i = filename.lastIndexOf('.')
+  if (i === -1) return filename
+  return filename.substring(0, i)
+}
+
 export function filenameExt(filename?: string) {
   if (!filename) return ''
   const i = filename.lastIndexOf('.')

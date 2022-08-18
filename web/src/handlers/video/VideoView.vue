@@ -1,5 +1,5 @@
 <template>
-  <div class="media-view-page">
+  <div class="video-view-page">
     <HandlerTitleBar :title="entry.name" @close="emit('close')" />
     <video
       :src="fileUrl(entry.path, entry.meta, { useProxy: 'referrer' })"
@@ -23,7 +23,7 @@ defineProps({
 const emit = defineEmits<{ (e: 'close'): void }>()
 </script>
 <style lang="scss">
-.media-view-page {
+.video-view-page {
   position: relative;
   display: flex;
   flex-direction: column;
