@@ -3,6 +3,10 @@
     v-long-press
     class="entry-link"
     :href="href"
+    :draggable="draggable ? 'true' : undefined"
+    @dragstart="onDragStart"
+    @dragover="onDragOver"
+    @drop="onDrop"
     @click="entryClicked"
     @contextmenu="entryContextMenu"
     @long-press="entryContextMenu"
@@ -26,6 +30,9 @@ const props = defineProps({
   getLink: {
     type: Function as PropType<GetLinkFn>,
   },
+  draggable: {
+    type: Boolean,
+  },
 })
 
 const router = useRouter()
@@ -33,6 +40,9 @@ const router = useRouter()
 const emit = defineEmits<{
   (e: 'click', data: EntryEventData): void
   (e: 'menu', data: EntryEventData): void
+  (e: 'dragstart', data: EntryEventData): void
+  (e: 'dragover', data: EntryEventData): void
+  (e: 'drop', data: EntryEventData): void
 }>()
 
 const link = computed(() => {
@@ -62,6 +72,30 @@ const entryClicked = (event: MouseEvent) => {
 
 const entryContextMenu = (event: MouseEvent) => {
   emit('menu', {
+    entry: props.entry,
+    path: props.path,
+    event,
+  })
+}
+
+const onDragStart = (event: DragEvent) => {
+  emit('dragstart', {
+    entry: props.entry,
+    path: props.path,
+    event,
+  })
+}
+
+const onDragOver = (event: DragEvent) => {
+  emit('dragover', {
+    entry: props.entry,
+    path: props.path,
+    event,
+  })
+}
+
+const onDrop = (event: DragEvent) => {
+  emit('drop', {
     entry: props.entry,
     path: props.path,
     event,

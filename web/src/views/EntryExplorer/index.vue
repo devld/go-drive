@@ -18,12 +18,14 @@
         :view-mode="viewMode"
         :path="path"
         show-toggles
+        draggable
         :get-link="getLink"
         @update:view-mode="onViewModeChanged"
         @entries-load="entriesLoaded"
         @entry-click="onEntryClicked"
         @entry-menu="showEntryMenu"
         @loading="progressBar($event)"
+        @drag-action="onEntriesDragAction"
       />
     </div>
     <!-- file list main area -->
@@ -63,12 +65,15 @@
 export default { name: 'EntryExplorer' }
 </script>
 <script setup lang="ts">
+import { mountPaths } from '@/api/admin'
 import { EntryEventData, ListViewMode } from '@/components/entry'
+import { EntryDragData } from '@/components/entry/useDrag'
 import { EntryHandler, EntryHandlersMenu } from '@/handlers/types'
 import { useAppStore } from '@/store'
 import { Entry } from '@/types'
 import { debounce, dir, filename, setTitle } from '@/utils'
-import { confirm } from '@/utils/ui-utils'
+import { copyOrMove } from '@/utils/entry'
+import { confirm, loading } from '@/utils/ui-utils'
 import EntryListView from '@/views/EntryListView/index.vue'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -285,6 +290,37 @@ const entriesLoaded = ({
 
   selectedEntries.value.splice(0)
   onRouteChanged(router.currentRoute.value)
+}
+
+const onEntriesDragAction = async (data: EntryDragData) => {
+  const to = typeof data.to === 'string' ? data.to : data.to.path
+
+  if (data.action === 'link') {
+    try {
+      loading(true)
+      await mountPaths(
+        to,
+        data.from.map((e) => ({
+          path: e.path,
+          name: e.name,
+        }))
+      )
+    } catch (e: any) {
+      alert(e.message)
+      return
+    } finally {
+      loading()
+    }
+  } else {
+    try {
+      const executed = await copyOrMove(data.action === 'move', data.from, to)
+      if (executed.length === 0) return
+    } catch {
+      return
+    }
+  }
+
+  reloadEntryList()
 }
 
 const confirmUnsavedState = () => {

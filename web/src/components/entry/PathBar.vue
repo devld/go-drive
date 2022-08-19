@@ -5,7 +5,11 @@
         class="path-bar__path"
         :path="s.path"
         :get-link="getLink"
+        :draggable="draggable"
         @click="pathChange"
+        @dragstart="onDragStart"
+        @dragover="onDragOver"
+        @drop="onDrop"
         >{{ s.name }}</EntryLink
       >
     </li>
@@ -14,7 +18,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { EntryEventData, GetLinkFn } from './entry'
+import type { EntryEventData, GetLinkFn } from '.'
 
 const props = defineProps({
   path: {
@@ -24,11 +28,19 @@ const props = defineProps({
   getLink: {
     type: Function as PropType<GetLinkFn>,
   },
+  draggable: {
+    type: Boolean,
+  },
 })
 
 const { t } = useI18n()
 
-const emit = defineEmits<{ (e: 'update:path', data: EntryEventData): void }>()
+const emit = defineEmits<{
+  (e: 'update:path', data: EntryEventData): void
+  (e: 'dragstart', data: EntryEventData): void
+  (e: 'dragover', data: EntryEventData): void
+  (e: 'drop', data: EntryEventData): void
+}>()
 
 const segments = computed(() => {
   const ss = props.path.replace(/\/+/g, '/').split('/').filter(Boolean)
@@ -40,6 +52,9 @@ const segments = computed(() => {
 })
 
 const pathChange = (e: EntryEventData) => emit('update:path', e)
+const onDragStart = (e: EntryEventData) => emit('dragstart', e)
+const onDragOver = (e: EntryEventData) => emit('dragover', e)
+const onDrop = (e: EntryEventData) => emit('drop', e)
 </script>
 <style lang="scss">
 .path-bar {
