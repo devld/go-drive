@@ -14,7 +14,6 @@
     "codemirror": "^6.0.0",
     "dompurify": "^2.3.8",
     "github-markdown-css": "^5.1.0",
-    "hammerjs": "^2.0.8",
     "highlight.js": "^11.5.1",
     "marked": "^4.0.17",
     "photoswipe": "^4.1.3",
