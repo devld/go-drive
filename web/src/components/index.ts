@@ -1,8 +1,7 @@
 import { Component, Plugin } from 'vue'
 
 import Icon from './Icon.vue'
-import { EntryIcon, EntryLink, EntryItem, EntryList } from './entry'
-import PathBar from './PathBar.vue'
+import { EntryIcon, EntryLink, EntryItem, EntryList, PathBar } from './entry'
 import ErrorView from './ErrorView.vue'
 import DialogView from './DialogView/index.vue'
 import FloatButton from './FloatButton'

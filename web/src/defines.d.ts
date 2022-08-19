@@ -5,8 +5,13 @@ import Icon from '@/components/Icon.vue'
 import SimpleButton from '@/components/SimpleButton'
 import SimpleForm, { SimpleFormItem } from '@/components/Form'
 import SimpleDropdown from '@/components/SimpleDropdown.vue'
-import { EntryItem, EntryIcon, EntryLink, EntryList } from '@/components/entry'
-import PathBar from '@/components/PathBar.vue'
+import {
+  EntryItem,
+  EntryIcon,
+  EntryLink,
+  EntryList,
+  PathBar,
+} from '@/components/entry'
 import ErrorView from '@/components/ErrorView.vue'
 import DialogView from '@/components/DialogView'
 import FloatButton from '@/components/FloatButton.vue'
@@ -22,6 +27,7 @@ declare global {
   declare type Fnn<
     A extends any[] = any[],
     R = any,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     F extends (...args: A) => any = (...args: A) => R
   > = (...args: A) => R
 

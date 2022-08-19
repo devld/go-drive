@@ -11,12 +11,14 @@
       :view-mode="viewMode"
       :show-toggles="showToggles"
       :get-link="getLink"
+      :draggable="draggable"
       @entry-click="emit('entry-click', $event)"
       @entry-menu="emit('entry-menu', $event)"
       @update:path="emit('update:path', $event)"
       @update:sort="emit('update:sort', $event)"
       @update:selection="emit('update:selection', $event)"
       @update:view-mode="emit('update:viewMode', $event)"
+      @drag-action="emit('drag-action', $event)"
     />
     <ErrorView v-else :status="error.status" :message="error.message" />
   </div>
@@ -31,6 +33,7 @@ import { EntryEventData, GetLinkFn, ListViewMode } from '@/components/entry'
 import { Entry } from '@/types'
 import { ref, computed, watch } from 'vue'
 import { EntriesLoadData } from './types'
+import { EntryDragData } from '@/components/entry/useDrag'
 
 const props = defineProps({
   path: {
@@ -58,6 +61,9 @@ const props = defineProps({
   getLink: {
     type: Function as PropType<GetLinkFn>,
   },
+  draggable: {
+    type: Boolean,
+  },
 })
 
 const emit = defineEmits<{
@@ -69,6 +75,7 @@ const emit = defineEmits<{
   (e: 'update:viewMode', v: ListViewMode): void
   (e: 'loading', v: boolean): void
   (e: 'entries-load', v: EntriesLoadData): void
+  (e: 'drag-action', v: EntryDragData): void
   (e: 'error', v: any): void
 }>()
 

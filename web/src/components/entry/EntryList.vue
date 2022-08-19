@@ -8,6 +8,8 @@
         :path="path"
         :get-link="getLink"
         @path-change="emit('update:path', $event)"
+        @dragover="onDragOver"
+        @drop="onDrop"
       />
       <div v-if="showToggles" class="entry-list__toggles">
         <button
@@ -49,7 +51,11 @@
           ref="parentEntryRef"
           :entry="parentDirEntry"
           :get-link="getLink"
+          :draggable="draggable"
           @click="entryClicked"
+          @dragstart="onDragStart"
+          @dragover="onDragOver"
+          @drop="onDrop"
         >
           <EntryItem
             :view-mode="validViewMode"
@@ -71,8 +77,12 @@
           :entry="entry"
           :get-link="getLink"
           :data-name="entry.name"
+          :draggable="draggable"
           @click="entryClicked"
           @menu="entryContextMenu"
+          @dragstart="onDragStart"
+          @dragover="onDragOver"
+          @drop="onDrop"
         >
           <EntryItem
             :view-mode="validViewMode"
@@ -102,6 +112,7 @@ import {
 } from 'vue'
 import type { EntryEventData, GetLinkFn, ListViewMode } from '.'
 import EntryLink from './EntryLink.vue'
+import { useEntryDarg, EntryDragData } from './useDrag'
 
 const SORTS_METHOD: O<(a: Entry, b: Entry) => number> = {
   name_asc: (a, b) =>
@@ -155,6 +166,9 @@ const props = defineProps({
   getLink: {
     type: Function as PropType<GetLinkFn>,
   },
+  draggable: {
+    type: Boolean,
+  },
 })
 
 const emit = defineEmits<{
@@ -164,6 +178,7 @@ const emit = defineEmits<{
   (e: 'entry-menu', data: EntryEventData): void
   (e: 'update:selection', data: Entry[]): void
   (e: 'update:sort', data: string): void
+  (e: 'drag-action', data: EntryDragData): void
 }>()
 
 const selected = ref<Entry[]>([])
@@ -197,7 +212,7 @@ onBeforeUpdate(() => {
 const parentDirEntry = computed<Entry>(() => ({
   path: pathClean(pathJoin(props.path, '..')),
   name: '..',
-  meta: {},
+  meta: { writable: true },
   size: -1,
   type: 'dir',
   modTime: -1,
@@ -223,22 +238,23 @@ watch(
 )
 
 const entryClicked = (e: EntryEventData) => {
-  if (e.event?.ctrlKey) {
+  const event = e.event as MouseEvent | undefined
+  if (event?.ctrlKey) {
     // toggle selection if ctrl key is pressed
-    e.event.preventDefault()
+    event.preventDefault()
     if (e.entry!.name === '..') return
     toggleSelect(e.entry!)
     return
   }
-  if (e.event?.shiftKey && selected.value.length > 0) {
+  if (event?.shiftKey && selected.value.length > 0) {
     // if shift key is pressed, select range
-    e.event.preventDefault()
+    event.preventDefault()
     if (e.entry!.name === '..') return
     toggleSelectRange(e.entry!)
     return
   }
   if (selected.value.length > 0) {
-    e.event?.preventDefault()
+    event?.preventDefault()
     // if there are selections, clear it
     selected.value = []
     emit('update:selection', selected.value)
@@ -329,6 +345,12 @@ const focusOnEntry = async (name: string) => {
   }
   dom?.focus()
 }
+
+const { onDragStart, onDragOver, onDrop } = useEntryDarg(
+  computed(() => props.draggable),
+  selected,
+  (d) => emit('drag-action', d)
+)
 
 useHotKey(() => {
   toggleViewMode()
