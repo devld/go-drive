@@ -23,9 +23,6 @@ export default {
       moving: 'Moving {n} {p}',
       copy_open_title: 'Select copy to',
       move_open_title: 'Select move to',
-      override_or_skip: 'Override or skip for duplicates?',
-      override: 'Override',
-      skip: 'Skip',
     },
     delete: {
       name: 'Delete',

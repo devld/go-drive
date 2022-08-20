@@ -23,9 +23,6 @@ export default {
       moving: '正在移动 {n} {p}',
       copy_open_title: '选择复制到',
       move_open_title: '选择移动到',
-      override_or_skip: '已存在时覆盖还是跳过？',
-      override: '覆盖',
-      skip: '跳过',
     },
     delete: {
       name: '删除',

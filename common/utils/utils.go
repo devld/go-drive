@@ -43,12 +43,8 @@ func IsRootPath(path string) bool {
 
 func CleanPath(path string) string {
 	path = path2.Clean(path)
-	if strings.HasPrefix(path, "/") {
-		path = path[1:]
-	}
-	for strings.HasPrefix(path, "../") {
-		path = path[3:]
-	}
+	path = strings.TrimPrefix(path, "/")
+	path = strings.TrimPrefix(path, "../")
 	if path == "." {
 		path = ""
 	}
@@ -63,12 +59,30 @@ func PathExt(name string) string {
 	return strings.ToLower(ext)
 }
 
+func PathName(name string) string {
+	name = PathBase(name)
+	i := strings.LastIndex(name, ".")
+	if i == -1 {
+		return name
+	}
+	return name[:i]
+}
+
 func PathBase(path string) string {
 	base := path2.Base(path)
 	if base == "/" || base == "." {
 		base = ""
 	}
 	return base
+}
+
+func IsPathParent(path, parent string) bool {
+	path = CleanPath(path)
+	parent = CleanPath(parent)
+	if IsRootPath(parent) {
+		return !IsRootPath(path)
+	}
+	return strings.HasPrefix(path, parent+"/")
 }
 
 func PathParent(path string) string {
@@ -166,10 +180,8 @@ func flattenStringMap(prefix string, val interface{}, separator string, result m
 
 func CopyMap(m types.M) types.M {
 	newMap := make(types.M)
-	if m != nil {
-		for k, v := range m {
-			newMap[k] = v
-		}
+	for k, v := range m {
+		newMap[k] = v
 	}
 	return newMap
 }
@@ -178,10 +190,11 @@ func TimeTick(fn func(), d time.Duration) func() {
 	ticker := time.NewTicker(d)
 	stopped := make(chan bool)
 	go func() {
+	out:
 		for {
 			select {
 			case <-stopped:
-				break
+				break out
 			case <-ticker.C:
 				fn()
 			}

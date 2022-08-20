@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"go-drive/common"
 	"go-drive/common/drive_util"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/storage"
@@ -51,7 +51,7 @@ func NewRootDrive(
 	return r, nil
 }
 
-func (d *RootDrive) Get() types.IDrive {
+func (d *RootDrive) Get() *DispatcherDrive {
 	return d.root
 }
 
