@@ -2,6 +2,7 @@ package drive
 
 import (
 	"context"
+	"fmt"
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
@@ -80,22 +81,22 @@ func (d *DispatcherDrive) Meta(context.Context) types.DriveMeta {
 	panic("not supported")
 }
 
-func (d *DispatcherDrive) resolve(path string) (types.IDrive, string, error) {
+func (d *DispatcherDrive) resolve(path string) (string, types.IDrive, string, error) {
 	targetPath := d.resolveMount(path)
 	if targetPath != "" {
 		path = targetPath
 	}
 	paths := pathRegexp.FindStringSubmatch(path)
 	if paths == nil {
-		return nil, "", err.NewNotFoundError()
+		return "", nil, "", err.NewNotFoundError()
 	}
 	driveName := paths[1]
 	entryPath := paths[3]
 	drive, ok := d.drives[driveName]
 	if !ok {
-		return nil, "", err.NewNotFoundError()
+		return "", nil, "", err.NewNotFoundError()
 	}
-	return drive, entryPath, nil
+	return driveName, drive, entryPath, nil
 }
 
 func (d *DispatcherDrive) resolveMount(path string) string {
@@ -128,7 +129,8 @@ func (d *DispatcherDrive) resolveMountedChildren(path string) ([]types.PathMount
 	isSelf := false
 	for mountParent, mounts := range d.mounts {
 		for mountName, m := range mounts {
-			if strings.HasPrefix(path2.Join(mountParent, mountName), path) {
+			mountPath := path2.Join(mountParent, mountName)
+			if mountPath == path || utils.IsPathParent(mountPath, path) {
 				result = append(result, m)
 				if !isSelf && path2.Join(*m.Path, m.Name) == path {
 					isSelf = true
@@ -145,7 +147,7 @@ func (d *DispatcherDrive) Get(ctx context.Context, path string) (types.IEntry, e
 			Writable: false,
 		}}, nil
 	}
-	drive, realPath, e := d.resolve(path)
+	_, drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
@@ -156,20 +158,59 @@ func (d *DispatcherDrive) Get(ctx context.Context, path string) (types.IEntry, e
 	return d.mapDriveEntry(path, entry), nil
 }
 
+func (d *DispatcherDrive) FindNonExistsEntryName(ctx context.Context, drive types.IDrive, path string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	_, e := drive.Get(ctx, path)
+	if e != nil && !err.IsNotFoundError(e) {
+		return "", e
+	}
+	if e != nil {
+		return path, nil
+	}
+	parentPath := utils.PathParent(path)
+	pathBaseName := utils.PathName(path)
+	pathExt := path2.Ext(path)
+	siblings, e := drive.List(ctx, parentPath)
+	if e != nil {
+		return "", e
+	}
+	seq := 1
+	var newPath string
+	for newPath == "" {
+		newPath = utils.CleanPath(path2.Join(parentPath, fmt.Sprintf("%s_%d%s", pathBaseName, seq, pathExt)))
+		for _, i := range siblings {
+			if newPath == i.Path() {
+				newPath = ""
+				break
+			}
+		}
+		seq++
+	}
+	return newPath, nil
+}
+
 func (d *DispatcherDrive) Save(ctx types.TaskCtx, path string, size int64,
 	override bool, reader io.Reader) (types.IEntry, error) {
-	drive, realPath, e := d.resolve(path)
+	driveName, drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
 	if e := d.ensureDir(ctx, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
+	if !override {
+		realPath, e = d.FindNonExistsEntryName(ctx, drive, realPath)
+		if e != nil {
+			return nil, e
+		}
+	}
 	save, e := drive.Save(ctx, realPath, size, override, reader)
 	if e != nil {
 		return nil, e
 	}
-	return d.mapDriveEntry(path, save), nil
+	return d.mapDriveEntry(path2.Join(driveName, realPath), save), nil
 }
 
 func (d *DispatcherDrive) ensureDir(ctx context.Context, drive types.IDrive, path string) error {
@@ -198,7 +239,7 @@ func (d *DispatcherDrive) ensureDir(ctx context.Context, drive types.IDrive, pat
 }
 
 func (d *DispatcherDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	drive, realPath, e := d.resolve(path)
+	_, drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
@@ -214,13 +255,19 @@ func (d *DispatcherDrive) MakeDir(ctx context.Context, path string) (types.IEntr
 
 func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 	override bool) (types.IEntry, error) {
-	driveTo, pathTo, e := d.resolve(to)
+	driveName, driveTo, pathTo, e := d.resolve(to)
 	if e != nil {
 		return nil, e
 	}
 	mounts, _ := d.resolveMountedChildren(from.Path())
 	if len(mounts) == 0 {
 		// if `from` has no mounted children, then copy
+		if !override {
+			pathTo, e = d.FindNonExistsEntryName(ctx, driveTo, pathTo)
+			if e != nil {
+				return nil, e
+			}
+		}
 		entry, e := driveTo.Copy(ctx, from, pathTo, override)
 		if e == nil {
 			return entry, nil
@@ -230,12 +277,19 @@ func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 		}
 	}
 	// if `from` has mounted children, we need to copy them
-	e = drive_util.CopyAll(ctx, from, d, to, override,
+	e = drive_util.CopyAll(ctx, from, d, to,
 		func(from types.IEntry, _ types.IDrive, to string, ctx types.TaskCtx) error {
-			driveTo, pathTo, e := d.resolve(to)
+			_, driveTo, pathTo, e := d.resolve(to)
 			ctxWrapper := task.NewCtxWrapper(ctx, true, false)
 			if e != nil {
 				return e
+			}
+
+			if !override {
+				pathTo, e = d.FindNonExistsEntryName(ctx, driveTo, pathTo)
+				if e != nil {
+					return e
+				}
 			}
 			_, e = driveTo.Copy(ctxWrapper, from, pathTo, true)
 			if e == nil {
@@ -255,11 +309,11 @@ func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 	if e != nil {
 		return nil, e
 	}
-	return d.mapDriveEntry(to, copied), nil
+	return d.mapDriveEntry(path2.Join(driveName, pathTo), copied), nil
 }
 
 func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	driveTo, pathTo, e := d.resolve(to)
+	driveName, driveTo, pathTo, e := d.resolve(to)
 	// if path depth is 1, move mounts
 	if e != nil && utils.PathDepth(to) != 1 {
 		return nil, e
@@ -273,6 +327,14 @@ func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, 
 				to,
 				path2.Join(*m.Path, m.Name)[len(fromPath):],
 			)
+
+			if !override {
+				t, e = d.FindNonExistsEntryName(ctx, d, t)
+				if e != nil {
+					return nil, e
+				}
+			}
+
 			mPath := utils.PathParent(t)
 			m.Path = &mPath
 			m.Name = utils.PathBase(t)
@@ -283,7 +345,7 @@ func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, 
 		}
 		_ = d.reloadMounts()
 		if isSelf {
-			return d.Get(ctx, to)
+			return d.Get(ctx, path2.Join(driveName, pathTo))
 		}
 	} else {
 		// no mounts matched and toPath is in root or trying to move drive
@@ -292,6 +354,14 @@ func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, 
 		}
 	}
 	if driveTo != nil {
+
+		if !override {
+			pathTo, e = d.FindNonExistsEntryName(ctx, driveTo, pathTo)
+			if e != nil {
+				return nil, e
+			}
+		}
+
 		move, e := driveTo.Move(ctx, from, pathTo, override)
 		if e != nil {
 			if err.IsUnsupportedError(e) {
@@ -299,9 +369,9 @@ func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, 
 			}
 			return nil, e
 		}
-		return d.mapDriveEntry(to, move), nil
+		return d.mapDriveEntry(path2.Join(driveName, pathTo), move), nil
 	}
-	return d.Get(ctx, to)
+	return d.Get(ctx, path2.Join(driveName, pathTo))
 }
 
 func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
@@ -313,7 +383,7 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 		}
 		entries = drives
 	} else {
-		drive, realPath, e := d.resolve(path)
+		_, drive, realPath, e := d.resolve(path)
 		if e != nil {
 			return nil, e
 		}
@@ -328,7 +398,7 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 	if ms != nil {
 		mountedMap := make(map[string]types.IEntry, len(entries))
 		for name, m := range ms {
-			drive, entryPath, e := d.resolve(m.MountAt)
+			_, drive, entryPath, e := d.resolve(m.MountAt)
 			if e != nil {
 				continue
 			}
@@ -368,7 +438,7 @@ func (d *DispatcherDrive) Delete(ctx types.TaskCtx, path string) error {
 			return nil
 		}
 	}
-	drive, path, e := d.resolve(path)
+	_, drive, path, e := d.resolve(path)
 	if e != nil {
 		return e
 	}
@@ -380,11 +450,15 @@ func (d *DispatcherDrive) Delete(ctx types.TaskCtx, path string) error {
 
 func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 	override bool, config types.SM) (*types.DriveUploadConfig, error) {
-	drive, path, e := d.resolve(path)
+	driveName, drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	return drive.Upload(ctx, path, size, override, config)
+	realPath, e = d.FindNonExistsEntryName(ctx, drive, realPath)
+	if e != nil {
+		return nil, e
+	}
+	return drive.Upload(ctx, path2.Join(driveName, realPath), size, override, config)
 }
 
 func (d *DispatcherDrive) mapDriveEntry(path string, entry types.IEntry) types.IEntry {

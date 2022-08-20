@@ -339,9 +339,19 @@ func InitAdminRoutes(
 		if len(src) == 0 {
 			return
 		}
+
+		dd := rootDrive.Get()
+
+		var e error
 		mounts := make([]types.PathMount, len(src))
 		for i, p := range src {
-			mounts[i] = types.PathMount{Path: &to, Name: p.Name, MountAt: p.Path}
+			mountPath := utils.CleanPath(path2.Join(to, p.Name))
+			mountPath, e = dd.FindNonExistsEntryName(c.Request.Context(), dd, mountPath)
+			if e != nil {
+				_ = c.Error(e)
+				return
+			}
+			mounts[i] = types.PathMount{Path: &to, Name: utils.PathBase(mountPath), MountAt: p.Path}
 		}
 		if e := pathMountDAO.SaveMounts(mounts, true); e != nil {
 			_ = c.Error(e)

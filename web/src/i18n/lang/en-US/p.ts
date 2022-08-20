@@ -166,7 +166,6 @@ export default {
     confirm_stop_task: 'Stop this task?',
     confirm_remove_task: 'Remove this task, cannot be undone?',
     resolve_file: '{n} files/directories...',
-    override_confirm: 'Override for duplicates?',
     upload_clipboard: 'Uploading files from the clipboard?',
   },
   login: {

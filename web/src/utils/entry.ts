@@ -2,7 +2,7 @@ import { copyEntry, deleteTask, fileUrl, moveEntry } from '@/api'
 import { T } from '@/i18n'
 import { Entry, Task } from '@/types'
 import { formatBytes, pathClean, pathJoin, taskDone, TASK_CANCELLED } from '.'
-import { alert, confirm, loading } from './ui-utils'
+import { alert, loading } from './ui-utils'
 
 export const DATA_TYPE_ENTRY = 'application/go-drive-entry'
 
@@ -37,17 +37,6 @@ export const copyOrMove = async (
 ) => {
   const executedEntries: Entry[] = []
 
-  let override = true
-  try {
-    await confirm({
-      message: T('handler.copy_move.override_or_skip'),
-      confirmType: 'danger',
-      confirmText: T('handler.copy_move.override'),
-      cancelText: T('handler.copy_move.skip'),
-    })
-  } catch {
-    override = false
-  }
   let canceled = false
   let task: Task<Entry>
   const onCancel = () => {
@@ -66,7 +55,7 @@ export const copyOrMove = async (
         ),
       })
       const copyOrMove = isMove ? moveEntry : copyEntry
-      await taskDone(copyOrMove(entry.path, dest, override), (t) => {
+      await taskDone(copyOrMove(entry.path, dest), (t) => {
         if (canceled) return false
         task = t
         loading({

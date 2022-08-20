@@ -240,7 +240,7 @@ func FlattenEntriesTree(root EntryNode) []EntryNode {
 }
 
 func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string,
-	override bool, newParent bool, doCopy DoCopy, after CopyCallback) (bool, error) {
+	newParent bool, doCopy DoCopy, after CopyCallback) (bool, error) {
 	if e := ctx.Err(); e != nil {
 		return false, e
 	}
@@ -277,7 +277,7 @@ func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string
 		if entry.children != nil {
 			for _, e := range entry.children {
 				r, ee := copyAll(ctx, e, driveTo, utils.CleanPath(path.Join(to, utils.PathBase(e.Path()))),
-					override, dirCreate, doCopy, after)
+					dirCreate, doCopy, after)
 				if ee != nil {
 					return false, ee
 				}
@@ -294,10 +294,6 @@ func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string
 				return false, err.NewNotAllowedMessageError(
 					i18n.T("drive.copy_type_mismatch2", entry.Path(), to))
 			}
-			if !override {
-				// skip
-				return false, nil
-			}
 		}
 
 		if e := doCopy(entry.IEntry, driveTo, to, ctx); e != nil {
@@ -311,7 +307,7 @@ func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string
 }
 
 func CopyAll(ctx types.TaskCtx, entry types.IEntry, driveTo types.IDrive, to string,
-	override bool, doCopy DoCopy, after CopyCallback) error {
+	doCopy DoCopy, after CopyCallback) error {
 	tree, e := BuildEntriesTree(ctx, entry, true)
 	if e != nil {
 		return e
@@ -319,7 +315,7 @@ func CopyAll(ctx types.TaskCtx, entry types.IEntry, driveTo types.IDrive, to str
 	if after == nil {
 		after = func(entry types.IEntry, fullProcessed bool, ctx types.TaskCtx) error { return nil }
 	}
-	_, e = copyAll(ctx, tree, driveTo, to, override, false, doCopy, after)
+	_, e = copyAll(ctx, tree, driveTo, to, false, doCopy, after)
 	return e
 }
 

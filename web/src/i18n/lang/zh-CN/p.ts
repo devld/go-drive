@@ -163,7 +163,6 @@ export default {
     confirm_stop_task: '确认停止该任务？',
     confirm_remove_task: '确认移除该任务，不可恢复？',
     resolve_file: '{n} 个文件/文件夹...',
-    override_confirm: '已存在时是否覆盖？',
     upload_clipboard: '上传来自剪贴板的文件？',
   },
   login: {

@@ -146,21 +146,10 @@ const submitUploadTasks = async (files: ResolvedEntry[]) => {
   const flattenFiles = getFileEntries(files)
   if (!flattenFiles.length) return
 
-  let override = true
-  try {
-    await confirm({
-      message: t('p.new_entry.override_confirm'),
-      confirmType: 'danger',
-    })
-  } catch {
-    override = false
-  }
-
   for (const file of flattenFiles) {
     uploadManager.submitTask({
       path: pathClean(pathJoin(props.path, file.path)),
       file: file.file,
-      override,
     })
   }
   showTaskManager()
