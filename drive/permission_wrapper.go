@@ -2,19 +2,22 @@ package drive
 
 import (
 	"context"
-	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"net/http"
 	"time"
 )
 
 const (
 	accessKeyValidity = 12 * time.Hour
 )
+
+type EntrySigner interface {
+	GetSignature(path string, notAfter time.Time) string
+	CheckSignature(path string) bool
+}
 
 // PermissionWrapperDrive intercept the request
 // based on the permission information in the database.
@@ -23,22 +26,16 @@ const (
 // Permissions for users take precedence over permissions for user groups.
 // REJECT takes precedence over ACCEPT
 type PermissionWrapperDrive struct {
-	drive   types.IDrive
-	request *http.Request
-	session types.Session
-	pm      utils.PermMap
-	signer  *utils.Signer
+	drive  types.IDrive
+	pm     utils.PermMap
+	signer EntrySigner
 }
 
-func NewPermissionWrapperDrive(request *http.Request, session types.Session, drive types.IDrive,
-	permissions utils.PermMap, signer *utils.Signer) *PermissionWrapperDrive {
-
+func NewPermissionWrapperDrive(drive types.IDrive, permissions utils.PermMap, signer EntrySigner) *PermissionWrapperDrive {
 	return &PermissionWrapperDrive{
-		drive:   drive,
-		request: request,
-		session: session,
-		pm:      permissions.Filter(session),
-		signer:  signer,
+		drive:  drive,
+		pm:     permissions,
+		signer: signer,
 	}
 }
 
@@ -49,7 +46,7 @@ func (p *PermissionWrapperDrive) Meta(ctx context.Context) types.DriveMeta {
 func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	canRead := false
 	if p.signer != nil {
-		canRead = checkSignature(p.signer, p.request, path)
+		canRead = p.signer.CheckSignature(path)
 	}
 	var permission = types.PermissionRead
 	if !canRead {
@@ -64,8 +61,8 @@ func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IE
 		return nil, e
 	}
 	ak := ""
-	if p.signer != nil {
-		ak = signPathRequest(p.signer, p.request, path, time.Now().Add(accessKeyValidity))
+	if p.signer != nil && entry.Type().IsFile() {
+		ak = p.signer.GetSignature(path, time.Now().Add(accessKeyValidity))
 	}
 	return &permissionWrapperEntry{
 		p:          p,
@@ -155,8 +152,8 @@ func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types
 		per := p.pm.ResolvePath(e.Path())
 		if per.Readable() {
 			accessKey := ""
-			if p.signer != nil {
-				accessKey = signPathRequest(p.signer, p.request, e.Path(), time.Now().Add(accessKeyValidity))
+			if p.signer != nil && e.Type().IsFile() {
+				accessKey = p.signer.GetSignature(e.Path(), time.Now().Add(accessKeyValidity))
 			}
 			result = append(
 				result,
@@ -251,12 +248,6 @@ func (p *permissionWrapperEntry) Meta() types.EntryMeta {
 		meta.Props = utils.CopyMap(meta.Props)
 		meta.Props["accessKey"] = p.accessKey
 	}
-	if !p.p.session.HasUserGroup(types.AdminUserGroup) {
-		if p.accessKey == "" {
-			meta.Props = utils.CopyMap(meta.Props)
-		}
-		delete(meta.Props, "mountAt")
-	}
 	return meta
 }
 
@@ -288,16 +279,4 @@ func (p *permissionWrapperEntry) GetURL(ctx context.Context) (*types.ContentURL,
 
 func (p *permissionWrapperEntry) GetIEntry() types.IEntry {
 	return p.entry
-}
-
-func getSignPayload(req *http.Request, path string) string {
-	return req.Host + "." + path
-}
-
-func signPathRequest(signer *utils.Signer, req *http.Request, path string, notAfter time.Time) string {
-	return signer.Sign(getSignPayload(req, path), notAfter)
-}
-
-func checkSignature(signer *utils.Signer, req *http.Request, path string) bool {
-	return signer.Validate(getSignPayload(req, path), req.URL.Query().Get(common.SignatureQueryKey))
 }

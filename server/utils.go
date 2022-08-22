@@ -6,8 +6,11 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
+	"go-drive/common/utils"
+	"go-drive/storage"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,6 +20,56 @@ const (
 	keySession = "session"
 	keyResult  = "apiResult"
 )
+
+func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		signature := c.Query(common.SignatureQueryKey)
+		session := types.Session{}
+		var username string
+
+		path := utils.CleanPath(c.Param("path"))
+
+		if signature != "" {
+			parts := strings.Split(signature, ".")
+			signature = parts[0]
+			if len(parts) > 1 {
+				temp, e := utils.Base64URLDecode(parts[1])
+				if e != nil {
+					c.AbortWithError(http.StatusBadRequest, e)
+					return
+				}
+				username = string(temp)
+			}
+
+			if signer.Validate(path+username, signature) {
+				session.AllowedPath = make(map[string]types.Permission, 1)
+				session.AllowedPath[path] = types.PermissionRead
+			} else {
+				_ = c.Error(err.NewBadRequestError("bad signature"))
+				c.Abort()
+				return
+			}
+		}
+
+		if username != "" {
+			user, e := userDAO.GetUser(username)
+			if e != nil {
+				_ = c.Error(err.NewBadRequestError("bad signature"))
+				c.Abort()
+				return
+			}
+			session.User = user
+		}
+
+		SetSession(c, session)
+		c.Next()
+	}
+}
+
+func MakeSignature(signer *utils.Signer, path, username string, notAfter time.Time) string {
+	signature := signer.Sign(path+username, notAfter)
+	return signature + "." + utils.Base64URLEncode([]byte(username))
+}
 
 func TokenAuth(tokenStore types.TokenStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
