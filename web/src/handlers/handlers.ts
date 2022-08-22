@@ -51,6 +51,7 @@ export function isHandlerSupports(
   const entry = data.entry
   const entries = Array.isArray(entry) ? entry : [entry]
   if (entries.length === 0) return false
+  if (!handler.multiple && entries.length > 1) return false
   if (handler.multiple) {
     return handler.supports({ entry: entries, parent: data.parent }, ctx)
   } else {
