@@ -8,14 +8,16 @@ Doc: [https://go-drive.top](https://go-drive.top)
 
 ## 功能
 
-- 基本的文件管理(上传，下载，复制，移动，重命名，删除)
+- 基本的文件管理，拖拽/粘贴上传，拖拽管理文件
 - 基于用户/组的访问控制
 - 图片浏览
+- 音乐播放([APlayer](https://github.com/DIYgod/APlayer))
 - 文本编辑
 - 路径挂载
 - 在 Drive 之间复制文件(夹)
 - Drive 管理界面
 - 文件搜索
+- 通过 WebDAV 访问
 
 ## 目前支持的 Drives
 
@@ -55,14 +57,16 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 
 ## Features
 
-- Basic file management(upload, download, copy, move, rename, delete)
+- Basic file management, drag-and-drop/paste upload, drag-and-drop file management
 - User/group-based access control
 - Images gallery
+- Music Playback([APlayer](https://github.com/DIYgod/APlayer))
 - Text file editing
 - Path mounting
 - Copy files/folders across drives
 - Drive-mapping management
 - Files searching
+- Access via WebDAV
 
 ## Currently supported drives
 
