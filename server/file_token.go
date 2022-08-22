@@ -3,9 +3,8 @@ package server
 import (
 	"encoding/gob"
 	"fmt"
-	"github.com/google/uuid"
 	"go-drive/common"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
 	"go-drive/common/types"
@@ -15,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const sessionPrefix = "s_"
@@ -149,7 +150,7 @@ func (f *FileTokenStore) clean() {
 		}
 	})
 	if n > 0 {
-		log.Println(fmt.Sprintf("%d expired sessions cleaned", n))
+		log.Printf("%d expired sessions cleaned", n)
 	}
 	if e != nil {
 		log.Println("error when cleaning expired sessions", e)

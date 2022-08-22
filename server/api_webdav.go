@@ -14,6 +14,8 @@ import (
 	"io"
 	"io/fs"
 	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -56,10 +58,18 @@ type webdavAccess struct {
 
 func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 	session := GetSession(c)
+
+	drive, e := w.access.GetDrive(session, nil)
+	if e != nil {
+		log.Printf("GetDrive error: %v", e)
+		c.AbortWithError(http.StatusInternalServerError, e)
+		return
+	}
+
 	handler := webdav.Handler{
 		Prefix: w.config.WebDav.Prefix,
 		FileSystem: &webdavFs{
-			drive:   w.access.GetDrive(c.Request, session),
+			drive:   drive,
 			tempDir: w.config.TempDir,
 		},
 		LockSystem: w.lockSys,

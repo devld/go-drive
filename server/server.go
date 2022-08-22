@@ -71,7 +71,7 @@ func InitServer(config common.Config,
 	}
 
 	if e := InitDriveRoutes(router, driveAccess, searcher, config, thumbnail,
-		signer, chunkUploader, runner, tokenStore, optionsDAO); e != nil {
+		signer, chunkUploader, runner, tokenStore, userDAO, optionsDAO); e != nil {
 		return nil, e
 	}
 

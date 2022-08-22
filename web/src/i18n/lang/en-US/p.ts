@@ -50,7 +50,8 @@ export default {
       f_username: 'Username',
       f_password: 'Password',
       f_rootPath: 'Root Path',
-      f_rootPath_desc: 'Restrict the user to access resources in this directory only, with paths that do not start with /',
+      f_rootPath_desc:
+        'Restrict the user to only access resources in this directory (users in the admin group will ignore this), with paths that do not start with /',
       delete_user: 'Delete user',
       confirm_delete: 'Are you sure to delete user {n}?',
     },
@@ -73,7 +74,8 @@ export default {
     misc: {
       permission_of_root: 'Permission of root',
       anonymous_root_path: 'Anonymous Root Path',
-      anonymous_root_path_desc: 'Restrict non-logged-in users to access resources in this directory only, with paths that do not start with /',
+      anonymous_root_path_desc:
+        'Restrict non-logged-in users to access resources in this directory only, with paths that do not start with /',
       file_preview_config: 'File Preview config',
       office_preview_enabled: 'Office Preview',
       office_preview_enabled_desc:

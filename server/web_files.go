@@ -27,7 +27,7 @@ func newWebFiles(webDir string, config common.Config, options *storage.OptionsDA
 	data := templateData{Options: options, Config: &config}
 
 	tp := newTemplateProcessor(func(stat fs.FileInfo) bool {
-		ok, _ := templateAllowedExt[strings.ToLower(path2.Ext(stat.Name()))]
+		ok := templateAllowedExt[strings.ToLower(path2.Ext(stat.Name()))]
 		return ok
 	})
 	preprocess := func(name string, file http.File) (string, error) {
@@ -53,7 +53,7 @@ func (templateData) Json(o interface{}) (string, error) {
 	return string(s), nil
 }
 
-var Unprocessed = errors.New("unprocessed")
+var ErrUnprocessed = errors.New("unprocessed")
 
 func newRootFileSystem(root string,
 	preprocess func(string, http.File) (string, error)) http.FileSystem {
@@ -71,7 +71,7 @@ func (r rootFs) Open(name string) (http.File, error) {
 		return nil, e
 	}
 	content, e := r.preprocess(name, file)
-	if e == Unprocessed {
+	if e == ErrUnprocessed {
 		return file, nil
 	}
 	defer func() { _ = file.Close() }()
@@ -102,7 +102,7 @@ func (tp *templateProcessor) Process(file http.File, data interface{}) ([]byte, 
 	}
 
 	if tp.filter != nil && !tp.filter(stat) {
-		return nil, Unprocessed
+		return nil, ErrUnprocessed
 	}
 
 	name := stat.Name()

@@ -50,7 +50,7 @@ export default {
       f_username: '用户名',
       f_password: '密码',
       f_rootPath: '根目录',
-      f_rootPath_desc: '限制用户只能访问这个目录下的资源，路径不以 / 开头',
+      f_rootPath_desc: '限制用户只能访问这个目录下的资源（admin 组的用户将忽略此参数），路径不以 / 开头',
       delete_user: '删除用户',
       confirm_delete: '确认删除 {n}？',
     },
