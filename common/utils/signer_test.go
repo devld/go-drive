@@ -8,7 +8,7 @@ import (
 func TestSigner(t *testing.T) {
 	s := NewSigner()
 
-	signature := s.Sign("hello world", time.Now().Add(900*time.Millisecond))
+	signature := s.Sign("hello world", time.Now().Add(3*time.Second))
 
 	t.Logf("signature: %s\n", signature)
 
@@ -22,7 +22,7 @@ func TestSigner(t *testing.T) {
 		t.Errorf("test failed")
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 	ok = s.Validate("hello world", signature)
 	if ok {
 		t.Errorf("test failed")

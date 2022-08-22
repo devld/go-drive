@@ -44,7 +44,9 @@ func IsRootPath(path string) bool {
 func CleanPath(path string) string {
 	path = path2.Clean(path)
 	path = strings.TrimPrefix(path, "/")
-	path = strings.TrimPrefix(path, "../")
+	for strings.HasPrefix(path, "../") {
+		path = path[3:]
+	}
 	if path == "." {
 		path = ""
 	}
