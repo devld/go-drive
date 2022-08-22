@@ -15,7 +15,7 @@ async function getRender() {
           const validLanguage = hljs.getLanguage(language)
             ? language
             : 'plaintext'
-          return hljs.highlight(validLanguage, code).value
+          return hljs.highlight(code, { language: validLanguage }).value
         },
       })
       marked = (s) => {

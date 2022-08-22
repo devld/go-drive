@@ -12,6 +12,7 @@
       :show-toggles="showToggles"
       :get-link="getLink"
       :draggable="draggable"
+      @entries-change="emit('entries-change', $event)"
       @entry-click="emit('entry-click', $event)"
       @entry-menu="emit('entry-menu', $event)"
       @update:path="emit('update:path', $event)"
@@ -67,6 +68,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits<{
+  (e: 'entries-change', v: Entry[]): void
   (e: 'entry-click', v: EntryEventData): void
   (e: 'entry-menu', v: EntryEventData): void
   (e: 'update:path', v: EntryEventData): void
@@ -151,6 +153,10 @@ const reload = () => {
 }
 
 defineExpose({
+  get entries() {
+    if (!entryListEl.value) return undefined
+    return entryListEl.value.entries
+  },
   reload,
   focusOnEntry,
   setViewMode,

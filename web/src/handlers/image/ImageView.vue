@@ -1,87 +1,18 @@
 <template>
-  <div class="image-view-page">
-    <!-- Root element of PhotoSwipe. Must have class pswp. -->
-    <div ref="psEl" class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
-      <!-- Background of PhotoSwipe.
-      It's a separate element as animating opacity is faster than rgba().-->
-      <div class="pswp__bg"></div>
-
-      <!-- Slides wrapper with overflow:hidden. -->
-      <div class="pswp__scroll-wrap">
-        <!-- Container that holds slides.
-            PhotoSwipe keeps only 3 of them in the DOM to save memory.
-        Don't modify these 3 pswp__item elements, data is added later on.-->
-        <div class="pswp__container">
-          <div class="pswp__item"></div>
-          <div class="pswp__item"></div>
-          <div class="pswp__item"></div>
-        </div>
-
-        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
-        <div class="pswp__ui pswp__ui--hidden">
-          <div class="pswp__top-bar">
-            <!--  Controls are self-explanatory. Order can be changed. -->
-
-            <div class="pswp__counter"></div>
-            <button
-              class="pswp__button pswp__button--close"
-              title="Close (Esc)"
-            ></button>
-            <button
-              class="pswp__button pswp__button--fs"
-              title="Toggle fullscreen"
-            ></button>
-            <button
-              class="pswp__button pswp__button--zoom"
-              title="Zoom in/out"
-            ></button>
-
-            <!-- Preloader demo https://codepen.io/dimsemenov/pen/yyBWoR -->
-            <!-- element will get class pswp__preloader--active when preloader is running -->
-            <div class="pswp__preloader">
-              <div class="pswp__preloader__icn">
-                <div class="pswp__preloader__cut">
-                  <div class="pswp__preloader__donut"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"
-          >
-            <div class="pswp__share-tooltip"></div>
-          </div>
-
-          <button
-            class="pswp__button pswp__button--arrow--left"
-            title="Previous (arrow left)"
-          ></button>
-
-          <button
-            class="pswp__button pswp__button--arrow--right"
-            title="Next (arrow right)"
-          ></button>
-
-          <div class="pswp__caption">
-            <div class="pswp__caption__center"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div
+    ref="psEl"
+    class="image-view-page"
+    :class="{ loading: isCurrentImageSizeLoading }"
+  ></div>
 </template>
 <script setup lang="ts">
 import { fileUrl } from '@/api'
 import PhotoSwipe from 'photoswipe'
-import PhotoSwipeUIDefault from 'photoswipe/dist/photoswipe-ui-default'
 import { filenameExt, filename as filenameFn, dir, pathJoin } from '@/utils'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Entry } from '@/types'
-
-function isSupportedImageExt(ext: string) {
-  return ['jpg', 'jpeg', 'png', 'gif'].includes(ext)
-}
+import { EntryHandlerContext } from '../types'
+import { DEFAULT_IMAGE_FILE_EXTS } from '@/config'
 
 const props = defineProps({
   entry: {
@@ -92,7 +23,17 @@ const props = defineProps({
     type: Array as PropType<Entry[]>,
     required: true,
   },
+  ctx: {
+    type: Object as PropType<EntryHandlerContext>,
+    required: true,
+  },
 })
+
+function isSupportedImageExt(ext: string) {
+  return (
+    props.ctx.options['web.imageFileExts'] || DEFAULT_IMAGE_FILE_EXTS
+  ).includes(ext)
+}
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -111,48 +52,53 @@ const filename = computed(() => filenameFn(path.value))
 
 const psEl = ref<HTMLElement | null>(null)
 
-let index: number
+let ps: PhotoSwipe | undefined
+
+const index = ref(0)
+
+const imageSizeLoading = ref(new Set<number>())
+const isCurrentImageSizeLoading = computed(() =>
+  imageSizeLoading.value.has(index.value)
+)
 
 const initPhotoSwipe = () => {
-  index = images.value.findIndex((f) => f.name === filename.value)
+  index.value = images.value.findIndex((f) => f.name === filename.value)
+
   const basePath = dir(path.value)
-  const ps = new PhotoSwipe(
-    psEl.value!,
-    PhotoSwipeUIDefault,
-    images.value.map((i) => ({
+  ps = new PhotoSwipe({
+    appendToEl: psEl.value!,
+    dataSource: images.value.map((i) => ({
       src: fileUrl(pathJoin(basePath, i.name), i.meta, {
         useProxy: 'referrer',
       }),
-      w: 0,
-      h: 0,
     })),
-    {
-      history: false,
-      index,
-      loop: false,
-    }
-  )
-  ps.listen('gettingData', (index: number, item: any) => {
+    index: index.value,
+    loop: true,
+    wheelToZoom: true,
+    pinchToClose: true,
+  })
+  ps.on('gettingData', ({ data, index }) => {
+    if (!ps) return
     // https://github.com/dimsemenov/PhotoSwipe/issues/796
-    if (item.w > 0 && item.h > 0) return
+    if (data.width! > 0 && data.height! > 0) return
+    imageSizeLoading.value.add(index)
     const img = new Image()
     img.onload = function () {
-      item.w = img.width
-      item.h = img.height
-      ps.updateSize(true)
+      data.width = img.width
+      data.height = img.height
+      ps?.refreshSlideContent(index)
+      imageSizeLoading.value.delete(index)
     }
-    img.src = item.src
+    img.src = data.src!
   })
-  ps.listen('close', () => {
+  ps.on('close', () => {
+    if (!ps) return
     emit('close')
+    ps = undefined
   })
-  ps.listen('beforeChange', (offset: number) => {
-    if (!offset) return
-    let newIndex = (index += offset)
-    if (newIndex < 0) newIndex += images.value.length
-    if (newIndex >= images.value.length) newIndex -= images.value.length
-    index = newIndex
-    emit('entry-change', images.value[index].path)
+  ps.on('change', () => {
+    index.value = ps!.currIndex
+    emit('entry-change', images.value[index.value].path)
   })
   ps.init()
 }
@@ -160,12 +106,24 @@ const initPhotoSwipe = () => {
 onMounted(() => {
   initPhotoSwipe()
 })
+
+onUnmounted(() => {
+  if (!ps) return
+  const ps_ = ps
+  ps = undefined
+  ps_.destroy()
+})
 </script>
 <style lang="scss">
 @import url('photoswipe/dist/photoswipe.css');
-@import url('photoswipe/dist/default-skin/default-skin.css');
 .image-view-page {
   width: 100vw;
   height: 100vh;
+
+  &.loading {
+    .pswp__img {
+      visibility: hidden;
+    }
+  }
 }
 </style>
