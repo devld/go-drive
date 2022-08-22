@@ -1,7 +1,7 @@
 <template>
-  <div class="music-view-page">
+  <div class="audio-view-page">
     <HandlerTitleBar :title="entry.name" @close="emit('close')" />
-    <div ref="containerEl" class="music-view-player"></div>
+    <div ref="containerEl" class="audio-view-player"></div>
   </div>
 </template>
 <script setup lang="ts">
@@ -75,7 +75,7 @@ onUnmounted(() => {
 })
 </script>
 <style lang="scss">
-.music-view-page {
+.audio-view-page {
   position: relative;
   width: 500px;
   overflow: hidden;
@@ -93,7 +93,7 @@ onUnmounted(() => {
     right: 0;
   }
 
-  .music-view-player {
+  .audio-view-player {
     width: 100%;
     margin: 0;
     box-shadow: none;
@@ -123,7 +123,7 @@ onUnmounted(() => {
 }
 
 @media screen and (max-width: 500px) {
-  .music-view-page {
+  .audio-view-page {
     width: 96vw;
   }
 }

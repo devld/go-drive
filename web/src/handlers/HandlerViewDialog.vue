@@ -1,5 +1,5 @@
 <template>
-  <DialogView eager :show="showing">
+  <DialogView class="entry-handler-dialog" eager :show="showing">
     <HandlerView ref="view" v-bind="events" />
   </DialogView>
 </template>
@@ -56,3 +56,10 @@ const handle: EntryHandlerViewHandle = {
 
 defineExpose(handle)
 </script>
+<style lang="scss">
+.entry-handler-dialog {
+  .dialog-view__content {
+    background-color: transparent;
+  }
+}
+</style>

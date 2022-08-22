@@ -172,6 +172,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits<{
+  (e: 'entries-change', data: Entry[]): void
   (e: 'update:path', data: EntryEventData): void
   (e: 'update:viewMode', data: ListViewMode): void
   (e: 'entry-click', data: EntryEventData): void
@@ -236,6 +237,8 @@ watch(
   },
   { immediate: true }
 )
+
+watch(sortedEntries, (entries) => emit('entries-change', entries))
 
 const entryClicked = (e: EntryEventData) => {
   const event = e.event as MouseEvent | undefined
@@ -356,7 +359,12 @@ useHotKey(() => {
   toggleViewMode()
 }, 't')
 
-defineExpose({ focusOnEntry, setSortBy, setViewMode, toggleViewMode })
+defineExpose({
+  focusOnEntry,
+  setSortBy,
+  setViewMode,
+  toggleViewMode,
+})
 </script>
 <style lang="scss">
 .entry-list {

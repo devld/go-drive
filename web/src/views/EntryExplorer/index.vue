@@ -20,8 +20,9 @@
         show-toggles
         draggable
         :get-link="getLink"
+        @entries-change="onEntriesChanged"
         @update:view-mode="onViewModeChanged"
-        @entries-load="entriesLoaded"
+        @entries-load="onEntriesLoaded"
         @entry-click="onEntryClicked"
         @entry-menu="showEntryMenu"
         @loading="progressBar($event)"
@@ -274,8 +275,7 @@ const showEntryMenu = ({ entry, event }: EntryEventData) => {
   entryMenuShowing.value = true
 }
 
-const entriesLoaded = ({
-  entries: entries_,
+const onEntriesLoaded = ({
   path: path_,
   entry: thisEntry,
 }: EntriesLoadData) => {
@@ -285,10 +285,12 @@ const entriesLoaded = ({
     router.push(getDirLink(path_))
   }
 
-  entries.value = entries_
   currentDirEntry.value = thisEntry
-
   selectedEntries.value.splice(0)
+}
+
+const onEntriesChanged = (data: Entry[]) => {
+  entries.value = data
   onRouteChanged(router.currentRoute.value)
 }
 
@@ -409,12 +411,6 @@ window.addEventListener('keydown', onKeyDown)
   background-color: var(--primary-bg-color);
   padding: 16px;
   border-radius: 16px;
-}
-
-.entry-handler-dialog {
-  .dialog-view__content {
-    background-color: transparent;
-  }
 }
 
 @media screen and (max-width: 900px) {
