@@ -168,7 +168,7 @@ const ext = computed(() => filenameExt(props.entry.name))
   }
 
   &:hover {
-    .entry-icon__thumbnail {
+    .entry-icon-file .entry-icon__thumbnail {
       transform: scale(1.2);
     }
   }
