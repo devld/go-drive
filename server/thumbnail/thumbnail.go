@@ -23,7 +23,7 @@ type TypeHandlerFactory = func(config types.SM) (TypeHandler, error)
 
 type TypeHandler interface {
 	// CreateThumbnail creates thumbnail for entry, and writes to dest
-	CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error
+	CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error
 	// MimeType returns the mime-type of this TypeHandler can generate
 	MimeType() string
 	// Timeout returns the timeout when generating thumbnail,
@@ -83,7 +83,7 @@ var entrySelfThumbnailTypeHandler = &entrySelfThumbnailHandler{}
 type entrySelfThumbnailHandler struct {
 }
 
-func (est *entrySelfThumbnailHandler) CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
+func (est *entrySelfThumbnailHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
 	te := GetWrappedThumbnailEntry(entry)
 	if te == nil {
 		return errors.New("entry is not ThumbnailEntry")
@@ -101,4 +101,24 @@ func (est *entrySelfThumbnailHandler) MimeType() string {
 
 func (est *entrySelfThumbnailHandler) Timeout() time.Duration {
 	return 30 * time.Second
+}
+
+type ThumbnailEntry interface {
+	types.IEntry
+	types.IDispatcherEntry
+	GetExternalURL() string
+}
+
+type thumbnailEntry struct {
+	types.IEntry
+	types.IDispatcherEntry
+	externalURL string
+}
+
+func (te *thumbnailEntry) GetExternalURL() string {
+	return te.externalURL
+}
+
+func (te *thumbnailEntry) GetIEntry() types.IEntry {
+	return te.IEntry
 }

@@ -89,23 +89,25 @@ thumbnail:
       #  # thumbnail image padding
       #  padding: 10
 
-    # shell: generating thumbnail by executing external command
-    # The file content(if the entry is readable) will be written to stdin.
+    # shell: generating thumbnail by executing external command, see docs/thumbnail-shell-example.sh
+    # The file content(if the entry is readable and write-content is true) will be written to stdin.
     # And the thumbnail should be written to stdout.
     # The generating failed if the command exit with non-zero code.
     # There are some environment variables will be supplied:
     #
     # GO_DRIVE_ENTRY_TYPE: file|dir
+    # GO_DRIVE_ENTRY_REAL_PATH: the quoted entry real path(no chroot, no mount)
     # GO_DRIVE_ENTRY_PATH: the quoted entry path
     # GO_DRIVE_ENTRY_NAME: the quoted entry name
     # GO_DRIVE_ENTRY_SIZE: the entry file size
     # GO_DRIVE_ENTRY_MOD_TIME: timestamp, modTime of this entry
+    # GO_DRIVE_ENTRY_URL: URL of the download file (e.g. /content/a/a.txt)
     #- type: shell
     #  tag:
     #  file-types: mp4,avi
     #  config:
     #    # the command to generating thumbnail
-    #    shell: ffmpeg.exe -hide_banner -loglevel error -i - -frames:v 1 -vf scale=220:-1 -f mjpeg -
+    #    shell: ffmpeg -hide_banner -loglevel error -i - -frames:v 1 -vf scale=220:-1 -f mjpeg -
     #    # the output file mime-type
     #    mime-type: image/jpeg
     #    # whether writing file content to stdin

@@ -51,17 +51,18 @@ func InitDriveRoutes(
 		options:       optionsDAO,
 	}
 
-	signatureAuthRoute := router.Group("/", SignatureAuth(signer, userDAO))
+	signatureAuthRoute := router.Group("/", SignatureAuth(signer, userDAO, false))
 
 	// get file content
 	signatureAuthRoute.HEAD("/content/*path", dr.getContent)
 	signatureAuthRoute.GET("/content/*path", dr.getContent)
 	signatureAuthRoute.GET("/thumbnail/*path", dr.getThumbnail)
 
-	r := router.Group("/", TokenAuth(tokenStore))
+	tokenAuth := TokenAuth(tokenStore)
+	r := router.Group("/", tokenAuth)
 
 	// list entries/drives
-	r.GET("/entries/*path", dr.list)
+	router.GET("/entries/*path", SignatureAuth(signer, userDAO, true), tokenAuth, dr.list)
 	// get entry info
 	r.GET("/entry/*path", dr.get)
 	// mkdir

@@ -38,7 +38,7 @@ func newImageTypeHandler(c types.SM) (TypeHandler, error) {
 	}, nil
 }
 
-func (i *imageTypeHandler) CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
+func (i *imageTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
 	if entry.Size() > i.maxSize {
 		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.file_too_large"))
 	}
