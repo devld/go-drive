@@ -1,7 +1,6 @@
 package i18n
 
 import (
-	"errors"
 	"fmt"
 	"go-drive/common"
 	"go-drive/common/utils"
@@ -87,10 +86,7 @@ func readAllLang(path string) (map[language.Tag]map[string]string, error) {
 	}
 	r := make(map[language.Tag]map[string]string)
 	for _, file := range files {
-		lang := file.Name()
-		if strings.HasSuffix(lang, ".yml") {
-			lang = lang[:len(lang)-4]
-		}
+		lang := strings.TrimSuffix(file.Name(), ".yml")
 
 		langTag, e := language.Parse(lang)
 		if e != nil {
@@ -104,7 +100,7 @@ func readAllLang(path string) (map[language.Tag]map[string]string, error) {
 		}
 		items := make(map[string]interface{})
 		if e := yaml.Unmarshal(bytes, items); e != nil {
-			return nil, errors.New(fmt.Sprintf("error parsing file '%s': %s", file.Name(), e.Error()))
+			return nil, fmt.Errorf("error parsing file '%s': %s", file.Name(), e.Error())
 		}
 		messages := utils.FlattenStringMap(items, ".")
 		r[langTag] = messages

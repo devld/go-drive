@@ -69,7 +69,7 @@ func NewOneDrive(_ context.Context, config types.SM,
 	}
 
 	cacheTtl := config.GetDuration("cache_ttl", -1)
-	params, e := driveUtils.Data.Load("drive_id", "share_point_id")
+	params, _ := driveUtils.Data.Load("drive_id", "share_point_id")
 	od := &OneDrive{
 		cacheTTL:      cacheTtl,
 		uploadProxy:   config.GetBool("proxy_upload"),

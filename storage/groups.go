@@ -2,9 +2,10 @@ package storage
 
 import (
 	"errors"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
+
 	"gorm.io/gorm"
 )
 
@@ -56,7 +57,7 @@ func (g *GroupDAO) GetGroup(name string) (GroupWithUsers, error) {
 }
 
 func saveUserGroup(users []types.User, name string, db *gorm.DB) error {
-	if users == nil || len(users) == 0 {
+	if len(users) == 0 {
 		return nil
 	}
 	for _, u := range users {

@@ -6,7 +6,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"go-drive/common/drive_util"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/req"
 	"go-drive/common/types"
@@ -267,9 +267,7 @@ func (w *Drive) deserializeEntry(dat string) (types.IEntry, error) {
 func (w *Drive) newEntry(res propfindResponse) *webDavEntry {
 	modTime, _ := time.Parse(time.RFC1123, res.LastModified)
 	href, _ := url.PathUnescape(res.Href)
-	if strings.HasPrefix(href, w.pathPrefix) {
-		href = href[len(w.pathPrefix):]
-	}
+	href = strings.TrimPrefix(href, w.pathPrefix)
 	return &webDavEntry{
 		path:    utils.CleanPath(href),
 		modTime: utils.Millisecond(modTime),

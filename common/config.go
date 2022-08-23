@@ -199,7 +199,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	}
 
 	if _, e := os.Stat(config.DataDir); os.IsNotExist(e) {
-		return config, errors.New(fmt.Sprintf("data dir '%s' does not exist", config.DataDir))
+		return config, fmt.Errorf("data dir '%s' does not exist", config.DataDir)
 	}
 
 	if config.Thumbnail.Concurrent <= 0 {

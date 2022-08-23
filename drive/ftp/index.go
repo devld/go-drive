@@ -2,7 +2,6 @@ package ftp
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
@@ -311,5 +310,5 @@ func mapError(e error) error {
 	if !ok {
 		return e
 	}
-	return errors.New(fmt.Sprintf("[%d] %s", fe.Code(), fe.Message()))
+	return fmt.Errorf("[%d] %s", fe.Code(), fe.Message())
 }

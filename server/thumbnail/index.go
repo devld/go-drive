@@ -82,38 +82,38 @@ func NewMaker(config common.Config, optionsDAO *storage.OptionsDAO,
 	return m, nil
 }
 
+var tagRegexp = regexp.MustCompile("^[A-z0-9-_]*$")
+
 func createHandlers(items []common.ThumbnailHandlerItem) (map[string]map[string]TypeHandler, error) {
 	hs := make(map[string]map[string]TypeHandler)
-	if items != nil {
-		for _, item := range items {
-			factory, ok := typeHandlerFactories[item.Type]
-			if !ok {
-				availableTypes := make([]string, 0, len(typeHandlerFactories))
-				for t := range typeHandlerFactories {
-					availableTypes = append(availableTypes, t)
-				}
+	for _, item := range items {
+		factory, ok := typeHandlerFactories[item.Type]
+		if !ok {
+			availableTypes := make([]string, 0, len(typeHandlerFactories))
+			for t := range typeHandlerFactories {
+				availableTypes = append(availableTypes, t)
+			}
 
-				return nil, errors.New(fmt.Sprintf("unknown handler type: %s. Available types are %v",
-					item.Type, availableTypes))
+			return nil, fmt.Errorf("unknown handler type: %s. Available types are %v",
+				item.Type, availableTypes)
+		}
+		h, e := factory(item.Config)
+		if e != nil {
+			return nil, errors.New("failed to create thumbnail type handler " + item.Type + ": " + e.Error())
+		}
+		for _, ext := range strings.Split(item.FileTypes, ",") {
+			ext = strings.ToLower(strings.TrimSpace(ext))
+			extHs, ok := hs[ext]
+			if !ok {
+				extHs = make(map[string]TypeHandler)
+				hs[ext] = extHs
 			}
-			h, e := factory(item.Config)
-			if e != nil {
-				return nil, errors.New("failed to create thumbnail type handler " + item.Type + ": " + e.Error())
-			}
-			for _, ext := range strings.Split(item.FileTypes, ",") {
-				ext = strings.ToLower(strings.TrimSpace(ext))
-				extHs, ok := hs[ext]
-				if !ok {
-					extHs = make(map[string]TypeHandler)
-					hs[ext] = extHs
+			for _, tag := range strings.Split(item.Tags, ",") {
+				if !tagRegexp.Match([]byte(tag)) {
+					return nil, errors.New("invalid handler tag: " + tag)
 				}
-				for _, tag := range strings.Split(item.Tags, ",") {
-					if v, _ := regexp.Match("^[A-z0-9-_]*$", []byte(tag)); !v {
-						return nil, errors.New("invalid handler tag: " + tag)
-					}
-					tag = strings.ToLower(strings.TrimSpace(tag))
-					extHs[tag] = h
-				}
+				tag = strings.ToLower(strings.TrimSpace(tag))
+				extHs[tag] = h
 			}
 		}
 	}
@@ -427,7 +427,7 @@ func (m *Maker) clean() {
 		return nil
 	})
 	if n > 0 {
-		log.Println(fmt.Sprintf("%d expired thumbnails cleaned", n))
+		log.Printf("%d expired thumbnails cleaned", n)
 	}
 	if e != nil {
 		log.Println("error when cleaning expired thumbnails", e)
