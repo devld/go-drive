@@ -2,7 +2,6 @@ package thumbnail
 
 import (
 	"context"
-	"github.com/nfnt/resize"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -15,6 +14,8 @@ import (
 	"io"
 	"os"
 	"time"
+
+	"github.com/nfnt/resize"
 )
 
 func init() {
@@ -38,14 +39,10 @@ func newImageTypeHandler(c types.SM) (TypeHandler, error) {
 }
 
 func (i *imageTypeHandler) CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
-	content, ok := entry.(types.IContent)
-	if !ok {
-		return err.NewNotFoundError()
-	}
-	if content.Size() > i.maxSize {
+	if entry.Size() > i.maxSize {
 		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.file_too_large"))
 	}
-	tempFile, e := drive_util.CopyIContentToTempFile(task.NewContextWrapper(ctx), content, "")
+	tempFile, e := drive_util.CopyIContentToTempFile(task.NewContextWrapper(ctx), entry, "")
 	if e != nil {
 		return e
 	}

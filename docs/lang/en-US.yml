@@ -49,7 +49,6 @@ drive:
   not_configured: Drive not configured
   copy_type_mismatch1: Dest '{{ 2 }}' is a file, but src '{{ 1 }}' is a dir
   copy_type_mismatch2: Dest '{{ 2 }}' is a dir, but src '{{ 1 }}' is a file
-  file_not_readable: File {{ 1 }} is not readable
   file_exists: File exists
   file_not_exists: File not exist
   invalid_path: Invalid path

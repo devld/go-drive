@@ -64,6 +64,8 @@ type IContent interface {
 
 // IEntry is the abstraction of file and directory
 type IEntry interface {
+	IContent
+
 	Path() string
 	Type() EntryType
 	Size() int64

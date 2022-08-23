@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"go-drive/common/drive_util"
-	err "go-drive/common/errors"
 	"go-drive/common/types"
 	"io"
 	"time"
@@ -33,11 +32,7 @@ func newTextTypeHandler(c types.SM) (TypeHandler, error) {
 }
 
 func (t *textTypeHandler) CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
-	content, ok := entry.(types.IContent)
-	if !ok {
-		return err.NewNotFoundError()
-	}
-	reader, e := drive_util.GetIContentReader(ctx, content)
+	reader, e := drive_util.GetIContentReader(ctx, entry)
 	if e != nil {
 		return e
 	}

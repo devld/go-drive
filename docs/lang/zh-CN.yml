@@ -49,7 +49,6 @@ drive:
   not_configured: Drive 还未配置完成
   copy_type_mismatch1: 目的路径 '{{ 2 }}' 是一个文件, 但源路径 '{{ 1 }}' 是一个文件夹
   copy_type_mismatch2: 目的路径 '{{ 2 }}' 是一个文件夹, 但源路径 '{{ 1 }}' 是一个文件
-  file_not_readable: 文件 '{{ 1 }}' 不可读
   file_exists: 文件已存在
   file_not_exists: 文件不存在
   invalid_path: 无效的路径

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
@@ -211,10 +210,6 @@ func (w *webdavFile) getFile() error {
 	}
 
 	if w.openFlag == os.O_RDONLY {
-		content, ok := w.e.(types.IContent)
-		if !ok {
-			return errors.New("file is not readable")
-		}
 		cf, e := utils.NewCacheFile(w.e.Size(), w.tempDir, "webdav-tmp")
 		if e != nil {
 			return e
@@ -226,7 +221,11 @@ func (w *webdavFile) getFile() error {
 		}
 		if w.e.Size() > 0 {
 			go func() {
-				_ = drive_util.CopyIContent(task.NewContextWrapper(context.Background()), content, cf)
+				e := drive_util.CopyIContent(task.NewContextWrapper(context.Background()), w.e, cf)
+				if e != nil {
+					log.Printf("error copy file: %v", e)
+					_ = cf.Close()
+				}
 			}()
 		}
 		w.cacheFile = cf
@@ -241,11 +240,7 @@ func (w *webdavFile) getFile() error {
 		}
 		file = tempFile
 	} else {
-		content, ok := w.e.(types.IContent)
-		if !ok {
-			return errors.New("file is not readable")
-		}
-		tempFile, e := drive_util.CopyIContentToTempFile(task.NewContextWrapper(context.Background()), content, w.tempDir)
+		tempFile, e := drive_util.CopyIContentToTempFile(task.NewContextWrapper(context.Background()), w.e, w.tempDir)
 		if e != nil {
 			return e
 		}
@@ -371,11 +366,7 @@ func (w *webdavFile) GetURL(ctx context.Context) (string, error) {
 	if !w.e.Type().IsFile() {
 		return "", os.ErrInvalid
 	}
-	c, ok := w.e.(types.IContent)
-	if !ok {
-		return "", nil
-	}
-	u, e := c.GetURL(ctx)
+	u, e := w.e.GetURL(ctx)
 	if err.IsUnsupportedError(e) {
 		return "", nil
 	}
@@ -480,4 +471,16 @@ func (c *createdEntry) ModTime() int64 {
 
 func (c *createdEntry) Drive() types.IDrive {
 	return c.drive
+}
+
+func (c *createdEntry) Name() string {
+	return utils.PathBase(c.path)
+}
+
+func (c *createdEntry) GetReader(_ context.Context) (io.ReadCloser, error) {
+	return nil, err.NewNotAllowedError()
+}
+
+func (c *createdEntry) GetURL(_ context.Context) (*types.ContentURL, error) {
+	return nil, err.NewNotAllowedError()
 }

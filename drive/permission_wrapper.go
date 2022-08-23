@@ -66,7 +66,7 @@ func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IE
 	}
 	return &permissionWrapperEntry{
 		p:          p,
-		entry:      entry,
+		IEntry:     entry,
 		permission: permission,
 		accessKey:  ak,
 	}, nil
@@ -82,7 +82,7 @@ func (p *PermissionWrapperDrive) Save(ctx types.TaskCtx, path string, size int64
 	if e != nil {
 		return nil, e
 	}
-	return &permissionWrapperEntry{p: p, entry: entry, permission: permission}, nil
+	return &permissionWrapperEntry{p: p, IEntry: entry, permission: permission}, nil
 }
 
 func (p *PermissionWrapperDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
@@ -94,7 +94,7 @@ func (p *PermissionWrapperDrive) MakeDir(ctx context.Context, path string) (type
 	if e != nil {
 		return nil, e
 	}
-	return &permissionWrapperEntry{p: p, entry: entry, permission: permission}, nil
+	return &permissionWrapperEntry{p: p, IEntry: entry, permission: permission}, nil
 }
 
 func (p *PermissionWrapperDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
@@ -109,7 +109,7 @@ func (p *PermissionWrapperDrive) Copy(ctx types.TaskCtx, from types.IEntry, to s
 	if e != nil {
 		return nil, e
 	}
-	return &permissionWrapperEntry{p: p, entry: entry, permission: toPermission}, nil
+	return &permissionWrapperEntry{p: p, IEntry: entry, permission: toPermission}, nil
 }
 
 func (p *PermissionWrapperDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
@@ -130,7 +130,7 @@ func (p *PermissionWrapperDrive) Move(ctx types.TaskCtx, from types.IEntry, to s
 	if e != nil {
 		return nil, e
 	}
-	return &permissionWrapperEntry{p: p, entry: entry, permission: toPermission}, nil
+	return &permissionWrapperEntry{p: p, IEntry: entry, permission: toPermission}, nil
 }
 
 func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
@@ -159,7 +159,7 @@ func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types
 				result,
 				&permissionWrapperEntry{
 					p:          p,
-					entry:      e,
+					IEntry:     e,
 					permission: per,
 					accessKey:  accessKey,
 				},
@@ -222,26 +222,14 @@ func (p *PermissionWrapperDrive) requireDescendantPermission(path string, requir
 }
 
 type permissionWrapperEntry struct {
+	types.IEntry
 	p          *PermissionWrapperDrive
-	entry      types.IEntry
 	permission types.Permission
 	accessKey  string
 }
 
-func (p *permissionWrapperEntry) Path() string {
-	return p.entry.Path()
-}
-
-func (p *permissionWrapperEntry) Type() types.EntryType {
-	return p.entry.Type()
-}
-
-func (p *permissionWrapperEntry) Size() int64 {
-	return p.entry.Size()
-}
-
 func (p *permissionWrapperEntry) Meta() types.EntryMeta {
-	meta := p.entry.Meta()
+	meta := p.IEntry.Meta()
 	meta.Readable = meta.Readable && p.permission.Readable()
 	meta.Writable = meta.Writable && p.permission.Writable()
 	if p.accessKey != "" {
@@ -251,32 +239,10 @@ func (p *permissionWrapperEntry) Meta() types.EntryMeta {
 	return meta
 }
 
-func (p *permissionWrapperEntry) ModTime() int64 {
-	return p.entry.ModTime()
-}
-
 func (p *permissionWrapperEntry) Drive() types.IDrive {
 	return p.p
 }
 
-func (p *permissionWrapperEntry) Name() string {
-	return utils.PathBase(p.entry.Path())
-}
-
-func (p *permissionWrapperEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	if c, ok := p.entry.(types.IContent); ok {
-		return c.GetReader(ctx)
-	}
-	return nil, err.NewUnsupportedError()
-}
-
-func (p *permissionWrapperEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
-	if c, ok := p.entry.(types.IContent); ok {
-		return c.GetURL(ctx)
-	}
-	return &types.ContentURL{}, err.NewUnsupportedError()
-}
-
 func (p *permissionWrapperEntry) GetIEntry() types.IEntry {
-	return p.entry
+	return p.IEntry
 }
