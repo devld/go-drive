@@ -2,7 +2,6 @@ package search
 
 import (
 	"errors"
-	"github.com/bmatcuk/doublestar/v4"
 	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/event"
@@ -12,10 +11,12 @@ import (
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/storage"
-	"golang.org/x/net/context"
 	"log"
 	"path/filepath"
 	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
+	"golang.org/x/net/context"
 )
 
 type IndexFilter = func(entry types.IEntry) bool
@@ -179,7 +180,7 @@ func (s *Service) indexAll(ctx types.TaskCtx, path string, ignoreError bool) err
 			return nil
 		}
 		if isEntryExcluded(entry, filters) {
-			return skip
+			return errSkip
 		}
 		items = append(items, s.mapEntry(entry))
 		if len(items) >= indexBatchSize {
@@ -225,11 +226,8 @@ func isEntryExcluded(entry types.IEntry, filters []string) bool {
 			}
 		}
 	}
-	if hasIncludes {
-		// if there are including patterns, but none of them matched, then it should be excluded
-		return true
-	}
-	return false
+	// if there are including patterns, but none of them matched, then it should be excluded
+	return hasIncludes
 }
 
 func (s *Service) loadFilters() ([]string, error) {
@@ -259,7 +257,7 @@ func (s *Service) mapEntry(e types.IEntry) types.EntrySearchItem {
 	}
 }
 
-var skip = errors.New("skip")
+var errSkip = errors.New("skip")
 
 func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 	ignoreError bool, visit func(entry types.IEntry) error) error {
@@ -275,7 +273,7 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 		return e
 	}
 	if e = visit(entry); e != nil {
-		if e == skip {
+		if e == errSkip {
 			return nil
 		}
 		log.Printf("failed to index %s: %s", utils.LogSanitize(rootPath), e)

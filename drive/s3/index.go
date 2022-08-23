@@ -2,16 +2,9 @@ package s3
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"go-drive/common/drive_util"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -21,6 +14,13 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 var s3T = i18n.TPrefix("drive.s3.")
@@ -327,7 +327,7 @@ func (s *Drive) delete(path string, ctx types.TaskCtx) error {
 			return e
 		}
 		if r.Errors != nil && len(r.Errors) > 0 {
-			return errors.New(fmt.Sprintf("%s: %s", *r.Errors[0].Key, *r.Errors[0].Code))
+			return fmt.Errorf("%s: %s", *r.Errors[0].Key, *r.Errors[0].Code)
 		}
 		ctx.Progress(int64(len(batches)), false)
 	}
@@ -364,7 +364,6 @@ func (s *Drive) Upload(ctx context.Context, path string, size int64,
 			UploadId:   aws.String(uploadId),
 		})
 		preSigned, e = req.Presign(2 * time.Hour)
-		break
 	case "CompleteMultipartUpload":
 		_, e := s.c.CompleteMultipartUploadWithContext(ctx, &s3.CompleteMultipartUploadInput{
 			Bucket:   s.bucket,

@@ -83,7 +83,8 @@ type IEntryWrapper interface {
 // IDispatcherEntry is for dispatcher.go to get the dispatched drive
 type IDispatcherEntry interface {
 	// GetDispatchedDrive returns the dispatched drive
-	GetDispatchedDrive() IDrive
+	GetDispatchedDrive() (string, IDrive)
+	GetRealPath() string
 }
 
 // DriveMeta is the metadata of drive

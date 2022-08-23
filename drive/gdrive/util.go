@@ -3,11 +3,11 @@ package gdrive
 import (
 	"context"
 	"errors"
-	"fmt"
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
+
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
@@ -69,7 +69,7 @@ func InitConfig(ctx context.Context, config types.SM,
 	user, e := service.Userinfo.V2.Me.Get().Context(ctx).Do()
 	initConfig.Configured = e == nil
 	if e == nil {
-		initConfig.OAuth.Principal = fmt.Sprintf("%s", user.Name)
+		initConfig.OAuth.Principal = user.Name
 		if e := buildInitForm(ctx, resp, utils, initConfig); e != nil {
 			return nil, e
 		}

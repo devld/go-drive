@@ -102,10 +102,8 @@ func (h *Client) newRequest(method string, requestUrl string, headers types.SM,
 	if e != nil {
 		return nil, e
 	}
-	if headers != nil {
-		for k, v := range headers {
-			req.Header.Set(k, v)
-		}
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", body.ContentType())

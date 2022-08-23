@@ -147,7 +147,7 @@ func (d *DispatcherDrive) Get(ctx context.Context, path string) (types.IEntry, e
 			Writable: false,
 		}}, nil
 	}
-	_, drive, realPath, e := d.resolve(path)
+	driveName, drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
@@ -155,7 +155,7 @@ func (d *DispatcherDrive) Get(ctx context.Context, path string) (types.IEntry, e
 	if e != nil {
 		return nil, e
 	}
-	return d.mapDriveEntry(path, entry), nil
+	return d.mapDriveEntry(path, driveName, entry), nil
 }
 
 func (d *DispatcherDrive) FindNonExistsEntryName(ctx context.Context, drive types.IDrive, path string) (string, error) {
@@ -210,7 +210,7 @@ func (d *DispatcherDrive) Save(ctx types.TaskCtx, path string, size int64,
 	if e != nil {
 		return nil, e
 	}
-	return d.mapDriveEntry(path2.Join(driveName, realPath), save), nil
+	return d.mapDriveEntry(path2.Join(driveName, realPath), driveName, save), nil
 }
 
 func (d *DispatcherDrive) ensureDir(ctx context.Context, drive types.IDrive, path string) error {
@@ -239,7 +239,7 @@ func (d *DispatcherDrive) ensureDir(ctx context.Context, drive types.IDrive, pat
 }
 
 func (d *DispatcherDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	_, drive, realPath, e := d.resolve(path)
+	driveName, drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
@@ -250,7 +250,7 @@ func (d *DispatcherDrive) MakeDir(ctx context.Context, path string) (types.IEntr
 	if e != nil {
 		return nil, e
 	}
-	return d.mapDriveEntry(path, dir), nil
+	return d.mapDriveEntry(path, driveName, dir), nil
 }
 
 func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
@@ -309,7 +309,7 @@ func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 	if e != nil {
 		return nil, e
 	}
-	return d.mapDriveEntry(path2.Join(driveName, pathTo), copied), nil
+	return d.mapDriveEntry(path2.Join(driveName, pathTo), driveName, copied), nil
 }
 
 func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
@@ -369,7 +369,7 @@ func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, 
 			}
 			return nil, e
 		}
-		return d.mapDriveEntry(path2.Join(driveName, pathTo), move), nil
+		return d.mapDriveEntry(path2.Join(driveName, pathTo), driveName, move), nil
 	}
 	return d.Get(ctx, path2.Join(driveName, pathTo))
 }
@@ -383,7 +383,7 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 		}
 		entries = drives
 	} else {
-		_, drive, realPath, e := d.resolve(path)
+		driveName, drive, realPath, e := d.resolve(path)
 		if e != nil {
 			return nil, e
 		}
@@ -391,7 +391,7 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 		if e != nil {
 			return nil, e
 		}
-		entries = d.mapDriveEntries(path, list)
+		entries = d.mapDriveEntries(path, driveName, list)
 	}
 
 	ms := d.mounts[path]
@@ -461,27 +461,28 @@ func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 	return drive.Upload(ctx, path2.Join(driveName, realPath), size, override, config)
 }
 
-func (d *DispatcherDrive) mapDriveEntry(path string, entry types.IEntry) types.IEntry {
-	return &entryWrapper{d: d, path: path, entry: entry}
+func (d *DispatcherDrive) mapDriveEntry(path string, driveName string, entry types.IEntry) types.IEntry {
+	return &entryWrapper{d: d, path: path, entry: entry, driveName: driveName}
 }
 
-func (d *DispatcherDrive) mapDriveEntries(dir string, entries []types.IEntry) []types.IEntry {
+func (d *DispatcherDrive) mapDriveEntries(dir string, driveName string, entries []types.IEntry) []types.IEntry {
 	mappedEntries := make([]types.IEntry, 0, len(entries))
 	for _, e := range entries {
 		path := e.Path()
 		mappedEntries = append(
 			mappedEntries,
-			d.mapDriveEntry(path2.Join(dir, utils.PathBase(path)), e),
+			d.mapDriveEntry(path2.Join(dir, utils.PathBase(path)), driveName, e),
 		)
 	}
 	return mappedEntries
 }
 
 type entryWrapper struct {
-	d       *DispatcherDrive
-	path    string
-	entry   types.IEntry
-	mountAt string
+	d         *DispatcherDrive
+	path      string
+	entry     types.IEntry
+	mountAt   string
+	driveName string
 }
 
 func (d *entryWrapper) Path() string {
@@ -535,8 +536,12 @@ func (d *entryWrapper) GetIEntry() types.IEntry {
 	return d.entry
 }
 
-func (d *entryWrapper) GetDispatchedDrive() types.IDrive {
-	return d.entry.Drive()
+func (d *entryWrapper) GetDispatchedDrive() (string, types.IDrive) {
+	return d.driveName, d.entry.Drive()
+}
+
+func (d *entryWrapper) GetRealPath() string {
+	return path2.Join(d.driveName, d.entry.Path())
 }
 
 type driveEntry struct {
