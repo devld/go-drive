@@ -297,20 +297,16 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	if content, ok := file.(types.IContent); ok {
-		useProxy := c.Query("proxy")
-		proxyMaxSize := dr.options.GetValue(maxProxySizeKey).DataSize(-1)
+	useProxy := c.Query("proxy")
+	proxyMaxSize := dr.options.GetValue(maxProxySizeKey).DataSize(-1)
 
-		if proxyMaxSize > 0 && file.Size() > proxyMaxSize {
-			useProxy = ""
-		}
-		if e := drive_util.DownloadIContent(c.Request.Context(), content, c.Writer, c.Request, useProxy != ""); e != nil {
-			_ = c.Error(e)
-			return
-		}
+	if proxyMaxSize > 0 && file.Size() > proxyMaxSize {
+		useProxy = ""
+	}
+	if e := drive_util.DownloadIContent(c.Request.Context(), file, c.Writer, c.Request, useProxy != ""); e != nil {
+		_ = c.Error(e)
 		return
 	}
-	_ = c.Error(err.NewNotAllowedError())
 }
 
 func (dr *driveRoute) getThumbnail(c *gin.Context) {

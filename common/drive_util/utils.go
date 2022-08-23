@@ -321,11 +321,7 @@ func CopyAll(ctx types.TaskCtx, entry types.IEntry, driveTo types.IDrive, to str
 
 func CopyEntry(ctx types.TaskCtx, from types.IEntry, driveTo types.IDrive, to string,
 	override bool, tempDir string) error {
-	content, ok := from.(types.IContent)
-	if !ok {
-		return err.NewNotAllowedMessageError(i18n.T("drive.file_not_readable", from.Path()))
-	}
-	file, e := CopyIContentToTempFile(task.DummyContext(), content, tempDir)
+	file, e := CopyIContentToTempFile(task.DummyContext(), from, tempDir)
 	if e != nil {
 		return e
 	}

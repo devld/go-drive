@@ -100,7 +100,6 @@ thumbnail:
     # GO_DRIVE_ENTRY_NAME: the quoted entry name
     # GO_DRIVE_ENTRY_SIZE: the entry file size
     # GO_DRIVE_ENTRY_MOD_TIME: timestamp, modTime of this entry
-    # GO_DRIVE_ENTRY_READABLE: true|false. If it's false, the stdin is empty
     #- type: shell
     #  tag:
     #  file-types: mp4,avi

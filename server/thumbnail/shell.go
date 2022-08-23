@@ -39,8 +39,6 @@ func init() {
 // GO_DRIVE_ENTRY_SIZE: the entry file size
 //
 // GO_DRIVE_ENTRY_MOD_TIME: timestamp, modTime of this entry
-//
-// GO_DRIVE_ENTRY_READABLE: true|false. If it's false, the stdin is empty
 type shellThumbnailTypeHandler struct {
 	command string
 	args    []string
@@ -88,17 +86,14 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry t
 	}
 	cmd := exec.Command(s.command, s.args...)
 
-	content, ok := entry.(types.IContent)
-
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_TYPE="+string(entry.Type()))
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_PATH=\""+entry.Path()+"\"")
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_NAME=\""+path.Base(entry.Path())+"\"")
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_SIZE="+strconv.FormatInt(entry.Size(), 10))
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_MOD_TIME="+strconv.FormatInt(entry.ModTime(), 10))
-	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_READABLE="+strconv.FormatBool(ok))
 
-	if ok && s.writeContent {
-		reader, e := content.GetReader(ctx)
+	if entry.Type().IsFile() && s.writeContent {
+		reader, e := entry.GetReader(ctx)
 		if e != nil {
 			return e
 		}

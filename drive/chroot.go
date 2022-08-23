@@ -159,9 +159,9 @@ func (c *ChrootWrapper) wrapEntry(e types.IEntry) types.IEntry {
 		return nil
 	}
 	return &chrootEntry{
-		entry: e,
-		path:  c.UnwrapPath(e.Path()),
-		c:     c,
+		IEntry: e,
+		path:   c.UnwrapPath(e.Path()),
+		c:      c,
 	}
 }
 
@@ -177,9 +177,9 @@ func (c *ChrootWrapper) wrapEntries(es []types.IEntry) []types.IEntry {
 }
 
 type chrootEntry struct {
-	entry types.IEntry
-	path  string
-	c     *ChrootWrapper
+	types.IEntry
+	path string
+	c    *ChrootWrapper
 }
 
 func (c *chrootEntry) Path() string {
@@ -191,39 +191,5 @@ func (c *chrootEntry) Drive() types.IDrive {
 }
 
 func (c *chrootEntry) GetIEntry() types.IEntry {
-	return c.entry
-}
-
-func (c *chrootEntry) Type() types.EntryType {
-	return c.entry.Type()
-}
-
-func (c *chrootEntry) Size() int64 {
-	return c.entry.Size()
-}
-
-func (c *chrootEntry) Meta() types.EntryMeta {
-	return c.entry.Meta()
-}
-
-func (c *chrootEntry) ModTime() int64 {
-	return c.entry.ModTime()
-}
-
-func (c *chrootEntry) Name() string {
-	return utils.PathBase(c.Path())
-}
-
-func (c *chrootEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	if content, ok := c.entry.(types.IContent); ok {
-		return content.GetReader(ctx)
-	}
-	return nil, err.NewNotAllowedError()
-}
-
-func (c *chrootEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
-	if content, ok := c.entry.(types.IContent); ok {
-		return content.GetURL(ctx)
-	}
-	return nil, err.NewNotAllowedError()
+	return c.IEntry
 }

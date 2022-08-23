@@ -409,7 +409,7 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 				}
 				return nil, e
 			}
-			mountedMap[name] = &entryWrapper{d: d, path: path2.Join(path, name), entry: entry, mountAt: m.MountAt}
+			mountedMap[name] = &entryWrapper{d: d, path: path2.Join(path, name), IEntry: entry, mountAt: m.MountAt}
 		}
 
 		newEntries := make([]types.IEntry, 0, len(entries)+len(mountedMap))
@@ -462,7 +462,7 @@ func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 }
 
 func (d *DispatcherDrive) mapDriveEntry(path string, driveName string, entry types.IEntry) types.IEntry {
-	return &entryWrapper{d: d, path: path, entry: entry, driveName: driveName}
+	return &entryWrapper{d: d, path: path, IEntry: entry, driveName: driveName}
 }
 
 func (d *DispatcherDrive) mapDriveEntries(dir string, driveName string, entries []types.IEntry) []types.IEntry {
@@ -478,9 +478,9 @@ func (d *DispatcherDrive) mapDriveEntries(dir string, driveName string, entries 
 }
 
 type entryWrapper struct {
+	types.IEntry
 	d         *DispatcherDrive
 	path      string
-	entry     types.IEntry
 	mountAt   string
 	driveName string
 }
@@ -489,16 +489,8 @@ func (d *entryWrapper) Path() string {
 	return d.path
 }
 
-func (d *entryWrapper) Type() types.EntryType {
-	return d.entry.Type()
-}
-
-func (d *entryWrapper) Size() int64 {
-	return d.entry.Size()
-}
-
 func (d *entryWrapper) Meta() types.EntryMeta {
-	meta := d.entry.Meta()
+	meta := d.IEntry.Meta()
 	if d.mountAt != "" {
 		meta.Props = utils.CopyMap(meta.Props)
 		meta.Props["mountAt"] = d.mountAt
@@ -506,42 +498,20 @@ func (d *entryWrapper) Meta() types.EntryMeta {
 	return meta
 }
 
-func (d *entryWrapper) ModTime() int64 {
-	return d.entry.ModTime()
-}
-
-func (d *entryWrapper) Name() string {
-	return utils.PathBase(d.path)
-}
-
-func (d *entryWrapper) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	if content, ok := d.entry.(types.IContent); ok {
-		return content.GetReader(ctx)
-	}
-	return nil, err.NewNotAllowedError()
-}
-
-func (d *entryWrapper) GetURL(ctx context.Context) (*types.ContentURL, error) {
-	if content, ok := d.entry.(types.IContent); ok {
-		return content.GetURL(ctx)
-	}
-	return nil, err.NewNotAllowedError()
-}
-
 func (d *entryWrapper) Drive() types.IDrive {
 	return d.d
 }
 
 func (d *entryWrapper) GetIEntry() types.IEntry {
-	return d.entry
+	return d.IEntry
 }
 
 func (d *entryWrapper) GetDispatchedDrive() (string, types.IDrive) {
-	return d.driveName, d.entry.Drive()
+	return d.driveName, d.IEntry.Drive()
 }
 
 func (d *entryWrapper) GetRealPath() string {
-	return path2.Join(d.driveName, d.entry.Path())
+	return path2.Join(d.driveName, d.IEntry.Path())
 }
 
 type driveEntry struct {
