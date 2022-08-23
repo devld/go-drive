@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
     port: 9803,
     proxy: {
       '/api': {
-        target: 'http://localhost:8099/go-drive/',
+        target: 'http://localhost:8089',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

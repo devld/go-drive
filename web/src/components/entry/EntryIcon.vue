@@ -1,5 +1,9 @@
 <template>
-  <span class="entry-icon" @click="emit('click', $event)">
+  <span
+    class="entry-icon"
+    :class="`entry-icon-${entry.type}`"
+    @click="emit('click', $event)"
+  >
     <Icon :svg="icon || entryIcon" />
     <img
       v-if="showThumbnail && thumbnail && !err"
@@ -79,5 +83,15 @@ const onError = (e: Event) => (err.value = e)
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.entry-icon-dir {
+  .entry-icon__thumbnail {
+    top: 60%;
+    left: 60%;
+    width: 50%;
+    height: 50%;
+    transform: translate(-50%, -50%);
+  }
 }
 </style>
