@@ -32,6 +32,8 @@ func init() {
 //
 // GO_DRIVE_ENTRY_TYPE: file|dir
 //
+// GO_DRIVE_ENTRY_REAL_PATH: the quoted entry real path(no chroot, no mount)
+//
 // GO_DRIVE_ENTRY_PATH: the quoted entry path
 //
 // GO_DRIVE_ENTRY_NAME: the quoted entry name
@@ -39,6 +41,8 @@ func init() {
 // GO_DRIVE_ENTRY_SIZE: the entry file size
 //
 // GO_DRIVE_ENTRY_MOD_TIME: timestamp, modTime of this entry
+//
+// GO_DRIVE_ENTRY_URL: URL of the download file (e.g. /content/a/a.txt)
 type shellThumbnailTypeHandler struct {
 	command string
 	args    []string
@@ -80,17 +84,19 @@ func newShellThumbnailTypeHandler(c types.SM) (TypeHandler, error) {
 	}, nil
 }
 
-func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
+func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
 	if s.maxSize > 0 && entry.Size() > s.maxSize {
 		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.file_too_large"))
 	}
 	cmd := exec.Command(s.command, s.args...)
 
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_TYPE="+string(entry.Type()))
+	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_REAL_PATH=\""+entry.GetRealPath()+"\"")
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_PATH=\""+entry.Path()+"\"")
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_NAME=\""+path.Base(entry.Path())+"\"")
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_SIZE="+strconv.FormatInt(entry.Size(), 10))
 	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_MOD_TIME="+strconv.FormatInt(entry.ModTime(), 10))
+	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_URL=\""+entry.GetExternalURL()+"\"")
 
 	if entry.Type().IsFile() && s.writeContent {
 		reader, e := entry.GetReader(ctx)

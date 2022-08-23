@@ -61,7 +61,7 @@ func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IE
 		return nil, e
 	}
 	ak := ""
-	if p.signer != nil && entry.Type().IsFile() {
+	if p.signer != nil {
 		ak = p.signer.GetSignature(path, time.Now().Add(accessKeyValidity))
 	}
 	return &permissionWrapperEntry{
@@ -152,7 +152,7 @@ func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types
 		per := p.pm.ResolvePath(e.Path())
 		if per.Readable() {
 			accessKey := ""
-			if p.signer != nil && e.Type().IsFile() {
+			if p.signer != nil {
 				accessKey = p.signer.GetSignature(e.Path(), time.Now().Add(accessKeyValidity))
 			}
 			result = append(

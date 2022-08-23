@@ -31,7 +31,7 @@ func newTextTypeHandler(c types.SM) (TypeHandler, error) {
 	}, nil
 }
 
-func (t *textTypeHandler) CreateThumbnail(ctx context.Context, entry types.IEntry, dest io.Writer) error {
+func (t *textTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
 	reader, e := drive_util.GetIContentReader(ctx, entry)
 	if e != nil {
 		return e

@@ -18,6 +18,7 @@ import (
 	"go-drive/storage"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -42,6 +43,7 @@ type Maker struct {
 	handlers map[string]map[string]TypeHandler
 
 	cacheDir string
+	apiPath  string
 
 	pool    *tunny.Pool
 	options *storage.OptionsDAO
@@ -66,6 +68,7 @@ func NewMaker(config common.Config, optionsDAO *storage.OptionsDAO,
 		handlers: handlers,
 		options:  optionsDAO,
 		cacheDir: dir,
+		apiPath:  config.APIPath,
 		validity: config.Thumbnail.TTL,
 	}
 
@@ -121,15 +124,10 @@ func createHandlers(items []common.ThumbnailHandlerItem) (map[string]map[string]
 }
 
 func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error) {
-	// we need to use the absolute path of this entry to generate thumbnail cache key
-	// so we get the wrapped IDispatcherEntry here
-	entry = drive_util.GetIEntry(entry, func(e types.IEntry) bool {
-		_, ok := e.(types.IDispatcherEntry)
-		return ok
-	})
+	thumbnailEntry := m.createThumbnailEntry(entry)
 
-	itemPath := m.getItem(entry)
-	t, e := m.tryToGetFromCache(entry, itemPath)
+	itemPath := m.getItem(thumbnailEntry)
+	t, e := m.tryToGetFromCache(thumbnailEntry, itemPath)
 	if e != nil {
 		return nil, e
 	}
@@ -137,10 +135,48 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 		return t, nil
 	}
 
-	return m.doMake(ctx, entry, itemPath)
+	return m.doMake(ctx, thumbnailEntry, itemPath)
 }
 
-func (m *Maker) resolveHandler(entry types.IEntry) (TypeHandler, error) {
+func (m *Maker) createThumbnailEntry(entry types.IEntry) ThumbnailEntry {
+	// we need to use the absolute path of this entry to generate thumbnail cache key
+	// so we get the wrapped IDispatcherEntry here
+	dispatcherEntry := drive_util.GetIEntry(entry, func(e types.IEntry) bool {
+		_, ok := e.(types.IDispatcherEntry)
+		return ok
+	})
+	if dispatcherEntry == nil {
+		panic("types.IDispatcherEntry required")
+	}
+
+	externalURL := m.apiPath
+
+	if entry.Type().IsDir() {
+		externalURL += "/entries/"
+	} else {
+		externalURL += "/content/"
+	}
+	externalURL += entry.Path()
+
+	ako, ok := entry.Meta().Props["accessKey"]
+	ak := ""
+	if ok {
+		if t, ok := ako.(string); ok {
+			ak = t
+		}
+	}
+	if ak != "" {
+		externalURL += "?" + common.SignatureQueryKey + "=" + url.QueryEscape(ak)
+	}
+
+	return &thumbnailEntry{
+		IEntry:           entry,
+		IDispatcherEntry: dispatcherEntry.(types.IDispatcherEntry),
+		externalURL:      externalURL,
+	}
+}
+
+func (m *Maker) resolveHandler(entry ThumbnailEntry) (TypeHandler, error) {
 	te := GetWrappedThumbnailEntry(entry)
 	if te != nil {
 		return entrySelfThumbnailTypeHandler, nil
@@ -169,7 +205,7 @@ func (m *Maker) resolveHandler(entry types.IEntry) (TypeHandler, error) {
 			log.Println("invalid handler mapping:", m)
 			continue
 		}
-		if ok, e := doublestar.Match(temp[1], entry.Path()); ok && e == nil {
+		if ok, e := doublestar.Match(temp[1], entry.GetRealPath()); ok && e == nil {
 			tags := strings.Split(temp[0], ",")
 			for _, tag := range tags {
 				if h, ok := hs[tag]; ok {
@@ -186,7 +222,7 @@ func (m *Maker) resolveHandler(entry types.IEntry) (TypeHandler, error) {
 	panic("no handlers found")
 }
 
-func (m *Maker) tryToGetFromCache(entry types.IEntry, path string) (Thumbnail, error) {
+func (m *Maker) tryToGetFromCache(entry ThumbnailEntry, path string) (Thumbnail, error) {
 	exists, e := utils.FileExists(path)
 	if e != nil {
 		return nil, e
@@ -209,7 +245,7 @@ func (m *Maker) tryToGetFromCache(entry types.IEntry, path string) (Thumbnail, e
 	return nil, nil
 }
 
-func (m *Maker) doMake(ctx context.Context, entry types.IEntry, path string) (Thumbnail, error) {
+func (m *Maker) doMake(ctx context.Context, entry ThumbnailEntry, path string) (Thumbnail, error) {
 	h, e := m.resolveHandler(entry)
 	if e != nil {
 		return nil, e
@@ -349,7 +385,7 @@ func (m *Maker) openFile(path string, file *os.File, meta *itemMeta, headerSize 
 	return f, nil
 }
 
-func (m *Maker) isThumbnailExpired(entry types.IEntry, meta itemMeta) bool {
+func (m *Maker) isThumbnailExpired(entry ThumbnailEntry, meta itemMeta) bool {
 	return entry.Type().IsDir() != meta.IsDir ||
 		entry.ModTime() != meta.ModTime ||
 		entry.Size() != meta.Size
@@ -366,7 +402,7 @@ func (m *Maker) readItemMeta(file *os.File) (*itemMeta, uint32, error) {
 	return &meta, 4 + headerSize, e
 }
 
-func (m *Maker) createItem(entry types.IEntry, path, mimeType string) (io.WriteCloser, error) {
+func (m *Maker) createItem(entry ThumbnailEntry, path, mimeType string) (io.WriteCloser, error) {
 	file, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
 	if e != nil {
 		return nil, e
@@ -406,8 +442,8 @@ func (m *Maker) remove(path string) error {
 	return os.Remove(path)
 }
 
-func (m *Maker) getItem(entry types.IEntry) string {
-	key := md5.Sum([]byte(entry.Path()))
+func (m *Maker) getItem(entry ThumbnailEntry) string {
+	key := md5.Sum([]byte(entry.GetRealPath()))
 	return filepath.Join(m.cacheDir, fmt.Sprintf("%x", key))
 }
 
@@ -459,7 +495,7 @@ type itemMeta struct {
 
 type taskWrapper struct {
 	h     TypeHandler
-	entry types.IEntry
+	entry ThumbnailEntry
 	dest  string
 }
 

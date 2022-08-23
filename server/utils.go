@@ -21,9 +21,14 @@ const (
 	keyResult  = "apiResult"
 )
 
-func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO) gin.HandlerFunc {
+func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, skipOnEmptySignature bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		signature := c.Query(common.SignatureQueryKey)
+		if signature == "" && skipOnEmptySignature {
+			c.Next()
+			return
+		}
+
 		session := types.Session{}
 		var username string
 
@@ -73,6 +78,11 @@ func MakeSignature(signer *utils.Signer, path, username string, notAfter time.Ti
 
 func TokenAuth(tokenStore types.TokenStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if IsAuthenticated(c) {
+			c.Next()
+			return
+		}
+
 		tokenKey := c.GetHeader(common.HeaderAuth)
 		token, e := tokenStore.Validate(tokenKey)
 		if e != nil {
@@ -91,6 +101,11 @@ func TokenAuth(tokenStore types.TokenStore) gin.HandlerFunc {
 
 func BasicAuth(userAuth *UserAuth, realm string, allowAnonymous bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if IsAuthenticated(c) {
+			c.Next()
+			return
+		}
+
 		username, password, ok := c.Request.BasicAuth()
 		session := types.Session{}
 		if ok {
@@ -147,6 +162,11 @@ func GetToken(c *gin.Context) string {
 
 func SetToken(c *gin.Context, token string) {
 	c.Set(keyToken, token)
+}
+
+func IsAuthenticated(c *gin.Context) bool {
+	_, exists := c.Get(keySession)
+	return exists
 }
 
 func GetSession(c *gin.Context) types.Session {
