@@ -2,6 +2,7 @@ package utils
 
 import (
 	"io"
+	"sync"
 	"testing"
 	"time"
 )
@@ -13,19 +14,29 @@ func TestCacheFile(t *testing.T) {
 		return
 	}
 	defer func() {
-		_ = cf.Close()
+		e := cf.Close()
+		if e != nil {
+			t.Error("failed to close file", e)
+		}
 	}()
 
 	content := "hello world"
 
-	wait := make(chan struct{})
+	wg := sync.WaitGroup{}
 
-	go func() {
+	testRead := func() {
+		defer wg.Done()
+
+		reader, e := cf.GetReader()
+		if e != nil {
+			t.Error(e)
+			return
+		}
 		defer func() {
-			close(wait)
+			_ = reader.Close()
 		}()
 
-		n, e := cf.Seek(4, io.SeekStart)
+		n, e := reader.Seek(4, io.SeekStart)
 		if e != nil {
 			t.Error(e)
 			return
@@ -34,7 +45,7 @@ func TestCacheFile(t *testing.T) {
 
 		buf := make([]byte, 11)
 		start := time.Now().UnixNano()
-		read, e := cf.Read(buf)
+		read, e := reader.Read(buf)
 		if e != nil {
 			t.Error(e)
 			return
@@ -47,7 +58,13 @@ func TestCacheFile(t *testing.T) {
 			t.Error("unexpected content")
 			return
 		}
-	}()
+	}
+
+	readersCount := 20
+	wg.Add(readersCount)
+	for i := 0; i < readersCount; i++ {
+		go testRead()
+	}
 
 	_, e = cf.Write([]byte("1234"))
 	if e != nil {
@@ -59,5 +76,10 @@ func TestCacheFile(t *testing.T) {
 		t.Error(e)
 	}
 
-	<-wait
+	wg.Wait()
+
+	if r := len(cf.readers); r != 0 {
+		t.Errorf("%d opened files not released", r)
+	}
+
 }

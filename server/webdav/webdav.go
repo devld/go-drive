@@ -207,6 +207,9 @@ func (h *Handler) handleGetHeadPost(w http.ResponseWriter, r *http.Request) (sta
 	fu, ok := f.(FileURL)
 	if ok {
 		fUrl, e := fu.GetURL(ctx)
+		if e == os.ErrInvalid {
+			return http.StatusMethodNotAllowed, nil
+		}
 		if e != nil {
 			return http.StatusInternalServerError, e
 		}

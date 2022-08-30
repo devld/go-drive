@@ -19,58 +19,29 @@ func NewCacheFile(size int64, tempDir, pattern string) (*CacheFile, error) {
 		_ = os.Remove(wf.Name())
 		return nil, e
 	}
-	rf, e := os.Open(wf.Name())
-	if e != nil {
-		_ = wf.Close()
-		_ = os.Remove(wf.Name())
-		return nil, e
-	}
 	return &CacheFile{
-		size: size,
-		l:    newRangeLock(),
-		wf:   wf,
-		rf:   rf,
-		pos:  0,
-		mu:   sync.Mutex{},
+		size:    size,
+		l:       newRangeLock(size),
+		wf:      wf,
+		readers: make(map[*cacheFileReader]struct{}, 1),
 	}, nil
 }
 
 type CacheFile struct {
 	size int64
 	wf   *os.File
-	rf   *os.File
 	l    *rangeLock
-	pos  int64
-	mu   sync.Mutex
 
 	wPos int64
-	wmu  sync.Mutex
-}
+	mu   sync.Mutex
 
-func (c *CacheFile) Read(p []byte) (n int, err error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	end := c.pos + int64(len(p))
-	if end > c.size {
-		end = c.size
-	}
-	if e := c.l.acquire(c.pos, end-c.pos); e != nil {
-		return 0, e
-	}
-	if _, e := c.rf.Seek(c.pos, io.SeekStart); e != nil {
-		return 0, e
-	}
-	n, err = c.rf.Read(p)
-	if err != nil {
-		return
-	}
-	c.pos += int64(n)
-	return
+	readers map[*cacheFileReader]struct{}
+	rmu     sync.Mutex
 }
 
 func (c *CacheFile) Write(p []byte) (n int, err error) {
-	c.wmu.Lock()
-	defer c.wmu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	n, err = c.wf.Write(p)
 	if err != nil {
 		return
@@ -80,42 +51,106 @@ func (c *CacheFile) Write(p []byte) (n int, err error) {
 	return
 }
 
-func (c *CacheFile) Seek(offset int64, whence int) (int64, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	pos := c.pos
+func (c *CacheFile) GetReader() (io.ReadSeekCloser, error) {
+	c.rmu.Lock()
+	defer c.rmu.Unlock()
+	rf, e := os.Open(c.wf.Name())
+	if e != nil {
+		return nil, e
+	}
+	cfr := &cacheFileReader{
+		cf: c,
+		rf: rf,
+	}
+	c.readers[cfr] = struct{}{}
+	cfr.release = func() {
+		c.rmu.Lock()
+		defer c.rmu.Unlock()
+		delete(c.readers, cfr)
+	}
+	return cfr, nil
+}
+
+func (c *CacheFile) Close() error {
+	c.rmu.Lock()
+	readers := make([]*cacheFileReader, 0, len(c.readers))
+	for r := range c.readers {
+		readers = append(readers, r)
+	}
+	c.rmu.Unlock()
+
+	c.l.release(false)
+	_ = c.wf.Close()
+
+	for _, r := range readers {
+		_ = r.Close()
+	}
+
+	return os.Remove(c.wf.Name())
+}
+
+type cacheFileReader struct {
+	cf      *CacheFile
+	release func()
+
+	rf  *os.File
+	pos int64
+	mu  sync.Mutex
+}
+
+func (cfr *cacheFileReader) Read(p []byte) (n int, err error) {
+	cfr.mu.Lock()
+	defer cfr.mu.Unlock()
+	end := cfr.pos + int64(len(p))
+	if end > cfr.cf.size {
+		end = cfr.cf.size
+	}
+	if e := cfr.cf.l.acquire(cfr.pos, end-cfr.pos); e != nil {
+		return 0, e
+	}
+	if _, e := cfr.rf.Seek(cfr.pos, io.SeekStart); e != nil {
+		return 0, e
+	}
+	n, err = cfr.rf.Read(p)
+	if err != nil {
+		return
+	}
+	cfr.pos += int64(n)
+	return
+}
+
+func (cfr *cacheFileReader) Seek(offset int64, whence int) (int64, error) {
+	cfr.mu.Lock()
+	defer cfr.mu.Unlock()
+	pos := cfr.pos
 	switch whence {
 	case io.SeekStart:
 		pos = offset
 	case io.SeekCurrent:
 		pos += offset
 	case io.SeekEnd:
-		pos += c.size + offset
+		pos += cfr.cf.size + offset
 	default:
 		pos = -1
 	}
-	if pos < 0 || pos > c.size {
+	if pos < 0 || pos > cfr.cf.size {
 		return 0, os.ErrInvalid
 	}
-	c.pos = pos
-	return c.pos, nil
+	cfr.pos = pos
+	return cfr.pos, nil
 }
 
-func (c *CacheFile) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.l.release(false)
-	_ = c.wf.Close()
-	_ = c.rf.Close()
-	_ = os.Remove(c.wf.Name())
-	return nil
+func (cfr *cacheFileReader) Close() error {
+	cfr.release()
+	return cfr.rf.Close()
 }
 
-func newRangeLock() *rangeLock {
+func newRangeLock(max int64) *rangeLock {
 	return &rangeLock{
 		mu:     sync.RWMutex{},
 		notify: make(chan bool),
 		ranges: make([][]int64, 0),
+		max:    max,
 	}
 }
 
@@ -123,6 +158,11 @@ type rangeLock struct {
 	mu     sync.RWMutex
 	notify chan bool
 	ranges [][]int64
+	max    int64
+	done   bool
+
+	waiting   int32
+	waitingMu sync.Mutex
 }
 
 func (rl *rangeLock) acquire(start, len int64) error {
@@ -130,8 +170,14 @@ func (rl *rangeLock) acquire(start, len int64) error {
 		if rl.satisfy(start, len) {
 			return nil
 		}
-		if !(<-rl.notify) {
-			return os.ErrClosed
+		rl.waitingMu.Lock()
+		rl.waiting += 1
+		rl.waitingMu.Unlock()
+		ok, readOk := <-rl.notify
+		if readOk {
+			if !ok {
+				return os.ErrClosed
+			}
 		}
 	}
 }
@@ -151,18 +197,33 @@ func (rl *rangeLock) satisfy(start, len int64) bool {
 	return false
 }
 
-func (rl *rangeLock) feed(start, len int64) {
+func (rl *rangeLock) feed(start, l int64) {
 	rl.mu.Lock()
-	defer rl.mu.Unlock()
-	rl.ranges = append(rl.ranges, []int64{start, start + len})
+	rl.ranges = append(rl.ranges, []int64{start, start + l})
 	rl._merge()
+	if len(rl.ranges) == 1 && rl.ranges[0][0] == 0 && rl.ranges[0][1] == rl.max {
+		close(rl.notify)
+		rl.done = true
+	}
+	rl.mu.Unlock()
+
 	rl.release(true)
 }
 
 func (rl *rangeLock) release(v bool) {
-	select {
-	case rl.notify <- v:
-	default:
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	if rl.done {
+		return
+	}
+	rl.waitingMu.Lock()
+	defer rl.waitingMu.Unlock()
+	for rl.waiting > 0 {
+		select {
+		case rl.notify <- v:
+		default:
+		}
+		rl.waiting--
 	}
 }
 

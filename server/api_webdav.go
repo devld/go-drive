@@ -154,9 +154,10 @@ func (w *webdavFs) newWebDavFile(e types.IEntry, flag int) *webdavFile {
 }
 
 type webdavFile struct {
-	e         types.IEntry
-	file      *os.File
-	cacheFile *utils.CacheFile
+	e               types.IEntry
+	file            *os.File
+	cacheFile       *utils.CacheFile
+	cacheFileReader io.ReadSeekCloser
 
 	children []types.IEntry
 	dirPos   int
@@ -214,7 +215,12 @@ func (w *webdavFile) getFile() error {
 		if e != nil {
 			return e
 		}
-		_, e = cf.Seek(w.seekPos, io.SeekStart)
+		cfr, e := cf.GetReader()
+		if e != nil {
+			_ = cf.Close()
+			return e
+		}
+		_, e = cfr.Seek(w.seekPos, io.SeekStart)
 		if e != nil {
 			_ = cf.Close()
 			return e
@@ -228,6 +234,7 @@ func (w *webdavFile) getFile() error {
 				}
 			}()
 		}
+		w.cacheFileReader = cfr
 		w.cacheFile = cf
 		return nil
 	}
@@ -272,7 +279,7 @@ func (w *webdavFile) Read(p []byte) (n int, err error) {
 		return 0, e
 	}
 	if w.cacheFile != nil {
-		n, err = w.cacheFile.Read(p)
+		n, err = w.cacheFileReader.Read(p)
 	} else {
 		n, err = w.file.Read(p)
 	}
@@ -283,7 +290,7 @@ func (w *webdavFile) Seek(offset int64, whence int) (int64, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.cacheFile != nil {
-		return w.cacheFile.Seek(offset, whence)
+		return w.cacheFileReader.Seek(offset, whence)
 	}
 	if w.file == nil {
 		// a fake file opened with flag = 0, used to get file size
