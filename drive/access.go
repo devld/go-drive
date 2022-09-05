@@ -77,18 +77,18 @@ func (da *Access) GetDrive(session types.Session, signer EntrySigner) (types.IDr
 		signer = &chrootEntrySigner{signer, chroot}
 	}
 
-	var drive types.IDrive = NewPermissionWrapperDrive(da.rootDrive.Get(), da.perms.Filter(session), signer)
-	if chroot != nil {
-		drive = NewChrootWrapper(drive, chroot)
-	}
-
-	return NewListenerWrapper(
-		drive,
+	var drive types.IDrive = NewListenerWrapper(
+		NewPermissionWrapperDrive(da.rootDrive.Get(), da.perms.Filter(session), signer),
 		types.DriveListenerContext{
 			Session: session,
 		},
 		da.bus,
-	), nil
+	)
+	if chroot != nil {
+		drive = NewChrootWrapper(drive, chroot)
+	}
+
+	return drive, nil
 }
 
 func (da *Access) GetRootDrive() types.IDrive {
