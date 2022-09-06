@@ -10,7 +10,6 @@ import (
 	"io"
 	"log"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -32,17 +31,17 @@ func init() {
 //
 // GO_DRIVE_ENTRY_TYPE: file|dir
 //
-// GO_DRIVE_ENTRY_REAL_PATH: the quoted entry real path(no chroot, no mount)
+// GO_DRIVE_ENTRY_REAL_PATH: the entry real path(no chroot, no mount)
 //
-// GO_DRIVE_ENTRY_PATH: the quoted entry path
+// GO_DRIVE_ENTRY_PATH: the entry path
 //
-// GO_DRIVE_ENTRY_NAME: the quoted entry name
+// GO_DRIVE_ENTRY_NAME: the entry name
 //
 // GO_DRIVE_ENTRY_SIZE: the entry file size
 //
 // GO_DRIVE_ENTRY_MOD_TIME: timestamp, modTime of this entry
 //
-// GO_DRIVE_ENTRY_URL: URL of the download file (e.g. /content/a/a.txt)
+// GO_DRIVE_ENTRY_URL: URL of the file content or folder children (e.g. /content/a/a.txt or /entries/a)
 type shellThumbnailTypeHandler struct {
 	command string
 	args    []string
@@ -90,13 +89,14 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry T
 	}
 	cmd := exec.Command(s.command, s.args...)
 
-	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_TYPE="+string(entry.Type()))
-	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_REAL_PATH=\""+entry.GetRealPath()+"\"")
-	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_PATH=\""+entry.Path()+"\"")
-	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_NAME=\""+path.Base(entry.Path())+"\"")
-	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_SIZE="+strconv.FormatInt(entry.Size(), 10))
-	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_MOD_TIME="+strconv.FormatInt(entry.ModTime(), 10))
-	cmd.Env = append(cmd.Env, "GO_DRIVE_ENTRY_URL=\""+entry.GetExternalURL()+"\"")
+	cmd.Env = append(cmd.Env,
+		"GO_DRIVE_ENTRY_TYPE="+string(entry.Type()),
+		"GO_DRIVE_ENTRY_REAL_PATH="+entry.GetRealPath(),
+		"GO_DRIVE_ENTRY_PATH="+entry.Path(),
+		"GO_DRIVE_ENTRY_NAME="+entry.Name(),
+		"GO_DRIVE_ENTRY_SIZE="+strconv.FormatInt(entry.Size(), 10),
+		"GO_DRIVE_ENTRY_MOD_TIME="+strconv.FormatInt(entry.ModTime(), 10),
+		"GO_DRIVE_ENTRY_URL="+entry.GetExternalURL())
 
 	if entry.Type().IsFile() && s.writeContent {
 		reader, e := entry.GetReader(ctx)
