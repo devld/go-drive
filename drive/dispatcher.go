@@ -450,15 +450,18 @@ func (d *DispatcherDrive) Delete(ctx types.TaskCtx, path string) error {
 
 func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 	override bool, config types.SM) (*types.DriveUploadConfig, error) {
-	driveName, drive, realPath, e := d.resolve(path)
+	_, drive, realPath, e := d.resolve(path)
 	if e != nil {
+		return nil, e
+	}
+	if e := d.ensureDir(ctx, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
 	realPath, e = d.FindNonExistsEntryName(ctx, drive, realPath)
 	if e != nil {
 		return nil, e
 	}
-	return drive.Upload(ctx, path2.Join(driveName, realPath), size, override, config)
+	return drive.Upload(ctx, realPath, size, override, config)
 }
 
 func (d *DispatcherDrive) mapDriveEntry(path string, driveName string, entry types.IEntry) types.IEntry {
