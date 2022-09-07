@@ -346,6 +346,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
+	session := GetSession(c)
 	override := c.Query("override")
 	size := utils.ToInt64(c.GetHeader("Content-Length"), -1)
 	defer func() { _ = c.Request.Body.Close() }()
@@ -373,7 +374,11 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 			_ = tempFile.Close()
 			_ = os.Remove(tempFile.Name())
 		}()
-		return d.Save(ctx, path, size, override != "", tempFile)
+		r, e := d.Save(ctx, path, size, override != "", tempFile)
+		if e != nil {
+			return nil, e
+		}
+		return newEntryJson(r, session), nil
 	}, 2*time.Second, task.WithNameGroup(path, "drive/write"))
 	if e != nil {
 		_ = c.Error(e)
