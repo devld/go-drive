@@ -30,6 +30,8 @@ type DispatcherDrive struct {
 
 	mountStorage *storage.PathMountDAO
 	mux          *sync.Mutex
+
+	drivesLock *utils.KeyLock
 }
 
 func NewDispatcherDrive(mountStorage *storage.PathMountDAO, config common.Config) *DispatcherDrive {
@@ -54,6 +56,7 @@ func (d *DispatcherDrive) setDrives(drives map[string]types.IDrive) {
 		newDrives[k] = v
 	}
 	d.drives = newDrives
+	d.drivesLock = utils.NewKeyLock(len(drives))
 }
 
 func (d *DispatcherDrive) reloadMounts() error {
@@ -197,7 +200,7 @@ func (d *DispatcherDrive) Save(ctx types.TaskCtx, path string, size int64,
 	if e != nil {
 		return nil, e
 	}
-	if e := d.ensureDir(ctx, drive, utils.PathParent(realPath)); e != nil {
+	if e := d.ensureDir(ctx, driveName, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
 	if !override {
@@ -213,7 +216,10 @@ func (d *DispatcherDrive) Save(ctx types.TaskCtx, path string, size int64,
 	return d.mapDriveEntry(path2.Join(driveName, realPath), driveName, save), nil
 }
 
-func (d *DispatcherDrive) ensureDir(ctx context.Context, drive types.IDrive, path string) error {
+func (d *DispatcherDrive) ensureDir(ctx context.Context, driveName string, drive types.IDrive, path string) error {
+	d.drivesLock.Lock(driveName)
+	defer d.drivesLock.UnLock(driveName)
+
 	path = utils.CleanPath(path)
 	if utils.IsRootPath(path) {
 		return nil
@@ -243,7 +249,7 @@ func (d *DispatcherDrive) MakeDir(ctx context.Context, path string) (types.IEntr
 	if e != nil {
 		return nil, e
 	}
-	if e := d.ensureDir(ctx, drive, utils.PathParent(realPath)); e != nil {
+	if e := d.ensureDir(ctx, driveName, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
 	dir, e := drive.MakeDir(ctx, realPath)
@@ -450,11 +456,11 @@ func (d *DispatcherDrive) Delete(ctx types.TaskCtx, path string) error {
 
 func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 	override bool, config types.SM) (*types.DriveUploadConfig, error) {
-	_, drive, realPath, e := d.resolve(path)
+	driveName, drive, realPath, e := d.resolve(path)
 	if e != nil {
 		return nil, e
 	}
-	if e := d.ensureDir(ctx, drive, utils.PathParent(realPath)); e != nil {
+	if e := d.ensureDir(ctx, driveName, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
 	realPath, e = d.FindNonExistsEntryName(ctx, drive, realPath)
