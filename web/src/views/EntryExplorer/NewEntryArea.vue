@@ -352,6 +352,8 @@ const onItemsDropped = (e: DragEvent) => {
 }
 
 const onPaste = (e: ClipboardEvent) => {
+  if (props.readonly) return
+
   if (!e.clipboardData) return
   if (!isDataTransferHasFiles(e.clipboardData)) return
   e.preventDefault()
