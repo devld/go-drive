@@ -56,7 +56,9 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 const linksEl = ref<HTMLTextAreaElement | null>(null)
 
-const singleEntry = computed(() => props.entry[0])
+const singleEntry = computed(() =>
+  props.entry.length > 1 ? undefined : props.entry[0]
+)
 
 const downloadLinks = computed(() => {
   if (singleEntry.value) return ''
@@ -73,6 +75,7 @@ const downloadFiles = () => {
   props.entry.forEach((f) => {
     const a = document.createElement('a')
     a.rel = 'noreferrer noopener nofollow'
+    a.target = '_blank'
     a.href = fileUrl(f.path, f.meta)
     a.download = filename(f.path)
     a.click()
