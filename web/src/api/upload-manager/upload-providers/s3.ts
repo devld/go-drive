@@ -112,7 +112,9 @@ export default class S3UploadTask extends ChunkUploadTask {
           action: 'AbortMultipartUpload',
           uploadId: this._uploadId,
         })
-        .catch(() => {})
+        .catch(() => {
+          // ignore
+        })
     }
     this._uploadedParts = undefined
   }

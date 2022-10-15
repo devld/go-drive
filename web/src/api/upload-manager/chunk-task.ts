@@ -124,6 +124,7 @@ export default abstract class ChunkUploadTask extends UploadTask {
   }
 
   private _chunkUploadLoop() {
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (!this.isStatus(STATUS_UPLOADING)) return
       const uploadingChunks = Object.keys(this._uploadingChunkProgress).length
@@ -175,7 +176,7 @@ export default abstract class ChunkUploadTask extends UploadTask {
 
   protected async _request(config: HttpRequestConfig, http_?: Http) {
     if (!http_) http_ = defaultHttp
-    let task = http_(config)
+    const task = http_(config)
     this._requests.push(task)
     try {
       return await task

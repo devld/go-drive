@@ -99,7 +99,9 @@ export default class OneDriveUploadTask extends ChunkUploadTask {
     super._cleanup()
     if (!this.isStatus(STATUS_COMPLETED)) {
       if (this._url) {
-        defaultHttp.delete(this._url).catch(() => {})
+        defaultHttp.delete(this._url).catch(() => {
+          // ignore
+        })
       }
     }
   }

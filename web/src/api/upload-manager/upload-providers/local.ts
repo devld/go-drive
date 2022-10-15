@@ -19,7 +19,7 @@ export default class LocalUploadTask extends UploadTask {
   override async start() {
     if ((await super.start()) === false) return false
 
-    let task = http.put(`/content/${this.task.path}`, this.task.file, {
+    const task = http.put(`/content/${this.task.path}`, this.task.file, {
       params: { override: this.task.override ? '1' : '' },
       transformRequest: (d) => d,
       onUploadProgress: ({ loaded, total }) => {
