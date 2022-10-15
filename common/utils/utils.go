@@ -153,6 +153,11 @@ func ToInt(s string, def int) int {
 	return types.SV(s).Int(def)
 }
 
+func ToBool(s string) bool {
+	s = strings.ToLower(strings.TrimSpace(s))
+	return s != "" && s != "false" && s != "0"
+}
+
 func FlattenStringMap(m map[string]interface{}, separator string) map[string]string {
 	r := make(map[string]string)
 	for k, v := range m {

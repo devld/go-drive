@@ -185,9 +185,9 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 		return
 	}
 	session := GetSession(c)
-	override := c.Query("override")
+	override := utils.ToBool(c.Query("override"))
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
-		r, e := drive_.Copy(ctx, fromEntry, to, override != "")
+		r, e := drive_.Copy(ctx, fromEntry, to, override)
 		if e != nil {
 			return nil, e
 		}
@@ -219,9 +219,9 @@ func (dr *driveRoute) move(c *gin.Context) {
 		return
 	}
 	session := GetSession(c)
-	override := c.Query("override")
+	override := utils.ToBool(c.Query("override"))
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
-		r, e := drive_.Move(ctx, fromEntry, to, override != "")
+		r, e := drive_.Move(ctx, fromEntry, to, override)
 		if e != nil {
 			return nil, e
 		}
@@ -264,7 +264,7 @@ func (dr *driveRoute) deleteEntry(c *gin.Context) {
 
 func (dr *driveRoute) upload(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	override := c.Query("override")
+	override := utils.ToBool(c.Query("override"))
 	size := utils.ToInt64(c.Query("size"), -1)
 	request := make(types.SM, 0)
 	if e := c.Bind(&request); e != nil {
@@ -276,7 +276,7 @@ func (dr *driveRoute) upload(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	config, e := d.Upload(c.Request.Context(), path, size, override != "", request)
+	config, e := d.Upload(c.Request.Context(), path, size, override, request)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -298,13 +298,13 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	useProxy := c.Query("proxy")
+	useProxy := utils.ToBool(c.Query("proxy"))
 	proxyMaxSize := dr.options.GetValue(maxProxySizeKey).DataSize(-1)
 
 	if proxyMaxSize > 0 && file.Size() > proxyMaxSize {
-		useProxy = ""
+		useProxy = false
 	}
-	if e := drive_util.DownloadIContent(c.Request.Context(), file, c.Writer, c.Request, useProxy != ""); e != nil {
+	if e := drive_util.DownloadIContent(c.Request.Context(), file, c.Writer, c.Request, useProxy); e != nil {
 		_ = c.Error(e)
 		return
 	}
@@ -347,7 +347,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 		return
 	}
 	session := GetSession(c)
-	override := c.Query("override")
+	override := utils.ToBool(c.Query("override"))
 	size := utils.ToInt64(c.GetHeader("Content-Length"), -1)
 	defer func() { _ = c.Request.Body.Close() }()
 	file, e := drive_util.CopyReaderToTempFile(task.DummyContext(), c.Request.Body, dr.config.TempDir)
@@ -374,7 +374,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 			_ = tempFile.Close()
 			_ = os.Remove(tempFile.Name())
 		}()
-		r, e := d.Save(ctx, path, size, override != "", tempFile)
+		r, e := d.Save(ctx, path, size, override, tempFile)
 		if e != nil {
 			return nil, e
 		}
@@ -421,6 +421,7 @@ func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 		return
 	}
 	session := GetSession(c)
+	override := utils.ToBool(c.Query("override"))
 	path := utils.CleanPath(c.Param("path"))
 	id := c.Query("id")
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
@@ -435,7 +436,7 @@ func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 		}
 		ctx.Progress(0, true)
 		tempFile := utils.NewTempFile(file)
-		entry, e := d.Save(ctx, path, stat.Size(), true, tempFile)
+		entry, e := d.Save(ctx, path, stat.Size(), override, tempFile)
 		if e != nil {
 			_ = tempFile.Close()
 			return nil, e

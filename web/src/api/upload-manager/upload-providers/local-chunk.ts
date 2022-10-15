@@ -53,7 +53,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
     try {
       return await taskDone(
         http.post(`/chunk-content/${this.task.path}`, null, {
-          params: { id: this._uploadId },
+          params: { id: this._uploadId, override: this.task.override ? '1' : '' },
         }),
         (task) => {
           this._mergeTask = task
@@ -73,7 +73,9 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
 
   override async stop() {
     if (this._mergeTask) {
-      deleteTask(this._mergeTask.id).catch(() => {})
+      deleteTask(this._mergeTask.id).catch(() => {
+        // ignore
+      })
     }
     return super.stop()
   }

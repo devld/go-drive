@@ -463,9 +463,11 @@ func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 	if e := d.ensureDir(ctx, driveName, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
-	realPath, e = d.FindNonExistsEntryName(ctx, drive, realPath)
-	if e != nil {
-		return nil, e
+	if !override {
+		realPath, e = d.FindNonExistsEntryName(ctx, drive, realPath)
+		if e != nil {
+			return nil, e
+		}
 	}
 	return drive.Upload(ctx, realPath, size, override, config)
 }
