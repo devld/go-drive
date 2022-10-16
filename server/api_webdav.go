@@ -12,7 +12,6 @@ import (
 	"go-drive/server/webdav"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -241,7 +240,7 @@ func (w *webdavFile) getFile() error {
 
 	var file *os.File
 	if w.openFlag&os.O_CREATE != 0 || w.openFlag&os.O_TRUNC != 0 {
-		tempFile, e := ioutil.TempFile(w.tempDir, "webdav-temp")
+		tempFile, e := os.CreateTemp(w.tempDir, "webdav-temp")
 		if e != nil {
 			return e
 		}

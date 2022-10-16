@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"go-drive/common"
 	"go-drive/common/utils"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -80,7 +80,7 @@ func (f *FileMessageSource) getMessage(key, lang string) string {
 }
 
 func readAllLang(path string) (map[language.Tag]map[string]string, error) {
-	files, e := ioutil.ReadDir(path)
+	files, e := os.ReadDir(path)
 	if e != nil {
 		return nil, e
 	}
@@ -94,7 +94,7 @@ func readAllLang(path string) (map[language.Tag]map[string]string, error) {
 			continue
 		}
 
-		bytes, e := ioutil.ReadFile(filepath.Join(path, file.Name()))
+		bytes, e := os.ReadFile(filepath.Join(path, file.Name()))
 		if e != nil {
 			return nil, e
 		}

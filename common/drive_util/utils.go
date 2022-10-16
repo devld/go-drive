@@ -9,7 +9,6 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	url2 "net/url"
@@ -62,7 +61,7 @@ func Copy(ctx types.TaskCtx, dst io.Writer, src io.Reader) (written int64, err e
 }
 
 func CopyReaderToTempFile(ctx types.TaskCtx, reader io.Reader, tempDir string) (*os.File, error) {
-	file, e := ioutil.TempFile(tempDir, "drive-copy")
+	file, e := os.CreateTemp(tempDir, "drive-copy")
 	if e != nil {
 		return nil, e
 	}
