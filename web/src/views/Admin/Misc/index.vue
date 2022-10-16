@@ -58,7 +58,7 @@ const thumbnailForm = ref<FormItem[]>([
       !v
         .split('\n')
         .filter(Boolean)
-        .some((f) => !/^([A-z0-9-_](,[A-z0-9-_])*):(.+)$/.test(f)) ||
+        .some((f) => !/^([A-Za-z0-9-_]+(,[A-Za-z0-9-_]+)*):(.+)$/.test(f)) ||
       t('p.admin.misc.thumbnail_mapping_invalid'),
   },
 ])
