@@ -155,13 +155,6 @@ func (f *Drive) toRemotePath(path string) string {
 	return path2.Join(f.rootPath, path)
 }
 
-func (f *Drive) toPath(remotePath string) string {
-	if f.rootPath == "" {
-		return remotePath
-	}
-	return strings.TrimPrefix(remotePath, f.rootPath)
-}
-
 func (f *Drive) Meta(context.Context) types.DriveMeta {
 	return types.DriveMeta{Writable: true}
 }

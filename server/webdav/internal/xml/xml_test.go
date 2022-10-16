@@ -184,6 +184,7 @@ const nonStrictInput = `
 <tag>&0a;</tag>
 `
 
+//lint:ignore U1000 just ignore
 var nonStringEntity = map[string]string{"": "oops!", "0a": "oops!"}
 
 var nonStrictTokens = []Token{
@@ -652,6 +653,7 @@ func TestDisallowedCharacters(t *testing.T) {
 	}
 }
 
+//lint:ignore U1000 just ignore
 type procInstEncodingTest struct {
 	expect, got string
 }

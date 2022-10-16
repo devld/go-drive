@@ -37,7 +37,8 @@ type Ship struct {
 	Drive     DriveType    `xml:"drive"`
 	Age       uint         `xml:"age"`
 	Passenger []*Passenger `xml:"passenger"`
-	secret    string
+	//lint:ignore U1000 just ignore
+	secret string
 }
 
 type NamedType string
@@ -1117,6 +1118,7 @@ func TestMarshal(t *testing.T) {
 }
 
 type AttrParent struct {
+	//lint:ignore SA5008 just ignore
 	X string `xml:"X>Y,attr"`
 }
 
@@ -1176,7 +1178,7 @@ var marshalIndentTests = []struct {
 		},
 		Prefix:    "",
 		Indent:    "\t",
-		ExpectXML: fmt.Sprintf("<agent handle=\"007\">\n\t<Identity>James Bond</Identity><redacted/>\n</agent>"),
+		ExpectXML: "<agent handle=\"007\">\n\t<Identity>James Bond</Identity><redacted/>\n</agent>",
 	},
 }
 
