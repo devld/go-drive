@@ -9,7 +9,6 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	path2 "path"
@@ -210,7 +209,7 @@ func (c *ChunkUploader) markDeleted(upload *ChunkUpload) error {
 		return e
 	}
 	if !exists {
-		if e := ioutil.WriteFile(deleteFile, []byte(""), 0644); e != nil {
+		if e := os.WriteFile(deleteFile, []byte(""), 0644); e != nil {
 			return e
 		}
 	}

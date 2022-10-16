@@ -8,7 +8,6 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -189,7 +188,7 @@ func (r *httpResp) getBody() ([]byte, error) {
 	r.mux.Lock()
 	if r.body == nil {
 		defer func() { _ = r.r.Body.Close() }()
-		dat, e := ioutil.ReadAll(io.LimitReader(r.r.Body, maxReadableBodySize))
+		dat, e := io.ReadAll(io.LimitReader(r.r.Body, maxReadableBodySize))
 		if e != nil {
 			return nil, e
 		}

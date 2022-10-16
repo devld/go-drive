@@ -9,7 +9,6 @@ import (
 	hTmpl "html/template"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"net/http"
 	path2 "path"
 	"strconv"
@@ -122,7 +121,7 @@ func (tp *templateProcessor) Process(file http.File, data interface{}) ([]byte, 
 	if tag != cached.tag {
 		cached.l.Lock()
 		defer cached.l.Unlock()
-		content, e := ioutil.ReadAll(file)
+		content, e := io.ReadAll(file)
 		if e != nil {
 			return nil, e
 		}

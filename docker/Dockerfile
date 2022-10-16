@@ -1,6 +1,6 @@
-FROM golang:1.17.3-alpine3.14 AS golang
+FROM 1.19.2-alpine3.16 AS golang
 
-FROM alpine:3.14 AS builder
+FROM alpine:3.16 AS builder
 
 ARG REF=heads/master
 ARG BUILD_VERSION
@@ -20,7 +20,7 @@ RUN git clone https://github.com/devld/go-drive.git && \
     git reset --hard ${REF} && \
     make target_name=go-drive_docker BUILD_VERSION=${BUILD_VERSION} all
 
-FROM alpine:3.14
+FROM alpine:3.16
 
 WORKDIR /app
 

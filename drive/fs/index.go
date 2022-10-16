@@ -3,13 +3,12 @@ package fs
 import (
 	"context"
 	"go-drive/common/drive_util"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -205,13 +204,17 @@ func (f *Drive) List(_ context.Context, path string) ([]types.IEntry, error) {
 	if !isDir {
 		return nil, err.NewNotAllowedMessageError(fsT("cannot_list_file"))
 	}
-	files, ee := ioutil.ReadDir(path)
+	files, ee := os.ReadDir(path)
 	if ee != nil {
 		return nil, ee
 	}
 	entries := make([]types.IEntry, len(files))
 	for i, file := range files {
-		entry, e := f.newFsFile(filepath.Join(path, file.Name()), file)
+		info, e := file.Info()
+		if e != nil {
+			return nil, e
+		}
+		entry, e := f.newFsFile(filepath.Join(path, file.Name()), info)
 		if e != nil {
 			return nil, e
 		}

@@ -1,7 +1,7 @@
 
 # Used for docker buildx
 
-FROM alpine:3.14
+FROM alpine:3.16
 
 ARG TAG
 ARG TARGETPLATFORM

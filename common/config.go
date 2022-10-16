@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"go-drive/common/registry"
 	"go-drive/common/types"
-	"io/ioutil"
 	"math"
 	"net/url"
 	"os"
@@ -188,7 +187,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	}
 
 	if *configFile != "" {
-		configBytes, e := ioutil.ReadFile(*configFile)
+		configBytes, e := os.ReadFile(*configFile)
 		if e != nil {
 			return config, e
 		}
