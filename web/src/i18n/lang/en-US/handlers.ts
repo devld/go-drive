@@ -24,6 +24,10 @@ export default {
       copy_open_title: 'Select copy to',
       move_open_title: 'Select move to',
     },
+    zip: {
+      name: 'Zip Download',
+      desc: 'Create zip archive'
+    },
     delete: {
       name: 'Delete',
       desc: 'Delete files',

@@ -237,6 +237,13 @@
       "unicode_decimal": 58962
     },
     {
+      "icon_id": "32455454",
+      "name": "zip-copy",
+      "font_class": "zip-grey",
+      "unicode": "f080",
+      "unicode_decimal": 61568
+    },
+    {
       "icon_id": "12600675",
       "name": "doc",
       "font_class": "doc",

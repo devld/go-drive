@@ -3,6 +3,8 @@ import { waitPromise } from '@/utils'
 import { ApiError, wrapAxios } from '@/utils/http/utils'
 import Axios, { AxiosRequestConfig } from 'axios'
 
+export const AUTH_PARAM = 'token'
+
 const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
 const MAX_RETRY = 1
@@ -22,7 +24,7 @@ function setToken(token: string) {
   return localStorage.setItem(TOKEN_KEY, token)
 }
 
-function getToken() {
+export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
 

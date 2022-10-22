@@ -36,4 +36,5 @@ export default {
       })
     })
   },
+  order: 2005,
 } as EntryHandler

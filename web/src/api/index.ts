@@ -61,6 +61,10 @@ function _fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
   return buildURL(`/content/${path}`, query)!
 }
 
+export function zipUrl() {
+  return `${API_PATH}/zip`
+}
+
 export function fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
   return `${API_PATH}${_fileUrl(path, meta, params)}`
 }
@@ -78,13 +82,15 @@ export function getContent(
   meta: EntryMeta,
   params?: FileURLParams
 ) {
-  return defaultHttp.get(
-    fileUrl(path, meta, {
-      ...params,
-      useProxy: 'cors',
-    })!,
-    { transformResponse: [] }
-  ).then(res => res.data)
+  return defaultHttp
+    .get(
+      fileUrl(path, meta, {
+        ...params,
+        useProxy: 'cors',
+      })!,
+      { transformResponse: [] }
+    )
+    .then((res) => res.data)
 }
 
 export function makeDir(path: string) {

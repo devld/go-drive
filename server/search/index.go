@@ -237,7 +237,7 @@ func (s *Service) loadFilters() ([]string, error) {
 	}
 
 	filters := make([]string, 0)
-	for _, f := range strings.Split(v, "\n") {
+	for _, f := range utils.SplitLines(v) {
 		if f != "" && (f[0] == '+' || f[0] == '-') {
 			filters = append(filters, strings.ToLower(f))
 		}

@@ -28,6 +28,7 @@ var (
 
 const (
 	HeaderAuth        = "Authorization"
+	ParamAuth         = "token"
 	SignatureQueryKey = "_k"
 )
 

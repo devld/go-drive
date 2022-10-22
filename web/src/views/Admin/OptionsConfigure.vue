@@ -1,6 +1,9 @@
 <template>
   <div class="section">
-    <h1 class="section-title">{{ title }}</h1>
+    <h1 class="section-title">
+      {{ title }}
+      <Icon v-if="loading" class="loading-icon" svg="#icon-loading" />
+    </h1>
 
     <div class="config-form">
       <SimpleForm ref="configFormEl" v-model="configValue" :form="form" />
@@ -28,10 +31,12 @@ const props = defineProps({
 })
 
 const configFormEl = ref<InstanceType<SimpleFormType> | null>(null)
+const loading = ref(false)
 const saving = ref(false)
 const configValue = ref<O<string>>({})
 
 const loadConfig = async () => {
+  loading.value = true
   try {
     const opts = await getOptions(...props.form.map((f) => f.field!))
     Object.assign(configValue.value, opts)
@@ -47,6 +52,8 @@ const loadConfig = async () => {
     })
   } catch (e: any) {
     alert(e.message)
+  } finally {
+    loading.value = false
   }
 }
 
