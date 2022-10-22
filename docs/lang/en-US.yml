@@ -2,6 +2,7 @@ error:
   not_found: Not found
   not_allowed: Operation not allowed
   permission_denied: Resource not found or permission denied
+  root_not_writable: Root path is readonly
 util:
   request_failed: "[{{ 1 }}] Request failed"
 oauth:
