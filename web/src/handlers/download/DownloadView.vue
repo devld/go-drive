@@ -44,6 +44,7 @@ import { filename, formatBytes } from '@/utils'
 import { fileUrl } from '@/api'
 import { computed, ref } from 'vue'
 import { Entry } from '@/types'
+import { triggerDownloadFile } from '@/utils/file'
 
 const props = defineProps({
   entry: {
@@ -73,12 +74,7 @@ const downloadLinksFocus = () => {
 
 const downloadFiles = () => {
   props.entry.forEach((f) => {
-    const a = document.createElement('a')
-    a.rel = 'noreferrer noopener nofollow'
-    a.target = '_blank'
-    a.href = fileUrl(f.path, f.meta)
-    a.download = filename(f.path)
-    a.click()
+    triggerDownloadFile(fileUrl(f.path, f.meta), filename(f.path))
   })
 }
 </script>

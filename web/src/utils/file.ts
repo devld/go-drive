@@ -111,3 +111,12 @@ export function getDataTransferFiles(dt: DataTransfer) {
   }
   return items
 }
+
+export function triggerDownloadFile(url: string, filename: string) {
+  const a = document.createElement('a')
+  a.rel = 'noreferrer noopener nofollow'
+  a.target = '_blank'
+  a.href = url
+  a.download = filename
+  a.click()
+}
