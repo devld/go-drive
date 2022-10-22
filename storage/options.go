@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"go-drive/common/registry"
 	"go-drive/common/types"
 
 	cmap "github.com/orcaman/concurrent-map"
@@ -13,8 +14,10 @@ type OptionsDAO struct {
 	cache cmap.ConcurrentMap
 }
 
-func NewOptionsDAO(db *DB) *OptionsDAO {
-	return &OptionsDAO{db: db, cache: cmap.New()}
+func NewOptionsDAO(db *DB, ch *registry.ComponentsHolder) *OptionsDAO {
+	dao := &OptionsDAO{db: db, cache: cmap.New()}
+	ch.Add("optionsDAO", dao)
+	return dao
 }
 
 func (d *OptionsDAO) Set(key, value string) error {

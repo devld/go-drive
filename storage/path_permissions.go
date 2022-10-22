@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"go-drive/common/registry"
 	"go-drive/common/types"
+
 	"gorm.io/gorm"
 )
 
@@ -9,8 +11,10 @@ type PathPermissionDAO struct {
 	db *DB
 }
 
-func NewPathPermissionDAO(db *DB) *PathPermissionDAO {
-	return &PathPermissionDAO{db}
+func NewPathPermissionDAO(db *DB, ch *registry.ComponentsHolder) *PathPermissionDAO {
+	dao := &PathPermissionDAO{db}
+	ch.Add("pathPermissionDAO", dao)
+	return dao
 }
 
 func (p *PathPermissionDAO) GetAll() ([]types.PathPermission, error) {

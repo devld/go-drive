@@ -55,6 +55,7 @@ const currentMenu = computed(() => router.currentRoute.value.path)
     margin: 0;
     padding: 0;
     list-style-type: none;
+    white-space: nowrap;
 
     &:hover {
       background-color: var(--hover-bg-color);
@@ -91,10 +92,11 @@ const currentMenu = computed(() => router.currentRoute.value.path)
 
   .menu-content {
     flex: 1;
+    overflow: hidden;
   }
 }
 
-@media screen and (max-width: 900px) {
+@media screen and (max-width: 1000px) {
   .admin-page {
     margin: 16px;
     display: block;

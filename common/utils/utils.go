@@ -149,13 +149,20 @@ func ToInt64(s string, def int64) int64 {
 	return types.SV(s).Int64(def)
 }
 
+func ToUInt64(s string, def uint64) uint64 {
+	return types.SV(s).Uint64(def)
+}
+
 func ToInt(s string, def int) int {
 	return types.SV(s).Int(def)
 }
 
+func ToUInt(s string, def uint) uint {
+	return types.SV(s).Uint(def)
+}
+
 func ToBool(s string) bool {
-	s = strings.ToLower(strings.TrimSpace(s))
-	return s != "" && s != "false" && s != "0"
+	return types.SV(s).Bool()
 }
 
 func FlattenStringMap(m map[string]interface{}, separator string) map[string]string {

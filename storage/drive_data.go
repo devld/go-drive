@@ -3,7 +3,9 @@ package storage
 import (
 	"errors"
 	"go-drive/common/drive_util"
+	"go-drive/common/registry"
 	"go-drive/common/types"
+
 	"gorm.io/gorm"
 )
 
@@ -11,8 +13,10 @@ type DriveDataDAO struct {
 	db *DB
 }
 
-func NewDriveDataDAO(db *DB) *DriveDataDAO {
-	return &DriveDataDAO{db}
+func NewDriveDataDAO(db *DB, ch *registry.ComponentsHolder) *DriveDataDAO {
+	dao := &DriveDataDAO{db}
+	ch.Add("driveDataDAO", dao)
+	return dao
 }
 
 func (d *DriveDataDAO) GetDataStore(ns string) drive_util.DriveDataStore {

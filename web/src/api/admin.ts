@@ -59,11 +59,11 @@ export function getDrives() {
   return http.get<Drive[]>('/admin/drives')
 }
 
-export function createDrive(drive: any) {
+export function createDrive(drive: Partial<Drive>) {
   return http.post<Drive>('/admin/drive', drive)
 }
 
-export function updateDrive(name: string, drive: any) {
+export function updateDrive(name: string, drive: Partial<Drive>) {
   return http.put<void>(`/admin/drive/${name}`, drive)
 }
 

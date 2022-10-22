@@ -10,12 +10,25 @@ export type FormItemType =
   | 'password'
   | 'checkbox'
   | 'select'
+  | 'form'
 
 export interface FormItemOption {
   name: I18nText
   title?: I18nText
   value: string
   disabled?: boolean
+}
+
+export interface FormItemForm {
+  key: string
+  name?: I18nText
+  form: FormItem[]
+}
+
+export interface FormItemForms {
+  addText?: I18nText
+  maxItems?: number
+  forms: FormItemForm[]
 }
 
 export interface BaseFormItem extends O {
@@ -25,7 +38,11 @@ export interface BaseFormItem extends O {
   required?: boolean
   description?: I18nText
   disabled?: boolean
+
   options?: FormItemOption[]
+
+  forms?: FormItemForms
+
   defaultValue?: string
 }
 

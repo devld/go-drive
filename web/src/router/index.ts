@@ -1,6 +1,5 @@
 import AppWrapper from '@/views/AppWrapper/index.vue'
 
-import { wrapAsyncComponent } from '@/components/async'
 import { T } from '@/i18n'
 import { setTitle } from '@/utils'
 import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
@@ -29,41 +28,31 @@ const routes: RouteRecordRaw[] = [
           {
             name: 'SiteConfig',
             path: '/admin/site',
-            component: wrapAsyncComponent(
-              () => import('@/views/Admin/Site.vue')
-            ),
+            component: () => import('@/views/Admin/Site.vue'),
             meta: { title: T('routes.title.site') },
           },
           {
             name: 'UsersManager',
             path: '/admin/users',
-            component: wrapAsyncComponent(
-              () => import('@/views/Admin/Users.vue')
-            ),
+            component: () => import('@/views/Admin/Users.vue'),
             meta: { title: T('routes.title.users') },
           },
           {
             name: 'GroupsManager',
             path: '/admin/groups',
-            component: wrapAsyncComponent(
-              () => import('@/views/Admin/Groups.vue')
-            ),
+            component: () => import('@/views/Admin/Groups.vue'),
             meta: { title: T('routes.title.groups') },
           },
           {
             name: 'DrivesManager',
             path: '/admin/drives',
-            component: wrapAsyncComponent(
-              () => import('@/views/Admin/Drives.vue')
-            ),
+            component: () => import('@/views/Admin/Drives.vue'),
             meta: { title: T('routes.title.drives') },
           },
           {
             name: 'MiscSettings',
             path: '/admin/misc',
-            component: wrapAsyncComponent(
-              () => import('@/views/Admin/Misc/index.vue')
-            ),
+            component: () => import('@/views/Admin/Misc/index.vue'),
             meta: { title: T('routes.title.misc') },
           },
         ],

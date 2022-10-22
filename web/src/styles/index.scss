@@ -5,7 +5,9 @@
 
 // theme
 :root {
-  @each $prop, $val in $theme-default {
+
+  @each $prop,
+  $val in $theme-default {
     --#{$prop}: #{$val};
   }
 }
@@ -13,7 +15,9 @@
 // theme dark
 @media (prefers-color-scheme: dark) {
   :root {
-    @each $prop, $val in $theme-dark {
+
+    @each $prop,
+    $val in $theme-dark {
       --#{$prop}: #{$val};
     }
   }
@@ -61,6 +65,16 @@ svg {
   align-self: flex-end;
 }
 
+.simple-table-wrapper {
+  overflow: auto hidden;
+
+  .simple-table {
+    td {
+      white-space: nowrap;
+    }
+  }
+}
+
 .simple-table {
   border: none;
   border-spacing: 0;
@@ -106,11 +120,15 @@ svg {
   }
 
   .line {
-    white-space: nowrap;
+    white-space: nowrap !important;
   }
 
   .center {
     text-align: center;
+  }
+
+  .right {
+    text-align: right;
   }
 }
 

@@ -34,16 +34,16 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	driveDAO := storage.NewDriveDAO(db)
-	pathMountDAO := storage.NewPathMountDAO(db)
-	driveDataDAO := storage.NewDriveDataDAO(db)
+	driveDAO := storage.NewDriveDAO(db, ch)
+	pathMountDAO := storage.NewPathMountDAO(db, ch)
+	driveDataDAO := storage.NewDriveDataDAO(db, ch)
 	driveCacheDAO := storage.NewDriveCacheDAO(db, ch)
-	rootDrive, err := drive.NewRootDrive(ctx, config, driveDAO, pathMountDAO, driveDataDAO, driveCacheDAO)
+	rootDrive, err := drive.NewRootDrive(ctx, config, driveDAO, pathMountDAO, driveDataDAO, driveCacheDAO, ch)
 	if err != nil {
 		return nil, err
 	}
-	pathPermissionDAO := storage.NewPathPermissionDAO(db)
-	optionsDAO := storage.NewOptionsDAO(db)
+	pathPermissionDAO := storage.NewPathPermissionDAO(db, ch)
+	optionsDAO := storage.NewOptionsDAO(db, ch)
 	access, err := drive.NewAccess(ch, rootDrive, pathPermissionDAO, optionsDAO, bus)
 	if err != nil {
 		return nil, err
@@ -66,8 +66,8 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	userDAO := storage.NewUserDAO(db)
-	groupDAO := storage.NewGroupDAO(db)
+	userDAO := storage.NewUserDAO(db, ch)
+	groupDAO := storage.NewGroupDAO(db, ch)
 	fileMessageSource, err := i18n.NewFileMessageSource(config)
 	if err != nil {
 		return nil, err

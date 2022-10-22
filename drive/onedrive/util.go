@@ -11,13 +11,14 @@ import (
 	"go-drive/common/req"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"golang.org/x/oauth2"
 	"io"
 	"log"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/oauth2"
 )
 
 var t = i18n.TPrefix("drive.onedrive.")
@@ -213,7 +214,7 @@ func generateDrivesForm(ctx context.Context, reqClient *req.Client,
 		}
 	}
 	initConfig.Form = []types.FormItem{
-		{Label: i18n.T("drive.onedrive.drive_select"), Type: "select", Field: "drive_id", Required: true, Options: opts},
+		{Label: i18n.T("drive.onedrive.drive_select"), Type: "select", Field: "drive_id", Required: true, Options: &opts},
 	}
 	initConfig.Value = types.SM{"drive_id": params["drive_id"]}
 	return nil

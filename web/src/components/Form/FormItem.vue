@@ -85,18 +85,28 @@
           {{ o.name }}
         </option>
       </select>
+      <FormItemForm
+        v-if="item.type === 'form'"
+        ref="typeFormEl"
+        class="value full-width"
+        :item="item"
+        :model-value="modelValue"
+        @update:model-value="formInput"
+      />
     </div>
     <span v-if="error" class="form-item-error">{{ error }}</span>
   </div>
 </template>
 <script setup lang="ts">
+import { isT } from '@/i18n';
 import { FormItem } from '@/types'
 import { ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
+import FormItemForm from './FormItemForm.vue'
 
 const props = defineProps({
   modelValue: {
-    type: [String, Number],
+    type: String,
   },
   item: {
     type: Object as PropType<FormItem>,
@@ -107,7 +117,7 @@ const props = defineProps({
 const slots = useSlots()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', v: string | number): void
+  (e: 'update:modelValue', v: string): void
 }>()
 
 const error = ref<I18nText | null>(null)
@@ -119,16 +129,26 @@ const toggleHelpShowing = () => {
   helpShowing.value = !helpShowing.value
 }
 
+const typeFormEl = ref<InstanceType<typeof FormItemForm>>()
+
 const validate = async () => {
+  if (props.item.type === 'form' && typeFormEl.value) {
+    try {
+      await typeFormEl.value.validate()
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    }
+  }
   if (props.item.required && !props.modelValue) {
     error.value = t('form.required_msg', { f: props.item.label })
     throw new Error(error.value)
   }
   if (typeof props.item.validate === 'function') {
     const err = await props.item.validate(props.modelValue)
-    if (typeof err === 'string') {
+    if (typeof err === 'string' || isT(err)) {
       error.value = err
-      throw new Error(error.value)
+      throw new Error(error.value.toString())
     }
   }
   return props.modelValue
@@ -139,6 +159,11 @@ const clearError = () => {
 }
 
 defineExpose({ clearError, validate })
+
+const formInput = (e: string) => {
+  emit('update:modelValue', e)
+  clearError()
+}
 
 const textInput = (e: Event) => {
   emit('update:modelValue', (e.target as HTMLInputElement).value)
