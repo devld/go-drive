@@ -2,6 +2,7 @@ error:
   not_found: 资源不存在
   not_allowed: 不允许的操作
   permission_denied: 资源不存在或权限不足
+  root_not_writable: 根目录是只读的
 util:
   request_failed: "[{{ 1 }}] 请求失败"
 oauth:
