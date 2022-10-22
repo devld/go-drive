@@ -66,6 +66,7 @@
 export default { name: 'EntryExplorer' }
 </script>
 <script setup lang="ts">
+import { fileUrl } from '@/api'
 import { mountPaths } from '@/api/admin'
 import { EntryEventData, ListViewMode } from '@/components/entry'
 import { EntryDragData } from '@/components/entry/useDrag'
@@ -74,6 +75,7 @@ import { useAppStore } from '@/store'
 import { Entry } from '@/types'
 import { debounce, dir, filename, setTitle } from '@/utils'
 import { copyOrMove } from '@/utils/entry'
+import { triggerDownloadFile } from '@/utils/file'
 import { confirm, loading } from '@/utils/ui-utils'
 import EntryListView from '@/views/EntryListView/index.vue'
 import { computed, onBeforeUnmount, ref } from 'vue'
@@ -248,13 +250,19 @@ const {
 
 const progressBar = (v?: number | boolean) => store.setProgressBar(v)
 
-const onEntryClicked = ({ entry }: EntryEventData) => {
+const onEntryClicked = ({ entry, event }: EntryEventData) => {
   if (!entry) return
   if (entry.type === 'dir') {
     // path changed
     entries.value = undefined
     currentDirEntry.value = undefined
     return
+  }
+  if (event && event instanceof MouseEvent) {
+    if (event.altKey) {
+      triggerDownloadFile(fileUrl(entry.path, entry.meta), filename(entry.path))
+      event.preventDefault()
+    }
   }
   // route change
 }
@@ -271,6 +279,16 @@ const showEntryMenu = ({ entry, event }: EntryEventData) => {
   if (!menu) return
 
   event && event.preventDefault()
+
+  if (event && event instanceof MouseEvent) {
+    if (event.altKey) {
+      let download
+      if ((download = menu.menus.find((e) => e.name === 'download'))) {
+        executeHandler(download.name, menu.entry)
+        return
+      }
+    }
+  }
   entryMenuData.value = menu
   entryMenuShowing.value = true
 }
