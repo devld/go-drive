@@ -25,6 +25,9 @@
       }
     </script>
     <% } %>
+    <% if (mode === 'development' && typeof (VITE_DEBUG_API) === 'string') { %>
+    <script>___config___.api = '<%= VITE_DEBUG_API %>'</script>
+    <% } %>
   </head>
   <body>
     <div id="app"></div>
