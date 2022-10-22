@@ -1,6 +1,7 @@
 package server
 
 import (
+	"archive/zip"
 	"context"
 	"fmt"
 	"go-drive/common"
@@ -15,6 +16,7 @@ import (
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -25,6 +27,7 @@ import (
 
 const (
 	maxProxySizeKey = "proxy.maxSize"
+	maxZipSizeKey   = "zip.maxSize"
 )
 
 func InitDriveRoutes(
@@ -60,6 +63,8 @@ func InitDriveRoutes(
 
 	tokenAuth := TokenAuth(tokenStore)
 	r := router.Group("/", tokenAuth)
+
+	router.POST("/zip", TokenAuthWithPostParams(tokenStore), dr.zipDownload)
 
 	// list entries/drives
 	router.GET("/entries/*path", SignatureAuth(signer, userDAO, true), tokenAuth, dr.list)
@@ -307,6 +312,93 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 	if e := drive_util.DownloadIContent(c.Request.Context(), file, c.Writer, c.Request, useProxy); e != nil {
 		_ = c.Error(e)
 		return
+	}
+}
+
+func (dr *driveRoute) zipDownload(c *gin.Context) {
+	files := utils.SplitLines(c.PostForm("files"))
+	if len(files) == 0 {
+		_ = c.Error(err.NewBadRequestError(""))
+		return
+	}
+	prefix := c.PostForm("prefix")
+
+	drive, e := dr.getDrive(c)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+
+	entries := make([]types.IEntry, 0, len(files))
+	for _, f := range files {
+		if f == "" {
+			continue
+		}
+		file := utils.CleanPath(f)
+		entry, e := drive.Get(c.Request.Context(), file)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		entries = append(entries, entry)
+	}
+
+	ctx := task.NewTaskContext(c.Request.Context())
+
+	entriesTrees := make([]drive_util.EntryNode, 0, len(entries))
+	for _, entry := range entries {
+		rootNode, e := drive_util.BuildEntriesTree(ctx, entry, true)
+		if e != nil {
+			return
+		}
+		entriesTrees = append(entriesTrees, rootNode)
+	}
+
+	totalSize := ctx.GetTotal()
+	maxAllowedSizeOpt := dr.options.GetValue(maxZipSizeKey)
+	maxAllowSize := maxAllowedSizeOpt.DataSize(-1)
+	if maxAllowSize > 0 && totalSize > maxAllowSize {
+		_ = c.Error(err.NewNotAllowedMessageError(i18n.T("api.zip.size_exceed", string(maxAllowedSizeOpt))))
+		return
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/zip")
+	c.Writer.Header().Set("Content-Disposition",
+		"attachment; filename=\""+
+			url.QueryEscape(fmt.Sprintf("packaged_%d.zip", len(files)))+"\"")
+
+	zipFile := zip.NewWriter(c.Writer)
+	defer func() {
+		_ = zipFile.Close()
+	}()
+
+	for _, node := range entriesTrees {
+		if e := drive_util.VisitEntriesTree(node, func(entry types.IEntry) error {
+			if e := ctx.Err(); e != nil {
+				return e
+			}
+			name := entry.Path()
+			if entry.Type().IsDir() {
+				name += "/"
+			}
+
+			if prefix != "" && strings.HasPrefix(name, prefix+"/") {
+				name = strings.TrimPrefix(name, prefix+"/")
+			}
+
+			file, e := zipFile.Create(name)
+			if e != nil {
+				return e
+			}
+			if entry.Type().IsFile() {
+				if e := drive_util.CopyIContent(task.NewContextWrapper(c.Request.Context()), entry, file); e != nil {
+					return e
+				}
+			}
+			return nil
+		}); e != nil {
+			return
+		}
 	}
 }
 

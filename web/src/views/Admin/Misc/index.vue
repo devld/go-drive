@@ -17,6 +17,10 @@
       :title="$t('p.admin.misc.proxy_max')"
       :form="proxyMaxForm"
     />
+    <OptionsConfigure
+      :title="$t('p.admin.misc.zip_max_size')"
+      :form="zipDownloadForm"
+    />
     <SearchIndex />
     <CleanInvalid />
     <CleanCache />
@@ -116,6 +120,14 @@ const proxyMaxForm = ref<FormItem[]>([
   {
     field: 'proxy.maxSize',
     description: t('p.admin.misc.proxy_max_desc'),
+    type: 'text',
+  },
+])
+
+const zipDownloadForm = ref<FormItem[]>([
+  {
+    field: 'zip.maxSize',
+    description: t('p.admin.misc.zip_max_size_desc'),
     type: 'text',
   },
 ])

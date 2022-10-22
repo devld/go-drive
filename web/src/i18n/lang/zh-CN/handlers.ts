@@ -24,6 +24,10 @@ export default {
       copy_open_title: '选择复制到',
       move_open_title: '选择移动到',
     },
+    zip: {
+      name: '打包下载',
+      desc: '创建 zip 压缩包'
+    },
     delete: {
       name: '删除',
       desc: '删除文件',

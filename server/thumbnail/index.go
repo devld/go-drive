@@ -196,7 +196,7 @@ func (m *Maker) resolveHandler(entry ThumbnailEntry) (TypeHandler, error) {
 	if e != nil {
 		return nil, e
 	}
-	for _, m := range strings.Split(mappingStr, "\n") {
+	for _, m := range utils.SplitLines(mappingStr) {
 		if m == "" {
 			continue
 		}

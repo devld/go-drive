@@ -238,6 +238,19 @@ func FlattenEntriesTree(root EntryNode) []EntryNode {
 	return flattenEntriesTree(root, result)
 }
 
+func VisitEntriesTree(root EntryNode, visit func(e types.IEntry) error) error {
+	e := visit(root.IEntry)
+	if e != nil {
+		return e
+	}
+	for _, node := range root.children {
+		if e := VisitEntriesTree(node, visit); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
 func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string,
 	newParent bool, doCopy DoCopy, after CopyCallback) (bool, error) {
 	if e := ctx.Err(); e != nil {

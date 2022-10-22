@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"go-drive/common/types"
+	"sync"
 )
 
 func DummyContext() types.TaskCtx {
@@ -10,20 +11,67 @@ func DummyContext() types.TaskCtx {
 }
 
 // NewContextWrapper wraps Context as a TaskCtx
-func NewContextWrapper(ctx context.Context) types.TaskCtx {
-	return &taskContextWrapper{ctx}
+func NewContextWrapper(ctx context.Context) *TaskContextWrapper {
+	return &TaskContextWrapper{ctx, 0, 0, false, nil}
 }
 
-var dummyCtx = &taskContextWrapper{context.Background()}
+// NewTaskContext wraps Context as a mutable TaskCtx
+func NewTaskContext(ctx context.Context) *TaskContextWrapper {
+	return &TaskContextWrapper{ctx, 0, 0, true, &sync.RWMutex{}}
+}
 
-type taskContextWrapper struct {
+var dummyCtx = &TaskContextWrapper{context.Background(), 0, 0, false, nil}
+
+type TaskContextWrapper struct {
 	context.Context
+	loaded  int64
+	total   int64
+	mutable bool
+	mu      *sync.RWMutex
 }
 
-func (d *taskContextWrapper) Progress(int64, bool) {
+func (d *TaskContextWrapper) Progress(loaded int64, abs bool) {
+	if !d.mutable {
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if abs {
+		d.loaded = loaded
+	} else {
+		d.loaded += loaded
+	}
 }
 
-func (d *taskContextWrapper) Total(int64, bool) {
+func (d *TaskContextWrapper) Total(total int64, abs bool) {
+	if !d.mutable {
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if abs {
+		d.total = total
+	} else {
+		d.total += total
+	}
+}
+
+func (d *TaskContextWrapper) GetProgress() int64 {
+	if !d.mutable {
+		return 0
+	}
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.loaded
+}
+
+func (d *TaskContextWrapper) GetTotal() int64 {
+	if !d.mutable {
+		return 0
+	}
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.total
 }
 
 func NewCtxWrapper(ctx types.TaskCtx, mutableLoaded, mutableTotal bool) types.TaskCtx {

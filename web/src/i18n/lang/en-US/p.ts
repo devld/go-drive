@@ -101,6 +101,9 @@ export default {
       proxy_max: 'Max Proxy Size',
       proxy_max_desc:
         'Maximum allowed file size for downloading via proxy. Units: b, k, m, g, t',
+      zip_max_size: 'Maximum allowed size for zip downloads',
+      zip_max_size_desc:
+        'Maximum total size of files allowed to be packaged and downloaded, Units: b, k, m, g, t',
       clean: 'Clean',
       clean_invalid: 'Clean Invalid Permissions and Mounts',
       clean_cache: 'Clean Cache',

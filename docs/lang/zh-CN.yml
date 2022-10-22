@@ -36,6 +36,8 @@ api:
   thumbnail:
     file_too_large: 文件过大无法创建缩略图
     image_too_large: 图片过大无法创建缩略图
+  zip:
+    size_exceed: 超过最大允许的大小 {{ 1 }}
 storage:
   drives:
     drive_exists: Drive '{{ 1 }}' 已存在

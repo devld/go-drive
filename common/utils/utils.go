@@ -137,6 +137,11 @@ func GetRealIP(r *http.Request) string {
 	return strings.TrimSpace(ips[0])
 }
 
+var lineEndRegexp = regexp.MustCompile("\r?\n")
+func SplitLines(s string) []string {
+	return lineEndRegexp.Split(s, -1)
+}
+
 func Millisecond(t time.Time) int64 {
 	return t.UnixNano() / int64(time.Millisecond)
 }

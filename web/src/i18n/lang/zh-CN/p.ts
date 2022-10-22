@@ -50,7 +50,8 @@ export default {
       f_username: '用户名',
       f_password: '密码',
       f_rootPath: '根目录',
-      f_rootPath_desc: '限制用户只能访问这个目录下的资源（admin 组的用户将忽略此参数），路径不以 / 开头',
+      f_rootPath_desc:
+        '限制用户只能访问这个目录下的资源（admin 组的用户将忽略此参数），路径不以 / 开头',
       delete_user: '删除用户',
       confirm_delete: '确认删除 {n}？',
     },
@@ -96,6 +97,9 @@ export default {
       proxy_max: '最大代理大小',
       proxy_max_desc:
         '最大允许通过代理下载的文件大小，可使用 b, k, m, g, t 单位',
+      zip_max_size: '打包下载最大允许大小',
+      zip_max_size_desc:
+        '最大允许打包下载的文件总大小，可使用 b, k, m, g, t 单位',
       clean: '清除',
       clean_invalid: '清理无效的权限项/挂载项',
       clean_cache: '清除缓存',

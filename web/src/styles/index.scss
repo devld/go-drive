@@ -183,6 +183,10 @@ svg {
   }
 }
 
+.loading-icon {
+  animation: spinning 1s linear infinite;
+}
+
 // animations
 @keyframes fade-in {
   from {

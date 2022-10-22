@@ -76,14 +76,31 @@ func MakeSignature(signer *utils.Signer, path, username string, notAfter time.Ti
 	return signature + "." + utils.Base64URLEncode([]byte(username))
 }
 
+// TokenAuthWithPostParams get token from Header or FormData
+func TokenAuthWithPostParams(tokenStore types.TokenStore) gin.HandlerFunc {
+	return tokenAuth(tokenStore, func(c *gin.Context) string {
+		t := c.PostForm(common.ParamAuth)
+		if t != "" {
+			return t
+		}
+		return c.GetHeader(common.HeaderAuth)
+	})
+}
+
 func TokenAuth(tokenStore types.TokenStore) gin.HandlerFunc {
+	return tokenAuth(tokenStore, func(c *gin.Context) string {
+		return c.GetHeader(common.HeaderAuth)
+	})
+}
+
+func tokenAuth(tokenStore types.TokenStore, getToken func(*gin.Context) string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if IsAuthenticated(c) {
 			c.Next()
 			return
 		}
 
-		tokenKey := c.GetHeader(common.HeaderAuth)
+		tokenKey := getToken(c)
 		token, e := tokenStore.Validate(tokenKey)
 		if e != nil {
 			_ = c.Error(e)

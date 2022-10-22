@@ -36,6 +36,7 @@ const createHandler = (isMove: boolean): EntryHandler => {
         })
       })
     },
+    order: isMove ? 2004 : 2003,
   }
 }
 

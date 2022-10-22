@@ -60,4 +60,5 @@ export default {
       loading()
     }
   },
+  order: 2005,
 } as EntryHandler
