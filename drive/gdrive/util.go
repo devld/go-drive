@@ -110,7 +110,7 @@ func buildInitForm(ctx context.Context, resp *drive_util.OAuthResponse,
 	}
 
 	initConfig.Form = []types.FormItem{
-		{Label: t("drive_label"), Type: "select", Field: "drive_id", Options: opts, DefaultValue: ""},
+		{Label: t("drive_label"), Type: "select", Field: "drive_id", Options: &opts, DefaultValue: ""},
 	}
 	initConfig.Value = types.SM{"drive_id": params["drive_id"]}
 

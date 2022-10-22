@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"encoding/json"
 	"regexp"
 	"strconv"
 	"strings"
@@ -41,15 +42,34 @@ type FormItemOption struct {
 	Disabled bool   `json:"disabled"`
 }
 
+type FormItemForm struct {
+	Key  string     `json:"key"`
+	Name string     `json:"name" i18n:""`
+	Form []FormItem `json:"form"`
+}
+
+type FormItemForms struct {
+	AddText  string         `json:"addText" i18n:""`
+	MaxItems int32          `json:"maxItems"`
+	Forms    []FormItemForm `json:"forms"`
+}
+
 type FormItem struct {
-	Label        string           `json:"label" i18n:""`
-	Type         string           `json:"type"`
-	Field        string           `json:"field"`
-	Required     bool             `json:"required"`
-	Description  string           `json:"description" i18n:""`
-	Disabled     bool             `json:"disabled"`
-	Options      []FormItemOption `json:"options"`
-	DefaultValue string           `json:"defaultValue"`
+	Label string `json:"label" i18n:""`
+	// Type: textarea, text, password, checkbox, select, form
+	Type        string `json:"type"`
+	Field       string `json:"field"`
+	Required    bool   `json:"required,omitempty"`
+	Description string `json:"description,omitempty" i18n:""`
+	Disabled    bool   `json:"disabled,omitempty"`
+
+	// Options is for type select
+	Options *[]FormItemOption `json:"options,omitempty"`
+
+	// Forms is for type form
+	Forms *FormItemForms `json:"forms,omitempty"`
+
+	DefaultValue string `json:"defaultValue,omitempty"`
 	// Secret is the replacement text when sending the value to client.
 	// The raw value will be sent if Secret is empty.
 	// FormItem with type 'password' will always be replaced.
@@ -138,7 +158,7 @@ func (s SV) DataSize(defVal int64) int64 {
 
 func (s SV) Bool() bool {
 	v := strings.ToLower(strings.TrimSpace(string(s)))
-	return s != "" && v != "false"
+	return v != "" && v != "false" && v != "0"
 }
 
 func (c SM) GetInt(key string, defVal int) int {
@@ -171,4 +191,24 @@ func (c SM) GetBool(key string) bool {
 
 func (c SM) GetDataSize(key string, defVal int64) int64 {
 	return SV(c[key]).DataSize(defVal)
+}
+
+func (c SM) GetMap(key string) SM {
+	str := c[key]
+	r := SM{}
+	e := json.Unmarshal([]byte(str), &r)
+	if e != nil {
+		return nil
+	}
+	return r
+}
+
+func (c SM) GetMapList(key string) []SM {
+	str := c[key]
+	r := []SM{}
+	e := json.Unmarshal([]byte(str), &r)
+	if e != nil {
+		return nil
+	}
+	return r
 }

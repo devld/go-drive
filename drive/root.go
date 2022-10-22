@@ -7,6 +7,7 @@ import (
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/storage"
 	"log"
@@ -31,7 +32,8 @@ func NewRootDrive(
 	driveStorage *storage.DriveDAO,
 	mountStorage *storage.PathMountDAO,
 	dataStorage *storage.DriveDataDAO,
-	driveCacheStorage *storage.DriveCacheDAO) (*RootDrive, error) {
+	driveCacheStorage *storage.DriveCacheDAO,
+	ch *registry.ComponentsHolder) (*RootDrive, error) {
 	root := NewDispatcherDrive(mountStorage, config)
 	r := &RootDrive{
 		root:              root,
@@ -48,6 +50,7 @@ func NewRootDrive(
 	if e := r.ReloadDrive(ctx, true); e != nil {
 		return nil, e
 	}
+	ch.Add("rootDrive", r)
 	return r, nil
 }
 

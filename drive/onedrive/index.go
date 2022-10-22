@@ -24,7 +24,7 @@ func init() {
 		ConfigForm: []types.FormItem{
 			{
 				Field: "site", Label: t("form.site.label"), Type: "select", Description: t("form.site.description"),
-				Options: []types.FormItemOption{
+				Options: &[]types.FormItemOption{
 					{Name: t("form.site.global"), Value: "global", Title: t("form.site.global")},
 					{Name: t("form.site.china"), Value: "china", Title: t("form.site.china")},
 				},
@@ -32,7 +32,7 @@ func init() {
 			},
 			{
 				Field: "tenant", Label: t("form.tenant.label"), Type: "select", Description: t("form.tenant.description"),
-				Options: []types.FormItemOption{
+				Options: &[]types.FormItemOption{
 					{Name: "common", Value: "common", Title: t("form.tenant.common")},
 					{Name: "organizations", Value: "organizations", Title: t("form.tenant.organizations")},
 					{Name: "consumers", Value: "consumers", Title: t("form.tenant.consumers")},

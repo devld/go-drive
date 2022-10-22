@@ -4,6 +4,7 @@ import (
 	"errors"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/registry"
 	"go-drive/common/types"
 
 	cmap "github.com/orcaman/concurrent-map"
@@ -16,11 +17,13 @@ type UserDAO struct {
 	cache cmap.ConcurrentMap
 }
 
-func NewUserDAO(db *DB) *UserDAO {
-	return &UserDAO{
+func NewUserDAO(db *DB, ch *registry.ComponentsHolder) *UserDAO {
+	dao := &UserDAO{
 		db:    db,
 		cache: cmap.New(),
 	}
+	ch.Add("userDAO", dao)
+	return dao
 }
 
 func (u *UserDAO) GetUser(username string) (types.User, error) {

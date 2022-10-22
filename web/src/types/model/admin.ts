@@ -9,7 +9,7 @@ export interface DriveFactoryConfig {
 
 export interface Drive {
   name: string
-  enabled: string
+  enabled: boolean
   type: string
   config: string
 }
