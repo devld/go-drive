@@ -138,6 +138,7 @@ func GetRealIP(r *http.Request) string {
 }
 
 var lineEndRegexp = regexp.MustCompile("\r?\n")
+
 func SplitLines(s string) []string {
 	return lineEndRegexp.Split(s, -1)
 }
@@ -203,6 +204,22 @@ func CopyMap(m types.M) types.M {
 		newMap[k] = v
 	}
 	return newMap
+}
+
+func MapKeys[K comparable, V any](m map[K]V) []K {
+	values := make([]K, 0, len(m))
+	for k := range m {
+		values = append(values, k)
+	}
+	return values
+}
+
+func MapValues[K comparable, V any](m map[K]V) []V {
+	values := make([]V, 0, len(m))
+	for _, v := range m {
+		values = append(values, v)
+	}
+	return values
 }
 
 func TimeTick(fn func(), d time.Duration) func() {

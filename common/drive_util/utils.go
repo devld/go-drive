@@ -384,6 +384,27 @@ func GetURL(ctx context.Context, u string, header types.SM) (io.ReadCloser, erro
 	return resp.Body, nil
 }
 
+func NewURLContentReader(url string, headers types.SM) types.IContentReader {
+	return &contentReaderImpl{url: url, headers: headers}
+}
+
+type contentReaderImpl struct {
+	url     string
+	headers types.SM
+}
+
+func (t *contentReaderImpl) GetReader(ctx context.Context) (io.ReadCloser, error) {
+	return GetURL(ctx, t.url, t.headers)
+}
+
+func (t *contentReaderImpl) GetURL(context.Context) (*types.ContentURL, error) {
+	return &types.ContentURL{
+		URL:    t.url,
+		Header: t.headers,
+		Proxy:  true,
+	}, nil
+}
+
 func RequireFileNotExists(ctx context.Context, d types.IDrive, p string) (types.IEntry, error) {
 	get, e := d.Get(ctx, p)
 	if e == nil {

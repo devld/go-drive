@@ -75,6 +75,9 @@ drive:
       cache_ttl:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
+      proxy_thumbnail:
+        label: 代理缩略图
+        description: 如果缩略图无法正常显示，尝试开启此选项
     oauth_text: 连接到 Google Drive
     drive_label: Drive
     my_drive_name: My Drive
