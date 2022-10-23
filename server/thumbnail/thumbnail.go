@@ -22,7 +22,8 @@ func RegisterTypeHandler(name string, thf TypeHandlerFactory) {
 type TypeHandlerFactory = func(config types.SM) (TypeHandler, error)
 
 type TypeHandler interface {
-	// CreateThumbnail creates thumbnail for entry, and writes to dest
+	// CreateThumbnail creates thumbnail for entry, and writes to dest.
+	// Returns err.UnsupportedError if this TypeHandler is unable to create thumbnail for this entry
 	CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error
 	// MimeType returns the mime-type of this TypeHandler can generate
 	MimeType() string
@@ -43,28 +44,8 @@ type Thumbnail interface {
 // Entries implement this interface to supports generating thumbnail by themself.
 // The wrapper IEntry must NOT implementing this interface.
 type IEntryThumbnail interface {
+	// Thumbnail returns err.UnsupportedError if this entry is not supported
 	Thumbnail(context.Context) (types.IContentReader, error)
-}
-
-func NewThumbnailURLReader(url string, headers types.SM) types.IContentReader {
-	return &thumbnailContentReaderImpl{url: url, headers: headers}
-}
-
-type thumbnailContentReaderImpl struct {
-	url     string
-	headers types.SM
-}
-
-func (t *thumbnailContentReaderImpl) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	return drive_util.GetURL(ctx, t.url, t.headers)
-}
-
-func (t *thumbnailContentReaderImpl) GetURL(context.Context) (*types.ContentURL, error) {
-	return &types.ContentURL{
-		URL:    t.url,
-		Header: t.headers,
-		Proxy:  true,
-	}, nil
 }
 
 func GetWrappedThumbnailEntry(entry types.IEntry) IEntryThumbnail {

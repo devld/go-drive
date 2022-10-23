@@ -4,18 +4,19 @@ import (
 	"context"
 	"fmt"
 	"go-drive/common/drive_util"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"golang.org/x/oauth2"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/option"
 	"io"
 	url2 "net/url"
 	path2 "path"
 	"strings"
 	"time"
+
+	"golang.org/x/oauth2"
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/option"
 )
 
 func init() {
@@ -27,6 +28,7 @@ func init() {
 			{Field: "client_id", Label: t("form.client_id.label"), Type: "text", Description: t("form.client_id.description"), Required: true},
 			{Field: "client_secret", Label: t("form.client_secret.label"), Type: "password", Description: t("form.client_secret.description"), Required: true},
 			{Field: "cache_ttl", Label: t("form.cache_ttl.label"), Type: "text", Description: t("form.cache_ttl.description"), DefaultValue: "4h"},
+			{Field: "proxy_thumbnail", Label: t("form.proxy_thumbnail.label"), Type: "checkbox", Description: t("form.proxy_thumbnail.description"), DefaultValue: "1"},
 		},
 		Factory: drive_util.DriveFactory{Create: NewGDrive, InitConfig: InitConfig, Init: Init},
 	})
@@ -49,10 +51,11 @@ func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils
 	}
 
 	g := &GDrive{
-		s:        service,
-		cacheTTL: cacheTtl,
-		ts:       resp.TokenSource(),
-		driveId:  params["drive_id"],
+		s:              service,
+		cacheTTL:       cacheTtl,
+		ts:             resp.TokenSource(),
+		driveId:        params["drive_id"],
+		proxyThumbnail: config.GetBool("proxy_thumbnail"),
 	}
 	if cacheTtl <= 0 {
 		g.cache = drive_util.DummyCache()
@@ -71,6 +74,8 @@ type GDrive struct {
 	cache    drive_util.DriveCache
 
 	ts oauth2.TokenSource
+
+	proxyThumbnail bool
 }
 
 func (g *GDrive) Meta(context.Context) types.DriveMeta {
@@ -421,8 +426,13 @@ func (g *gdriveEntry) mimeType() string {
 }
 
 func (g *gdriveEntry) Meta() types.EntryMeta {
+	thumbnail := ""
+	if !g.d.proxyThumbnail {
+		thumbnail = g.thumbnail
+	}
+
 	return types.EntryMeta{
-		Readable: true, Writable: true, Thumbnail: g.thumbnail,
+		Readable: true, Writable: true, Thumbnail: thumbnail,
 		Props: types.M{
 			"ext": mimeTypeExtensionsMap[g.mimeType()],
 		},
@@ -474,6 +484,13 @@ func (g *gdriveEntry) GetURL(context.Context) (*types.ContentURL, error) {
 		Proxy: true, URL: downloadUrl,
 		Header: types.SM{"Authorization": t.TokenType + " " + t.AccessToken},
 	}, nil
+}
+
+func (g *gdriveEntry) Thumbnail(ctx context.Context) (types.IContentReader, error) {
+	if !g.d.proxyThumbnail || g.thumbnail == "" {
+		return nil, err.NewUnsupportedError()
+	}
+	return drive_util.NewURLContentReader(g.thumbnail, nil), nil
 }
 
 func (g *gdriveEntry) EntryData() types.SM {

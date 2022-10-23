@@ -75,6 +75,9 @@ drive:
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
+      proxy_thumbnail:
+        label: Thumbnail Proxy
+        description: If the thumbnails are not displayed properly, try turning on this option
     oauth_text: Connect to Google Drive
     drive_label: Drive
     my_drive_name: My Drive

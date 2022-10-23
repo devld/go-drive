@@ -39,7 +39,7 @@ const (
 var errMaking = errors.New("making")
 
 type Maker struct {
-	// handlers is a registry for TypeHandler, map[extension]map[handlerName]TypeHandler
+	// handlers is a registry for TypeHandler, map[extension]map[tag]TypeHandler
 	handlers map[string]map[string]TypeHandler
 
 	cacheDir string
@@ -176,11 +176,7 @@ func (m *Maker) createThumbnailEntry(entry types.IEntry) ThumbnailEntry {
 	}
 }
 
-func (m *Maker) resolveHandler(entry ThumbnailEntry) (TypeHandler, error) {
-	te := GetWrappedThumbnailEntry(entry)
-	if te != nil {
-		return entrySelfThumbnailTypeHandler, nil
-	}
+func (m *Maker) resolveHandler(entry ThumbnailEntry) ([]TypeHandler, error) {
 	fType := ""
 	if entry.Type().IsDir() {
 		fType = FolderType
@@ -188,14 +184,20 @@ func (m *Maker) resolveHandler(entry ThumbnailEntry) (TypeHandler, error) {
 		fType = utils.PathExt(entry.Path())
 	}
 
+	te := GetWrappedThumbnailEntry(entry)
+
 	hs, ok := m.handlers[fType]
 	if !ok {
+		if te != nil {
+			return []TypeHandler{entrySelfThumbnailTypeHandler}, nil
+		}
 		return nil, err.NewNotFoundError()
 	}
 	mappingStr, e := m.options.Get(optKeyHandlerMapping)
 	if e != nil {
 		return nil, e
 	}
+	matchedHandlers := make([]TypeHandler, 0)
 	for _, m := range utils.SplitLines(mappingStr) {
 		if m == "" {
 			continue
@@ -209,17 +211,27 @@ func (m *Maker) resolveHandler(entry ThumbnailEntry) (TypeHandler, error) {
 			tags := strings.Split(temp[0], ",")
 			for _, tag := range tags {
 				if h, ok := hs[tag]; ok {
-					return h, nil
+					matchedHandlers = append(matchedHandlers, h)
 				}
 			}
 		}
 	}
 
-	for _, h := range hs {
-		return h, nil
+	if len(matchedHandlers) == 0 {
+		matchedHandlers = utils.MapValues(hs)
 	}
 
-	panic("no handlers found")
+	if te != nil {
+		finalHandlers := make([]TypeHandler, len(matchedHandlers)+1)
+		finalHandlers[0] = entrySelfThumbnailTypeHandler
+		copy(finalHandlers[1:], matchedHandlers)
+		return finalHandlers, nil
+	}
+
+	if len(matchedHandlers) == 0 {
+		return nil, err.NewNotFoundMessageError("no thumbnail handlers matched")
+	}
+	return matchedHandlers, nil
 }
 
 func (m *Maker) tryToGetFromCache(entry ThumbnailEntry, path string) (Thumbnail, error) {
@@ -296,32 +308,42 @@ func (m *Maker) executeTask(v interface{}) interface{} {
 	if exists {
 		return errMaking
 	}
+	for _, h := range task.h {
+		item, e := m.createItem(task.entry, lockFile, h.MimeType())
+		if e != nil {
+			return e
+		}
 
-	item, e := m.createItem(task.entry, lockFile, task.h.MimeType())
-	if e != nil {
+		ctx := context.Background()
+		var ctxCancel context.CancelFunc
+		if h.Timeout() > 0 {
+			ctx, ctxCancel = context.WithTimeout(ctx, h.Timeout())
+		}
+		if ctxCancel != nil {
+			defer ctxCancel()
+		}
+
+		e = h.CreateThumbnail(ctx, task.entry, item)
+		_ = item.Close()
+
+		if err.IsUnsupportedError(e) {
+			continue
+		}
+
+		if e == nil {
+			e = os.Rename(lockFile, task.dest)
+		}
+
+		if e != nil {
+			_ = os.Remove(lockFile)
+			_ = os.Remove(task.dest)
+		}
 		return e
 	}
 
-	ctx := context.Background()
-	var ctxCancel context.CancelFunc
-	if task.h.Timeout() > 0 {
-		ctx, ctxCancel = context.WithTimeout(ctx, task.h.Timeout())
-	}
-	if ctxCancel != nil {
-		defer ctxCancel()
-	}
-
-	e = task.h.CreateThumbnail(ctx, task.entry, item)
-	_ = item.Close()
-	if e == nil {
-		e = os.Rename(lockFile, task.dest)
-	}
-
-	if e != nil {
-		_ = os.Remove(lockFile)
-		_ = os.Remove(task.dest)
-	}
-	return e
+	_ = os.Remove(lockFile)
+	_ = os.Remove(task.dest)
+	return err.NewNotFoundMessageError("unable to create thumbnail")
 }
 
 func waitPendingTask(ctx context.Context, path string, lock string) error {
@@ -403,7 +425,7 @@ func (m *Maker) readItemMeta(file *os.File) (*itemMeta, uint32, error) {
 }
 
 func (m *Maker) createItem(entry ThumbnailEntry, path, mimeType string) (io.WriteCloser, error) {
-	file, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
+	file, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if e != nil {
 		return nil, e
 	}
@@ -494,7 +516,7 @@ type itemMeta struct {
 }
 
 type taskWrapper struct {
-	h     TypeHandler
+	h     []TypeHandler
 	entry ThumbnailEntry
 	dest  string
 }
