@@ -472,6 +472,9 @@ func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 			return nil, e
 		}
 	}
+	if size == 0 {
+		return types.UseLocalProvider(0), nil
+	}
 	return drive.Upload(ctx, realPath, size, override, config)
 }
 
