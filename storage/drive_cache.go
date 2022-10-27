@@ -3,12 +3,14 @@ package storage
 import (
 	"encoding/json"
 	"go-drive/common/drive_util"
+	err "go-drive/common/errors"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"gorm.io/gorm"
 	"log"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type DriveCacheDAO struct {
@@ -26,7 +28,7 @@ func NewDriveCacheDAO(db *DB, ch *registry.ComponentsHolder) *DriveCacheDAO {
 func (d *DriveCacheDAO) cleanExpired() {
 	now := time.Now().Unix()
 	rows := d.db.C().Delete(&types.DriveCache{}, "expires_at > 0 AND expires_at < ?", now).RowsAffected
-	if utils.IsDebugOn() && rows > 0 {
+	if utils.IsDebugOn && rows > 0 {
 		log.Printf("%d expired caches item cleaned", rows)
 	}
 }
@@ -36,8 +38,8 @@ func (d *DriveCacheDAO) Dispose() error {
 	return nil
 }
 
-func (d *DriveCacheDAO) GetCacheStore(ns string, serialize drive_util.EntrySerialize, deserialize drive_util.EntryDeserialize) drive_util.DriveCache {
-	return &dbDriveNamespacedCacheStore{db: d.db, ns: ns, s: serialize, d: deserialize}
+func (d *DriveCacheDAO) GetCacheStore(ns string, deserialize drive_util.EntryDeserialize) drive_util.DriveCache {
+	return &dbDriveNamespacedCacheStore{db: d.db, ns: ns, deserialize: deserialize}
 }
 
 func (d *DriveCacheDAO) Remove(ns string) error {
@@ -45,10 +47,9 @@ func (d *DriveCacheDAO) Remove(ns string) error {
 }
 
 type dbDriveNamespacedCacheStore struct {
-	ns string
-	db *DB
-	s  drive_util.EntrySerialize
-	d  drive_util.EntryDeserialize
+	ns          string
+	db          *DB
+	deserialize drive_util.EntryDeserialize
 }
 
 func (d *dbDriveNamespacedCacheStore) put(db *gorm.DB, path string, cacheType uint8, val string, ttl time.Duration) error {
@@ -84,6 +85,9 @@ func (d *dbDriveNamespacedCacheStore) get(path string, cacheType uint8) (string,
 		"drive = ? AND path = ? AND depth = ? AND type = ?",
 		d.ns, path, depth, cacheType,
 	).Error
+	if e == gorm.ErrRecordNotFound {
+		return "", nil
+	}
 	if e != nil {
 		return "", e
 	}
@@ -114,7 +118,8 @@ func (d *dbDriveNamespacedCacheStore) delete(db *gorm.DB, path string, descendan
 func (d *dbDriveNamespacedCacheStore) PutEntries(entries []types.IEntry, ttl time.Duration) error {
 	return d.db.C().Transaction(func(tx *gorm.DB) error {
 		for _, e := range entries {
-			if err := d.put(tx, e.Path(), types.CacheEntry, d.s(e), ttl); err != nil {
+			b, _ := json.Marshal(drive_util.SerializeEntry(e))
+			if err := d.put(tx, e.Path(), types.CacheEntry, string(b), ttl); err != nil {
 				return err
 			}
 		}
@@ -123,7 +128,8 @@ func (d *dbDriveNamespacedCacheStore) PutEntries(entries []types.IEntry, ttl tim
 }
 
 func (d *dbDriveNamespacedCacheStore) PutEntry(entry types.IEntry, ttl time.Duration) error {
-	return d.put(d.db.C(), entry.Path(), types.CacheEntry, d.s(entry), ttl)
+	b, _ := json.Marshal(drive_util.SerializeEntry(entry))
+	return d.put(d.db.C(), entry.Path(), types.CacheEntry, string(b), ttl)
 }
 
 func (d *dbDriveNamespacedCacheStore) PutChildren(parentPath string, entries []types.IEntry, ttl time.Duration) error {
@@ -148,18 +154,18 @@ func (d *dbDriveNamespacedCacheStore) EvictAll() error {
 	return d.db.C().Delete(&types.DriveCache{}, "drive = ?", d.ns).Error
 }
 
-func (d *dbDriveNamespacedCacheStore) GetEntry(path string) (types.IEntry, error) {
-	v, e := d.get(path, types.CacheEntry)
+func (d *dbDriveNamespacedCacheStore) GetEntryRaw(path string) (*drive_util.EntryCacheItem, error) {
+	j, e := d.get(path, types.CacheEntry)
 	if e != nil {
 		return nil, e
 	}
-	if v == "" {
+	if j == "" {
 		return nil, nil
 	}
-	return d.d(v)
+	return drive_util.DeserializeEntry(j)
 }
 
-func (d *dbDriveNamespacedCacheStore) GetChildren(path string) ([]types.IEntry, error) {
+func (d *dbDriveNamespacedCacheStore) GetChildrenRaw(path string) ([]drive_util.EntryCacheItem, error) {
 	depth := utils.PathDepth(path)
 	v, e := d.get(path, types.CacheChildren)
 	if e != nil {
@@ -185,13 +191,49 @@ func (d *dbDriveNamespacedCacheStore) GetChildren(path string) ([]types.IEntry, 
 		itemsMap[c.Path] = c
 	}
 
-	entries := make([]types.IEntry, len(childrenPath))
+	result := make([]drive_util.EntryCacheItem, len(childrenPath))
 	for i, path := range childrenPath {
 		item, ok := itemsMap[path+"/"]
 		if !ok || item.ExpiresAt > 0 && item.ExpiresAt < time.Now().Unix() {
 			return nil, nil
 		}
-		entry, e := d.d(item.Value)
+		cacheItem, e := drive_util.DeserializeEntry(item.Value)
+		if e != nil {
+			return nil, e
+		}
+		result[i] = *cacheItem
+	}
+	return result, nil
+}
+
+func (d *dbDriveNamespacedCacheStore) GetEntry(path string) (types.IEntry, error) {
+	if d.deserialize == nil {
+		return nil, err.NewUnsupportedError()
+	}
+	cacheItem, e := d.GetEntryRaw(path)
+	if e != nil {
+		return nil, e
+	}
+	if cacheItem == nil {
+		return nil, nil
+	}
+	return d.deserialize(*cacheItem)
+}
+
+func (d *dbDriveNamespacedCacheStore) GetChildren(path string) ([]types.IEntry, error) {
+	if d.deserialize == nil {
+		return nil, err.NewUnsupportedError()
+	}
+	childrenRaw, e := d.GetChildrenRaw(path)
+	if e != nil {
+		return nil, e
+	}
+	if childrenRaw == nil {
+		return nil, nil
+	}
+	entries := make([]types.IEntry, len(childrenRaw))
+	for i, raw := range childrenRaw {
+		entry, e := d.deserialize(raw)
 		if e != nil {
 			return nil, e
 		}

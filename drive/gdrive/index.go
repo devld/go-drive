@@ -35,7 +35,11 @@ func init() {
 }
 
 func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils) (types.IDrive, error) {
-	resp, e := drive_util.OAuthGet(*oauthReq(utils.Config), config, utils.Data)
+	resp, e := drive_util.OAuthGet(*oauthReq(utils.Config),
+		drive_util.OAuthCredentials{
+			ClientID:     config["client_id"],
+			ClientSecret: config["client_secret"],
+		}, utils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -60,7 +64,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils
 	if cacheTtl <= 0 {
 		g.cache = drive_util.DummyCache()
 	} else {
-		g.cache = utils.CreateCache(g.deserializeEntry, nil)
+		g.cache = utils.CreateCache(g.deserializeEntry)
 	}
 	return g, nil
 }
@@ -494,7 +498,7 @@ func (g *gdriveEntry) Thumbnail(ctx context.Context) (types.IContentReader, erro
 	if !g.d.proxyThumbnail || g.thumbnail == "" {
 		return nil, err.NewUnsupportedError()
 	}
-	return drive_util.NewURLContentReader(g.thumbnail, nil), nil
+	return drive_util.NewURLContentReader(g.thumbnail, nil, true), nil
 }
 
 func (g *gdriveEntry) EntryData() types.SM {

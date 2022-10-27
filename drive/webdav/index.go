@@ -61,7 +61,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	if cacheTtl <= 0 {
 		w.cache = drive_util.DummyCache()
 	} else {
-		w.cache = utils.CreateCache(w.deserializeEntry, nil)
+		w.cache = utils.CreateCache(w.deserializeEntry)
 	}
 
 	client, e := req.NewClient(u, w.beforeRequest, w.afterRequest, &http.Client{})
@@ -253,11 +253,7 @@ func (w *Drive) afterRequest(resp req.Response) error {
 	return nil
 }
 
-func (w *Drive) deserializeEntry(dat string) (types.IEntry, error) {
-	ec, e := drive_util.DeserializeEntry(dat)
-	if e != nil {
-		return nil, e
-	}
+func (w *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
 	return &webDavEntry{
 		path: ec.Path, modTime: ec.ModTime,
 		size: ec.Size, isDir: ec.Type.IsDir(), d: w,

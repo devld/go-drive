@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	TypeFile = "file"
-	TypeDir  = "dir"
+	TypeFile EntryType = "file"
+	TypeDir  EntryType = "dir"
 )
 
 type EntryType string
@@ -131,6 +131,12 @@ type IDrive interface {
 
 	// Upload returns the upload config of the path
 	Upload(ctx context.Context, path string, size int64, override bool, config SM) (*DriveUploadConfig, error)
+}
+
+type IRootDrive interface {
+	Get() IDrive
+	ReloadDrive(ctx context.Context, ignoreFailure bool) error
+	ReloadMounts() error
 }
 
 const (

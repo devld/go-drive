@@ -6,13 +6,14 @@ import (
 	"net/http"
 )
 
-type RequestError interface {
+type Error interface {
+	Name() string
 	Code() int
 	Error() string
 }
 
-type RequestErrorWithData interface {
-	RequestError
+type ErrorWithData interface {
+	Error
 	Data() types.M
 }
 
@@ -29,6 +30,10 @@ func (b BadRequestError) Code() int {
 	return http.StatusBadRequest
 }
 
+func (b BadRequestError) Name() string {
+	return "BAD_REQUEST"
+}
+
 // UnauthorizedError 401
 type UnauthorizedError struct {
 	msg string
@@ -40,6 +45,10 @@ func (i UnauthorizedError) Error() string {
 
 func (i UnauthorizedError) Code() int {
 	return http.StatusUnauthorized
+}
+
+func (b UnauthorizedError) Name() string {
+	return "UNAUTHORIZED"
 }
 
 // NotFoundError 404
@@ -55,6 +64,10 @@ func (d NotFoundError) Code() int {
 	return http.StatusNotFound
 }
 
+func (d NotFoundError) Name() string {
+	return "NOT_FOUND"
+}
+
 // NotAllowedError 403
 type NotAllowedError struct {
 	msg string
@@ -66,6 +79,10 @@ func (d NotAllowedError) Error() string {
 
 func (d NotAllowedError) Code() int {
 	return http.StatusForbidden
+}
+
+func (d NotAllowedError) Name() string {
+	return "NOT_ALLOWED"
 }
 
 // PermissionDeniedError 403
@@ -81,6 +98,10 @@ func (p PermissionDeniedError) Error() string {
 	return p.msg
 }
 
+func (p PermissionDeniedError) Name() string {
+	return "PERMISSION_DENIED"
+}
+
 // UnsupportedError 405
 type UnsupportedError struct {
 	msg string
@@ -94,6 +115,10 @@ func (n UnsupportedError) Code() int {
 	return http.StatusMethodNotAllowed
 }
 
+func (n UnsupportedError) Name() string {
+	return "UNSUPPORTED"
+}
+
 type RemoteApiError struct {
 	code int
 	msg  string
@@ -105,6 +130,10 @@ func (r RemoteApiError) Error() string {
 
 func (r RemoteApiError) Code() int {
 	return r.code
+}
+
+func (r RemoteApiError) Name() string {
+	return "REMOTE_API"
 }
 
 func IsUnauthorizedError(e error) bool {

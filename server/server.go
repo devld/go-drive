@@ -43,7 +43,7 @@ func InitServer(config common.Config,
 	pathMountDAO *storage.PathMountDAO,
 	messageSource i18n.MessageSource) (*gin.Engine, error) {
 
-	if utils.IsDebugOn() {
+	if utils.IsDebugOn {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -51,7 +51,7 @@ func InitServer(config common.Config,
 
 	engine := gin.New()
 
-	engine.Use(gin.Recovery())
+	engine.Use(gin.CustomRecovery(handlePanic))
 	engine.Use(Logger())
 	engine.Use(apiResultHandler(messageSource))
 
@@ -106,14 +106,28 @@ func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {
 		result := types.M{
 			"message": e.Err.Error(),
 		}
-		if re, ok := e.Err.(err.RequestError); ok {
+		if re, ok := e.Err.(err.Error); ok {
 			code = re.Code()
 		}
-		if red, ok := e.Err.(err.RequestErrorWithData); ok {
+		if red, ok := e.Err.(err.ErrorWithData); ok {
 			result["data"] = red.Data()
 		}
 		writeJSON(c, ms, code, result)
 	}
+}
+
+func handlePanic(c *gin.Context, err interface{}) {
+	var msg string
+	if ee, ok := err.(error); ok {
+		msg = ee.Error()
+	} else {
+		msg = fmt.Sprintf("%v", err)
+	}
+	c.JSON(http.StatusInternalServerError,
+		types.M{
+			"message": msg,
+		},
+	)
 }
 
 func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v interface{}) {

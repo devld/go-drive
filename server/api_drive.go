@@ -604,7 +604,7 @@ type entryJson struct {
 
 func newEntryJson(e types.IEntry, s types.Session) *entryJson {
 	entryMeta := e.Meta()
-	meta := utils.CopyMap(entryMeta.Props)
+	meta := utils.CopyMap(entryMeta.Props, nil)
 	meta["writable"] = entryMeta.Writable
 	if entryMeta.Thumbnail != "" {
 		meta["thumbnail"] = entryMeta.Thumbnail

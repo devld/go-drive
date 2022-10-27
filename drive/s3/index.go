@@ -90,7 +90,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	if cacheTtl <= 0 {
 		d.cache = drive_util.DummyCache()
 	} else {
-		d.cache = utils.CreateCache(d.deserializeEntry, nil)
+		d.cache = utils.CreateCache(d.deserializeEntry)
 	}
 	return d, d.check(ctx)
 }
@@ -110,11 +110,7 @@ func (s *Drive) check(ctx context.Context) error {
 	return e
 }
 
-func (s *Drive) deserializeEntry(dat string) (types.IEntry, error) {
-	ec, e := drive_util.DeserializeEntry(dat)
-	if e != nil {
-		return nil, e
-	}
+func (s *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
 	return &s3Entry{key: ec.Path, c: s, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 

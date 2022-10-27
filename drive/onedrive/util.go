@@ -106,7 +106,11 @@ func itemPath(path string) string {
 
 func InitConfig(ctx context.Context, config types.SM,
 	driveUtils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
-	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(driveUtils.Config, config), config, driveUtils.Data)
+	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(driveUtils.Config, config),
+		drive_util.OAuthCredentials{
+			ClientID:     config["client_id"],
+			ClientSecret: config["client_secret"],
+		}, driveUtils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -157,7 +161,11 @@ func InitConfig(ctx context.Context, config types.SM,
 
 func Init(ctx context.Context, data types.SM, config types.SM, utils drive_util.DriveUtils) error {
 	oReq := *oauthReq(utils.Config, config)
-	resp, e := drive_util.OAuthInit(ctx, oReq, data, config, utils.Data)
+	resp, e := drive_util.OAuthInit(ctx, oReq, data,
+		drive_util.OAuthCredentials{
+			ClientID:     config["client_id"],
+			ClientSecret: config["client_secret"],
+		}, utils.Data)
 	if e != nil {
 		return e
 	}
@@ -167,7 +175,11 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils drive_util.
 	sharePointURL := config["share_point"]
 	if sharePointURL != "" {
 		if resp == nil {
-			resp, e = drive_util.OAuthGet(oReq, config, utils.Data)
+			resp, e = drive_util.OAuthGet(oReq,
+				drive_util.OAuthCredentials{
+					ClientID:     config["client_id"],
+					ClientSecret: config["client_secret"],
+				}, utils.Data)
 			if e != nil {
 				return e
 			}
@@ -380,11 +392,7 @@ func (o *OneDrive) toEntry(resp req.Response) (*oneDriveEntry, error) {
 	return entry, nil
 }
 
-func (o *OneDrive) deserializeEntry(dat string) (types.IEntry, error) {
-	ec, e := drive_util.DeserializeEntry(dat)
-	if e != nil {
-		return nil, e
-	}
+func (o *OneDrive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
 	ed := ec.Data
 	if ed == nil || ed["id"] == "" {
 		return nil, errors.New("invalid cache")

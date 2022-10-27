@@ -52,7 +52,11 @@ func oauthReq(c common.Config) *drive_util.OAuthRequest {
 
 func InitConfig(ctx context.Context, config types.SM,
 	utils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
-	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(utils.Config), config, utils.Data)
+	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(utils.Config),
+		drive_util.OAuthCredentials{
+			ClientID:     config["client_id"],
+			ClientSecret: config["client_secret"],
+		}, utils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -122,15 +126,15 @@ func Init(ctx context.Context, data types.SM,
 	if e := utils.Data.Save(types.SM{"drive_id": data["drive_id"]}); e != nil {
 		return e
 	}
-	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config), data, config, utils.Data)
+	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config), data,
+		drive_util.OAuthCredentials{
+			ClientID:     config["client_id"],
+			ClientSecret: config["client_secret"],
+		}, utils.Data)
 	return e
 }
 
-func (g *GDrive) deserializeEntry(dat string) (types.IEntry, error) {
-	ci, e := drive_util.DeserializeEntry(dat)
-	if e != nil {
-		return nil, e
-	}
+func (g *GDrive) deserializeEntry(ci drive_util.EntryCacheItem) (types.IEntry, error) {
 	id := ci.Data["i"]
 	if id == "" {
 		return nil, errors.New("")

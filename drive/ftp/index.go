@@ -59,7 +59,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	if cacheTTL <= 0 {
 		ftp.cache = drive_util.DummyCache()
 	} else {
-		ftp.cache = driveUtils.CreateCache(ftp.deserializeEntry, nil)
+		ftp.cache = driveUtils.CreateCache(ftp.deserializeEntry)
 	}
 
 	_, e = ftp.List(ctx, "")
@@ -234,11 +234,7 @@ func (f *Drive) newFTPEntry(path string, stat os.FileInfo) *ftpEntry {
 	}
 }
 
-func (f *Drive) deserializeEntry(dat string) (types.IEntry, error) {
-	ec, e := drive_util.DeserializeEntry(dat)
-	if e != nil {
-		return nil, e
-	}
+func (f *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
 	return &ftpEntry{path: ec.Path, d: f, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 

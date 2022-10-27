@@ -37,6 +37,17 @@ func GetIEntry(entry types.IEntry, test func(iEntry types.IEntry) bool) types.IE
 	return entry
 }
 
+func UnwrapIEntry(entry types.IEntry) types.IEntry {
+	for {
+		ew, ok := entry.(types.IEntryWrapper)
+		if !ok {
+			return entry
+		} else {
+			entry = ew.GetIEntry()
+		}
+	}
+}
+
 func GetSelfEntry(d types.IDrive, entry types.IEntry) types.IEntry {
 	return GetIEntry(entry, func(ee types.IEntry) bool { return ee.Drive() == d })
 }
@@ -384,13 +395,14 @@ func GetURL(ctx context.Context, u string, header types.SM) (io.ReadCloser, erro
 	return resp.Body, nil
 }
 
-func NewURLContentReader(url string, headers types.SM) types.IContentReader {
-	return &contentReaderImpl{url: url, headers: headers}
+func NewURLContentReader(url string, headers types.SM, proxy bool) types.IContentReader {
+	return &contentReaderImpl{url, headers, proxy}
 }
 
 type contentReaderImpl struct {
 	url     string
 	headers types.SM
+	proxy   bool
 }
 
 func (t *contentReaderImpl) GetReader(ctx context.Context) (io.ReadCloser, error) {
@@ -401,7 +413,7 @@ func (t *contentReaderImpl) GetURL(context.Context) (*types.ContentURL, error) {
 	return &types.ContentURL{
 		URL:    t.url,
 		Header: t.headers,
-		Proxy:  true,
+		Proxy:  t.proxy,
 	}, nil
 }
 
