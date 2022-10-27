@@ -106,7 +106,7 @@ func NewDrive(_ context.Context, config types.SM, driveUtils drive_util.DriveUti
 	if cacheTTL <= 0 {
 		s.cache = drive_util.DummyCache()
 	} else {
-		s.cache = driveUtils.CreateCache(s.deserializeEntry, nil)
+		s.cache = driveUtils.CreateCache(s.deserializeEntry)
 	}
 
 	_, e = s.getClient()
@@ -316,11 +316,7 @@ func (f *Drive) newSFTPEntry(parent string, stat os.FileInfo) *sftpEntry {
 	}
 }
 
-func (f *Drive) deserializeEntry(dat string) (types.IEntry, error) {
-	ec, e := drive_util.DeserializeEntry(dat)
-	if e != nil {
-		return nil, e
-	}
+func (f *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
 	return &sftpEntry{path: ec.Path, d: f, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 

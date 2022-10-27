@@ -236,6 +236,13 @@ drive:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
     invalid_root_path: "根路径必须以 '/' 开头"
+  script:
+    name: 脚本
+    readme: 使用 JavaScript 驱动盘。该盘无配置参数，请在保存后在下方进行具体配置
+    form:
+      script:
+        label: 脚本文件
+        description: 选择 scripts 文件夹中的脚本
 stat:
   task:
     total: 总计

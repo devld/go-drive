@@ -63,7 +63,11 @@ type OneDrive struct {
 
 func NewOneDrive(_ context.Context, config types.SM,
 	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
-	resp, e := drive_util.OAuthGet(*oauthReq(driveUtils.Config, config), config, driveUtils.Data)
+	resp, e := drive_util.OAuthGet(*oauthReq(driveUtils.Config, config),
+		drive_util.OAuthCredentials{
+			ClientID:     config["client_id"],
+			ClientSecret: config["client_secret"],
+		}, driveUtils.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -78,7 +82,7 @@ func NewOneDrive(_ context.Context, config types.SM,
 	if cacheTtl <= 0 {
 		od.cache = drive_util.DummyCache()
 	} else {
-		od.cache = driveUtils.CreateCache(od.deserializeEntry, nil)
+		od.cache = driveUtils.CreateCache(od.deserializeEntry)
 	}
 
 	driveId := params["drive_id"]

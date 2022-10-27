@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-type EntrySerialize = func(types.IEntry) string
-type EntryDeserialize = func(string) (types.IEntry, error)
+type EntrySerialize = func(types.IEntry) EntryCacheItem
+type EntryDeserialize = func(EntryCacheItem) (types.IEntry, error)
 
 type DriveCache interface {
 	// PutEntries cache the entries, is ttl <= 0, the cache won't expire
@@ -21,6 +21,9 @@ type DriveCache interface {
 	EvictAll() error
 	GetEntry(path string) (types.IEntry, error)
 	GetChildren(path string) ([]types.IEntry, error)
+
+	GetEntryRaw(path string) (*EntryCacheItem, error)
+	GetChildrenRaw(path string) ([]EntryCacheItem, error)
 }
 
 type CacheableEntry interface {
@@ -35,7 +38,7 @@ type EntryCacheItem struct {
 	Data    types.SM        `json:"d"`
 }
 
-func SerializeEntry(e types.IEntry) string {
+func SerializeEntry(e types.IEntry) EntryCacheItem {
 	dat := EntryCacheItem{
 		ModTime: e.ModTime(),
 		Size:    e.Size(),
@@ -45,14 +48,16 @@ func SerializeEntry(e types.IEntry) string {
 	if ed, ok := e.(CacheableEntry); ok {
 		dat.Data = ed.EntryData()
 	}
-	s, _ := json.Marshal(dat)
-	return string(s)
+	return dat
 }
 
-func DeserializeEntry(dat string) (EntryCacheItem, error) {
+func DeserializeEntry(dat string) (*EntryCacheItem, error) {
+	if dat == "" {
+		return nil, nil
+	}
 	ec := EntryCacheItem{}
 	e := json.Unmarshal([]byte(dat), &ec)
-	return ec, e
+	return &ec, e
 }
 
 func DummyCache() DriveCache {
@@ -87,5 +92,12 @@ func (d *dummyCache) GetEntry(string) (types.IEntry, error) {
 }
 
 func (d *dummyCache) GetChildren(string) ([]types.IEntry, error) {
+	return nil, nil
+}
+func (d *dummyCache) GetEntryRaw(path string) (*EntryCacheItem, error) {
+	return nil, nil
+}
+
+func (d *dummyCache) GetChildrenRaw(path string) ([]EntryCacheItem, error) {
 	return nil, nil
 }

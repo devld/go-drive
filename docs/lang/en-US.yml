@@ -236,6 +236,13 @@ drive:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
     invalid_root_path: "Root path must starts with '/'"
+  script:
+    name: Script
+    readme: Use the JavaScript driver. There are no configuration parameters for this, please save it and configure it below
+    form:
+      script:
+        label: Script File
+        description: Select the script in the scripts folder
 stat:
   task:
     total: Total

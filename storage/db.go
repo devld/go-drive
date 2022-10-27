@@ -24,7 +24,7 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 	dialect := config.GetDB()
 	dbConfig := gorm.Config{}
 
-	if utils.IsDebugOn() {
+	if utils.IsDebugOn {
 		dbConfig.Logger = logger.New(
 			log.New(os.Stdout, "\n", log.LstdFlags),
 			logger.Config{

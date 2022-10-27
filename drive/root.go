@@ -161,11 +161,8 @@ func (d *RootDrive) DriveInit(ctx context.Context, name string, data types.SM) e
 func (d *RootDrive) createDriveUtils(name string) drive_util.DriveUtils {
 	return drive_util.DriveUtils{
 		Data: d.driveDataStorage.GetDataStore(name),
-		CreateCache: func(de drive_util.EntryDeserialize, s drive_util.EntrySerialize) drive_util.DriveCache {
-			if s == nil {
-				s = drive_util.SerializeEntry
-			}
-			return d.driveCacheStorage.GetCacheStore(name, s, de)
+		CreateCache: func(de drive_util.EntryDeserialize) drive_util.DriveCache {
+			return d.driveCacheStorage.GetCacheStore(name, de)
 		},
 		Config: d.config,
 	}

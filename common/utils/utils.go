@@ -16,9 +16,11 @@ import (
 	"time"
 )
 
-func IsDebugOn() bool {
+var IsDebugOn bool
+
+func init() {
 	_, exists := os.LookupEnv("DEBUG")
-	return exists
+	IsDebugOn = exists
 }
 
 func FileExists(path string) (bool, error) {
@@ -171,6 +173,13 @@ func ToBool(s string) bool {
 	return types.SV(s).Bool()
 }
 
+func BoolString(b bool) string {
+	if b {
+		return "1"
+	}
+	return ""
+}
+
 func FlattenStringMap(m map[string]interface{}, separator string) map[string]string {
 	r := make(map[string]string)
 	for k, v := range m {
@@ -198,12 +207,22 @@ func flattenStringMap(prefix string, val interface{}, separator string, result m
 	result[prefix] = fmt.Sprintf("%v", val)
 }
 
-func CopyMap(m types.M) types.M {
-	newMap := make(types.M)
-	for k, v := range m {
-		newMap[k] = v
+func CopyMap[K comparable, V any](m map[K]V, dest map[K]V) map[K]V {
+	if dest == nil {
+		dest = make(map[K]V, len(m))
 	}
-	return newMap
+	for k, v := range m {
+		dest[k] = v
+	}
+	return dest
+}
+
+func MapArray[TF any, TT any](a []TF, convert func(*TF) *TT) []TT {
+	r := make([]TT, len(a))
+	for i := range a {
+		r[i] = *convert(&a[i])
+	}
+	return r
 }
 
 func MapKeys[K comparable, V any](m map[K]V) []K {

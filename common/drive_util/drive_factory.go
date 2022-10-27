@@ -23,13 +23,13 @@ type DriveInitConfig struct {
 }
 
 type OAuthConfig struct {
-	Url  string `json:"url"`
+	URL  string `json:"url"`
 	Text string `json:"text" i18n:""`
 
 	Principal string `json:"principal"`
 }
 
-type DriveCacheFactory = func(EntryDeserialize, EntrySerialize) DriveCache
+type DriveCacheFactory = func(EntryDeserialize) DriveCache
 
 // DriveDataStore is a place to store drive's runtime data, such as token, refresh token.
 type DriveDataStore interface {

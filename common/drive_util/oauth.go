@@ -2,15 +2,16 @@ package drive_util
 
 import (
 	"context"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"golang.org/x/oauth2"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -20,6 +21,11 @@ const (
 	DsKeyRefreshToken = "refresh_token"
 	DsKeyState        = "state"
 )
+
+type OAuthCredentials struct {
+	ClientID     string
+	ClientSecret string
+}
 
 type OAuthRequest struct {
 	Endpoint       oauth2.Endpoint
@@ -54,20 +60,20 @@ func (o *OAuthResponse) Token() (*oauth2.Token, error) {
 	return o.ts.Token()
 }
 
-func oAuthConfig(o OAuthRequest, config types.SM) *oauth2.Config {
+func oAuthConfig(o OAuthRequest, cred OAuthCredentials) *oauth2.Config {
 	return &oauth2.Config{
-		ClientID:     config["client_id"],
-		ClientSecret: config["client_secret"],
+		ClientID:     cred.ClientID,
+		ClientSecret: cred.ClientSecret,
 		Endpoint:     o.Endpoint,
 		RedirectURL:  o.RedirectURL,
 		Scopes:       o.Scopes,
 	}
 }
 
-func OAuthInitConfig(o OAuthRequest, config types.SM,
+func OAuthInitConfig(o OAuthRequest, cred OAuthCredentials,
 	ds DriveDataStore) (*DriveInitConfig, *OAuthResponse, error) {
 
-	c := oAuthConfig(o, config)
+	c := oAuthConfig(o, cred)
 	t := loadToken(ds)
 
 	state := utils.RandString(6)
@@ -77,7 +83,7 @@ func OAuthInitConfig(o OAuthRequest, config types.SM,
 	initConfig := &DriveInitConfig{
 		Configured: t != nil,
 		OAuth: &OAuthConfig{
-			Url:  c.AuthCodeURL(state, o.AutoCodeOption...),
+			URL:  c.AuthCodeURL(state, o.AutoCodeOption...),
 			Text: o.Text,
 		},
 	}
@@ -91,7 +97,7 @@ func OAuthInitConfig(o OAuthRequest, config types.SM,
 }
 
 func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
-	config types.SM, ds DriveDataStore) (*OAuthResponse, error) {
+	cred OAuthCredentials, ds DriveDataStore) (*OAuthResponse, error) {
 	code := data["code"]
 	state := data["state"]
 
@@ -99,7 +105,7 @@ func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
 		return nil, nil
 	}
 
-	oauthConf := oAuthConfig(o, config)
+	oauthConf := oAuthConfig(o, cred)
 
 	params, e := ds.Load(DsKeyState)
 	if e != nil {
@@ -115,12 +121,12 @@ func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
 	return newOAuthResponse(oauthConf, ds, t), storeToken(ds, t)
 }
 
-func OAuthGet(o OAuthRequest, config types.SM, ds DriveDataStore) (*OAuthResponse, error) {
+func OAuthGet(o OAuthRequest, cred OAuthCredentials, ds DriveDataStore) (*OAuthResponse, error) {
 	t := loadToken(ds)
 	if t == nil {
 		return nil, err.NewNotAllowedMessageError("drive.not_configured")
 	}
-	return newOAuthResponse(oAuthConfig(o, config), ds, t), nil
+	return newOAuthResponse(oAuthConfig(o, cred), ds, t), nil
 }
 
 func loadToken(ds DriveDataStore) *oauth2.Token {
