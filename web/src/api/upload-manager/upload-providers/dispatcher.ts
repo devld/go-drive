@@ -36,7 +36,7 @@ class DispatcherUploadTask extends UploadTask {
 
   override async stop() {
     if (!this._targetTask) return false
-    const r = this._targetTask.stop()
+    const r = await this._targetTask.stop()
     this._targetTask = undefined
     this._started = false
     return r
