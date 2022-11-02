@@ -44,6 +44,7 @@ type Thumbnail interface {
 // Entries implement this interface to supports generating thumbnail by themself.
 // The wrapper IEntry must NOT implementing this interface.
 type IEntryThumbnail interface {
+	HasThumbnail() bool
 	// Thumbnail returns err.UnsupportedError if this entry is not supported
 	Thumbnail(context.Context) (types.IContentReader, error)
 }
@@ -56,7 +57,11 @@ func GetWrappedThumbnailEntry(entry types.IEntry) IEntryThumbnail {
 	if e == nil {
 		return nil
 	}
-	return e.(IEntryThumbnail)
+	th := e.(IEntryThumbnail)
+	if !th.HasThumbnail() {
+		return nil
+	}
+	return th
 }
 
 var entrySelfThumbnailTypeHandler = &entrySelfThumbnailHandler{}
@@ -67,7 +72,7 @@ type entrySelfThumbnailHandler struct {
 func (est *entrySelfThumbnailHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
 	te := GetWrappedThumbnailEntry(entry)
 	if te == nil {
-		return errors.New("entry is not ThumbnailEntry")
+		return errors.New("cannot generate thumbnail")
 	}
 	tr, e := te.Thumbnail(ctx)
 	if e != nil {
