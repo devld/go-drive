@@ -486,6 +486,10 @@ func (g *gdriveEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	}, nil
 }
 
+func (g *gdriveEntry) HasThumbnail() bool {
+	return g.d.proxyThumbnail && g.thumbnail != ""
+}
+
 func (g *gdriveEntry) Thumbnail(ctx context.Context) (types.IContentReader, error) {
 	if !g.d.proxyThumbnail || g.thumbnail == "" {
 		return nil, err.NewUnsupportedError()
