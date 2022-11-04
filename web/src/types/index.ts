@@ -11,6 +11,7 @@ export type FormItemType =
   | 'checkbox'
   | 'select'
   | 'form'
+  | 'code'
 
 export interface FormItemOption {
   name: I18nText
@@ -31,6 +32,10 @@ export interface FormItemForms {
   forms: FormItemForm[]
 }
 
+export interface FormItemCode {
+  type: string
+}
+
 export interface BaseFormItem extends O {
   label?: I18nText
   type?: FormItemType
@@ -42,6 +47,8 @@ export interface BaseFormItem extends O {
   options?: FormItemOption[]
 
   forms?: FormItemForms
+
+  code?: FormItemCode
 
   defaultValue?: string
 }

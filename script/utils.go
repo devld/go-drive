@@ -16,6 +16,25 @@ func newValue(vm *VM, v otto.Value) *Value {
 	return &Value{vm, v, nil}
 }
 
+func newValues(vm *VM, vs []otto.Value) Values {
+	return Values{vm, utils.MapArray(vs, func(t *otto.Value) **Value {
+		a := newValue(vm, *t)
+		return &a
+	})}
+}
+
+type Values struct {
+	vm *VM
+	vs []*Value
+}
+
+func (vs Values) Get(index int) *Value {
+	if index >= len(vs.vs) {
+		return newValue(vs.vm, otto.UndefinedValue())
+	}
+	return vs.vs[index]
+}
+
 type Value struct {
 	vm  *VM
 	v   otto.Value
@@ -163,6 +182,18 @@ func (v *Value) Raw() interface{} {
 	return r
 }
 
+func (v *Value) Call(thisValue interface{}, args ...interface{}) *Value {
+	thisV, e := v.vm.o.ToValue(thisValue)
+	if e != nil {
+		v.vm.ThrowTypeError(e.Error())
+	}
+	rv, e := v.v.Call(thisV, args...)
+	if e != nil {
+		v.vm.ThrowTypeError(e.Error())
+	}
+	return newValue(v.vm, rv)
+}
+
 func parseValue(ov *Value, v reflect.Value) {
 	if !v.IsValid() {
 		return
@@ -264,16 +295,12 @@ func parseValue(ov *Value, v reflect.Value) {
 	}
 }
 
-func WrapVmCall(vm *VM, fn func(vm *VM, args []*Value) interface{}) interface{} {
+func WrapVmCall(vm *VM, fn func(vm *VM, args Values) interface{}) interface{} {
 	return func(c otto.FunctionCall) otto.Value {
 		vm = vm.vms[c.Otto]
 		if vm == nil {
 			panic("detached vm")
 		}
-		args := utils.MapArray(c.ArgumentList, func(t *otto.Value) **Value {
-			a := newValue(vm, *t)
-			return &a
-		})
 
 		defer func() {
 			if e := recover(); e != nil {
@@ -281,7 +308,7 @@ func WrapVmCall(vm *VM, fn func(vm *VM, args []*Value) interface{}) interface{} 
 			}
 		}()
 
-		ret := fn(vm, args)
+		ret := fn(vm, newValues(vm, c.ArgumentList))
 		ov, e := vm.o.ToValue(ret)
 		if e != nil {
 			vm.ThrowTypeError(e.Error())

@@ -2,6 +2,7 @@ package script
 
 import (
 	"bytes"
+	"go-drive/common/utils"
 	"io"
 	"net/http"
 )
@@ -11,12 +12,12 @@ var httpClient = &http.Client{CheckRedirect: func(*http.Request, []*http.Request
 }}
 
 // vm_http: (ctx Context, method, url string, headers types.SM, body interface{}) *httpResponse
-func vm_http(vm *VM, args []*Value) interface{} {
-	ctx := args[0].Raw()
-	method := args[1].String()
-	url := args[2].String()
-	headers := args[3].SM()
-	body := args[4].Raw()
+func vm_http(vm *VM, args Values) interface{} {
+	ctx := args.Get(0).Raw()
+	method := args.Get(1).String()
+	url := args.Get(2).String()
+	headers := args.Get(3).SM()
+	body := args.Get(4).Raw()
 	var bodyReader io.Reader
 	if body != nil {
 		if vr := GetReader(body); vr != nil {
@@ -74,6 +75,10 @@ type httpResponse struct {
 	Status  int
 	Headers *HttpHeaders
 	Body    ReadCloser
+}
+
+func (r *httpResponse) BodySize() int64 {
+	return utils.ToInt64(r.Headers.Get("Content-Length"), -1)
 }
 
 func (r *httpResponse) Text() string {

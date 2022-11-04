@@ -1,0 +1,36 @@
+{
+  "name": "go-drive-web-monaco-editor",
+  "version": "0.0.0",
+  "description": "Monaco editor of go-drive web",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "vue-tsc --noEmit && eslint"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.34.1"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.28.0",
+    "@typescript-eslint/parser": "^5.28.0",
+    "@vue/eslint-config-typescript": "^11.0.0",
+    "eslint": "^8.18.0",
+    "eslint-config-prettier": "^8.3.0",
+    "sass": "^1.45.2",
+    "typescript": "^4.5.4",
+    "vite": "^2.9.13",
+    "vite-plugin-html": "^2.1.2",
+    "vue-tsc": "^0.38.9"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devld/go-drive.git"
+  },
+  "license": "MIT",
+  "prettier": {
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  }
+}

@@ -58,3 +58,36 @@ export interface ServiceStatsItem {
   name: string
   data: O<string>
 }
+
+export interface JobDefinition {
+  name: string
+  displayName: string
+  description?: string
+  paramsForm: FormItem[]
+}
+
+export interface Job {
+  id: number
+  description: string
+  job: string
+  params: string
+  schedule: string
+  enabled: boolean
+
+  nextRun?: string
+}
+
+export enum JobExecutionStatus {
+  Running = 'running',
+  Success = 'success',
+  Failed = 'failed',
+}
+
+export interface JobExecution {
+  id: number
+  jobId: number
+  startedAt: number
+  completedAt?: number
+  status: JobExecutionStatus
+  errorMsg?: string
+}

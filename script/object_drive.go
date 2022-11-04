@@ -6,6 +6,10 @@ import (
 	"go-drive/common/utils"
 )
 
+func NewRootDrive(vm *VM, rootDrive types.IRootDrive) RootDrive {
+	return RootDrive{vm, rootDrive}
+}
+
 func NewDrive(vm *VM, d types.IDrive) Drive {
 	return Drive{vm, d}
 }
@@ -23,7 +27,7 @@ func (r RootDrive) Get() Drive {
 	return NewDrive(r.vm, r.d.Get())
 }
 
-func (r RootDrive) ReloadDrive(ctx Context, ignoreFailure bool) {
+func (r RootDrive) ReloadDrive(ctx interface{}, ignoreFailure bool) {
 	if e := r.d.ReloadDrive(GetContext(ctx), ignoreFailure); e != nil {
 		r.vm.ThrowError(e)
 	}
@@ -40,7 +44,7 @@ type Drive struct {
 	d  types.IDrive
 }
 
-func (d Drive) Get(ctx Context, path string) Entry {
+func (d Drive) Get(ctx interface{}, path string) Entry {
 	entry, e := d.d.Get(GetContext(ctx), path)
 	if e != nil {
 		d.vm.ThrowError(e)
@@ -48,7 +52,7 @@ func (d Drive) Get(ctx Context, path string) Entry {
 	return NewEntry(d.vm, entry)
 }
 
-func (d Drive) Save(ctx TaskCtx, path string, size int64, override bool, reader Reader) Entry {
+func (d Drive) Save(ctx interface{}, path string, size int64, override bool, reader interface{}) Entry {
 	entry, e := d.d.Save(GetTaskCtx(ctx), path, size, override, GetReader(reader))
 	if e != nil {
 		d.vm.ThrowError(e)
@@ -56,7 +60,7 @@ func (d Drive) Save(ctx TaskCtx, path string, size int64, override bool, reader 
 	return NewEntry(d.vm, entry)
 }
 
-func (d Drive) MakeDir(ctx Context, path string) Entry {
+func (d Drive) MakeDir(ctx interface{}, path string) Entry {
 	entry, e := d.d.MakeDir(GetContext(ctx), path)
 	if e != nil {
 		d.vm.ThrowError(e)
@@ -64,7 +68,7 @@ func (d Drive) MakeDir(ctx Context, path string) Entry {
 	return NewEntry(d.vm, entry)
 }
 
-func (d Drive) Copy(ctx TaskCtx, from Entry, to string, override bool) Entry {
+func (d Drive) Copy(ctx interface{}, from interface{}, to string, override bool) Entry {
 	entry, e := d.d.Copy(GetTaskCtx(ctx), GetEntry(from), to, override)
 	if e != nil {
 		d.vm.ThrowError(e)
@@ -72,7 +76,7 @@ func (d Drive) Copy(ctx TaskCtx, from Entry, to string, override bool) Entry {
 	return NewEntry(d.vm, entry)
 }
 
-func (d Drive) Move(ctx TaskCtx, from Entry, to string, override bool) Entry {
+func (d Drive) Move(ctx interface{}, from interface{}, to string, override bool) Entry {
 	entry, e := d.d.Move(GetTaskCtx(ctx), GetEntry(from), to, override)
 	if e != nil {
 		d.vm.ThrowError(e)
@@ -80,7 +84,7 @@ func (d Drive) Move(ctx TaskCtx, from Entry, to string, override bool) Entry {
 	return NewEntry(d.vm, entry)
 }
 
-func (d Drive) List(ctx Context, path string) []Entry {
+func (d Drive) List(ctx interface{}, path string) []Entry {
 	entries, e := d.d.List(GetContext(ctx), path)
 	if e != nil {
 		d.vm.ThrowError(e)
@@ -91,7 +95,7 @@ func (d Drive) List(ctx Context, path string) []Entry {
 	})
 }
 
-func (d Drive) Delete(ctx TaskCtx, path string) {
+func (d Drive) Delete(ctx interface{}, path string) {
 	if e := d.d.Delete(GetTaskCtx(ctx), path); e != nil {
 		d.vm.ThrowError(e)
 	}
@@ -134,7 +138,7 @@ func (e Entry) ModTime() int64 {
 	return e.e.ModTime()
 }
 
-func (e Entry) GetURL(ctx Context) *types.ContentURL {
+func (e Entry) GetURL(ctx interface{}) *types.ContentURL {
 	r, er := e.e.GetURL(GetContext(ctx))
 	if er != nil {
 		e.vm.ThrowError(er)
@@ -142,7 +146,7 @@ func (e Entry) GetURL(ctx Context) *types.ContentURL {
 	return r
 }
 
-func (e Entry) GetReader(ctx Context) ReadCloser {
+func (e Entry) GetReader(ctx interface{}) ReadCloser {
 	r, err := e.e.GetReader(GetContext(ctx))
 	if err != nil {
 		e.vm.ThrowError(err)

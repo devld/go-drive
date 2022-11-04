@@ -4,7 +4,7 @@
 // The first line is the name of this drive type.
 // The second line is the description.
 
-/// <reference path="../../docs/scripts/drive.d.ts"/>
+/// <reference path="../../docs/scripts/env/drive.d.ts"/>
 
 /**
  * @param {RootConfig} config

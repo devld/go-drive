@@ -17,11 +17,12 @@
           ref="formsEl"
           :form="formsMapByKey[f.typeKey].form"
           :model-value="f.value"
+          :disabled="disabled"
           @update:model-value="onInput(f, $event)"
         />
       </template>
     </div>
-    <div v-if="addable" class="form-item__form-add">
+    <div v-if="!disabled && addable" class="form-item__form-add">
       <SimpleDropdown v-model="addDropdownShowing">
         <SimpleButton icon="#icon-add">{{ forms.addText }}</SimpleButton>
         <template #dropdown>
@@ -62,6 +63,9 @@ const props = defineProps({
   item: {
     type: Object as PropType<FormItem>,
     required: true,
+  },
+  disabled: {
+    type: Boolean,
   },
 })
 

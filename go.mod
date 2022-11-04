@@ -9,19 +9,21 @@ require (
 	github.com/blevesearch/bleve/v2 v2.3.2
 	github.com/bmatcuk/doublestar/v4 v4.0.2
 	github.com/gin-gonic/gin v1.7.7
+	github.com/go-co-op/gocron v1.17.1
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/orcaman/concurrent-map v1.0.0
 	github.com/pkg/sftp v1.13.4
 	github.com/robertkrimen/otto v0.0.0-20221011175642-09fc211e5ab1
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/secsy/goftp v0.0.0-20200609142545-aa2de14babf4
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	golang.org/x/net v0.0.0-20220524220425-1d687d428aca
 	golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401
 	golang.org/x/text v0.3.7
 	google.golang.org/api v0.81.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.3.3
 	gorm.io/driver/sqlite v1.3.2
 	gorm.io/gorm v1.23.5
@@ -68,6 +70,7 @@ require (
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.23.0 // indirect
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220525015930-6ca3db687a9d // indirect

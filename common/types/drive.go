@@ -134,9 +134,14 @@ type IDrive interface {
 }
 
 type IRootDrive interface {
-	Get() IDrive
+	Get() IDispatcherDrive
 	ReloadDrive(ctx context.Context, ignoreFailure bool) error
 	ReloadMounts() error
+}
+
+type IDispatcherDrive interface {
+	IDrive
+	FindNonExistsEntryName(ctx context.Context, drive IDrive, path string) (string, error)
 }
 
 const (
