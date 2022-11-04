@@ -17,6 +17,7 @@ export default {
       users: 'Users',
       groups: 'Groups',
       drives: 'Drives',
+      jobs: 'Jobs',
       misc: 'Misc',
     },
   },

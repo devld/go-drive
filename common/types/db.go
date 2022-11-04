@@ -93,13 +93,37 @@ const (
 )
 
 type PathPermission struct {
-	ID      uint    `gorm:"column:id;primaryKey;autoIncrement"`
+	ID      uint    `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	Path    *string `gorm:"column:path;not null;type:string;size:4096" json:"path"`
 	Subject string  `gorm:"column:subject;not null;type:string;size:34" json:"subject"`
 	// Permission bits for the path which subject accessed: 1: read, 2: write
 	Permission Permission `gorm:"column:permission;not null" json:"permission"`
 	// Policy to apply to the permission when subject access this path: 0: REJECT, 1: ACCEPT
 	Policy uint8 `gorm:"column:policy;not null" json:"policy"`
+}
+
+type Job struct {
+	ID          uint   `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	Description string `gorm:"column:description;not null;type:text" json:"description"`
+	Job         string `gorm:"column:job;not null;type:string;size:64" json:"job"`
+	Params      string `gorm:"column:params;not null;type:text" json:"params"`
+	Schedule    string `gorm:"column:schedule;not null;type:string;size:64" json:"schedule"`
+	Enabled     bool   `gorm:"column:enabled;not null;type:bool" json:"enabled"`
+}
+
+const (
+	JobExecutionRunning = "running"
+	JobExecutionSuccess = "success"
+	JobExecutionFailed  = "failed"
+)
+
+type JobExecution struct {
+	ID          uint   `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	JobId       uint   `gorm:"column:job_id;not null;type:uint" json:"jobId"`
+	StartedAt   uint64 `gorm:"column:started_at;type:uint" json:"startedAt"`
+	CompletedAt uint64 `gorm:"column:completed_at;type:uint" json:"completedAt"`
+	Status      string `gorm:"column:status;not null;type:string" json:"status"`
+	ErrorMsg    string `gorm:"column:error_msg;type:text" json:"errorMsg"`
 }
 
 func UserSubject(username string) string {

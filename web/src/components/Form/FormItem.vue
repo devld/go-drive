@@ -30,7 +30,7 @@
         :value="modelValue"
         :placeholder="s(item.placeholder)"
         :required="item.required"
-        :disabled="item.disabled"
+        :disabled="disabled || item.disabled"
         rows="4"
         @input="textInput"
       />
@@ -42,7 +42,7 @@
         :value="modelValue"
         :placeholder="s(item.placeholder)"
         :required="item.required"
-        :disabled="item.disabled"
+        :disabled="disabled || item.disabled"
         @input="textInput"
       />
       <input
@@ -53,7 +53,7 @@
         :value="modelValue"
         :placeholder="s(item.placeholder)"
         :required="item.required"
-        :disabled="item.disabled"
+        :disabled="disabled || item.disabled"
         @input="textInput"
       />
       <input
@@ -63,7 +63,7 @@
         :name="item.field"
         :checked="!!modelValue"
         :required="item.required"
-        :disabled="item.disabled"
+        :disabled="disabled || item.disabled"
         @input="checkboxInput"
       />
       <select
@@ -72,7 +72,7 @@
         :name="item.field"
         :value="modelValue"
         :required="item.required"
-        :disabled="item.disabled"
+        :disabled="disabled || item.disabled"
         @input="selectInput"
       >
         <option
@@ -91,18 +91,28 @@
         class="value full-width"
         :item="item"
         :model-value="modelValue"
-        @update:model-value="formInput"
+        :disabled="disabled || item.disabled"
+        @update:model-value="stringInput"
+      />
+      <CodeEditor
+        v-if="item.type === 'code'"
+        :model-value="modelValue"
+        :type="item.code?.type"
+        :disabled="disabled || item.disabled"
+        @update:model-value="stringInput"
       />
     </div>
     <span v-if="error" class="form-item-error">{{ error }}</span>
   </div>
 </template>
 <script setup lang="ts">
-import { isT } from '@/i18n';
+import { isT } from '@/i18n'
 import { FormItem } from '@/types'
 import { ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FormItemForm from './FormItemForm.vue'
+
+import CodeEditor from '../CodeEditor/index.vue'
 
 const props = defineProps({
   modelValue: {
@@ -111,6 +121,9 @@ const props = defineProps({
   item: {
     type: Object as PropType<FormItem>,
     required: true,
+  },
+  disabled: {
+    type: Boolean,
   },
 })
 
@@ -160,7 +173,7 @@ const clearError = () => {
 
 defineExpose({ clearError, validate })
 
-const formInput = (e: string) => {
+const stringInput = (e: string) => {
   emit('update:modelValue', e)
   clearError()
 }

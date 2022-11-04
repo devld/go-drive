@@ -11,6 +11,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
+	"go-drive/server/scheduled"
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
@@ -41,6 +42,8 @@ func InitServer(config common.Config,
 	driveDataDAO *storage.DriveDataDAO,
 	permissionDAO *storage.PathPermissionDAO,
 	pathMountDAO *storage.PathMountDAO,
+	scheduledDAO *storage.ScheduledDAO,
+	jobExecutor *scheduled.JobExecutor,
 	messageSource i18n.MessageSource) (*gin.Engine, error) {
 
 	if utils.IsDebugOn {
@@ -67,6 +70,10 @@ func InitServer(config common.Config,
 	}
 	if e := InitAdminRoutes(router, ch, bus, driveAccess, rootDrive, searcher, tokenStore, optionsDAO,
 		userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO); e != nil {
+		return nil, e
+	}
+
+	if e := InitJobsRoutes(router, ch, tokenStore, jobExecutor, scheduledDAO); e != nil {
 		return nil, e
 	}
 

@@ -224,7 +224,7 @@ drive:
         description: 用于登录认证的密码，密码和私钥必须任选其一
       priv_key:
         label: 私钥
-        description: | 
+        description: |
           用于登录认证的私钥，如 -----BEGIN RSA PRIVATE KEY-----，暂不支持加密的私钥，私钥和密码必须任选其一
       host_key:
         label: HostKey
@@ -251,3 +251,31 @@ stat:
     done: 已完成
     error: 错误
     canceled: 已取消
+jobs:
+  copy:
+    name: 复制
+    desc: 复制文件，如从 a/b 复制到 c/d，将产生 c/d/b，即 c/d 必须存在且是文件夹
+    src: 源路径
+    src_desc: 源路径（每行一个）
+    dest: 目的路径
+    dest_desc: 必须存在且是文件夹
+    override: 覆盖
+    override_desc: 复制时遇到同名文件是否覆盖，否则会自动重命名
+    move: 移动
+    move_desc: 移动文件，而不是复制
+  delete:
+    name: 删除
+    desc: 删除文件
+    paths: 路径
+    paths_desc: 待删除的路径（每行一个）
+  flow:
+    name: 组合
+    desc: 将多个操作按顺序执行
+    add_text: 添加操作
+    ignore_err: 忽略错误
+    ignore_err_desc: 当这个操作执行失败时，忽略错误继续向下执行
+  script:
+    name: 脚本
+    desc: 执行 JavaScript 脚本
+    code: 代码
+    code_desc: JavaScript 代码

@@ -13,13 +13,13 @@ import (
 )
 
 // vm_base64Encode: (b Bytes) string
-func vm_base64Encode(vm *VM, args []*Value) interface{} {
-	return base64.StdEncoding.EncodeToString(args[0].Raw().(Bytes).b)
+func vm_base64Encode(vm *VM, args Values) interface{} {
+	return base64.StdEncoding.EncodeToString(args.Get(0).Raw().(Bytes).b)
 }
 
 // vm_base64Decode: (s string) Bytes
-func vm_base64Decode(vm *VM, args []*Value) interface{} {
-	r, e := base64.StdEncoding.DecodeString(args[0].String())
+func vm_base64Decode(vm *VM, args Values) interface{} {
+	r, e := base64.StdEncoding.DecodeString(args.Get(0).String())
 	if e != nil {
 		vm.ThrowError(e)
 	}
@@ -27,13 +27,13 @@ func vm_base64Decode(vm *VM, args []*Value) interface{} {
 }
 
 // vm_urlBase64Encode: (s Bytes) string
-func vm_urlBase64Encode(vm *VM, args []*Value) interface{} {
-	return base64.URLEncoding.EncodeToString(args[0].Raw().(Bytes).b)
+func vm_urlBase64Encode(vm *VM, args Values) interface{} {
+	return base64.URLEncoding.EncodeToString(args.Get(0).Raw().(Bytes).b)
 }
 
 // vm_urlBase64Decode: (s string) Bytes
-func vm_urlBase64Decode(vm *VM, args []*Value) interface{} {
-	r, e := base64.URLEncoding.DecodeString(args[0].String())
+func vm_urlBase64Decode(vm *VM, args Values) interface{} {
+	r, e := base64.URLEncoding.DecodeString(args.Get(0).String())
 	if e != nil {
 		vm.ThrowError(e)
 	}
@@ -41,13 +41,13 @@ func vm_urlBase64Decode(vm *VM, args []*Value) interface{} {
 }
 
 // vm_urlBase64Encode: (s Bytes) string
-func vm_toHex(vm *VM, args []*Value) interface{} {
-	return hex.EncodeToString(args[0].Raw().(Bytes).b)
+func vm_toHex(vm *VM, args Values) interface{} {
+	return hex.EncodeToString(args.Get(0).Raw().(Bytes).b)
 }
 
 // vm_urlBase64Decode: (s string) Bytes
-func vm_fromHex(vm *VM, args []*Value) interface{} {
-	b, e := hex.DecodeString(args[0].String())
+func vm_fromHex(vm *VM, args Values) interface{} {
+	b, e := hex.DecodeString(args.Get(0).String())
 	if e != nil {
 		vm.ThrowError(e)
 	}
@@ -84,13 +84,13 @@ func (h hasher) Sum() Bytes {
 	return NewBytes(h.vm, r)
 }
 
-func vm_newHash(vm *VM, args []*Value) interface{} {
-	return hasher{vm, hashFn(vm, int(args[0].Integer()))()}
+func vm_newHash(vm *VM, args Values) interface{} {
+	return hasher{vm, hashFn(vm, int(args.Get(0).Integer()))()}
 }
 
 // vm_hmac: (typ int, payload, key Bytes) Bytes
-func vm_hmac(vm *VM, args []*Value) interface{} {
-	mac := hmac.New(hashFn(vm, int(args[0].Integer())), args[2].Raw().(Bytes).b)
-	_, _ = mac.Write(args[1].Raw().(Bytes).b)
+func vm_hmac(vm *VM, args Values) interface{} {
+	mac := hmac.New(hashFn(vm, int(args.Get(0).Integer())), args.Get(2).Raw().(Bytes).b)
+	_, _ = mac.Write(args.Get(1).Raw().(Bytes).b)
 	return NewBytes(vm, mac.Sum(nil))
 }

@@ -1,4 +1,4 @@
-/// <reference path="./env.d.ts"/>
+/// <reference path="../global.d.ts"/>
 
 declare interface DriveMeta {
   Writable: boolean;

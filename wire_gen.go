@@ -17,6 +17,7 @@ import (
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server"
+	"go-drive/server/scheduled"
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
@@ -68,11 +69,16 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	}
 	userDAO := storage.NewUserDAO(db, ch)
 	groupDAO := storage.NewGroupDAO(db, ch)
+	scheduledDAO := storage.NewScheduledDAO(db, ch)
+	jobExecutor, err := scheduled.NewJobExecutor(scheduledDAO, ch)
+	if err != nil {
+		return nil, err
+	}
 	fileMessageSource, err := i18n.NewFileMessageSource(config)
 	if err != nil {
 		return nil, err
 	}
-	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, optionsDAO, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, fileMessageSource)
+	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, optionsDAO, userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, scheduledDAO, jobExecutor, fileMessageSource)
 	if err != nil {
 		return nil, err
 	}

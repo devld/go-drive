@@ -17,6 +17,7 @@ export default {
       users: '用户',
       groups: '用户组',
       drives: '盘',
+      jobs: '任务',
       misc: '其他',
     },
   },

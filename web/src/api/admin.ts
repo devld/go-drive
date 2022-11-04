@@ -3,6 +3,9 @@ import {
   DriveFactoryConfig,
   DriveInitConfig,
   Group,
+  Job,
+  JobDefinition,
+  JobExecution,
   PathMountSource,
   PathPermission,
   ServiceStatsItem,
@@ -119,4 +122,44 @@ export function getOptions(...keys: string[]) {
   return http.get<O<string>>(
     `/admin/options/${encodeURIComponent(keys.join(','))}`
   )
+}
+
+export function getJobDefinitions() {
+  return http.get<JobDefinition[]>('/admin/jobs/definitions')
+}
+
+export function getJobs() {
+  return http.get<Job[]>('/admin/jobs')
+}
+
+export function createJob(job: Partial<Job>) {
+  return http.post<Job>('/admin/jobs', job)
+}
+
+export function updateJob(id: number, job: Partial<Job>) {
+  return http.put<void>(`/admin/jobs/${id}`, job)
+}
+
+export function deleteJob(id: number) {
+  return http.delete<void>(`/admin/jobs/${id}`)
+}
+
+export function getJobExecutions(jobId?: number) {
+  return http.get<JobExecution[]>('/admin/jobs/execution', {
+    params: { jobId },
+  })
+}
+
+export function cancelJobExecution(id: number) {
+  return http.put<void>(`/admin/jobs/execution/${id}/cancel`)
+}
+
+export function deleteJobExecution(id: number) {
+  return http.delete<void>(`/admin/jobs/execution/${id}`)
+}
+
+export function deleteJobExecutions(jobId: number) {
+  return http.delete<void>('/admin/jobs/execution', {
+    params: { jobId },
+  })
 }

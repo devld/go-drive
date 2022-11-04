@@ -9,12 +9,16 @@ func initVarsForVm(v *VM) {
 
 	v.o.Set("newContext", WrapVmCall(v, vm_newContext))
 	v.o.Set("newContextWithTimeout", WrapVmCall(v, vm_newContextWithTimeout))
+	v.o.Set("newTaskCtx", WrapVmCall(v, vm_newTaskCtx))
 
-	v.o.Set("newBytes", WrapVmCall(v, func(vm *VM, args []*Value) interface{} {
-		return NewBytes(vm, args[0].Raw())
+	v.o.Set("newBytes", WrapVmCall(v, func(vm *VM, args Values) interface{} {
+		return NewBytes(vm, args.Get(0).Raw())
 	}))
-	v.o.Set("newEmptyBytes", WrapVmCall(v, func(vm *VM, args []*Value) interface{} {
-		return NewEmptyBytes(vm, args[0].Integer())
+	v.o.Set("newEmptyBytes", WrapVmCall(v, func(vm *VM, args Values) interface{} {
+		return NewEmptyBytes(vm, args.Get(0).Integer())
+	}))
+	v.o.Set("newTempFile", WrapVmCall(v, func(vm *VM, args Values) interface{} {
+		return NewTempFile(vm)
 	}))
 
 	v.o.Set("__encToHex__", WrapVmCall(v, vm_toHex))

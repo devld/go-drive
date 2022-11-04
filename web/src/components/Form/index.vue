@@ -11,6 +11,7 @@
         v-model="data[item.field!]"
         :item="item"
         :class="item.class"
+        :disabled="disabled"
         :style="{
           width:
             typeof item.width === 'number' ? `${item.width}px` : item.width,
@@ -41,6 +42,9 @@ const props = defineProps({
     type: Object as PropType<O>,
   },
   noAutoComplete: {
+    type: Boolean,
+  },
+  disabled: {
     type: Boolean,
   },
 })

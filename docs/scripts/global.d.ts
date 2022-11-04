@@ -1,4 +1,4 @@
-/// <reference path="./dayjs/index.d.ts" />
+/// <reference path="./libs/dayjs.d.ts" />
 
 /** is debug mode on */
 declare const DEBUG: boolean;
@@ -13,6 +13,8 @@ declare function newContextWithTimeout(
   parent: Context,
   timeout: Duration
 ): ContextWithTimeout;
+declare type TaskCtxOnUpdate = (loaded: number, total: number) => void;
+declare function newTaskCtx(ctx: Context, onUpdate?: TaskCtxOnUpdate): TaskCtx;
 
 /** Context of Go */
 declare interface Context {}
@@ -37,6 +39,7 @@ declare interface TaskCtx extends Context {
 
 declare function newBytes(s: string): Bytes;
 declare function newEmptyBytes(n: number): Bytes;
+declare function newTempFile(): TempFile;
 
 declare interface Bytes {
   Len(): number;
@@ -57,6 +60,19 @@ declare interface ReadCloser extends Reader {
   Close(): void;
 }
 
+/** seek relative to the origin of the file */
+declare const SEEK_START = 0;
+/** seek relative to the current offset */
+declare const SEEK_CURRENT = 1;
+/** seek relative to the end */
+declare const SEEK_END = 2;
+
+declare interface TempFile extends ReadCloser {
+  Write(b: Bytes): void;
+  CopyFrom(r: Reader): void;
+  SeekTo(offset: number, whence: number): number;
+}
+
 declare type EntryType = "file" | "dir";
 
 declare interface EntryMeta {
@@ -72,10 +88,43 @@ declare interface ContentURL {
   Proxy?: boolean;
 }
 
+declare interface RootDrive {
+  Get(): DriveInstance;
+  ReloadDrive(ctx: Context, ignoreFailure: boolean): void;
+  ReloadMounts(): void;
+}
+
+declare interface DriveInstance {
+  Get(ctx: Context, path: string): DriveEntry;
+  Save(
+    ctx: TaskCtx,
+    path: string,
+    size: number,
+    override: boolean,
+    reader: Reader
+  ): DriveEntry;
+  MakeDir(ctx: Context, path: string): DriveEntry;
+  Copy(
+    ctx: TaskCtx,
+    from: DriveEntry,
+    to: string,
+    override: boolean
+  ): DriveEntry;
+  Move(
+    ctx: TaskCtx,
+    from: DriveEntry,
+    to: string,
+    override: boolean
+  ): DriveEntry;
+  List(ctx: Context, path: string): DriveEntry[];
+  Delete(ctx: TaskCtx, path: string): void;
+}
+
 declare interface DriveEntry {
   Path(): string;
   Name(): string;
   Type(): EntryType;
+  Size(): number;
   Meta(): EntryMeta;
   ModTime(): number;
   GetURL(ctx: Context): ContentURL;
@@ -106,6 +155,7 @@ declare interface HttpResponse {
   Status: number;
   Headers: HttpHeaders;
   Body: ReadCloser;
+  BodySize(): number;
   /** Read the whole body as string. HttpResponse.Text will dispose this HttpResponse */
   Text(): string;
   Dispose(): void;
@@ -211,11 +261,6 @@ declare const pathUtils: {
   ext: (path: string) => string;
   isRoot: (path: string) => boolean;
 };
-
-declare const HASH_MD5: number;
-declare const HASH_SHA1: number;
-declare const HASH_SHA256: number;
-declare const HASH_SHA512: number;
 
 declare enum HASH {
   MD5 = 1,

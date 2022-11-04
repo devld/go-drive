@@ -51,6 +51,8 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		&types.DriveData{},
 		&types.DriveCache{},
 		&types.Option{},
+		&types.Job{},
+		&types.JobExecution{},
 	); e != nil {
 		closeDb(db)
 		return nil, e

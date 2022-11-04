@@ -50,6 +50,12 @@ const routes: RouteRecordRaw[] = [
             meta: { title: T('routes.title.drives') },
           },
           {
+            name: 'JobsManager',
+            path: '/admin/jobs',
+            component: () => import('@/views/Admin/Jobs.vue'),
+            meta: { title: T('routes.title.jobs') },
+          },
+          {
             name: 'MiscSettings',
             path: '/admin/misc',
             component: () => import('@/views/Admin/Misc/index.vue'),

@@ -60,6 +60,10 @@ func (v *VM) init() error {
 	return nil
 }
 
+func (v *VM) Set(name string, value interface{}) {
+	v.o.Set(name, value)
+}
+
 func (v *VM) Fork() *VM {
 	v.vmsMu.Lock()
 	defer v.vmsMu.Unlock()
@@ -132,6 +136,8 @@ func (v *VM) ThrowTypeError(message string) {
 }
 
 func (v *VM) Dispose() error {
+	v.vmsMu.Lock()
+	defer v.vmsMu.Unlock()
 	delete(v.vms, v.o)
 	// nothing
 	return nil
