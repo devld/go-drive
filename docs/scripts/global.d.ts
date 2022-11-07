@@ -8,6 +8,8 @@ declare type SM = { [key: string]: string };
 /** Map */
 declare type M<T = any> = { [key: string]: T };
 
+declare function sleep(t: Duration): void;
+
 declare function newContext(): Context;
 declare function newContextWithTimeout(
   parent: Context,
@@ -231,26 +233,31 @@ declare function toDate(goTime: GoTime): Date;
  * create a BadRequestError(400)
  */
 declare function ErrBadRequest(msg?: string): Error;
+declare function isBadRequestErr(e: any): boolean;
 
 /**
  * create a NotFoundError(404)
  */
 declare function ErrNotFound(msg?: string): Error;
+declare function isNotFoundErr(e: any): boolean;
 
 /**
  * create a NotAllowedError(403)
  */
 declare function ErrNotAllowed(msg?: string): Error;
+declare function isNotAllowedErr(e: any): boolean;
 
 /**
  * create an UnsupportedError
  */
 declare function ErrUnsupported(msg?: string): Error;
+declare function isUnsupportedErr(e: any): boolean;
 
 /**
  * create a RemoteApiError
  */
 declare function ErrRemoteApi(status: number, msg: string): Error;
+declare function isRemoteApiErr(e: any): boolean;
 
 declare const pathUtils: {
   clean: (path: string) => string;

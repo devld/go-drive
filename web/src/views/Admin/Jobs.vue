@@ -92,6 +92,7 @@
               <th>{{ $t('p.admin.jobs.started_at') }}</th>
               <th>{{ $t('p.admin.jobs.completed_at') }}</th>
               <th>{{ $t('p.admin.jobs.execution_duration') }}</th>
+              <th>{{ $t('p.admin.jobs.logs') }}</th>
               <th>{{ $t('p.admin.jobs.error_msg') }}</th>
               <th>{{ $t('p.admin.jobs.operation') }}</th>
             </tr>
@@ -103,7 +104,7 @@
               </td>
               <td class="center">{{ formatTime(e.startedAt) }}</td>
               <td class="center">
-                {{ e.completedAt && formatTime(e.completedAt) || '' }}
+                {{ (e.completedAt && formatTime(e.completedAt)) || '' }}
               </td>
               <td class="right">
                 {{
@@ -113,15 +114,15 @@
                     : ''
                 }}ms
               </td>
-              <td
-                style="
-                  max-width: 200px;
-                  white-space: normal;
-                  word-break: break-all;
-                "
-                :title="e.errorMsg"
-              >
-                {{ e.errorMsg }}
+              <td :title="e.logs">
+                <div class="job-log-text">
+                  {{ e.logs }}
+                </div>
+              </td>
+              <td :title="e.errorMsg">
+                <div class="job-log-text">
+                  {{ e.errorMsg }}
+                </div>
               </td>
               <td class="center line">
                 <SimpleButton
@@ -193,7 +194,9 @@ const jobExecutions = ref<JobExecution[]>([])
 
 const addJob = () => {
   hideJobExecutions()
-  jobEdit.value = {}
+  jobEdit.value = {
+    job: jobDefinitions.value[0]?.name,
+  }
   jobParams.value = {}
   edit.value = false
 }
@@ -450,6 +453,13 @@ loadJobDefinitions()
   }
   .status-running {
     color: var(--btn-bg-color-warning);
+  }
+
+  .job-log-text {
+    max-width: 190px;
+    max-height: 100px;
+    white-space: pre;
+    overflow: auto;
   }
 }
 </style>

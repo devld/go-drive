@@ -89,5 +89,6 @@ export interface JobExecution {
   startedAt: number
   completedAt?: number
   status: JobExecutionStatus
+  logs?: string
   errorMsg?: string
 }

@@ -7,6 +7,8 @@ func initVarsForVm(v *VM) {
 
 	v.o.Set("http", WrapVmCall(v, vm_http))
 
+	v.o.Set("sleep", WrapVmCall(v, vm_sleep))
+
 	v.o.Set("newContext", WrapVmCall(v, vm_newContext))
 	v.o.Set("newContextWithTimeout", WrapVmCall(v, vm_newContextWithTimeout))
 	v.o.Set("newTaskCtx", WrapVmCall(v, vm_newTaskCtx))

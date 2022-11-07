@@ -25,7 +25,9 @@ func NewReader(vm *VM, r io.Reader) Reader {
 }
 
 func NewReadCloser(vm *VM, r io.ReadCloser) ReadCloser {
-	return ReadCloser{NewReader(vm, r), r}
+	rc := ReadCloser{NewReader(vm, r), r}
+	vm.PutDisposable(rc)
+	return rc
 }
 
 func NewTempFile(vm *VM) TempFile {
@@ -33,7 +35,9 @@ func NewTempFile(vm *VM) TempFile {
 	if e != nil {
 		vm.ThrowError(e)
 	}
-	return TempFile{NewReader(vm, f), f}
+	tf := TempFile{NewReader(vm, f), f}
+	vm.PutDisposable(tf)
+	return tf
 }
 
 func GetReader(v interface{}) io.Reader {
@@ -110,6 +114,7 @@ type ReadCloser struct {
 }
 
 func (r ReadCloser) Close() {
+	r.vm.RemoveDisposable(r)
 	if e := r.r.Close(); e != nil {
 		r.vm.ThrowError(e)
 	}
@@ -164,6 +169,7 @@ func (tf TempFile) close() error {
 }
 
 func (tf TempFile) Close() {
+	tf.vm.RemoveDisposable(tf)
 	if e := tf.close(); e != nil {
 		tf.vm.ThrowError(e)
 	}

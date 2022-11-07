@@ -252,28 +252,6 @@ stat:
     error: Error
     canceled: Canceled
 jobs:
-  copy:
-    name: Copy
-    desc: Copying a file, e.g. from a/b to c/d, will result in c/d/b, c/d must exist and be a folder
-    src: Source Path
-    src_desc: Source paths (one per line)
-    dest: Destination Path
-    dest_desc: Must exist and be a folder
-    override: Override
-    override_desc: Whether to overwrite the file with the same name when copying, otherwise it will be renamed automatically
-    move: Move
-    move_desc: Move files, not copy
-  delete:
-    name: Delete
-    desc: Delete files
-    paths: Path
-    paths_desc: Paths to be deleted (one per line)
-  flow:
-    name: Flow
-    desc: Execute multiple operations in sequence
-    add_text: Add operation
-    ignore_err: Ignore errors
-    ignore_err_desc: When this operation fails, ignore the error and continue down the line
   script:
     name: Script
     desc: Execute JavaScript
