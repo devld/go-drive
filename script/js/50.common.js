@@ -52,24 +52,49 @@ function __newGoError__(type, status, msg) {
   return new Error("E:" + type + ":" + (status || 0) + ":" + (msg || ""));
 }
 
+function __isTypeOfErr__(e, type) {
+  var message = e && e.message;
+  return typeof message === "string" && message.indexOf("E:" + type) === 0;
+}
+
 function ErrBadRequest(msg) {
   return __newGoError__("BAD_REQUEST", 0, msg);
+}
+
+function isBadRequestErr(e) {
+  return __isTypeOfErr__(e, "BAD_REQUEST");
 }
 
 function ErrNotFound(msg) {
   return __newGoError__("NOT_FOUND", 0, msg);
 }
 
+function isNotFoundErr(e) {
+  return __isTypeOfErr__(e, "NOT_FOUND");
+}
+
 function ErrNotAllowed(msg) {
   return __newGoError__("NOT_ALLOWED", 0, msg);
+}
+
+function isNotAllowedErr(e) {
+  return __isTypeOfErr__(e, "NOT_ALLOWED");
 }
 
 function ErrUnsupported(msg) {
   return __newGoError__("UNSUPPORTED", 0, msg);
 }
 
+function isUnsupportedErr(e) {
+  return __isTypeOfErr__(e, "UNSUPPORTED");
+}
+
 function ErrRemoteApi(status, msg) {
   return __newGoError__("REMOTE_API", status, msg);
+}
+
+function isRemoteApiErr(e) {
+  return __isTypeOfErr__(e, "REMOTE_API");
 }
 
 var pathUtils = Object.freeze({
@@ -87,9 +112,11 @@ var pathUtils = Object.freeze({
   join: function () {
     var segments = [];
     for (var i = 0; i < arguments.length; i++) {
-      segments.push(segments[i]);
+      segments.push(arguments[i]);
     }
-    return segments.filter(Boolean).join("/").replace(/\/+/g, "/");
+    return pathUtils.clean(
+      segments.filter(Boolean).join("/").replace(/\/+/g, "/")
+    );
   },
   parent: function (path) {
     if (!path) return "";

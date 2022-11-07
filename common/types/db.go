@@ -123,6 +123,7 @@ type JobExecution struct {
 	StartedAt   uint64 `gorm:"column:started_at;type:uint" json:"startedAt"`
 	CompletedAt uint64 `gorm:"column:completed_at;type:uint" json:"completedAt"`
 	Status      string `gorm:"column:status;not null;type:string" json:"status"`
+	Logs        string `gorm:"column:logs;type:string" json:"logs"`
 	ErrorMsg    string `gorm:"column:error_msg;type:text" json:"errorMsg"`
 }
 

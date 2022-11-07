@@ -6,7 +6,7 @@ import (
 	"go-drive/common/types"
 )
 
-type JobWork func(context.Context, types.SM, *registry.ComponentsHolder) error
+type JobWork func(context.Context, types.SM, *registry.ComponentsHolder, func(string)) error
 
 type JobDefinition struct {
 	Name        string           `json:"name"`

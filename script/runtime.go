@@ -1,6 +1,7 @@
 package script
 
 import (
+	"context"
 	"fmt"
 	err "go-drive/common/errors"
 	"sort"
@@ -19,14 +20,18 @@ type VM struct {
 	o     *otto.Otto
 	vms   map[*otto.Otto]*VM
 	vmsMu *sync.Mutex
+
+	disposables map[interface{}]struct{}
 }
 
 func NewVM() (*VM, error) {
 	ovm := otto.New()
+	ovm.Interrupt = make(chan func(), 1)
 	vm := &VM{
-		o:     ovm,
-		vms:   make(map[*otto.Otto]*VM),
-		vmsMu: &sync.Mutex{},
+		o:           ovm,
+		vms:         make(map[*otto.Otto]*VM),
+		vmsMu:       &sync.Mutex{},
+		disposables: make(map[interface{}]struct{}),
 	}
 
 	if e := vm.init(); e != nil {
@@ -52,7 +57,7 @@ func (v *VM) init() error {
 		if e != nil {
 			return e
 		}
-		if _, e := v.Run(script); e != nil {
+		if _, e := v.Run(context.Background(), script); e != nil {
 			return e
 		}
 	}
@@ -68,24 +73,26 @@ func (v *VM) Fork() *VM {
 	v.vmsMu.Lock()
 	defer v.vmsMu.Unlock()
 	newVM := &VM{
-		o:     v.o.Copy(),
-		vms:   v.vms,
-		vmsMu: v.vmsMu,
+		o:           v.o.Copy(),
+		vms:         v.vms,
+		vmsMu:       v.vmsMu,
+		disposables: make(map[interface{}]struct{}),
 	}
+	newVM.o.Interrupt = make(chan func(), 1)
 	v.vms[newVM.o] = newVM
 	return newVM
 }
 
 // Run runs code with this VM. Run can NOT be executed concurrency
-func (v *VM) Run(code interface{}) (*Value, error) {
-	return wrapVmRun(v, func() (otto.Value, error) {
+func (v *VM) Run(ctx context.Context, code interface{}) (*Value, error) {
+	return wrapVmRun(ctx, v, func() (otto.Value, error) {
 		return v.o.Run(code)
 	})
 }
 
 // Call calls function with this VM. Call can NOT be executed concurrency
-func (v *VM) Call(fn string, args ...interface{}) (value *Value, e error) {
-	return wrapVmRun(v, func() (otto.Value, error) {
+func (v *VM) Call(ctx context.Context, fn string, args ...interface{}) (value *Value, e error) {
+	return wrapVmRun(ctx, v, func() (otto.Value, error) {
 		a, b := v.o.Call(fn, nil, args...)
 		return a, b
 	})
@@ -96,34 +103,12 @@ func (v *VM) GetValue(prop string) (value *Value, e error) {
 	return newValue(v, vv), e
 }
 
-// ForkRun runs code with a cloned VM. ForkRun can be executed concurrency
-func (v *VM) ForkRun(code interface{}) (*Value, error) {
-	rt := v.Fork()
-	defer func() {
-		_ = rt.Dispose()
-	}()
-	return rt.Run(code)
-}
-
-// ForkCall calls function with a cloned VM. ForkCall can be executed concurrency
-func (v *VM) ForkCall(fn string, args ...interface{}) (*Value, error) {
-	rt := v.Fork()
-	defer func() {
-		_ = rt.Dispose()
-	}()
-	return rt.Call(fn, args...)
-}
-
 func (v *VM) ThrowError(e interface{}) {
 	if oe, ok := e.(otto.Value); ok {
 		panic(oe)
 	}
 	if re, ok := e.(err.Error); ok {
-		rev, e := v.o.ToValue(re)
-		if e != nil {
-			panic(e)
-		}
-		panic(rev)
+		panic(v.o.MakeCustomError("Error", fmt.Sprintf("E:%s:%d:%s", re.Name(), re.Code(), re.Error())))
 	}
 	if ee, ok := e.(error); ok {
 		panic(v.o.MakeCustomError("Error", ee.Error()))
@@ -135,10 +120,36 @@ func (v *VM) ThrowTypeError(message string) {
 	panic(v.o.MakeTypeError(message))
 }
 
+func (v *VM) PutDisposable(o interface{}) {
+	v.disposables[o] = struct{}{}
+}
+
+func (v *VM) RemoveDisposable(o interface{}) {
+	delete(v.disposables, o)
+}
+
 func (v *VM) Dispose() error {
+	for o := range v.disposables {
+		if d, ok := o.(ObjectDisposable); ok {
+			d.Dispose()
+		}
+		if c, ok := o.(ObjectClosable); ok {
+			c.Close()
+		}
+	}
+	v.disposables = nil
+
 	v.vmsMu.Lock()
 	defer v.vmsMu.Unlock()
 	delete(v.vms, v.o)
 	// nothing
 	return nil
+}
+
+type ObjectDisposable interface {
+	Dispose()
+}
+
+type ObjectClosable interface {
+	Close()
 }

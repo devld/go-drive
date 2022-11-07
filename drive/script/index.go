@@ -38,7 +38,7 @@ func (sd *ScriptDrive) call(vm *s.VM, fn string, args ...interface{}) (*s.Value,
 	if gotValue.IsNil() {
 		return nil, err.NewUnsupportedError()
 	}
-	return vm.Call(fn, args...)
+	return vm.Call(context.Background(), fn, args...)
 }
 
 func (sd *ScriptDrive) Meta(ctx context.Context) types.DriveMeta {

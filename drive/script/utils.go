@@ -30,7 +30,7 @@ func init() {
 		panic(e)
 	}
 
-	_, e = vm.Run(helperScript)
+	_, e = vm.Run(context.Background(), helperScript)
 	if e != nil {
 		panic(e)
 	}
@@ -61,7 +61,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.
 		vm: vm,
 	}
 
-	_, e = vm.Call("__driveCreate", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
+	_, e = vm.Call(context.Background(), "__driveCreate", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
 
 	if e != nil {
 		_ = d.Dispose()
@@ -117,7 +117,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 		return retCfg, nil
 	}
 
-	v, e := vm.Call("__driveInitConfig", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
+	v, e := vm.Call(context.Background(), "__driveInitConfig", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
 	if e != nil {
 		return nil, e
 	}
@@ -162,7 +162,7 @@ func init_(ctx context.Context, data, config types.SM, driveUtils drive_util.Dri
 		return nil
 	}
 
-	_, e = vm.Call("__driveInit", s.NewContext(vm, ctx), data, config, newScriptDriveUtils(vm, driveUtils))
+	_, e = vm.Call(context.Background(), "__driveInit", s.NewContext(vm, ctx), data, config, newScriptDriveUtils(vm, driveUtils))
 	return e
 }
 
@@ -269,7 +269,7 @@ func createVm(config common.Config, script string) (*s.VM, error) {
 
 	vm := baseVM.Fork()
 
-	_, e = vm.Run(scriptBytes)
+	_, e = vm.Run(context.Background(), scriptBytes)
 	return vm, e
 }
 

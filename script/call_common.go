@@ -16,9 +16,12 @@ func vm_newContextWithTimeout(vm *VM, args Values) interface{} {
 	parent := GetContext(args.Get(0).Raw())
 	timeout := time.Duration(args.Get(1).Integer())
 	ctx, cancel := context.WithTimeout(GetContext(parent), timeout)
-	return contextWithTimeout{NewContext(vm, ctx), cancel}
+	cwt := contextWithTimeout{NewContext(vm, ctx), cancel}
+	vm.PutDisposable(cwt)
+	return cwt
 }
 
+// vm_newTaskCtx: (ctx Context, onUpdate func(int64, int64)) TaskCtx
 func vm_newTaskCtx(vm *VM, args Values) interface{} {
 	ctx := GetContext(args.Get(0).Raw())
 	onUpdate := args.Get(1)
@@ -26,6 +29,12 @@ func vm_newTaskCtx(vm *VM, args Values) interface{} {
 		onUpdate = nil
 	}
 	return NewTaskCtx(vm, &scriptTaskCtx{ctx, onUpdate, 0, 0, sync.Mutex{}})
+}
+
+// vm_sleep: (t time.Duration)
+func vm_sleep(vm *VM, args Values) interface{} {
+	time.Sleep(time.Duration(args.Get(0).Integer()))
+	return nil
 }
 
 type scriptTaskCtx struct {
@@ -66,4 +75,9 @@ func (s *scriptTaskCtx) Total(total int64, abs bool) {
 type contextWithTimeout struct {
 	Context Context
 	Cancel  func()
+}
+
+func (cwt contextWithTimeout) Dispose() {
+	cwt.Context.vm.RemoveDisposable(cwt)
+	cwt.Cancel()
 }

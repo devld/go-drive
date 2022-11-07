@@ -11,6 +11,7 @@ import (
 	"go-drive/storage"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -89,7 +90,8 @@ func (je *JobExecutor) jobExecutor(job types.Job) {
 	}
 
 	executionCtx, cancel := context.WithCancel(context.Background())
-	item := &jobExecutionItem{JobExecution: jobExecution, cancel: cancel}
+	logger := newJobExecutionLogger((jobExecution.ID))
+	item := &jobExecutionItem{JobExecution: jobExecution, cancel: cancel, logger: logger}
 	je.addJobExecution(item)
 
 	defer func() {
@@ -109,7 +111,7 @@ func (je *JobExecutor) jobExecutor(job types.Job) {
 		return
 	}
 
-	e = jobDefinition.Do(executionCtx, params, je.ch)
+	e = jobDefinition.Do(executionCtx, params, je.ch, item.logger.Log)
 }
 
 func (je *JobExecutor) updateJobExecutionResult(item *jobExecutionItem, e error) {
@@ -120,6 +122,7 @@ func (je *JobExecutor) updateJobExecutionResult(item *jobExecutionItem, e error)
 	} else {
 		item.Status = types.JobExecutionSuccess
 	}
+	item.JobExecution.Logs = item.logger.String()
 	if e := je.scheduledDAO.UpdateJobExecution(item.JobExecution); e != nil {
 		log.Printf("failed to update job execution: %v", e)
 	}
@@ -186,4 +189,29 @@ func (je *JobExecutor) Dispose() error {
 type jobExecutionItem struct {
 	*types.JobExecution
 	cancel func()
+	logger *jobExecutionLogger
+}
+
+func newJobExecutionLogger(jid uint) *jobExecutionLogger {
+	return &jobExecutionLogger{jid: jid}
+}
+
+type jobExecutionLogger struct {
+	jid  uint
+	logs strings.Builder
+	mu   sync.RWMutex
+}
+
+func (jel *jobExecutionLogger) Log(s string) {
+	log.Printf("[JobExecutor] [%d] %s\n", jel.jid, s)
+	jel.mu.Lock()
+	defer jel.mu.Unlock()
+	jel.logs.WriteString(s)
+	jel.logs.WriteRune('\n')
+}
+
+func (jel *jobExecutionLogger) String() string {
+	jel.mu.RLock()
+	defer jel.mu.RUnlock()
+	return jel.logs.String()
 }

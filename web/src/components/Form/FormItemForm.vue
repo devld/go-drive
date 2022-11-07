@@ -114,7 +114,7 @@ watch(
   (v) => {
     if (v === lastValue) return
     try {
-      let obj = JSON.parse(v!)
+      let obj = v ? JSON.parse(v) : undefined
       if (!Array.isArray(obj)) {
         obj = obj ? [obj] : []
       }

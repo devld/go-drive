@@ -1,6 +1,7 @@
 package script
 
 import (
+	"context"
 	"fmt"
 	err "go-drive/common/errors"
 	"go-drive/common/types"
@@ -50,6 +51,9 @@ func (v *Value) IsNumber() bool {
 }
 
 func (v *Value) String() string {
+	if v.IsNil() {
+		return ""
+	}
 	return v.v.String()
 }
 
@@ -317,7 +321,7 @@ func WrapVmCall(vm *VM, fn func(vm *VM, args Values) interface{}) interface{} {
 	}
 }
 
-func wrapVmRun(vm *VM, fn func() (otto.Value, error)) (value *Value, e error) {
+func wrapVmRun(ctx context.Context, vm *VM, fn func() (otto.Value, error)) (value *Value, e error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if ee, ok := r.(error); ok {
@@ -329,7 +333,17 @@ func wrapVmRun(vm *VM, fn func() (otto.Value, error)) (value *Value, e error) {
 
 		e = mapError(e)
 	}()
+
+	finished := make(chan struct{}, 1)
+	go func() {
+		select {
+		case <-ctx.Done():
+			vm.o.Interrupt <- func() { panic(ctx.Err()) }
+		case <-finished:
+		}
+	}()
 	var ottoValue otto.Value
+	defer func() { finished <- struct{}{} }()
 	ottoValue, e = fn()
 	value = newValue(vm, ottoValue)
 	return
