@@ -62,6 +62,14 @@ func GetReadCloser(v interface{}) io.ReadCloser {
 	return nil
 }
 
+func GetBytes(v interface{}) []byte {
+	switch v := v.(type) {
+	case Bytes:
+		return v.b
+	}
+	return nil
+}
+
 type Bytes struct {
 	vm *VM
 	b  []byte

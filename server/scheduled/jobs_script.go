@@ -70,6 +70,10 @@ var defaultCodeValue = strings.TrimLeft(`
 //
 // Or you can use 'rootDrive.Get()' to do any thing.
 
+// See https://github.com/devld/go-drive/blob/master/docs/scripts/global.d.ts
+// See https://github.com/devld/go-drive/blob/master/docs/scripts/env/jobs.d.ts
+// See https://github.com/devld/go-drive/tree/master/docs/scripts/libs
+
 log('started...')
 var drive = rootDrive.Get()
 
