@@ -114,7 +114,7 @@ defineInit(function (ctx, data, config, utils) {
 });
 
 /**
- * @typedef DriveInstance
+ * @typedef DriveDataHolder
  * @property {DriveCache} _cache
  * @property {OAuthResponse} _oauth
  * @property {Duration} _cacheTTL
@@ -122,7 +122,7 @@ defineInit(function (ctx, data, config, utils) {
  */
 
 /**
- * @typedef {Drive & DriveInstance} DropboxDrive
+ * @typedef {Drive & DriveDataHolder} DropboxDrive
  */
 
 /**

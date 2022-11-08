@@ -14,7 +14,7 @@ import (
 
 // vm_base64Encode: (b Bytes) string
 func vm_base64Encode(vm *VM, args Values) interface{} {
-	return base64.StdEncoding.EncodeToString(args.Get(0).Raw().(Bytes).b)
+	return base64.StdEncoding.EncodeToString(GetBytes(args.Get(0).Raw()))
 }
 
 // vm_base64Decode: (s string) Bytes
@@ -28,7 +28,7 @@ func vm_base64Decode(vm *VM, args Values) interface{} {
 
 // vm_urlBase64Encode: (s Bytes) string
 func vm_urlBase64Encode(vm *VM, args Values) interface{} {
-	return base64.URLEncoding.EncodeToString(args.Get(0).Raw().(Bytes).b)
+	return base64.URLEncoding.EncodeToString(GetBytes(args.Get(0).Raw()))
 }
 
 // vm_urlBase64Decode: (s string) Bytes
@@ -42,7 +42,7 @@ func vm_urlBase64Decode(vm *VM, args Values) interface{} {
 
 // vm_urlBase64Encode: (s Bytes) string
 func vm_toHex(vm *VM, args Values) interface{} {
-	return hex.EncodeToString(args.Get(0).Raw().(Bytes).b)
+	return hex.EncodeToString(GetBytes(args.Get(0).Raw()))
 }
 
 // vm_urlBase64Decode: (s string) Bytes
@@ -90,7 +90,7 @@ func vm_newHash(vm *VM, args Values) interface{} {
 
 // vm_hmac: (typ int, payload, key Bytes) Bytes
 func vm_hmac(vm *VM, args Values) interface{} {
-	mac := hmac.New(hashFn(vm, int(args.Get(0).Integer())), args.Get(2).Raw().(Bytes).b)
-	_, _ = mac.Write(args.Get(1).Raw().(Bytes).b)
+	mac := hmac.New(hashFn(vm, int(args.Get(0).Integer())), GetBytes(args.Get(2).Raw()))
+	_, _ = mac.Write(GetBytes(args.Get(1).Raw()))
 	return NewBytes(vm, mac.Sum(nil))
 }

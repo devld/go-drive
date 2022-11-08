@@ -129,6 +129,9 @@ func (r RemoteApiError) Error() string {
 }
 
 func (r RemoteApiError) Code() int {
+	if r.code == http.StatusUnauthorized {
+		return http.StatusInternalServerError
+	}
 	return r.code
 }
 

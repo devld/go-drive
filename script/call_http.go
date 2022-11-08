@@ -24,6 +24,8 @@ func vm_http(vm *VM, args Values) interface{} {
 			bodyReader = vr
 		} else if str, ok := body.(string); ok {
 			bodyReader = bytes.NewReader([]byte((str)))
+		} else if b := GetBytes(body); b != nil {
+			bodyReader = bytes.NewReader(b)
 		}
 	}
 	var req *http.Request

@@ -144,7 +144,7 @@ declare type HttpMethod =
   | "PATCH"
   | "OPTIONS";
 
-declare type HttpBody = Reader | string;
+declare type HttpBody = Reader | string | Bytes;
 
 declare interface HttpHeaders {
   Get(key: string): string;
