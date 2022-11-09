@@ -8,6 +8,7 @@ import {
   setupJavaScript,
 } from './utils'
 import './workers'
+import { KeyCode, KeyMod } from 'monaco-editor'
 
 const language = queries['lang']
 
@@ -16,6 +17,9 @@ emit('ready', undefined)
 
 editor.getModel()!.onDidChangeContent(() => {
   emit('change', editor.getValue())
+})
+editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
+  emit('save', undefined)
 })
 
 const messageHandlers: EditorInMessageHandlers = {

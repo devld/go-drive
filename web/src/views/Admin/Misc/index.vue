@@ -101,6 +101,12 @@ const handlerExtsForm = ref<FormItem[]>([
     fillDefaultIfEmpty: true,
   },
   {
+    field: 'web.monacoEditorExts',
+    label: t('p.admin.misc.monaco_editor_exts'),
+    description: t('p.admin.misc.monaco_editor_exts_desc'),
+    type: 'textarea',
+  },
+  {
     field: 'web.officePreviewEnabled',
     label: t('p.admin.misc.office_preview_enabled'),
     description: t('p.admin.misc.office_preview_enabled_desc'),

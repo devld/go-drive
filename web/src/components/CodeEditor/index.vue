@@ -1,12 +1,15 @@
 <template>
   <div class="code-editor">
     <iframe ref="el" class="code-editor__inner"></iframe>
-    <div v-if="loading" class="code-editor__loading">Loading...</div>
+    <div v-if="loading" class="code-editor__loading">Editor loading...</div>
   </div>
 </template>
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { EditorOutMessageHandlers } from '../../../monaco-editor/src/types'
+import {
+  EditorOutMessageHandlers,
+  JavaScriptSetupOptions,
+} from '../../../monaco-editor/src/types'
 import { getEnv } from './js-script-env'
 import { useEditorSetup, useEditorTheme } from './utils'
 
@@ -24,6 +27,7 @@ const props = defineProps({
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
+  (e: 'save'): void
 }>()
 
 const id = (Math.random() * 10000000).toFixed(0)
@@ -38,9 +42,7 @@ const mode = computed(() => {
   const [lang, env] = props.type.split('-', 2)
   return { lang, env }
 })
-
 const language = computed(() => mode.value?.lang)
-const languageEnv = computed(() => mode.value?.env)
 
 const url = computed(
   () =>
@@ -54,9 +56,11 @@ const initEditor = () => {
   el.value!.src = url.value
 }
 const prepareEditor = () => {
+  let jsEnv: JavaScriptSetupOptions | undefined
   switch (language.value) {
     case 'javascript':
-      editorEmit('setupJs', getEnv(languageEnv.value))
+      jsEnv = getEnv(mode.value?.env)
+      if (jsEnv) editorEmit('setupJs', jsEnv)
       break
   }
 }
@@ -73,6 +77,7 @@ const messageHandlers: EditorOutMessageHandlers = {
     lastValue = v
     emit('update:modelValue', v)
   },
+  save: () => emit('save'),
 }
 
 const [editorEmit] = useEditorSetup(id, el, messageHandlers)
