@@ -1,0 +1,72 @@
+// from https://gist.github.com/ppisarczyk/43962d06686722d26d176fad46879d41
+const languages: O<string[]> = {
+  abap: ['abap'],
+  apex: ['cls'],
+  bat: ['bat', 'cmd'],
+  clojure: ['clj', 'cl2', 'cljc', 'cljx'],
+  coffee: ['coffee'],
+  cpp: [
+    'cpp',
+    'c++',
+    'cc',
+    'cp',
+    'cxx',
+    'h',
+    'h++',
+    'hh',
+    'hpp',
+    'hxx',
+    'inc',
+    'inl',
+    'ipp',
+    'tcc',
+    'tpp',
+    'c',
+  ],
+  csharp: ['cs', 'cake', 'cshtml', 'csx'],
+  css: ['scss', 'css', 'less'],
+  dart: ['dart'],
+  dockerfile: ['dockerfile'],
+  ecl: ['ecl', 'eclxml'],
+  elixir: ['ex', 'exs'],
+  freemarker2: ['ftl'],
+  fsharp: ['fs', 'fsi', 'fsx'],
+  go: ['go'],
+  graphql: ['graphql'],
+  html: ['html', 'htm', 'xhtml'],
+  ini: ['ini'],
+  java: ['java'],
+  javascript: ['js', 'jsx'],
+  julia: ['jl'],
+  kotlin: ['kt', 'kts', 'ktm'],
+  lua: ['lua'],
+  markdown: ['md', 'markdown'],
+  perl: ['perl'],
+  php: ['php'],
+  powershell: ['ps1'],
+  protobuf: ['proto', 'pb'],
+  pub: ['pub'],
+  python: ['py'],
+  r: ['r'],
+  ruby: ['rb', 'ruby'],
+  rust: ['rs'],
+  scala: ['scala'],
+  scheme: ['scm'],
+  shell: ['sh', 'bash'],
+  sql: ['sql'],
+  swift: ['swift'],
+  tcl: ['tcl'],
+  typescript: ['ts', 'tsx'],
+  vb: ['vb', 'vba', 'vbs'],
+  xml: ['xml', 'ant', 'plist', 'xsd'],
+  yaml: ['yaml', 'yml'],
+}
+
+const extToLanguage: O<string> = {}
+Object.keys(languages).forEach((lang) => {
+  languages[lang].forEach((ext) => {
+    extToLanguage[ext] = lang
+  })
+})
+
+export const getLang = (ext: string) => extToLanguage[ext]

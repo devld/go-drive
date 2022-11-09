@@ -22,6 +22,7 @@ export interface EditorInMessageTypes {
 export interface EditorOutMessageTypes {
   ready: undefined
   change: string
+  save: undefined
 }
 
 export type EditorInMessageHandlers = {

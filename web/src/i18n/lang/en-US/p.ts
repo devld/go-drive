@@ -123,6 +123,9 @@ export default {
       video_file_exts: 'Video file extensions',
       video_file_exts_desc:
         'List of supported video file extensions, separated by comma',
+      monaco_editor_exts: 'Use the Monaco editor',
+      monaco_editor_exts_desc:
+        'Comma-separated file extensions, which will be opened using the Monaco editor',
       thumbnail_config: 'Thumbnail config',
       thumbnail_mapping: 'Thumbnail Generator Mapping',
       thumbnail_mapping_tips:

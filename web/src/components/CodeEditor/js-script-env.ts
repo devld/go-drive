@@ -34,8 +34,11 @@ export const baseOptions = (
 
 export const getEnv = (name?: string) => {
   const content = name ? JS_DECLARATIONS.env[name] : undefined
-  if (content !== undefined && typeof content !== 'string') {
-    console.warn('[CodeEditor] unknown env: ' + name)
+  if (typeof content !== 'string') {
+    if (name) {
+      console.warn('[CodeEditor] unknown env: ' + name)
+    }
+    return
   }
-  return baseOptions(name && content ? [{ name, content }] : [])
+  return baseOptions([{ name: name!, content: content! }])
 }

@@ -25,6 +25,10 @@ const configOptions = mapOf(
       key: 'web.videoFileExts',
       process: stringList,
     },
+    {
+      key: 'web.monacoEditorExts',
+      process: stringList,
+    },
   ],
   (e) => e.key
 )

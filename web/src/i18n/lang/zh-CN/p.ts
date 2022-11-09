@@ -107,6 +107,7 @@ export default {
       anonymous_root_path: '匿名用户根路径',
       anonymous_root_path_desc:
         '限制未登录的用户只能访问这个目录下的资源，路径不以 / 开头',
+      file_preview_config: '文件预览配置',
       office_preview_enabled: 'Office 预览',
       office_preview_enabled_desc:
         '通过微软和谷歌提供的在线服务来预览 Office 文件',
@@ -118,7 +119,9 @@ export default {
       audio_file_exts_desc: '支持查看的音频文件后缀名列表，用英文逗号隔开',
       video_file_exts: '视频文件后缀名',
       video_file_exts_desc: '支持查看的视频文件后缀名列表，用英文逗号隔开',
-      file_preview_config: '文件预览配置',
+      monaco_editor_exts: '使用 Monaco 编辑器',
+      monaco_editor_exts_desc:
+        '用英文逗号隔开的文件后缀名，这些文件将会使用 Monaco 编辑器打开',
       thumbnail_config: '缩略图配置',
       thumbnail_mapping: '缩略图生成器映射',
       thumbnail_mapping_tips:

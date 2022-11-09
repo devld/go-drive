@@ -7,26 +7,38 @@
         </SimpleButton>
       </template>
     </HandlerTitleBar>
-    <TextEditor
-      v-if="!error"
-      v-model="content"
-      :filename="filename"
-      :disabled="readonly"
-    />
+    <template v-if="!error">
+      <CodeEditor
+        v-if="useMonacoEditor"
+        v-model="content"
+        :type="monacoEditorType"
+        :disabled="readonly"
+        @save="!readonly && saveFile()"
+      />
+      <TextEditor
+        v-else
+        v-model="content"
+        :filename="filename"
+        :disabled="readonly"
+      />
+    </template>
     <ErrorView v-else :status="error.status" :message="error.message" />
     <div v-if="!inited" class="loading-tips">Loading...</div>
   </div>
 </template>
 <script setup lang="ts">
-import { filename as filenameFn } from '@/utils'
+import { filename as filenameFn, filenameExt } from '@/utils'
 import { getContent } from '@/api'
 import TextEditor from '@/components/TextEditor/index.vue'
+import CodeEditor from '@/components/CodeEditor/index.vue'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import uploadManager from '@/api/upload-manager'
 import { alert } from '@/utils/ui-utils'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Entry } from '@/types'
 import { ApiError } from '@/utils/http'
+import { EntryHandlerContext } from '../types'
+import { getLang } from '@/components/CodeEditor/mapping'
 
 const props = defineProps({
   entry: {
@@ -34,6 +46,10 @@ const props = defineProps({
     required: true,
   },
   entries: { type: Array as PropType<Entry[]> },
+  ctx: {
+    type: Object as PropType<EntryHandlerContext>,
+    required: true,
+  },
 })
 
 const emit = defineEmits<{
@@ -55,6 +71,15 @@ const filename = computed(() => filenameFn(path.value))
 const readonly = computed(() => !props.entry.meta.writable)
 
 const el = ref<HTMLElement | null>(null)
+
+const useMonacoEditor = computed(() => {
+  const ext = props.ctx.config.options['web.monacoEditorExts']
+  return ext && ext.length > 0 && ext.includes(filenameExt(filename.value))
+})
+const monacoEditorType = computed(() => {
+  const ext = filenameExt(filename.value)
+  return getLang(ext)
+})
 
 const loadFile = async () => {
   inited.value = false
@@ -78,6 +103,7 @@ const loadFileContent = async () => {
 }
 
 const saveFile = async () => {
+  if (readonly.value) return
   if (saving.value) {
     return
   }
@@ -157,6 +183,10 @@ loadFile()
     .CodeMirror {
       height: 100%;
     }
+  }
+
+  .code-editor {
+    height: 100%;
   }
 
   .loading-tips {
