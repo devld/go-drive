@@ -63,6 +63,8 @@ export const STATUS_MASK_CAN_STOP =
 
 export default abstract class UploadTask {
   private _progress?: UploadProgress
+  private _error?: any
+
   private _status = STATUS_CREATED
   private _task: TaskDef
 
@@ -108,6 +110,9 @@ export default abstract class UploadTask {
     if (status === STATUS_COMPLETED) {
       this._task.file = undefined
     }
+    if (status === STATUS_ERROR) {
+      this._error = data
+    }
 
     this.changeListener({ task: this, data })
   }
@@ -124,6 +129,9 @@ export default abstract class UploadTask {
   get progress(): Readonly<UploadProgress> | undefined {
     return this._progress
   }
+  get error(): any | undefined {
+    return this._error
+  }
 }
 
 export class UploadTaskItem {
@@ -131,11 +139,14 @@ export class UploadTaskItem {
   public readonly task: TaskDef
   public readonly status: number
   public readonly progress?: UploadProgress
+  public readonly error?: any
+
   constructor(task: UploadTask) {
     this.id = task.id
     this.task = task.task
     this.status = task.status
     this.progress = task.progress
+    this.error = task.error
     Object.freeze(this)
   }
 
