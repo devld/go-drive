@@ -28,7 +28,11 @@
         {{ filenameFn(dir) }}
       </EntryLink>
     </span>
-    <span class="upload-task-item__status">{{ statusText }}</span>
+    <span
+      class="upload-task-item__status"
+      :title="task.error?.message || task.error"
+      >{{ statusText }}</span
+    >
     <span class="upload-task-item__ops">
       <button
         v-if="showStart"
@@ -161,9 +165,16 @@ const showRemove = computed(() => !showStop.value)
   align-items: center;
   padding: 8px;
   font-size: 14px;
+  overflow: hidden;
 
   & > * {
     z-index: 1;
+  }
+
+  &.task-status-64 {
+    .upload-task-item__status {
+      color: var(--btn-bg-color-danger);
+    }
   }
 }
 
