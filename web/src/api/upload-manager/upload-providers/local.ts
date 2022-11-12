@@ -30,7 +30,14 @@ export default class LocalUploadTask extends UploadTask {
       },
     })
     this._httpTask = task
-    this._waitingTask = await task
+    task.then(
+      (t) => {
+        this._waitingTask = t
+      },
+      () => {
+        // ignore
+      }
+    )
 
     return taskDone(task, (t) => {
       this._waitingTask = t

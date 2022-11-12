@@ -124,8 +124,7 @@ const entry = computed<Entry>(() => ({
 }))
 
 const dir = computed(() => dirFn(entry.value.path))
-
-const filename = computed(() => filenameFn(entry.value.name))
+const filename = computed(() => entry.value.name)
 
 const statusText = computed(() => {
   switch (props.task.status) {

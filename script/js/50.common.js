@@ -162,3 +162,34 @@ var encUtils = Object.freeze({
 var SEEK_START = 0;
 var SEEK_CURRENT = 1;
 var SEEK_END = 2;
+
+function buildEntriesTree(ctx, entry, bytesProgress) {
+  ctx.Err();
+  if (bytesProgress) {
+    if (entry.Type() === "file") {
+      ctx.Total(entry.Size(), false);
+    }
+  } else {
+    ctx.Total(1, false);
+  }
+  var r = { entry: entry };
+  if (entry.Type() === "file") {
+    return r;
+  }
+  var entries = entry.Drive().List(ctx, entry.Path());
+  r.children = entries.map(function (e) {
+    return buildEntriesTree(ctx, e, bytesProgress);
+  });
+  return r;
+}
+
+function flattenEntriesTree(node, result) {
+  if (!result) result = [];
+  result.push(node);
+  if (node.children) {
+    node.children.forEach(function (item) {
+      flattenEntriesTree(item, result);
+    });
+  }
+  return result;
+}

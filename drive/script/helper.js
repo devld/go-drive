@@ -55,3 +55,12 @@ function useLocalProvider(size) {
   }
   return { Provider: "localChunk" };
 }
+
+function useCustomProvider(uploader, data) {
+  return {
+    Provider: "custom",
+    Config: Object.assign({}, data, {
+      uploader: uploader,
+    }),
+  };
+}

@@ -24,6 +24,8 @@ db:
 # There may be these files here:
 # - lang: i18n language dir
 # - local: The files of type 'Local Drive' will be placed here
+# - script-drives: Drives implemented using JavaScript
+# - drive-uploaders: The web upload adapters
 # - sessions: The user sessions
 # - temp: Temp dir
 # - thumbnails: Thumbnail cache dir

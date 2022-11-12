@@ -8,6 +8,7 @@ import LocalUploadTask from './local'
 import LocalChunkUploadTask from './local-chunk'
 import S3UploadTask from './s3'
 import OneDriveUploadTask from './onedrive'
+import CustomUploadTask from './custom'
 
 const TASK_PROVIDERS: O<{
   new (...args: ConstructorParameters<typeof UploadTask>): UploadTask
@@ -16,6 +17,7 @@ const TASK_PROVIDERS: O<{
   localChunk: LocalChunkUploadTask,
   s3: S3UploadTask,
   onedrive: OneDriveUploadTask,
+  custom: CustomUploadTask,
 }
 
 class DispatcherUploadTask extends UploadTask {
@@ -67,10 +69,16 @@ class DispatcherUploadTask extends UploadTask {
       )
       return
     }
+
+    const task = { ...this.task }
+    if (uploadConfig.path) {
+      task.path = uploadConfig.path
+    }
+
     this._targetTask = new ConcreteUploadTask(
       this.id,
       this._dispatcherOnTaskChanged.bind(this),
-      this.task,
+      task,
       uploadConfig.config
     )
     this._targetTask.start()

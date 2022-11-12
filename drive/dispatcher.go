@@ -466,16 +466,30 @@ func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 	if e := d.ensureDir(ctx, driveName, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
+	var newPath string
 	if !override {
-		realPath, e = d.FindNonExistsEntryName(ctx, drive, realPath)
+		p, e := d.FindNonExistsEntryName(ctx, drive, realPath)
 		if e != nil {
 			return nil, e
 		}
+		if realPath != p {
+			newPath = path2.Join(driveName, p)
+		}
+		realPath = p
 	}
 	if size == 0 {
 		return types.UseLocalProvider(0), nil
 	}
-	return drive.Upload(ctx, realPath, size, override, config)
+	r, e := drive.Upload(ctx, realPath, size, override, config)
+	if e != nil {
+		return r, e
+	}
+	if r != nil && newPath != "" {
+		rr := *r
+		rr.Path = newPath
+		r = &rr
+	}
+	return r, nil
 }
 
 func (d *DispatcherDrive) mapDriveEntry(path string, driveName string, entry types.IEntry) types.IEntry {

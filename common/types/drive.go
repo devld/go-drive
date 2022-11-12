@@ -171,6 +171,8 @@ type DriveUploadConfig struct {
 	// Provider is the upload provider.
 	// Available providers are LocalProvider, LocalChunkProvider, S3Provider, OneDriveProvider
 	Provider string
+	// Path is the new location to upload
+	Path string
 	// Config is the provider-specified configuration for this uploading
 	Config SM
 }

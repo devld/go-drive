@@ -1,5 +1,7 @@
 /// <reference path="../global.d.ts"/>
 
+declare const selfDrive: DriveInstance;
+
 declare interface DriveMeta {
   Writable: boolean;
   Props?: M;
@@ -17,6 +19,7 @@ declare interface Entry {
 
 declare interface DriveUploadConfig {
   Provider: string;
+  Path?: string;
   Config?: SM;
 }
 
@@ -42,7 +45,7 @@ declare interface Drive {
     size: number,
     override: boolean,
     config: SM
-  ): DriveUploadConfig;
+  ): DriveUploadConfig | undefined;
 
   getReader(ctx: Context, entry: Entry): ReadCloser;
   getURL?(ctx: Context, entry: Entry): ContentURL;
@@ -177,3 +180,7 @@ declare function defineInitConfig(fn: DriveInitConfig): void;
 declare function defineInit(fn: DriveInit): void;
 
 declare function useLocalProvider(size: number): DriveUploadConfig;
+declare function useCustomProvider(
+  uploader: string,
+  config?: Record<string, string>
+): DriveUploadConfig;

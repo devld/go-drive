@@ -36,6 +36,13 @@ type Context struct {
 	v  context.Context
 }
 
+func (c Context) Err() {
+	e := c.v.Err()
+	if e != nil {
+		c.vm.ThrowError(e)
+	}
+}
+
 type TaskCtx struct {
 	Context
 	v types.TaskCtx

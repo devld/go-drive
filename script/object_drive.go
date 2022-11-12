@@ -173,3 +173,7 @@ func (e Entry) Data() interface{} {
 	}
 	return dat
 }
+
+func (e Entry) Drive() Drive {
+	return NewDrive(e.vm, e.e.Drive())
+}

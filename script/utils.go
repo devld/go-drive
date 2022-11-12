@@ -6,6 +6,7 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -353,6 +354,11 @@ func mapError(e error) error {
 	if e == nil {
 		return nil
 	}
+
+	if oe, ok := e.(*otto.Error); ok {
+		log.Println(oe.String())
+	}
+
 	if re, ok := e.(err.Error); ok {
 		return re
 	}

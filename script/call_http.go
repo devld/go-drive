@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"go-drive/common/utils"
 	"io"
+	"mime/multipart"
 	"net/http"
 )
 
@@ -18,14 +19,27 @@ func vm_http(vm *VM, args Values) interface{} {
 	url := args.Get(2).String()
 	headers := args.Get(3).SM()
 	body := args.Get(4).Raw()
+
 	var bodyReader io.Reader
+	var contentType string
+	var errChan chan error
+
 	if body != nil {
-		if vr := GetReader(body); vr != nil {
-			bodyReader = vr
-		} else if str, ok := body.(string); ok {
+		if str, ok := body.(string); ok {
 			bodyReader = bytes.NewReader([]byte((str)))
+		} else if vr := GetReader(body); vr != nil {
+			bodyReader = vr
 		} else if b := GetBytes(body); b != nil {
 			bodyReader = bytes.NewReader(b)
+		} else if fd, ok := body.(*formData); ok {
+			r, w := io.Pipe()
+			errChan = make(chan error, 1)
+			bodyReader = r
+			contentType = fd.prepare(w)
+			go func() {
+				defer func() { _ = w.Close() }()
+				errChan <- fd.write()
+			}()
 		}
 	}
 	var req *http.Request
@@ -35,10 +49,21 @@ func vm_http(vm *VM, args Values) interface{} {
 	if e != nil {
 		vm.ThrowError(e)
 	}
+
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
 	resp, e := httpClient.Do(req)
+	var wErr error
+	if errChan != nil {
+		wErr = <-errChan
+	}
+	if wErr != nil {
+		vm.ThrowError(wErr)
+	}
 	if e != nil {
 		vm.ThrowError(e)
 	}
@@ -46,20 +71,106 @@ func vm_http(vm *VM, args Values) interface{} {
 	return newHttpResponse(vm, resp)
 }
 
-type HttpHeaders struct {
+// vm_newFormData: () *formData
+func vm_newFormData(vm *VM, args Values) interface{} {
+	return &formData{vm, make([]formDataField, 0), nil}
+}
+
+type formData struct {
+	vm   *VM
+	data []formDataField
+	mw   *multipart.Writer
+}
+
+type formDataField struct {
+	field    string
+	filename string
+	data     interface{}
+}
+
+func (fd *formData) AppendField(key string, v interface{}) {
+	var data []byte
+	if str, ok := v.(string); ok {
+		data = []byte((str))
+	} else if b := GetBytes(v); b != nil {
+		data = b
+	} else {
+		fd.vm.ThrowTypeError("AppendField: value must be string or Bytes")
+	}
+	fd.data = append(fd.data, formDataField{key, "", data})
+}
+
+func (fd *formData) AppendFile(key, filename string, reader interface{}) {
+	var r io.Reader
+	if vr := GetReader(reader); vr != nil {
+		r = vr
+	} else if str, ok := reader.(string); ok {
+		r = bytes.NewReader([]byte((str)))
+	} else if b := GetBytes(reader); b != nil {
+		r = bytes.NewReader(b)
+	} else {
+		fd.vm.ThrowTypeError("AppendFile: value must be string, Bytes or Reader")
+	}
+	fd.data = append(fd.data, formDataField{key, filename, r})
+}
+
+func (fd *formData) prepare(w io.Writer) string {
+	if fd.mw != nil {
+		panic("already prepared")
+	}
+	fd.mw = multipart.NewWriter(w)
+	return fd.mw.FormDataContentType()
+}
+
+func (fd *formData) write() error {
+	defer func() { _ = fd.mw.Close() }()
+
+	var e error
+	for _, item := range fd.data {
+		if b, ok := item.data.([]byte); ok {
+			if e != nil {
+				continue
+			}
+			var fw io.Writer
+			fw, e = fd.mw.CreateFormField(item.field)
+			if e != nil {
+				continue
+			}
+			_, e = fw.Write(b)
+		} else if r, ok := item.data.(io.Reader); ok {
+			if rc, ok := r.(io.ReadCloser); ok {
+				defer func() {
+					_ = rc.Close()
+				}()
+			}
+			if e != nil {
+				continue
+			}
+			var fw io.Writer
+			fw, e = fd.mw.CreateFormFile(item.field, item.filename)
+			if e != nil {
+				continue
+			}
+			_, e = io.Copy(fw, r)
+		}
+	}
+	return e
+}
+
+type httpHeaders struct {
 	vm *VM
 	h  http.Header
 }
 
-func (h *HttpHeaders) Get(key string) string {
+func (h *httpHeaders) Get(key string) string {
 	return h.h.Get(key)
 }
 
-func (h *HttpHeaders) Values(key string) []string {
+func (h *httpHeaders) Values(key string) []string {
 	return h.h.Values(key)
 }
 
-func (h *HttpHeaders) GetAll() map[string][]string {
+func (h *httpHeaders) GetAll() map[string][]string {
 	return h.h
 }
 
@@ -67,7 +178,7 @@ func newHttpResponse(vm *VM, resp *http.Response) *httpResponse {
 	return &httpResponse{
 		vm:      vm,
 		Status:  resp.StatusCode,
-		Headers: &HttpHeaders{vm, resp.Header},
+		Headers: &httpHeaders{vm, resp.Header},
 		Body:    NewReadCloser(vm, resp.Body),
 	}
 }
@@ -75,7 +186,7 @@ func newHttpResponse(vm *VM, resp *http.Response) *httpResponse {
 type httpResponse struct {
 	vm      *VM
 	Status  int
-	Headers *HttpHeaders
+	Headers *httpHeaders
 	Body    ReadCloser
 }
 
