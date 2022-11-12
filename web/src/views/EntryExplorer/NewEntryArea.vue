@@ -161,6 +161,7 @@ const handleDataTransfer = async (
 ) => {
   try {
     const files = getDataTransferFiles(dt)
+    if (files.length === 0) return
 
     await before?.()
 
