@@ -1,4 +1,3 @@
-import http from '@/api/http'
 import defaultHttp from '@/utils/http'
 import ChunkUploadTask from '../chunk-task'
 import { STATUS_COMPLETED, UploadProgress } from '../task'
@@ -84,7 +83,7 @@ export default class OneDriveUploadTask extends ChunkUploadTask {
     if (!this._finishedResponse) {
       throw new Error('unexpected undefined finishedResponse')
     }
-    await http.post(`/upload/${this.task.path}`, { action: 'CompleteUpload' })
+    await this.uploadCallback({ action: 'CompleteUpload' })
     return this._finishedResponse
   }
 

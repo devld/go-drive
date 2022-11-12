@@ -19,7 +19,9 @@ declare type TaskCtxOnUpdate = (loaded: number, total: number) => void;
 declare function newTaskCtx(ctx: Context, onUpdate?: TaskCtxOnUpdate): TaskCtx;
 
 /** Context of Go */
-declare interface Context {}
+declare interface Context {
+  Err(): void;
+}
 
 declare interface ContextWithTimeout extends Context {
   Cancel(): void;
@@ -133,6 +135,7 @@ declare interface DriveEntry {
   GetReader(ctx: Context): ReadCloser;
   Unwrap(): DriveEntry;
   Data(): SM | null;
+  Drive(): DriveInstance;
 }
 
 declare type HttpMethod =
@@ -144,12 +147,21 @@ declare type HttpMethod =
   | "PATCH"
   | "OPTIONS";
 
-declare type HttpBody = Reader | string | Bytes;
+declare type HttpBody = Reader | string | Bytes | HttpFormData;
 
 declare interface HttpHeaders {
   Get(key: string): string;
   Values(key: string): string[] | null;
   GetAll(): M<string[]>;
+}
+
+declare interface HttpFormData {
+  AppendField(key: string, data: string | Bytes): void;
+  AppendFile(
+    key: string,
+    filename: string,
+    data: string | Bytes | Reader
+  ): void;
 }
 
 /** HttpResponse must be Disposed after use */
@@ -162,6 +174,8 @@ declare interface HttpResponse {
   Text(): string;
   Dispose(): void;
 }
+
+declare function newFormData(): HttpFormData;
 
 declare function http(
   ctx: Context,
@@ -291,3 +305,19 @@ declare const encUtils: {
   newHash: (h: HASH) => Hasher;
   hmac: (h: HASH, payload: Bytes, key: Bytes) => Bytes;
 };
+
+declare interface EntryTreeNode {
+  entry: DriveEntry;
+  children?: EntryTreeNode[];
+}
+
+declare function buildEntriesTree(
+  ctx: TaskCtx,
+  entry: DriveEntry,
+  byteProgress?: boolean
+): EntryTreeNode;
+
+declare function flattenEntriesTree(
+  node: EntryTreeNode,
+  result?: EntryTreeNode[]
+): EntryTreeNode[];

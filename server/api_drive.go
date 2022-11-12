@@ -54,6 +54,9 @@ func InitDriveRoutes(
 		options:       optionsDAO,
 	}
 
+	scriptsDir, _ := config.GetDir("drive-uploaders", false)
+	router.Static("/drive-uploader", scriptsDir)
+
 	signatureAuthRoute := router.Group("/", SignatureAuth(signer, userDAO, false))
 
 	// get file content
@@ -287,7 +290,7 @@ func (dr *driveRoute) upload(c *gin.Context) {
 		return
 	}
 	if config != nil {
-		SetResult(c, uploadConfig{config.Provider, config.Config})
+		SetResult(c, uploadConfig{config.Provider, config.Path, config.Config})
 	}
 }
 
@@ -632,6 +635,7 @@ func newEntryJson(e types.IEntry, s types.Session) *entryJson {
 
 type uploadConfig struct {
 	Provider string      `json:"provider"`
+	Path     string      `json:"path,omitempty"`
 	Config   interface{} `json:"config"`
 }
 

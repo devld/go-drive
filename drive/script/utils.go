@@ -67,6 +67,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.
 		_ = d.Dispose()
 		return nil, e
 	}
+	vm.Set("selfDrive", s.NewDrive(vm, d))
 
 	return d, nil
 }

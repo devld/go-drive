@@ -1,4 +1,5 @@
 import { IS_DEBUG } from '@/utils'
+import http from '../http'
 
 export interface TaskChangeEvent {
   task: UploadTask
@@ -59,7 +60,7 @@ export const STATUS_MASK_CAN_START =
   STATUS_CREATED | STATUS_PAUSED | STATUS_ERROR | STATUS_STOPPED
 export const STATUS_MASK_CAN_PAUSE = STATUS_STARTING | STATUS_UPLOADING
 export const STATUS_MASK_CAN_STOP =
-  STATUS_STARTING | STATUS_UPLOADING | STATUS_PAUSED
+  STATUS_STARTING | STATUS_UPLOADING | STATUS_PAUSED | STATUS_ERROR
 
 export default abstract class UploadTask {
   private _progress?: UploadProgress
@@ -115,6 +116,12 @@ export default abstract class UploadTask {
     }
 
     this.changeListener({ task: this, data })
+  }
+
+  protected uploadCallback<T = any>(data: O<string>): Promise<T> {
+    return http.post(`/upload/${this.task.path}`, data, {
+      params: { override: true, size: this.task.size },
+    })
   }
 
   get id() {

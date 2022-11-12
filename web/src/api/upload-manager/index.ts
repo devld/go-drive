@@ -159,9 +159,8 @@ export class UploadManager {
   }
 
   private _removeTask(task: UploadTask, force: boolean) {
-    if (task.isStatus(STATUS_MASK_PENDING)) {
-      if (force) task.stop()
-      else return false
+    if (!force && task.isStatus(STATUS_MASK_PENDING)) {
+      return false
     }
     const index = this._tasks.findIndex((t) => t.id === task.id)
     if (index === -1) return false

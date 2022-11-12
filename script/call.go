@@ -5,6 +5,7 @@ import "go-drive/common/utils"
 func initVarsForVm(v *VM) {
 	v.o.Set("DEBUG", utils.IsDebugOn)
 
+	v.o.Set("newFormData", WrapVmCall(v, vm_newFormData))
 	v.o.Set("http", WrapVmCall(v, vm_http))
 
 	v.o.Set("sleep", WrapVmCall(v, vm_sleep))

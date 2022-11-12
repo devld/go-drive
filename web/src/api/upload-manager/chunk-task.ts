@@ -3,6 +3,7 @@ import { arrayRemove } from '@/utils'
 import defaultHttp from '@/utils/http'
 import { Http, HttpRequestConfig } from '@/utils/http/types'
 import { ApiError, RequestTask } from '@/utils/http/utils'
+import http from '../http'
 import UploadTask, {
   STATUS_COMPLETED,
   STATUS_CREATED,
@@ -81,8 +82,12 @@ export default abstract class ChunkUploadTask extends UploadTask {
       this._abort(e)
       return
     }
-    if (typeof this._chunks !== 'number' || this._chunks <= 0) {
-      throw new Error('invalid chunk size')
+    if (
+      typeof this._chunks !== 'number' ||
+      isNaN(this._chunks) ||
+      this._chunks <= 0
+    ) {
+      throw new Error('invalid chunk size: ' + this._chunks)
     }
     this._queue.splice(0)
     for (let i = 0; i < this._chunks; i++) {
@@ -120,6 +125,7 @@ export default abstract class ChunkUploadTask extends UploadTask {
     Object.values(this._uploadingChunkProgress).forEach((l) => {
       loaded += l
     })
+    loaded = Math.min(total, loaded)
     return { loaded, total }
   }
 
@@ -183,6 +189,18 @@ export default abstract class ChunkUploadTask extends UploadTask {
     } finally {
       arrayRemove(this._requests, (e) => e === task)
     }
+  }
+
+  protected async uploadCallback<T = any>(data: O<string>): Promise<T> {
+    return this._request(
+      {
+        method: 'post',
+        url: `/upload/${this.task.path}`,
+        params: { override: true, size: this.task.size },
+        data,
+      },
+      http
+    )
   }
 
   /** prepare upload */

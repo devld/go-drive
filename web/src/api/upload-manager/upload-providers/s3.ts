@@ -1,4 +1,3 @@
-import http from '@/api/http'
 import ChunkUploadTask from '../chunk-task'
 import { STATUS_COMPLETED, UploadProgress } from '../task'
 
@@ -58,14 +57,11 @@ export default class S3UploadTask extends ChunkUploadTask {
     }
 
     // request for presigned UploadPart url
-    const r = await this._request(
-      {
-        method: 'post',
-        url: `/upload/${this.task.path}`,
-        data: { action: 'UploadPart', uploadId: this._uploadId, seq: `${seq}` },
-      },
-      http
-    )
+    const r = await this.uploadCallback({
+      action: 'UploadPart',
+      uploadId: this._uploadId,
+      seq: `${seq}`,
+    })
     const url = r.config.url
 
     const resp = await this._request({
@@ -86,11 +82,9 @@ export default class S3UploadTask extends ChunkUploadTask {
 
   override async _completeUpload() {
     if (!this._uploadId) {
-      return http.post(`/upload/${this.task.path}`, {
-        action: 'CompletePutObject',
-      })
+      return this.uploadCallback({ action: 'CompletePutObject' })
     }
-    return http.post(`/upload/${this.task.path}`, {
+    return this.uploadCallback({
       action: 'CompleteMultipartUpload',
       uploadId: this._uploadId,
       parts: this._uploadedParts!.join(';'),
@@ -107,14 +101,12 @@ export default class S3UploadTask extends ChunkUploadTask {
   _cleanup() {
     super._cleanup()
     if (!this.isStatus(STATUS_COMPLETED)) {
-      http
-        .post(`/upload/${this.task!.path}`, {
-          action: 'AbortMultipartUpload',
-          uploadId: this._uploadId,
-        })
-        .catch(() => {
-          // ignore
-        })
+      this.uploadCallback({
+        action: 'AbortMultipartUpload',
+        uploadId: this._uploadId!,
+      }).catch(() => {
+        // ignore
+      })
     }
     this._uploadedParts = undefined
   }
