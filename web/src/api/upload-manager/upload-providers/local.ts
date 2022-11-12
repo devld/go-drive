@@ -1,6 +1,8 @@
 /// local storage provider
 
+import { deleteTask } from '@/api'
 import http from '@/api/http'
+import { Task } from '@/types'
 import { taskDone } from '@/utils'
 import { ApiError, RequestTask } from '@/utils/http/utils'
 import UploadTask, {
@@ -14,7 +16,8 @@ import UploadTask, {
  * local upload task provider
  */
 export default class LocalUploadTask extends UploadTask {
-  private _httpTask?: RequestTask
+  private _httpTask?: RequestTask<Task<any>>
+  private _waitingTask?: Task<any>
 
   override async start() {
     if ((await super.start()) === false) return false
@@ -27,8 +30,11 @@ export default class LocalUploadTask extends UploadTask {
       },
     })
     this._httpTask = task
+    this._waitingTask = await task
 
-    return taskDone(task)
+    return taskDone(task, (t) => {
+      this._waitingTask = t
+    })
       .then(
         () => {
           this._onChange(STATUS_COMPLETED)
@@ -51,6 +57,13 @@ export default class LocalUploadTask extends UploadTask {
     if (this._httpTask) {
       this._onChange(STATUS_STOPPED)
       this._httpTask.cancel()
+    }
+    if (this._waitingTask) {
+      try {
+        await deleteTask(this._waitingTask.id)
+      } catch {
+        // ignore
+      }
     }
   }
 }
