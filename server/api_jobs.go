@@ -7,6 +7,7 @@ import (
 	"go-drive/common/utils"
 	"go-drive/server/scheduled"
 	"go-drive/storage"
+	"io"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -181,6 +182,22 @@ func InitJobsRoutes(
 		if e != nil {
 			_ = c.Error(e)
 			return
+		}
+	})
+
+	r.POST("/script-eval", func(c *gin.Context) {
+		code, e := io.ReadAll(c.Request.Body)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		w := c.Writer
+		e = scheduled.ExecuteJobCode(c.Request.Context(), code, ch, func(s string) {
+			_, _ = w.Write([]byte(s + "\n"))
+			w.Flush()
+		})
+		if e != nil {
+			w.Write([]byte("ERROR: " + e.Error()))
 		}
 	})
 

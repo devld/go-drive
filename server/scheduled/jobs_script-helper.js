@@ -2,24 +2,18 @@
 
 function __copyOrMove__(isMove, from, to, override) {
   var drive = rootDrive.Get();
-  var ctx = newContext();
+  var ctx = newTaskCtx(newContext());
 
-  var fromEntry = drive.Get(ctx, from);
+  var fromEntries = findEntries(ctx, drive, from);
 
-  try {
-    var toEntry = drive.Get(ctx, to);
-    if (toEntry.Type() === "dir") {
-      to = pathUtils.join(to, pathUtils.base(fromEntry.Path()));
+  for (var i = 0; i < fromEntries.length; i++) {
+    var fromEntry = fromEntries[i];
+    var toPath = pathUtils.join(to, fromEntry.Name());
+    if (isMove) {
+      drive.Move(ctx, fromEntry, toPath, !!override);
+    } else {
+      drive.Copy(ctx, fromEntry, toPath, !!override);
     }
-  } catch (e) {
-    if (!isNotFoundErr(e)) throw e;
-  }
-
-  var taskCtx = newTaskCtx(ctx);
-  if (isMove) {
-    return drive.Move(taskCtx, fromEntry, to, !!override);
-  } else {
-    return drive.Copy(taskCtx, fromEntry, to, !!override);
   }
 }
 
@@ -33,7 +27,15 @@ function mv(from, to, override) {
 
 function rm(path) {
   var drive = rootDrive.Get();
-  return drive.Delete(newTaskCtx(newContext()), path);
+  var ctx = newTaskCtx(newContext());
+  var entries = findEntries(ctx, drive, path);
+  for (var i = entries.length - 1; i >= 0; i--) {
+    try {
+      drive.Delete(ctx, entries[i].Path());
+    } catch (e) {
+      if (!isNotFoundErr(e)) throw e;
+    }
+  }
 }
 
 function ls(path) {

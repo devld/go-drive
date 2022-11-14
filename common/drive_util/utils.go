@@ -2,6 +2,7 @@ package drive_util
 
 import (
 	"context"
+	"errors"
 	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -9,12 +10,15 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httputil"
 	url2 "net/url"
 	"os"
 	"path"
 	"strconv"
+
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 func GetIEntry(entry types.IEntry, test func(iEntry types.IEntry) bool) types.IEntry {
@@ -188,17 +192,36 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 
 // region copy all
 
-type EntryNode struct {
-	types.IEntry
-	children []EntryNode
+type EntryTreeNode struct {
+	Entry    types.IEntry
+	Children []EntryTreeNode
+	Excluded bool
 }
 
 type DoCopy = func(from types.IEntry, driveTo types.IDrive, to string, ctx types.TaskCtx) error
 type CopyCallback = func(entry types.IEntry, allProcessed bool, ctx types.TaskCtx) error
 
-func buildEntriesTree(ctx types.TaskCtx, entry types.IEntry, bytesProgress bool) (EntryNode, error) {
+var ErrSkipDir = errors.New("skip")
+
+func buildEntriesTree(ctx types.TaskCtx, entry types.IEntry, filter func(types.IEntry) (bool, error), bytesProgress bool) (*EntryTreeNode, error) {
 	if e := ctx.Err(); e != nil {
-		return EntryNode{}, e
+		return nil, e
+	}
+	dirSkipped := false
+	filterMatched := true
+	if filter != nil {
+		ok, e := filter(entry)
+		filterMatched = ok
+		if e == ErrSkipDir {
+			dirSkipped = true
+			e = nil
+		}
+		if e != nil {
+			return nil, e
+		}
+		if !ok && entry.Type().IsFile() {
+			return nil, nil
+		}
 	}
 	if bytesProgress {
 		if entry.Type().IsFile() {
@@ -207,54 +230,99 @@ func buildEntriesTree(ctx types.TaskCtx, entry types.IEntry, bytesProgress bool)
 	} else {
 		ctx.Total(1, false)
 	}
-	r := EntryNode{entry, nil}
+	r := &EntryTreeNode{entry, nil, !filterMatched}
 	if entry.Type().IsFile() {
+		return r, nil
+	}
+	if dirSkipped && !filterMatched {
+		return nil, nil
+	}
+	if dirSkipped {
 		return r, nil
 	}
 	entries, e := entry.Drive().List(ctx, entry.Path())
 	if e != nil {
 		return r, e
 	}
-	children := make([]EntryNode, len(entries))
-	for i, e := range entries {
-		node, ee := buildEntriesTree(ctx, e, bytesProgress)
+	children := make([]EntryTreeNode, 0, len(entries))
+	for _, e := range entries {
+		node, ee := buildEntriesTree(ctx, e, filter, bytesProgress)
 		if ee != nil {
 			return r, ee
 		}
-		children[i] = node
+		if node != nil {
+			children = append(children, *node)
+		}
 	}
-	r.children = children
+	r.Children = children
 	return r, nil
 }
 
-func BuildEntriesTree(ctx types.TaskCtx, root types.IEntry, bytesProgress bool) (EntryNode, error) {
+func BuildEntriesTree(ctx types.TaskCtx, root types.IEntry, bytesProgress bool) (EntryTreeNode, error) {
 	if ctx == nil {
 		ctx = task.DummyContext()
 	}
-	return buildEntriesTree(ctx, root, bytesProgress)
+	r, e := buildEntriesTree(ctx, root, nil, bytesProgress)
+	if e != nil {
+		return EntryTreeNode{}, e
+	}
+	if r == nil {
+		return EntryTreeNode{}, err.NewNotFoundMessageError("no matched entries")
+	}
+	return *r, nil
 }
 
-func flattenEntriesTree(root EntryNode, result []EntryNode) []EntryNode {
-	result = append(result, root)
-	if root.children != nil {
-		for _, e := range root.children {
-			result = flattenEntriesTree(e, result)
+func FindEntries(ctx types.TaskCtx, root types.IDrive, pattern string, bytesProgress bool) ([]types.IEntry, error) {
+	if pattern == "" {
+		return nil, err.NewNotFoundMessageError("empty pattern")
+	}
+	if ctx == nil {
+		ctx = task.DummyContext()
+	}
+	result := make([]types.IEntry, 0)
+	dfs := NewDriveFS(root, "")
+	e := doublestar.GlobWalk(dfs, pattern, func(path string, d fs.DirEntry) error {
+		entry, e := root.Get(ctx, path)
+		if e != nil {
+			return e
 		}
+		if bytesProgress {
+			if entry.Type().IsFile() {
+				ctx.Total(entry.Size(), false)
+			}
+		} else {
+			ctx.Total(1, false)
+		}
+		result = append(result, entry)
+		return nil
+	}, doublestar.WithFailOnIOErrors())
+	return result, e
+}
+
+func flattenEntriesTree(root EntryTreeNode, deepFirst bool, result []EntryTreeNode) []EntryTreeNode {
+	if !deepFirst && !root.Excluded {
+		result = append(result, root)
+	}
+	for _, e := range root.Children {
+		result = flattenEntriesTree(e, deepFirst, result)
+	}
+	if deepFirst && !root.Excluded {
+		result = append(result, root)
 	}
 	return result
 }
 
-func FlattenEntriesTree(root EntryNode) []EntryNode {
-	result := make([]EntryNode, 0)
-	return flattenEntriesTree(root, result)
+func FlattenEntriesTree(root EntryTreeNode, deepFirst bool) []EntryTreeNode {
+	result := make([]EntryTreeNode, 0)
+	return flattenEntriesTree(root, deepFirst, result)
 }
 
-func VisitEntriesTree(root EntryNode, visit func(e types.IEntry) error) error {
-	e := visit(root.IEntry)
+func VisitEntriesTree(root EntryTreeNode, visit func(e types.IEntry) error) error {
+	e := visit(root.Entry)
 	if e != nil {
 		return e
 	}
-	for _, node := range root.children {
+	for _, node := range root.Children {
 		if e := VisitEntriesTree(node, visit); e != nil {
 			return e
 		}
@@ -262,7 +330,7 @@ func VisitEntriesTree(root EntryNode, visit func(e types.IEntry) error) error {
 	return nil
 }
 
-func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string,
+func copyAll(ctx types.TaskCtx, entry EntryTreeNode, driveTo types.IDrive, to string,
 	newParent bool, doCopy DoCopy, after CopyCallback) (bool, error) {
 	if e := ctx.Err(); e != nil {
 		return false, e
@@ -283,12 +351,12 @@ func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string
 	}
 
 	allProcessed := true
-	if entry.Type().IsDir() {
+	if entry.Entry.Type().IsDir() {
 		dirCreate := false
 		if dstExists {
 			if dstType.IsFile() {
 				return false, err.NewNotAllowedMessageError(
-					i18n.T("drive.copy_type_mismatch1", entry.Path(), to))
+					i18n.T("drive.copy_type_mismatch1", entry.Entry.Path(), to))
 			}
 		} else {
 			_, e := driveTo.MakeDir(ctx, to)
@@ -297,9 +365,9 @@ func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string
 			}
 			dirCreate = true
 		}
-		if entry.children != nil {
-			for _, e := range entry.children {
-				r, ee := copyAll(ctx, e, driveTo, utils.CleanPath(path.Join(to, utils.PathBase(e.Path()))),
+		if entry.Children != nil {
+			for _, e := range entry.Children {
+				r, ee := copyAll(ctx, e, driveTo, utils.CleanPath(path.Join(to, utils.PathBase(e.Entry.Path()))),
 					dirCreate, doCopy, after)
 				if ee != nil {
 					return false, ee
@@ -311,19 +379,19 @@ func copyAll(ctx types.TaskCtx, entry EntryNode, driveTo types.IDrive, to string
 		}
 	}
 
-	if entry.Type().IsFile() {
+	if entry.Entry.Type().IsFile() {
 		if dstExists {
 			if dstType.IsDir() {
 				return false, err.NewNotAllowedMessageError(
-					i18n.T("drive.copy_type_mismatch2", entry.Path(), to))
+					i18n.T("drive.copy_type_mismatch2", entry.Entry.Path(), to))
 			}
 		}
 
-		if e := doCopy(entry.IEntry, driveTo, to, ctx); e != nil {
+		if e := doCopy(entry.Entry, driveTo, to, ctx); e != nil {
 			return false, e
 		}
 	}
-	if e := after(entry, allProcessed, ctx); e != nil {
+	if e := after(entry.Entry, allProcessed, ctx); e != nil {
 		return false, e
 	}
 	return allProcessed, nil

@@ -61,6 +61,7 @@
       <SimpleForm ref="jobFormEl" v-model="jobEdit" :form="jobForm" />
       <SimpleForm
         ref="jobParamsFormEl"
+        :key="jobEdit.job"
         v-model="jobParams"
         :form="jobParamsForm"
       />
@@ -194,9 +195,7 @@ const jobExecutions = ref<JobExecution[]>([])
 
 const addJob = () => {
   hideJobExecutions()
-  jobEdit.value = {
-    job: jobDefinitions.value[0]?.name,
-  }
+  jobEdit.value = {}
   jobParams.value = {}
   edit.value = false
 }
@@ -460,6 +459,8 @@ loadJobDefinitions()
     max-height: 100px;
     white-space: pre;
     overflow: auto;
+    font-size: 10px;
+    font-family: monospace;
   }
 }
 </style>

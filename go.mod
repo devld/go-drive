@@ -7,7 +7,7 @@ require (
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
 	github.com/aws/aws-sdk-go v1.44.22
 	github.com/blevesearch/bleve/v2 v2.3.2
-	github.com/bmatcuk/doublestar/v4 v4.0.2
+	github.com/bmatcuk/doublestar/v4 v4.4.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-co-op/gocron v1.17.1
 	github.com/google/uuid v1.3.0
