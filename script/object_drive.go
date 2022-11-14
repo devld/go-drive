@@ -44,6 +44,14 @@ type Drive struct {
 	d  types.IDrive
 }
 
+func GetDrive(v interface{}) types.IDrive {
+	switch v := v.(type) {
+	case Drive:
+		return v.d
+	}
+	return nil
+}
+
 func (d Drive) Get(ctx interface{}, path string) Entry {
 	entry, e := d.d.Get(GetContext(ctx), path)
 	if e != nil {

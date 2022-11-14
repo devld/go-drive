@@ -298,14 +298,14 @@ func (s *Drive) delete(path string, ctx types.TaskCtx) error {
 	if e != nil {
 		return e
 	}
-	entries := drive_util.FlattenEntriesTree(tree)
+	entries := drive_util.FlattenEntriesTree(tree, false)
 	n := int(math.Ceil(float64(len(entries)) / 1000))
 	for i := 0; i < n; i += 1 {
 		batches := entries[i*1000 : int(math.Min(float64((i+1)*1000), float64(len(entries))))]
 		deletes := make([]*s3.ObjectIdentifier, len(batches))
 		for i, o := range batches {
-			key := o.Path()
-			if o.Type().IsDir() {
+			key := o.Entry.Path()
+			if o.Entry.Type().IsDir() {
 				key += "/"
 			}
 			deletes[i] = &s3.ObjectIdentifier{

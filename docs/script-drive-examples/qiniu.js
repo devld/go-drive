@@ -229,7 +229,7 @@ var DriveImpl = {
           "op=/delete/" +
           buildURI(
             this_._bucket,
-            e.entry.Path() + (e.entry.Type() === "dir" ? "/" : "")
+            e.Entry.Path() + (e.Entry.Type() === "dir" ? "/" : "")
           )
         );
       })

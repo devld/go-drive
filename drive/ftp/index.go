@@ -195,14 +195,14 @@ func (f *Drive) Delete(ctx types.TaskCtx, path string) error {
 	if e != nil {
 		return e
 	}
-	entries := drive_util.FlattenEntriesTree(tree)
+	entries := drive_util.FlattenEntriesTree(tree, false)
 
 	for i := len(entries) - 1; i >= 0; i-- {
 		var e error
-		if entries[i].Type().IsDir() {
-			e = f.c.Rmdir(entries[i].Path())
+		if entries[i].Entry.Type().IsDir() {
+			e = f.c.Rmdir(entries[i].Entry.Path())
 		} else {
-			e = f.c.Delete(entries[i].Path())
+			e = f.c.Delete(entries[i].Entry.Path())
 		}
 		if e != nil {
 			return e

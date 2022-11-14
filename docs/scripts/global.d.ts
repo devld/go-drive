@@ -307,8 +307,9 @@ declare const encUtils: {
 };
 
 declare interface EntryTreeNode {
-  entry: DriveEntry;
-  children?: EntryTreeNode[];
+  Entry: DriveEntry;
+  Children?: EntryTreeNode[];
+  Excluded?: boolean;
 }
 
 declare function buildEntriesTree(
@@ -317,7 +318,14 @@ declare function buildEntriesTree(
   byteProgress?: boolean
 ): EntryTreeNode;
 
+declare function findEntries(
+  ctx: TaskCtx,
+  root: DriveInstance,
+  pattern: string,
+  bytesProgress?: boolean
+): DriveEntry[];
+
 declare function flattenEntriesTree(
   node: EntryTreeNode,
-  result?: EntryTreeNode[]
+  deepFirst?: boolean
 ): EntryTreeNode[];

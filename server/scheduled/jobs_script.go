@@ -49,7 +49,7 @@ func init() {
 }
 
 // ExecuteJobCode executes the code, and return the log and error
-func ExecuteJobCode(ctx context.Context, code string, ch *registry.ComponentsHolder, onLog func(string)) error {
+func ExecuteJobCode(ctx context.Context, code interface{}, ch *registry.ComponentsHolder, onLog func(string)) error {
 	vm := baseVM.Fork()
 	defer func() { _ = vm.Dispose() }()
 
@@ -62,13 +62,13 @@ func ExecuteJobCode(ctx context.Context, code string, ch *registry.ComponentsHol
 
 var defaultCodeValue = strings.TrimLeft(`
 // Available functions:
-// - cp: copy file/directory
-// - mv: move file/directory
-// - rm: delete file/directory
+// - cp: copy files/directories
+// - mv: move files/directories
+// - rm: delete files/directories
 // - ls: list directory
 // - mkdir: create a directory
 //
-// Or you can use 'rootDrive.Get()' to do any thing.
+// Or you can use 'rootDrive.Get()' to do anything.
 
 // See https://github.com/devld/go-drive/blob/master/docs/scripts/global.d.ts
 // See https://github.com/devld/go-drive/blob/master/docs/scripts/env/jobs.d.ts
@@ -79,6 +79,16 @@ var drive = rootDrive.Get()
 
 // do something
 
+// examples:
+// - Copy all '.js' files in 'a' to directory 'b'.
+// 	 'true' means overwrite when there are existing files.
+// cp('a/*.js', 'b', true)
+//
+// - Move all '.js' files in 'a' to directory 'b'.
+//   auto rename when there are existing files.
+// mv('a/*.js', 'b')
 
+// - Delete all '.js' files in 'a' (including those in subdirectories)
+// rm('a/**/*.js')
 
 `, "\t\n\r ")

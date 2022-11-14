@@ -348,7 +348,7 @@ func (dr *driveRoute) zipDownload(c *gin.Context) {
 
 	ctx := task.NewTaskContext(c.Request.Context())
 
-	entriesTrees := make([]drive_util.EntryNode, 0, len(entries))
+	entriesTrees := make([]drive_util.EntryTreeNode, 0, len(entries))
 	for _, entry := range entries {
 		rootNode, e := drive_util.BuildEntriesTree(ctx, entry, true)
 		if e != nil {

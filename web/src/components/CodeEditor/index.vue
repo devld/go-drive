@@ -99,7 +99,7 @@ onMounted(initEditor)
 <style lang="scss">
 .code-editor {
   height: 0;
-  min-height: 300px;
+  min-height: 500px;
   position: relative;
 }
 
@@ -118,5 +118,6 @@ onMounted(initEditor)
   display: flex;
   justify-content: center;
   align-items: center;
+  user-select: none;
 }
 </style>
