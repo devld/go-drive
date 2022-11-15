@@ -330,6 +330,7 @@ func InitAdminRoutes(
 
 	// save mounts
 	r.POST("/mount/*to", func(c *gin.Context) {
+		s := GetSession(c)
 		to := utils.CleanPath(c.Param("to"))
 		src := make([]mountSource, 0)
 		if e := c.Bind(&src); e != nil {
@@ -359,7 +360,10 @@ func InitAdminRoutes(
 		}
 		_ = rootDrive.ReloadMounts()
 		for _, m := range mounts {
-			bus.Publish(event.EntryUpdated, types.DriveListenerContext{}, path2.Join(*m.Path, m.Name), true)
+			bus.Publish(event.EntryUpdated, types.DriveListenerContext{
+				Session: &s,
+				Drive:   rootDrive.Get(),
+			}, path2.Join(*m.Path, m.Name), true)
 		}
 	})
 

@@ -50,7 +50,7 @@ func NewRootDrive(
 	if e := r.ReloadDrive(ctx, true); e != nil {
 		return nil, e
 	}
-	ch.Add("rootDrive", (types.IRootDrive)(r))
+	ch.Add("rootDrive", r)
 	return r, nil
 }
 

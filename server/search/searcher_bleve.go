@@ -132,10 +132,11 @@ func (s *BleveSearcher) Delete(path string) error {
 func (s *BleveSearcher) DeleteDir(ctx types.TaskCtx, dirPath string) error {
 	ctx.Total(1, false)
 	total := uint64(0)
-	if !utils.IsRootPath(dirPath) {
-		dirPath += "/"
+	dirIndexPath := dirPath
+	if !utils.IsRootPath(dirIndexPath) {
+		dirIndexPath += "/"
 	}
-	ps := bleve.NewPrefixQuery(dirPath)
+	ps := bleve.NewPrefixQuery(dirIndexPath)
 	for {
 		if e := ctx.Err(); e != nil {
 			return e

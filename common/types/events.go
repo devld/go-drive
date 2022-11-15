@@ -1,5 +1,6 @@
 package types
 
 type DriveListenerContext struct {
-	Session Session
+	Session *Session
+	Drive   IDrive
 }

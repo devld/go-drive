@@ -6,6 +6,7 @@ import (
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
 	"go-drive/common/types"
+	"go-drive/drive"
 	s "go-drive/script"
 	"strings"
 )
@@ -53,7 +54,7 @@ func ExecuteJobCode(ctx context.Context, code interface{}, ch *registry.Componen
 	vm := baseVM.Fork()
 	defer func() { _ = vm.Dispose() }()
 
-	vm.Set("rootDrive", s.NewRootDrive(vm, ch.Get("rootDrive").(types.IRootDrive)))
+	vm.Set("drive", s.NewDrive(vm, ch.Get("driveAccess").(*drive.Access).GetRootDrive()))
 	vm.Set("log", onLog)
 
 	_, e := vm.Run(ctx, code)
@@ -68,14 +69,13 @@ var defaultCodeValue = strings.TrimLeft(`
 // - ls: list directory
 // - mkdir: create a directory
 //
-// Or you can use 'rootDrive.Get()' to do anything.
+// Or you can use 'drive' to do anything.
 
 // See https://github.com/devld/go-drive/blob/master/docs/scripts/global.d.ts
 // See https://github.com/devld/go-drive/blob/master/docs/scripts/env/jobs.d.ts
 // See https://github.com/devld/go-drive/tree/master/docs/scripts/libs
 
 log('started...')
-var drive = rootDrive.Get()
 
 // do something
 
@@ -90,5 +90,8 @@ var drive = rootDrive.Get()
 
 // - Delete all '.js' files in 'a' (including those in subdirectories)
 // rm('a/**/*.js')
+
+// - Do something
+// drive.
 
 `, "\t\n\r ")

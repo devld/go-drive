@@ -1,6 +1,6 @@
 /// <reference path="../global.d.ts"/>
 
-declare const rootDrive: RootDrive;
+declare const drive: DriveInstance;
 
 declare function log(s: string): void;
 

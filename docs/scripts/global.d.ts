@@ -92,12 +92,6 @@ declare interface ContentURL {
   Proxy?: boolean;
 }
 
-declare interface RootDrive {
-  Get(): DriveInstance;
-  ReloadDrive(ctx: Context, ignoreFailure: boolean): void;
-  ReloadMounts(): void;
-}
-
 declare interface DriveInstance {
   Get(ctx: Context, path: string): DriveEntry;
   Save(

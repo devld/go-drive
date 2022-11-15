@@ -33,7 +33,8 @@ func init() {
 			move := params.GetBool("move")
 			override := params.GetBool("override")
 
-			drive := ch.Get("rootDrive").(*drive.RootDrive).Get()
+			drive := ch.Get("driveAccess").(*drive.Access).GetRootDrive()
+
 			for _, from := range src {
 				if from == "" {
 					continue
@@ -80,7 +81,7 @@ func init() {
 		Do: func(ctx context.Context, params types.SM, ch *registry.ComponentsHolder, log func(string)) error {
 			paths := strings.Split(params["paths"], "\n")
 
-			drive := ch.Get("rootDrive").(*drive.RootDrive).Get()
+			drive := ch.Get("driveAccess").(*drive.Access).GetRootDrive()
 			for _, p := range paths {
 				if p == "" {
 					continue
