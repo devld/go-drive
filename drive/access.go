@@ -80,7 +80,8 @@ func (da *Access) GetDrive(session types.Session, signer EntrySigner) (types.IDr
 	var drive types.IDrive = NewListenerWrapper(
 		NewPermissionWrapperDrive(da.rootDrive.Get(), da.perms.Filter(session), signer),
 		types.DriveListenerContext{
-			Session: session,
+			Session: &session,
+			Drive:   da.rootDrive.Get(),
 		},
 		da.bus,
 	)
@@ -92,7 +93,9 @@ func (da *Access) GetDrive(session types.Session, signer EntrySigner) (types.IDr
 }
 
 func (da *Access) GetRootDrive() types.IDrive {
-	return da.rootDrive.Get()
+	return NewListenerWrapper(da.rootDrive.Get(), types.DriveListenerContext{
+		Drive: da.rootDrive.Get(),
+	}, da.bus)
 }
 
 func (da *Access) GetPerms() utils.PermMap {

@@ -6,7 +6,6 @@
   >
     <template v-for="item in form" :key="item.field">
       <FormItem
-        v-if="item.field"
         :ref="addFieldsRef"
         v-model="data[item.field!]"
         :item="item"

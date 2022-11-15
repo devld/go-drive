@@ -6,37 +6,12 @@ import (
 	"go-drive/common/utils"
 )
 
-func NewRootDrive(vm *VM, rootDrive types.IRootDrive) RootDrive {
-	return RootDrive{vm, rootDrive}
-}
-
 func NewDrive(vm *VM, d types.IDrive) Drive {
 	return Drive{vm, d}
 }
 
 func NewEntry(vm *VM, e types.IEntry) Entry {
 	return Entry{vm, e}
-}
-
-type RootDrive struct {
-	vm *VM
-	d  types.IRootDrive
-}
-
-func (r RootDrive) Get() Drive {
-	return NewDrive(r.vm, r.d.Get())
-}
-
-func (r RootDrive) ReloadDrive(ctx interface{}, ignoreFailure bool) {
-	if e := r.d.ReloadDrive(GetContext(ctx), ignoreFailure); e != nil {
-		r.vm.ThrowError(e)
-	}
-}
-
-func (r RootDrive) ReloadMounts() {
-	if e := r.d.ReloadMounts(); e != nil {
-		r.vm.ThrowError(e)
-	}
 }
 
 type Drive struct {

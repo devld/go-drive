@@ -304,7 +304,7 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 	return nil
 }
 
-func (s *Service) onUpdated(_ types.DriveListenerContext, path string, includeDescendants bool) {
+func (s *Service) onUpdated(dc types.DriveListenerContext, path string, includeDescendants bool) {
 	if s.checkEnabled() != nil {
 		return
 	}
@@ -312,7 +312,7 @@ func (s *Service) onUpdated(_ types.DriveListenerContext, path string, includeDe
 		_, _ = s.TriggerIndexAll(path, true)
 	} else {
 		_, _ = s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
-			entry, e := s.drive.Get().Get(ctx, path)
+			entry, e := dc.Drive.Get(ctx, path)
 			if e != nil {
 				return nil, e
 			}
@@ -325,7 +325,7 @@ func (s *Service) onUpdated(_ types.DriveListenerContext, path string, includeDe
 	}
 }
 
-func (s *Service) onDeleted(_ types.DriveListenerContext, path string) {
+func (s *Service) onDeleted(dc types.DriveListenerContext, path string) {
 	if s.checkEnabled() != nil {
 		return
 	}

@@ -1,7 +1,6 @@
 /// <reference path="../../docs/scripts/env/jobs.d.ts"/>
 
 function __copyOrMove__(isMove, from, to, override) {
-  var drive = rootDrive.Get();
   var ctx = newTaskCtx(newContext());
 
   var fromEntries = findEntries(ctx, drive, from);
@@ -26,7 +25,6 @@ function mv(from, to, override) {
 }
 
 function rm(path) {
-  var drive = rootDrive.Get();
   var ctx = newTaskCtx(newContext());
   var entries = findEntries(ctx, drive, path);
   for (var i = entries.length - 1; i >= 0; i--) {
@@ -39,11 +37,9 @@ function rm(path) {
 }
 
 function ls(path) {
-  var drive = rootDrive.Get();
   return drive.List(newContext(), path);
 }
 
 function mkdir(path) {
-  var drive = rootDrive.Get();
   return drive.MakeDir(newContext(), path);
 }
