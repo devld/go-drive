@@ -27,18 +27,18 @@
   </div>
 </template>
 <script setup lang="ts">
-import { filename as filenameFn, filenameExt } from '@/utils'
 import { getContent } from '@/api'
-import TextEditor from '@/components/TextEditor/index.vue'
-import CodeEditor from '@/components/CodeEditor/index.vue'
-import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import uploadManager from '@/api/upload-manager'
-import { alert } from '@/utils/ui-utils'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Entry } from '@/types'
-import { ApiError } from '@/utils/http'
-import { EntryHandlerContext } from '../types'
+import CodeEditor from '@/components/CodeEditor/index.vue'
 import { getLang } from '@/components/CodeEditor/mapping'
+import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
+import TextEditor from '@/components/TextEditor/index.vue'
+import { Entry } from '@/types'
+import { filename as filenameFn, filenameExt } from '@/utils'
+import { ApiError } from '@/utils/http'
+import { alert } from '@/utils/ui-utils'
+import { computed, nextTick, ref, watch } from 'vue'
+import { EntryHandlerContext } from '../types'
 
 const props = defineProps({
   entry: {
@@ -136,12 +136,6 @@ const onKeyDown = (e: KeyboardEvent) => {
   }
 }
 
-const onWindowResize = () => {
-  if (window.innerWidth <= 800) {
-    el.value!.style.height = `${window.innerHeight}px`
-  }
-}
-
 watch(
   () => content.value,
   () => {
@@ -149,20 +143,12 @@ watch(
   }
 )
 
-onMounted(() => {
-  window.addEventListener('resize', onWindowResize)
-  onWindowResize()
-})
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', onWindowResize)
-})
-
 loadFile()
 </script>
 <style lang="scss">
 .text-edit-view {
   position: relative;
-  width: 800px;
+  width: 90vw;
   height: calc(100vh - 64px);
   padding-top: 48px;
   background-color: var(--secondary-bg-color);
@@ -207,7 +193,7 @@ loadFile()
   }
 }
 
-@media screen and (max-width: 800px) {
+@media screen and (max-width: 900px) {
   .text-edit-view {
     width: 100vw;
     height: 100vh;
