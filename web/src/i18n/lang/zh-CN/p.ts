@@ -7,6 +7,7 @@ export default {
     t_drives: '盘',
     t_jobs: '任务',
     t_misc: '其他',
+    t_statistics: '统计信息',
     save: '保存',
     site: {
       app_name: '站点标题',
@@ -128,6 +129,7 @@ export default {
         '配置某个路径中生成缩略图所使用的生成器 tag，每行一个规则。\n格式为: tag1,tag2:路径匹配规则\n其中，挂载路径和 chroot 路径将会被解析为绝对路径来进行匹配\n\n** 匹配零个或多个目录；\n* 匹配任意个数的非目录分隔符字符;\n? 匹配单个非目录分隔符字符。',
       thumbnail_mapping_placeholder: '例如: a,b:Pictures/**/*.jpg',
       thumbnail_mapping_invalid: '无效的映射规则',
+      download_options: '下载配置',
       proxy_max: '最大代理大小',
       proxy_max_desc:
         '最大允许通过代理下载的文件大小，可使用 b, k, m, g, t 单位',
@@ -137,7 +139,6 @@ export default {
       clean: '清除',
       clean_invalid: '清理无效的权限项/挂载项',
       clean_cache: '清除缓存',
-      statistics: '统计信息',
       refresh_in: '{n} 秒后刷新',
       invalid_path_cleaned: '已清理 {n} 个无效的路径',
       search_index: '文件索引',

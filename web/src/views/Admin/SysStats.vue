@@ -1,11 +1,10 @@
 <template>
-  <div class="section">
-    <h1 class="section-title">
-      {{ $t('p.admin.misc.statistics') }}
+  <div class="sys-stats">
+    <div class="header">
       <SimpleButton :loading="statLoading" @click="loadStats">
         {{ $t('p.admin.misc.refresh_in', { n: refreshCountDown }) }}
       </SimpleButton>
-    </h1>
+    </div>
     <div class="statistics">
       <table v-for="(s, i) in stats" :key="i" class="stat-item simple-table">
         <thead>
@@ -32,6 +31,7 @@ const refreshCountDown = ref(0)
 const statLoading = ref(false)
 
 const loadStats = async () => {
+  stopStatTimer()
   if (statLoading.value) return
   statLoading.value = true
   try {
@@ -60,7 +60,6 @@ const statRefreshTimer = () => {
   refreshCountDown.value--
   if (refreshCountDown.value <= 0) {
     loadStats()
-    stopStatTimer()
   }
 }
 
@@ -71,6 +70,14 @@ onBeforeUnmount(() => {
 })
 </script>
 <style lang="scss">
+.sys-stats {
+  padding: 16px;
+
+  .header {
+    margin: 0 0 16px;
+  }
+}
+
 .statistics {
   display: flex;
   align-items: flex-start;

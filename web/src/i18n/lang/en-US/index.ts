@@ -19,6 +19,7 @@ export default {
       drives: 'Drives',
       jobs: 'Jobs',
       misc: 'Misc',
+      statistics: 'Statistics',
     },
   },
   md: {

@@ -7,6 +7,7 @@ export default {
     t_drives: 'Drives',
     t_jobs: 'Jobs',
     t_misc: 'Misc',
+    t_statistics: 'Statistics',
     save: 'Save',
     site: {
       app_name: 'Site Title',
@@ -132,6 +133,7 @@ export default {
         'Configure the tag used to match thumbnails generator in a path, one rule per line. The format is: tag1,tag2:path-pattern\nThe mounted path and chrooted path will be resolved to an absolute path for matching\n\n** matches zero or more directories;\n* matches any sequence of non-path-separators;\n? matches any single non-path-separator character.',
       thumbnail_mapping_placeholder: 'Example: a,b:Pictures/**/*.jpg',
       thumbnail_mapping_invalid: 'Invalid mapping pattern',
+      download_options: 'Download Options',
       proxy_max: 'Max Proxy Size',
       proxy_max_desc:
         'Maximum allowed file size for downloading via proxy. Units: b, k, m, g, t',
@@ -141,7 +143,6 @@ export default {
       clean: 'Clean',
       clean_invalid: 'Clean Invalid Permissions and Mounts',
       clean_cache: 'Clean Cache',
-      statistics: 'Statistics',
       refresh_in: 'Refresh in {n}s',
       invalid_path_cleaned: '{n} invalid paths cleaned',
       search_index: 'Files Index',

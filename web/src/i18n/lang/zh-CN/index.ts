@@ -19,6 +19,7 @@ export default {
       drives: '盘',
       jobs: '任务',
       misc: '其他',
+      statistics: '统计信息',
     },
   },
   md: {
