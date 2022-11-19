@@ -34,6 +34,7 @@ const menus = [
   { name: t('p.admin.t_drives'), path: '/admin/drives' },
   { name: t('p.admin.t_jobs'), path: '/admin/jobs' },
   { name: t('p.admin.t_misc'), path: '/admin/misc' },
+  { name: t('p.admin.t_statistics'), path: '/admin/stats' },
 ]
 
 const currentMenu = computed(() => router.currentRoute.value.path)

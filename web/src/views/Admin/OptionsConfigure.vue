@@ -1,54 +1,89 @@
 <template>
-  <div class="section">
-    <h1 class="section-title">
-      {{ title }}
-      <Icon v-if="loading" class="loading-icon" svg="#icon-loading" />
-    </h1>
+  <div class="options-configure">
+    <details
+      v-for="(form, i) in forms"
+      :key="i"
+      class="options-group"
+      :open="form.defaultOpen"
+    >
+      <summary>
+        <h3 class="options-group-title">
+          {{ form.title }}
+          <Icon v-if="loading" class="loading-icon" svg="#icon-loading" />
+        </h3>
+      </summary>
 
-    <div class="config-form">
-      <SimpleForm ref="configFormEl" v-model="configValue" :form="form" />
-      <SimpleButton :loading="saving" @click="saveConfig">{{
-        $t('p.admin.save')
-      }}</SimpleButton>
-    </div>
+      <div class="options-form">
+        <SimpleForm
+          ref="configFormElsSet"
+          v-model="configValues[i]"
+          :form="form.form"
+        />
+      </div>
+    </details>
+
+    <SimpleButton :loading="saving" :disabled="loading" @click="saveConfig">{{
+      $t('p.admin.save')
+    }}</SimpleButton>
   </div>
 </template>
 <script setup lang="ts">
 import { getOptions, setOptions } from '@/api/admin'
 import { FormItem } from '@/types'
 import { alert } from '@/utils/ui-utils'
-import { ref } from 'vue'
+import { onUpdated, ref, watch } from 'vue'
+
+export interface OptionsForm {
+  title?: I18nText
+  form: FormItem[]
+  defaultOpen?: boolean
+}
 
 const props = defineProps({
-  title: {
-    type: String,
-    required: true,
-  },
-  form: {
-    type: Array as PropType<FormItem[]>,
+  forms: {
+    type: Object as PropType<OptionsForm[]>,
     required: true,
   },
 })
 
-const configFormEl = ref<InstanceType<SimpleFormType> | null>(null)
+const configFormEls: InstanceType<SimpleFormType>[] = []
+const configFormElsSet = (el: InstanceType<SimpleFormType>) =>
+  configFormEls.push(el)
+
+onUpdated(() => configFormEls.splice(0))
+
 const loading = ref(false)
 const saving = ref(false)
-const configValue = ref<O<string>>({})
+const configValues = ref<O<string>[]>([])
 
 const loadConfig = async () => {
+  const value = {} as O<string>
+  props.forms.forEach(() => {
+    configValues.value.push(value)
+  })
+
   loading.value = true
   try {
-    const opts = await getOptions(...props.form.map((f) => f.field!))
-    Object.assign(configValue.value, opts)
+    const opts = await getOptions(
+      ...props.forms.flatMap((f) => f.form.map((ff) => ff.field!))
+    )
 
-    props.form.forEach((item) => {
-      if (
-        !configValue.value[item.field!] &&
-        item.defaultValue &&
-        item.fillDefaultIfEmpty
-      ) {
-        configValue.value[item.field!] = item.defaultValue
-      }
+    props.forms.forEach((form, i) => {
+      const value = configValues.value[i]
+
+      form.form.forEach((item) => {
+        value[item.field!] = opts[item.field!]
+      })
+
+      form.form.forEach((item) => {
+        if (
+          !value[item.field!] &&
+          item.defaultValue &&
+          item.fillDefaultIfEmpty
+        ) {
+          value[item.field!] = item.defaultValue
+        }
+      })
     })
   } catch (e: any) {
     alert(e.message)
@@ -59,13 +94,15 @@ const loadConfig = async () => {
 
 const saveConfig = async () => {
   try {
-    await configFormEl.value!.validate()
+    await Promise.all(configFormEls.map((f) => f.validate()))
   } catch {
     return
   }
   saving.value = true
   try {
-    await setOptions(configValue.value)
+    await setOptions(
+      configValues.value.reduce((p, c) => Object.assign(p, c), {})
+    )
   } catch (e: any) {
     alert(e.message)
   } finally {
@@ -73,5 +110,24 @@ const saveConfig = async () => {
   }
 }
 
+watch(() => props.forms, loadConfig)
 loadConfig()
 </script>
+
+<style lang="scss">
+.options-configure {
+  .options-group {
+    &:not(:last-child) {
+      margin-bottom: 16px;
+    }
+  }
+
+  .options-group-title {
+    display: inline-block;
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: normal;
+    cursor: pointer;
+  }
+}
+</style>
