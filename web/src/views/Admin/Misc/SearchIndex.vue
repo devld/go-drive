@@ -1,6 +1,6 @@
 <template>
   <div class="section">
-    <h1 class="section-title">{{ $t('p.admin.misc.search_index') }}</h1>
+    <h3 class="section-title">{{ $t('p.admin.misc.search_index') }}</h3>
 
     <template v-if="searchEnabled">
       <div class="search-index-submit">

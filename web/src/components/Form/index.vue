@@ -8,7 +8,7 @@
       <div
         v-if="item.type === 'md'"
         v-markdown="item.description"
-        class="form-markdown markdown-body"
+        class="form-item form-markdown markdown-body"
       ></div>
 
       <FormItem
@@ -115,7 +115,7 @@ fillDefaultValue()
   .form-item {
     width: 232px;
   }
-  
+
   .form-markdown {
     width: 100%;
   }

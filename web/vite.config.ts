@@ -60,7 +60,10 @@ function readEnvDeclarations() {
   const readDeclarations = (dir: string) => {
     return fs
       .readdirSync(dir)
-      .filter((name) => fs.statSync(path.join(dir, name)).isFile())
+      .filter(
+        (name) =>
+          name.endsWith('.d.ts') && fs.statSync(path.join(dir, name)).isFile()
+      )
       .map((name) => ({
         name: name.substring(0, name.length - 5), // .d.ts
         content: fs.readFileSync(path.join(dir, name)).toString('utf-8'),

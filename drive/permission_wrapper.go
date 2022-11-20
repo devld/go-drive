@@ -233,7 +233,7 @@ func (p *permissionWrapperEntry) Meta() types.EntryMeta {
 	meta.Readable = meta.Readable && p.permission.Readable()
 	meta.Writable = meta.Writable && p.permission.Writable()
 	if p.accessKey != "" {
-		meta.Props = utils.CopyMap(meta.Props, nil)
+		meta.Props = utils.MapCopy(meta.Props, nil)
 		meta.Props["accessKey"] = p.accessKey
 	}
 	return meta

@@ -89,7 +89,7 @@ func (w *DriveFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	if e != nil {
 		return nil, mapError(e)
 	}
-	return utils.MapArray(entries, func(t *types.IEntry) *fs.DirEntry {
+	return utils.ArrayMap(entries, func(t *types.IEntry) *fs.DirEntry {
 		var a fs.DirEntry = entryToFileInfo(*t).(entryFileInfo)
 		return &a
 	}), nil
@@ -365,7 +365,7 @@ func (w *driveFSFile) ReadDir(n int) ([]fs.DirEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	return utils.MapArray(r, func(t *fs.FileInfo) *fs.DirEntry {
+	return utils.ArrayMap(r, func(t *fs.FileInfo) *fs.DirEntry {
 		var a fs.DirEntry = (*t).(entryFileInfo)
 		return &a
 	}), nil

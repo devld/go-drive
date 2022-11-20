@@ -11,6 +11,41 @@ export default {
     save: 'Save',
     site: {
       app_name: 'Site Title',
+      anonymous_root_path: 'Anonymous Root Path',
+      anonymous_root_path_desc:
+        'Restrict non-logged-in users to access resources in this directory only, with paths that do not start with /',
+      file_preview_config: 'File Preview config',
+      office_preview_enabled: 'Office Preview',
+      office_preview_enabled_desc:
+        'Enable office files preview via online services provided by Microsoft and Google',
+      text_file_exts: 'Text file extensions',
+      text_file_exts_desc:
+        'List of text file extensions supported for viewing and editing, separated by comma',
+      image_file_exts: 'Image file extensions',
+      image_file_exts_desc:
+        'List of supported image file extensions, separated by comma',
+      audio_file_exts: 'Audio file extensions',
+      audio_file_exts_desc:
+        'List of supported audio file extensions, separated by comma',
+      video_file_exts: 'Video file extensions',
+      video_file_exts_desc:
+        'List of supported video file extensions, separated by comma',
+      monaco_editor_exts: 'Use the Monaco editor',
+      monaco_editor_exts_desc:
+        'Comma-separated file extensions, which will be opened using the Monaco editor',
+      thumbnail_config: 'Thumbnail config',
+      thumbnail_mapping: 'Thumbnail Generator Mapping',
+      thumbnail_mapping_tips:
+        'Configure the tag used to match thumbnails generator in a path, one rule per line. The format is: tag1,tag2:path-pattern\nThe mounted path and chrooted path will be resolved to an absolute path for matching\n\n** matches zero or more directories;\n* matches any sequence of non-path-separators;\n? matches any single non-path-separator character.',
+      thumbnail_mapping_placeholder: 'Example: a,b:Pictures/**/*.jpg',
+      thumbnail_mapping_invalid: 'Invalid mapping pattern',
+      download_options: 'Download Options',
+      proxy_max: 'Max Proxy Size',
+      proxy_max_desc:
+        'Maximum allowed file size for downloading via proxy. Units: b, k, m, g, t',
+      zip_max_size: 'Maximum allowed size for zip downloads',
+      zip_max_size_desc:
+        'Maximum total size of files allowed to be packaged and downloaded, Units: b, k, m, g, t',
     },
     drive: {
       reload_drives: 'Reload drives',
@@ -105,41 +140,6 @@ export default {
     },
     misc: {
       permission_of_root: 'Permission of root',
-      anonymous_root_path: 'Anonymous Root Path',
-      anonymous_root_path_desc:
-        'Restrict non-logged-in users to access resources in this directory only, with paths that do not start with /',
-      file_preview_config: 'File Preview config',
-      office_preview_enabled: 'Office Preview',
-      office_preview_enabled_desc:
-        'Enable office files preview via online services provided by Microsoft and Google',
-      text_file_exts: 'Text file extensions',
-      text_file_exts_desc:
-        'List of text file extensions supported for viewing and editing, separated by comma',
-      image_file_exts: 'Image file extensions',
-      image_file_exts_desc:
-        'List of supported image file extensions, separated by comma',
-      audio_file_exts: 'Audio file extensions',
-      audio_file_exts_desc:
-        'List of supported audio file extensions, separated by comma',
-      video_file_exts: 'Video file extensions',
-      video_file_exts_desc:
-        'List of supported video file extensions, separated by comma',
-      monaco_editor_exts: 'Use the Monaco editor',
-      monaco_editor_exts_desc:
-        'Comma-separated file extensions, which will be opened using the Monaco editor',
-      thumbnail_config: 'Thumbnail config',
-      thumbnail_mapping: 'Thumbnail Generator Mapping',
-      thumbnail_mapping_tips:
-        'Configure the tag used to match thumbnails generator in a path, one rule per line. The format is: tag1,tag2:path-pattern\nThe mounted path and chrooted path will be resolved to an absolute path for matching\n\n** matches zero or more directories;\n* matches any sequence of non-path-separators;\n? matches any single non-path-separator character.',
-      thumbnail_mapping_placeholder: 'Example: a,b:Pictures/**/*.jpg',
-      thumbnail_mapping_invalid: 'Invalid mapping pattern',
-      download_options: 'Download Options',
-      proxy_max: 'Max Proxy Size',
-      proxy_max_desc:
-        'Maximum allowed file size for downloading via proxy. Units: b, k, m, g, t',
-      zip_max_size: 'Maximum allowed size for zip downloads',
-      zip_max_size_desc:
-        'Maximum total size of files allowed to be packaged and downloaded, Units: b, k, m, g, t',
       clean: 'Clean',
       clean_invalid: 'Clean Invalid Permissions and Mounts',
       clean_cache: 'Clean Cache',
@@ -164,6 +164,14 @@ export default {
       search_index_stop: 'Stop',
       search_op_index: 'Index',
       search_op_delete: 'Delete',
+      extra_drive: 'Instal Extra Drive',
+      extra_drive_name: 'Name',
+      extra_drive_scripts: 'Scripts',
+      extra_drive_ops: 'Operations',
+      extra_drive_install: 'Install',
+      extra_drive_uninstall: 'Remove',
+      extra_drive_uninstall_confirm: 'Confirm deletion？',
+      extra_drive_refresh_repository: 'Re-pull from Repository',
     },
     p_edit: {
       subject: 'Subject',

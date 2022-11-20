@@ -92,3 +92,15 @@ export interface JobExecution {
   logs?: string
   errorMsg?: string
 }
+
+export interface AvailableDriveScript {
+  name: string
+  driveUrl: string
+  driveUploaderUrl?: string
+}
+
+export interface InstalledDriveScript {
+  name: string
+  displayName: string
+  description?: string
+}

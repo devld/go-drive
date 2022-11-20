@@ -58,7 +58,7 @@ func vm_findEntries(vm *VM, args Values) interface{} {
 	if e != nil {
 		vm.ThrowError(e)
 	}
-	return utils.MapArray(r, func(t *types.IEntry) *Entry {
+	return utils.ArrayMap(r, func(t *types.IEntry) *Entry {
 		a := NewEntry(vm, *t)
 		return &a
 	})

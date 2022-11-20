@@ -113,7 +113,7 @@ func (sd *ScriptDrive) List(ctx context.Context, path string) ([]types.IEntry, e
 	if arr == nil {
 		panic("invalid value got from drive")
 	}
-	return utils.MapArray(arr, func(t **s.Value) *types.IEntry {
+	return utils.ArrayMap(arr, func(t **s.Value) *types.IEntry {
 		var a types.IEntry = sd.valueToEntry(*t)
 		return &a
 	}), nil

@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
 	"go-drive/common/event"
@@ -10,12 +11,16 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
+	"go-drive/drive/script"
 	"go-drive/server/search"
 	"go-drive/storage"
+	"os"
 	path2 "path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +28,7 @@ import (
 func InitAdminRoutes(
 	r gin.IRouter,
 	ch *registry.ComponentsHolder,
+	config common.Config,
 	bus event.Bus,
 	access *drive.Access,
 	rootDrive *drive.RootDrive,
@@ -497,6 +503,83 @@ func InitAdminRoutes(
 			return
 		}
 		SetResult(c, value)
+	})
+
+	// endregion
+
+	// region script drives
+
+	scriptDriveRoutes := r.Group("/scripts")
+	driveRepositoryLock := sync.Mutex{}
+
+	// get available drives from repository
+	scriptDriveRoutes.GET("/available", func(c *gin.Context) {
+		driveRepositoryLock.Lock()
+		defer driveRepositoryLock.Unlock()
+
+		cacheFile := filepath.Join(config.TempDir, "drives-repository-cache.json")
+
+		forceLoad := utils.ToBool(c.Query("force"))
+		var result []script.AvailableDriveScript = nil
+
+		if !forceLoad {
+			if data, e := os.ReadFile(cacheFile); e == nil {
+				temp := make([]script.AvailableDriveScript, 0)
+				if e := json.Unmarshal(data, &temp); e == nil {
+					result = temp
+				}
+			}
+		}
+
+		if result == nil {
+			scripts, e := script.ListAvailableScriptsFromRepository(c.Request.Context(), config.DriveRepositoryURL)
+			if e != nil {
+				_ = c.Error(e)
+				return
+			}
+			result = scripts
+
+			data, e := json.Marshal(scripts)
+			if e != nil {
+				_ = c.Error(e)
+				return
+			}
+			if e := os.WriteFile(cacheFile, data, 0644); e != nil {
+				_ = c.Error(e)
+				return
+			}
+		}
+		SetResult(c, result)
+	})
+
+	// get installed drives
+	scriptDriveRoutes.GET("/installed", func(c *gin.Context) {
+		scripts, e := script.ListDriveScripts(config)
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, scripts)
+	})
+
+	scriptDriveRoutes.POST("/install", func(c *gin.Context) {
+		ads := script.AvailableDriveScript{}
+		if e := c.Bind(&ads); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		if e := script.InstallDriveScript(c.Request.Context(), config, ads); e != nil {
+			_ = c.Error(e)
+			return
+		}
+	})
+
+	scriptDriveRoutes.DELETE("/uninstall", func(c *gin.Context) {
+		name := c.Query("name")
+		if e := script.UninstallDriveScript(config, name); e != nil {
+			_ = c.Error(e)
+			return
+		}
 	})
 
 	// endregion

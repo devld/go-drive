@@ -1,6 +1,6 @@
 <template>
   <div class="section">
-    <h1 class="section-title">{{ $t('p.admin.misc.clean_cache') }}</h1>
+    <h3 class="section-title">{{ $t('p.admin.misc.clean_cache') }}</h3>
     <SimpleFormItem
       v-model="cacheSelectedDrive"
       class="cache-clean-form-item"

@@ -14,7 +14,7 @@ type scriptDriveCache struct {
 }
 
 func (sc *scriptDriveCache) PutEntries(entries []scriptEntryStruct, ttl time.Duration) {
-	if e := sc.c.PutEntries(utils.MapArray(entries, structToEntry), ttl); e != nil {
+	if e := sc.c.PutEntries(utils.ArrayMap(entries, structToEntry), ttl); e != nil {
 		sc.vm.ThrowError(e)
 	}
 }
@@ -26,7 +26,7 @@ func (sc *scriptDriveCache) PutEntry(entry scriptEntryStruct, ttl time.Duration)
 }
 
 func (sc *scriptDriveCache) PutChildren(parentPath string, entries []scriptEntryStruct, ttl time.Duration) {
-	if e := sc.c.PutChildren(parentPath, utils.MapArray(entries, structToEntry), ttl); e != nil {
+	if e := sc.c.PutChildren(parentPath, utils.ArrayMap(entries, structToEntry), ttl); e != nil {
 		sc.vm.ThrowError(e)
 	}
 }
