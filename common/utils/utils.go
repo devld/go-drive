@@ -207,7 +207,34 @@ func flattenStringMap(prefix string, val interface{}, separator string, result m
 	result[prefix] = fmt.Sprintf("%v", val)
 }
 
-func CopyMap[K comparable, V any](m map[K]V, dest map[K]V) map[K]V {
+func ArrayMap[TF any, TT any](a []TF, convert func(*TF) *TT) []TT {
+	r := make([]TT, len(a))
+	for i := range a {
+		r[i] = *convert(&a[i])
+	}
+	return r
+}
+
+func ArrayFind[T any](a []T, matches func(T, int) bool) (ret T, ok bool) {
+	for i := range a {
+		if matches(a[i], i) {
+			ret = a[i]
+			ok = true
+			return a[i], true
+		}
+	}
+	return
+}
+
+func ArrayKeyBy[KT comparable, T any](a []T, keyFn func(T, int) KT) map[KT]T {
+	m := make(map[KT]T, len(a))
+	for i := range a {
+		m[keyFn(a[i], i)] = a[i]
+	}
+	return m
+}
+
+func MapCopy[K comparable, V any](m map[K]V, dest map[K]V) map[K]V {
 	if dest == nil {
 		dest = make(map[K]V, len(m))
 	}
@@ -215,14 +242,6 @@ func CopyMap[K comparable, V any](m map[K]V, dest map[K]V) map[K]V {
 		dest[k] = v
 	}
 	return dest
-}
-
-func MapArray[TF any, TT any](a []TF, convert func(*TF) *TT) []TT {
-	r := make([]TT, len(a))
-	for i := range a {
-		r[i] = *convert(&a[i])
-	}
-	return r
 }
 
 func MapKeys[K comparable, V any](m map[K]V) []K {

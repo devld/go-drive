@@ -55,6 +55,10 @@ const (
 	DefaultSearcher          = "bleve"
 
 	DefaultConfigFile = "config.yml"
+
+	DefaultDrivesDir          = "script-drives"
+	DefaultDriveUploadersDir  = "drive-uploaders"
+	DefaultDriveRepositoryURL = "https://api.github.com/repos/devld/go-drive/contents/script-drives"
 )
 
 type Config struct {
@@ -74,6 +78,13 @@ type Config struct {
 	LangDir string `yaml:"lang-dir"`
 	// DefaultLang is the default language code
 	DefaultLang string `yaml:"default-lang"`
+
+	// DrivesDir is the location of the extra script drives
+	DrivesDir string `yaml:"drives-dir"`
+	// DriveUploadersDir is the location of the extra script drive's uploaders
+	DriveUploadersDir string `yaml:"drive-uploaders-dir"`
+	// DriveRepositoryURL is where to find and download script drives
+	DriveRepositoryURL string `yaml:"drive-repository-url"`
 
 	OAuthRedirectURI string `yaml:"oauth-redirect-uri"`
 
@@ -140,13 +151,18 @@ type SearchConfig struct {
 
 func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	config := Config{
-		Listen:            DefaultListen,
-		APIPath:           DefaultAPIPath,
-		WebPath:           DefaultWebPath,
-		DataDir:           DefaultDataDir,
-		WebDir:            DefaultWebDir,
-		LangDir:           DefaultLangDir,
-		DefaultLang:       DefaultLang,
+		Listen:      DefaultListen,
+		APIPath:     DefaultAPIPath,
+		WebPath:     DefaultWebPath,
+		DataDir:     DefaultDataDir,
+		WebDir:      DefaultWebDir,
+		LangDir:     DefaultLangDir,
+		DefaultLang: DefaultLang,
+
+		DrivesDir:          DefaultDrivesDir,
+		DriveUploadersDir:  DefaultDriveUploadersDir,
+		DriveRepositoryURL: DefaultDriveRepositoryURL,
+
 		OAuthRedirectURI:  DefaultOAuthRedirectURI,
 		MaxConcurrentTask: DefaultMaxConcurrentTask,
 		FreeFs:            DefaultFreeFs,

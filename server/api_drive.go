@@ -54,7 +54,7 @@ func InitDriveRoutes(
 		options:       optionsDAO,
 	}
 
-	scriptsDir, _ := config.GetDir("drive-uploaders", false)
+	scriptsDir, _ := config.GetDir(config.DriveUploadersDir, false)
 	router.Static("/drive-uploader", scriptsDir)
 
 	signatureAuthRoute := router.Group("/", SignatureAuth(signer, userDAO, false))
@@ -607,7 +607,7 @@ type entryJson struct {
 
 func newEntryJson(e types.IEntry, s types.Session) *entryJson {
 	entryMeta := e.Meta()
-	meta := utils.CopyMap(entryMeta.Props, nil)
+	meta := utils.MapCopy(entryMeta.Props, nil)
 	meta["writable"] = entryMeta.Writable
 	if entryMeta.Thumbnail != "" {
 		meta["thumbnail"] = entryMeta.Thumbnail

@@ -1,7 +1,7 @@
 // Qiniu
 // Qiniu Kodo
 
-/// <reference path="../../docs/scripts/env/drive.d.ts"/>
+/// <reference path="../docs/scripts/env/drive.d.ts"/>
 
 var utcOffset = dayjs().utcOffset();
 

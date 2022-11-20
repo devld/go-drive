@@ -19,7 +19,7 @@ func newValue(vm *VM, v otto.Value) *Value {
 }
 
 func newValues(vm *VM, vs []otto.Value) Values {
-	return Values{vm, utils.MapArray(vs, func(t *otto.Value) **Value {
+	return Values{vm, utils.ArrayMap(vs, func(t *otto.Value) **Value {
 		a := newValue(vm, *t)
 		return &a
 	})}

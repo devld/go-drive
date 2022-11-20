@@ -523,7 +523,7 @@ func (d *entryWrapper) Path() string {
 func (d *entryWrapper) Meta() types.EntryMeta {
 	meta := d.IEntry.Meta()
 	if d.mountAt != "" {
-		meta.Props = utils.CopyMap(meta.Props, nil)
+		meta.Props = utils.MapCopy(meta.Props, nil)
 		meta.Props["mountAt"] = d.mountAt
 	}
 	return meta

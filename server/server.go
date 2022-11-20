@@ -68,7 +68,7 @@ func InitServer(config common.Config,
 	if e := InitAuthRoutes(router, userAuth, tokenStore); e != nil {
 		return nil, e
 	}
-	if e := InitAdminRoutes(router, ch, bus, driveAccess, rootDrive, searcher, tokenStore, optionsDAO,
+	if e := InitAdminRoutes(router, ch, config, bus, driveAccess, rootDrive, searcher, tokenStore, optionsDAO,
 		userDAO, groupDAO, driveDAO, driveCacheDAO, driveDataDAO, permissionDAO, pathMountDAO); e != nil {
 		return nil, e
 	}

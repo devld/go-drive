@@ -1,4 +1,4 @@
-/// <reference path="./types.d.ts"/>
+/// <reference path="../docs/drive-uploaders/types.d.ts"/>
 
 /**
  * @param {UploadFactoryContext} ctx

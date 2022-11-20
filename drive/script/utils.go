@@ -1,7 +1,6 @@
 package script
 
 import (
-	"bufio"
 	"context"
 	_ "embed"
 	"go-drive/common"
@@ -14,8 +13,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
 
 	"golang.org/x/oauth2"
 )
@@ -37,8 +34,6 @@ func init() {
 
 	baseVM = vm
 }
-
-const scriptDir = "script-drives"
 
 var t = i18n.TPrefix("drive.script.")
 
@@ -78,8 +73,11 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 		return nil, e
 	}
 
-	scriptsPath, _ := driveUtils.Config.GetDir(scriptDir, false)
-	scripts, _ := readAvailableScripts(scriptsPath)
+	scripts, _ := ListDriveScripts(driveUtils.Config)
+	scriptOptions := (utils.ArrayMap(scripts, func(t *DriveScript) *types.FormItemOption {
+		a := types.FormItemOption{Value: t.Name + ".js", Name: t.DisplayName}
+		return &a
+	}))
 
 	initForm := make([]types.FormItem, 1)
 	initForm[0] = types.FormItem{
@@ -87,12 +85,19 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 		Label:       t("form.script.label"),
 		Description: t("form.script.description"),
 		Type:        "select",
-		Options:     &scripts,
+		Options:     &scriptOptions,
 		Required:    true,
 		Disabled:    cfg["_script"] != "",
 	}
 	values := make(types.SM, 1)
 	values["_script"] = cfg["_script"]
+
+	if cfg["_script"] != "" {
+		s, ok := utils.ArrayFind(scripts, func(s DriveScript, _ int) bool { return s.Name+".js" == cfg["_script"] })
+		if ok {
+			initForm = append(initForm, types.FormItem{Type: "md", Description: s.Description})
+		}
+	}
 
 	retCfg := &drive_util.DriveInitConfig{
 		Configured: false,
@@ -129,7 +134,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 	retCfg.Configured = vmCfg.Configured
 	retCfg.OAuth = vmCfg.OAuth
 	retCfg.Form = append(retCfg.Form, vmCfg.Form...)
-	utils.CopyMap(vmCfg.Value, retCfg.Value)
+	utils.MapCopy(vmCfg.Value, retCfg.Value)
 
 	return retCfg, nil
 }
@@ -262,7 +267,7 @@ func (or *oauthRespWrapper) Token() *oauth2.Token {
 }
 
 func createVm(config common.Config, script string) (*s.VM, error) {
-	scriptsPath, _ := config.GetDir(scriptDir, false)
+	scriptsPath, _ := config.GetDir(config.DrivesDir, false)
 	scriptBytes, e := os.ReadFile(filepath.Join(scriptsPath, script))
 	if e != nil {
 		return nil, e
@@ -272,52 +277,6 @@ func createVm(config common.Config, script string) (*s.VM, error) {
 
 	_, e = vm.Run(context.Background(), scriptBytes)
 	return vm, e
-}
-
-func readAvailableScripts(p string) ([]types.FormItemOption, error) {
-	entries, e := os.ReadDir(p)
-	if e != nil {
-		return []types.FormItemOption{}, e
-	}
-	result := make([]types.FormItemOption, 0)
-
-	for _, entry := range entries {
-		n := strings.ToLower(entry.Name())
-		if !strings.HasSuffix(n, ".js") {
-			continue
-		}
-
-		scriptFile, e := os.Open(filepath.Join(p, entry.Name()))
-		if e != nil {
-			continue
-		}
-		r := bufio.NewReader(scriptFile)
-		name := readMetaValue(r, entry.Name())
-		description := readMetaValue(r, "")
-		_ = scriptFile.Close()
-
-		result = append(result, types.FormItemOption{
-			Name:  name,
-			Value: entry.Name(),
-			Title: description,
-		})
-	}
-
-	return result, nil
-}
-
-var metaPrefixRegexp = regexp.MustCompile(`^\s*//\s*`)
-
-func readMetaValue(r *bufio.Reader, def string) string {
-	line, e := r.ReadBytes('\n')
-	if e != nil {
-		return def
-	}
-	temp := strings.TrimSpace(string(metaPrefixRegexp.ReplaceAll(line, []byte{})))
-	if temp != "" {
-		return temp
-	}
-	return def
 }
 
 func wrapReader(reader io.Reader) io.ReadCloser {

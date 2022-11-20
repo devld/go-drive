@@ -1,8 +1,10 @@
 import {
+  AvailableDriveScript,
   Drive,
   DriveFactoryConfig,
   DriveInitConfig,
   Group,
+  InstalledDriveScript,
   Job,
   JobDefinition,
   JobExecution,
@@ -161,5 +163,25 @@ export function deleteJobExecution(id: number) {
 export function deleteJobExecutions(jobId: number) {
   return http.delete<void>('/admin/jobs/execution', {
     params: { jobId },
+  })
+}
+
+export function listAvailableDriveScripts(force?: boolean) {
+  return http.get<AvailableDriveScript[]>('/admin/scripts/available', {
+    params: { force },
+  })
+}
+
+export function listInstalledDriveScripts() {
+  return http.get<InstalledDriveScript[]>('/admin/scripts/installed')
+}
+
+export function installDriveScript(s: AvailableDriveScript) {
+  return http.post<void>('/admin/scripts/install', s)
+}
+
+export function uninstallDriveScript(name: string) {
+  return http.delete<void>('/admin/scripts/uninstall', {
+    params: { name },
   })
 }

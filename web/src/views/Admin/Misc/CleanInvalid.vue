@@ -1,6 +1,6 @@
 <template>
   <div class="section">
-    <h1 class="section-title">{{ $t('p.admin.misc.clean_invalid') }}</h1>
+    <h3 class="section-title">{{ $t('p.admin.misc.clean_invalid') }}</h3>
     <SimpleButton :loading="cleaning" @click="cleanPermissionsAndMounts">
       {{ $t('p.admin.misc.clean') }}
     </SimpleButton>

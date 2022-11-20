@@ -1,6 +1,6 @@
 <template>
   <div class="section">
-    <h1 class="section-title">
+    <h3 class="section-title">
       {{ $t('p.admin.misc.permission_of_root') }}
       <SimpleButton
         :loading="saving"
@@ -9,7 +9,7 @@
       >
         {{ $t('p.admin.save') }}
       </SimpleButton>
-    </h1>
+    </h3>
     <PermissionsEditor
       ref="permissionsEditorEl"
       :path="rootPath"
