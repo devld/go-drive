@@ -166,7 +166,9 @@ export default {
       extra_drive_ops: '操作',
       extra_drive_install: '安装',
       extra_drive_uninstall: '删除',
+      extra_drive_edit: '编辑',
       extra_drive_uninstall_confirm: '确认删除？',
+      extra_drive_save: '保存',
       extra_drive_refresh_repository: '重新从仓库拉取',
     },
     p_edit: {

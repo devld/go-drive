@@ -170,7 +170,9 @@ export default {
       extra_drive_ops: 'Operations',
       extra_drive_install: 'Install',
       extra_drive_uninstall: 'Remove',
+      extra_drive_edit: 'Edit',
       extra_drive_uninstall_confirm: 'Confirm deletion？',
+      extra_drive_save: 'Save',
       extra_drive_refresh_repository: 'Re-pull from Repository',
     },
     p_edit: {

@@ -74,6 +74,72 @@ type DriveScript struct {
 	Description string `json:"description"`
 }
 
+type DriveScriptContent struct {
+	Drive    string `json:"drive"`
+	Uploader string `json:"uploader,omitempty"`
+}
+
+func GetDriveScript(config common.Config, name string) (DriveScriptContent, error) {
+	if name == "" {
+		return DriveScriptContent{}, err.NewBadRequestError("")
+	}
+
+	drivesDir, _ := config.GetDir(config.DrivesDir, false)
+	driveUploadersDir, _ := config.GetDir(config.DriveUploadersDir, false)
+	driveFile := filepath.Join(drivesDir, name+".js")
+	driveUploaderFile := filepath.Join(driveUploadersDir, name+".js")
+
+	r := DriveScriptContent{}
+	var e error
+
+	if exists, _ := utils.FileExists(driveFile); exists {
+		bytes, e := os.ReadFile(driveFile)
+		if e != nil {
+			return r, e
+		}
+		r.Drive = string(bytes)
+	} else {
+		return r, err.NewNotFoundError()
+	}
+
+	if exists, _ := utils.FileExists(driveUploaderFile); exists {
+		bytes, e := os.ReadFile(driveUploaderFile)
+		if e != nil {
+			return r, e
+		}
+		r.Uploader = string(bytes)
+	}
+
+	return r, e
+}
+
+func SaveDriveScript(config common.Config, name string, content DriveScriptContent) error {
+	if name == "" {
+		return err.NewBadRequestError("")
+	}
+	if content.Drive != "" {
+		drivesDir, e := config.GetDir(config.DrivesDir, true)
+		if e != nil {
+			return e
+		}
+		if e = os.WriteFile(filepath.Join(drivesDir, name+".js"), []byte(content.Drive), 0644); e != nil {
+			return e
+		}
+	}
+
+	if content.Uploader != "" {
+		driveUploadersDir, e := config.GetDir(config.DriveUploadersDir, true)
+		if e != nil {
+			return e
+		}
+		if e = os.WriteFile(filepath.Join(driveUploadersDir, name+".js"), []byte(content.Uploader), 0644); e != nil {
+			return e
+		}
+	}
+
+	return nil
+}
+
 func InstallDriveScript(ctx context.Context, config common.Config, s AvailableDriveScript) error {
 	if s.Name == "" || s.DriveURL == "" {
 		return err.NewBadRequestError("invalid installation request")
@@ -106,7 +172,7 @@ func UninstallDriveScript(config common.Config, name string) error {
 	}
 
 	drivesDir, _ := config.GetDir(config.DrivesDir, false)
-	driveUploadersDir, _ := config.GetDir(config.DriveUploadersDir, true)
+	driveUploadersDir, _ := config.GetDir(config.DriveUploadersDir, false)
 	driveFile := filepath.Join(drivesDir, name+".js")
 	driveUploaderFile := filepath.Join(driveUploadersDir, name+".js")
 	if exists, _ := utils.FileExists(driveFile); exists {
