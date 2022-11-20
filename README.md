@@ -8,16 +8,19 @@ Doc: [https://go-drive.top](https://go-drive.top)
 
 ## 功能
 
-- 基本的文件管理，拖拽/粘贴上传，拖拽管理文件
-- 基于用户/组的访问控制
-- 图片浏览
+- 文件管理，拖拽/粘贴上传，拖拽管理文件
+- 文件打包下载
+- 基于用户/组的权限控制
+- 图片浏览([PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe))
 - 音乐播放([APlayer](https://github.com/DIYgod/APlayer))
-- 文本编辑
+- 文本编辑([CodeMirror](https://github.com/codemirror/))
+- 代码编辑([Monaco Editor](https://github.com/microsoft/monaco-editor))
+- 展示缩略图
 - 路径挂载
-- 在 Drive 之间复制文件(夹)
 - Drive 管理界面
 - 文件搜索
 - 通过 WebDAV 访问
+- 定时任务([gocron](https://github.com/go-co-op/gocron))
 
 ## 目前支持的 Drives
 
@@ -28,6 +31,8 @@ Doc: [https://go-drive.top](https://go-drive.top)
 - S3 兼容的云存储
 - OneDrive
 - Google Drive
+- Dropbox(JavaScript)
+- 七牛云(JavaScript)
 
 ## 如何使用
 
@@ -53,20 +58,23 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 
 直接运行 `go-drive.exe` 即可
 
-默认用户为 `admin`，密码 `123456`
+> 默认用户为 `admin`，密码 `123456`
 
 ## Features
 
-- Basic file management, drag-and-drop/paste upload, drag-and-drop file management
-- User/group-based access control
-- Images gallery
-- Music Playback([APlayer](https://github.com/DIYgod/APlayer))
-- Text file editing
+- files management, drag-and-drop/paste upload, drag-and-drop file management
+- Zip package download
+- User/group-based permission control
+- Image gallery([PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe))
+- Music player([APlayer](https://github.com/DIYgod/APlayer))
+- Text Editor([CodeMirror](https://github.com/codemirror/))
+- Code Editor([Monaco Editor](https://github.com/microsoft/monaco-editor))
+- Thumbnails
 - Path mounting
-- Copy files/folders across drives
-- Drive-mapping management
+- Drive management
 - Files searching
-- Access via WebDAV
+- Access via WebDAV 
+- Scheduled Jobs([gocron](https://github.com/go-co-op/gocron))
 
 ## Currently supported drives
 
@@ -77,6 +85,8 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 - S3
 - OneDrive
 - Google Drive
+- Dropbox(JavaScript)
+- Qiniu(JavaScript)
 
 ## How to use
 
@@ -102,4 +112,4 @@ Download binary file from the [Release](https://github.com/devld/go-drive/releas
 
 Just run `go-drive.exe`
 
-Default user is `admin`, its password is `123456`
+> Default user is `admin`, its password is `123456`
