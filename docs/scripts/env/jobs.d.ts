@@ -11,6 +11,6 @@ declare function mv(from: string, to: string, override: boolean): DriveEntry;
 /** delete files */
 declare function rm(path: string): void;
 /** list directory */
-declare function ls(path: string, ignoreError?: boolean): DriveEntry[];
+declare function ls(path: string): DriveEntry[];
 /** create directory */
 declare function mkdir(path: string): DriveEntry;
