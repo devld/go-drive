@@ -55,21 +55,29 @@
               <td>
                 <SimpleButton
                   v-if="item.installed"
+                  icon="#icon-edit"
+                  :loading="item.loading"
+                  :disabled="loading"
+                  :title="$t('p.admin.misc.extra_drive_edit')"
+                  @click="editDrive(item)"
+                />
+                <SimpleButton
+                  v-if="item.installed"
                   type="danger"
                   icon="#icon-delete"
                   :loading="item.loading"
                   :disabled="loading"
+                  :title="$t('p.admin.misc.extra_drive_uninstall')"
                   @click="doUninstall(item)"
-                  >{{ $t('p.admin.misc.extra_drive_uninstall') }}</SimpleButton
-                >
+                />
                 <SimpleButton
                   v-else
                   icon="#icon-add"
                   :loading="item.loading"
                   :disabled="loading"
+                  :title="$t('p.admin.misc.extra_drive_install')"
                   @click="doInstall(item)"
-                  >{{ $t('p.admin.misc.extra_drive_install') }}</SimpleButton
-                >
+                />
               </td>
             </tr>
             <tr v-if="item.expanded">
@@ -81,9 +89,21 @@
         </tbody>
       </table>
     </div>
+
+    <DialogView v-model:show="edit.showing">
+      <div class="drive-script-editor-wrapper">
+        <DriveCodeEditor
+          v-if="edit.name"
+          :key="edit.name"
+          :name="edit.name"
+          @close="onScriptEditClose"
+        />
+      </div>
+    </DialogView>
   </div>
 </template>
 <script lang="ts" setup>
+import DriveCodeEditor from './DriveCodeEditor.vue'
 import { AvailableDriveScript } from '@/types'
 import {
   listAvailableDriveScripts,
@@ -92,7 +112,7 @@ import {
   uninstallDriveScript,
 } from '@/api/admin'
 import { alert, confirm } from '@/utils/ui-utils'
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { mapOf } from '@/utils'
 import { useI18n } from 'vue-i18n'
 
@@ -112,6 +132,11 @@ const { t } = useI18n()
 
 const loading = ref(false)
 const data = ref<DriveScript[]>([])
+
+const edit = reactive({
+  showing: false,
+  name: '',
+})
 
 const loadData = async (force?: boolean) => {
   data.value = []
@@ -201,6 +226,16 @@ const formatName = (item: DriveScript) => {
   return item.name
 }
 
+const editDrive = (item: DriveScript) => {
+  edit.name = item.name
+  edit.showing = true
+}
+
+const onScriptEditClose = () => {
+  edit.showing = false
+  edit.name = ''
+}
+
 loadData()
 </script>
 <style lang="scss">
@@ -224,5 +259,10 @@ loadData()
     color: inherit;
     color: var(--link-color);
   }
+}
+
+.drive-script-editor-wrapper {
+  width: 100vw;
+  height: 100vh;
 }
 </style>

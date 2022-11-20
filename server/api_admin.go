@@ -582,6 +582,27 @@ func InitAdminRoutes(
 		}
 	})
 
+	scriptDriveRoutes.GET("/content/:name", func(c *gin.Context) {
+		content, e := script.GetDriveScript(config, c.Param("name"))
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, content)
+	})
+
+	scriptDriveRoutes.PUT("/content/:name", func(c *gin.Context) {
+		content := script.DriveScriptContent{}
+		if e := c.Bind(&content); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		if e := script.SaveDriveScript(config, c.Param("name"), content); e != nil {
+			_ = c.Error(e)
+			return
+		}
+	})
+
 	// endregion
 
 	return nil

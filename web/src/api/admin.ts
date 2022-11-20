@@ -3,6 +3,7 @@ import {
   Drive,
   DriveFactoryConfig,
   DriveInitConfig,
+  DriveScriptContent,
   Group,
   InstalledDriveScript,
   Job,
@@ -184,4 +185,15 @@ export function uninstallDriveScript(name: string) {
   return http.delete<void>('/admin/scripts/uninstall', {
     params: { name },
   })
+}
+
+export function getDriveScriptContent(name: string) {
+  return http.get<DriveScriptContent>(`/admin/scripts/content/${name}`)
+}
+
+export function saveDriveScriptContent(
+  name: string,
+  content: Partial<DriveScriptContent>
+) {
+  return http.put(`/admin/scripts/content/${name}`, content)
 }

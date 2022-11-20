@@ -104,3 +104,8 @@ export interface InstalledDriveScript {
   displayName: string
   description?: string
 }
+
+export interface DriveScriptContent {
+  drive: string
+  uploader?: string
+}
