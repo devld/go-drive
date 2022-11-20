@@ -18,6 +18,13 @@ async function getRender() {
           return hljs.highlight(code, { language: validLanguage }).value
         },
       })
+
+      DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+        if ('target' in node) {
+          node.setAttribute('target', '_blank')
+        }
+      })
+
       marked = (s) => {
         return DOMPurify.sanitize(marked_.parse(s))
       }

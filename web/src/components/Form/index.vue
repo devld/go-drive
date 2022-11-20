@@ -5,7 +5,14 @@
     @submit="onSubmit"
   >
     <template v-for="item in form" :key="item.field">
+      <div
+        v-if="item.type === 'md'"
+        v-markdown="item.description"
+        class="form-markdown markdown-body"
+      ></div>
+
       <FormItem
+        v-else
         :ref="addFieldsRef"
         v-model="data[item.field!]"
         :item="item"
@@ -107,6 +114,10 @@ fillDefaultValue()
 
   .form-item {
     width: 232px;
+  }
+  
+  .form-markdown {
+    width: 100%;
   }
 }
 </style>

@@ -61,10 +61,12 @@ type FormItemCode struct {
 
 type FormItem struct {
 	Label string `json:"label" i18n:""`
-	// Type: textarea, text, password, checkbox, select, form, code
-	Type        string `json:"type"`
-	Field       string `json:"field"`
-	Required    bool   `json:"required,omitempty"`
+	// Type: md, textarea, text, password, checkbox, select, form, code
+	Type     string `json:"type"`
+	Field    string `json:"field"`
+	Required bool   `json:"required,omitempty"`
+	// Description is the description of this field.
+	// Description is the markdown content if Type if `md`
 	Description string `json:"description,omitempty" i18n:""`
 	Disabled    bool   `json:"disabled,omitempty"`
 

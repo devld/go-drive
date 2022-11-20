@@ -5,6 +5,7 @@ export interface ApiError {
 }
 
 export type FormItemType =
+  | 'md'
   | 'textarea'
   | 'text'
   | 'password'

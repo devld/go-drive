@@ -180,6 +180,7 @@ declare function http(
 ): HttpResponse;
 
 declare type FormItemType =
+  | 'md'
   | "textarea"
   | "text"
   | "password"
