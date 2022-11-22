@@ -24,6 +24,7 @@ type IndexFilter = func(entry types.IEntry) bool
 const (
 	indexBatchSize  = 1000
 	filterOptionKey = "search.filter"
+	minimumPageSize = 10
 	initialPageSize = 10
 	pageSizeStep    = 10
 	maxPageSize     = 100
@@ -90,17 +91,18 @@ func (s *Service) Search(ctx context.Context, path string, query string,
 	from := next
 	size := initialPageSize
 	var more bool
-	var items []types.EntrySearchResultItem
-	var e error
+	result := make([]types.EntrySearchResultItem, 0, size)
 	for {
 		if e := ctx.Err(); e != nil {
 			return types.EntrySearchResult{}, e
 		}
-		items, more, e = s.search(path, query, from, size, perms)
+		items, hasMore, e := s.search(path, query, from, size, perms)
 		if e != nil {
 			return types.EntrySearchResult{}, e
 		}
-		if len(items) > 0 || !more {
+		more = hasMore
+		result = append(result, items...)
+		if len(result) >= minimumPageSize || !hasMore {
 			break
 		}
 		if size >= maxPageSize {
@@ -114,7 +116,7 @@ func (s *Service) Search(ctx context.Context, path string, query string,
 		nextNext = from + size
 	}
 	return types.EntrySearchResult{
-		Items: items,
+		Items: result,
 		Next:  nextNext,
 	}, nil
 }
