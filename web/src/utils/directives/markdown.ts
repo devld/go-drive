@@ -12,7 +12,7 @@ async function getRender() {
     ([{ marked: marked_ }, { default: hljs }, { default: DOMPurify }]) => {
       marked_.setOptions({
         highlight: (code, language) => {
-          const validLanguage = hljs.getLanguage(language)
+          const validLanguage: string = hljs.getLanguage(language)
             ? language
             : 'plaintext'
           return hljs.highlight(code, { language: validLanguage }).value
@@ -22,6 +22,12 @@ async function getRender() {
       DOMPurify.addHook('afterSanitizeAttributes', (node) => {
         if ('target' in node) {
           node.setAttribute('target', '_blank')
+        }
+        if ('href' in node) {
+          const a = node as HTMLAnchorElement
+          a.dataset.href = a.getAttribute('href')!
+          a.href = 'javascript:;'
+          a.target = ''
         }
       })
 
@@ -33,6 +39,25 @@ async function getRender() {
   )
 }
 
+const onAnchorClicked = function (this: HTMLAnchorElement, e: MouseEvent) {
+  e.preventDefault()
+  const href = this.dataset.href
+  if (!href) return
+  if (href.startsWith('#')) {
+    const id = decodeURIComponent(href.substring(1))
+    const targetEl = document.getElementById(id)
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: 'smooth' })
+    }
+  } else {
+    const a = document.createElement('a')
+    a.target = '_blank'
+    a.rel = 'nofollow noopener noreferrer'
+    a.href = href
+    a.click()
+  }
+}
+
 const render: DirectiveHook = (el, binding) => {
   el._currentMarkdownContent = binding.value
   getRender().then(
@@ -40,6 +65,11 @@ const render: DirectiveHook = (el, binding) => {
       if (el._currentMarkdownContent === el._renderedMarkdownContent) return
       el.innerHTML = render(el._currentMarkdownContent)
       el._renderedMarkdownContent = el._currentMarkdownContent
+
+      const anchors = el.querySelectorAll('a[data-href]')
+      anchors.forEach((a: HTMLAnchorElement) => {
+        a.addEventListener('click', onAnchorClicked)
+      })
     },
     (e) => {
       console.error('markdown render error: ', e)
