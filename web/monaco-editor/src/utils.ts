@@ -38,6 +38,7 @@ export function setupJavaScript(opt: JavaScriptSetupOptions) {
   })
   monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
     allowNonTsExtensions: true,
+    allowJs: true,
     lib: opt.lib,
     target:
       JsTargets[opt.target] || monaco.languages.typescript.ScriptTarget.Latest,
