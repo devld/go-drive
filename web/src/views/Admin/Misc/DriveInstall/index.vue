@@ -52,7 +52,7 @@
                   </div>
                 </template>
               </td>
-              <td>
+              <td class="line">
                 <SimpleButton
                   v-if="item.installed"
                   icon="#icon-edit"
@@ -127,6 +127,10 @@ interface DriveScript {
   description?: string
   script?: AvailableDriveScript
 }
+
+const emit = defineEmits<{
+  (e: 'timer', v: boolean): void
+}>()
 
 const { t } = useI18n()
 
@@ -229,11 +233,13 @@ const formatName = (item: DriveScript) => {
 const editDrive = (item: DriveScript) => {
   edit.name = item.name
   edit.showing = true
+  emit('timer', false)
 }
 
 const onScriptEditClose = () => {
   edit.showing = false
   edit.name = ''
+  emit('timer', true)
 }
 
 loadData()

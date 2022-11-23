@@ -357,6 +357,7 @@ loadDrives()
 
   .drive-edit {
     padding: 16px;
+    overflow: hidden;
   }
 
   .drives-list {
