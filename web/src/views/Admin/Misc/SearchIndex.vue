@@ -76,6 +76,10 @@ interface Task extends Task_<void> {
   opLoading?: boolean
 }
 
+const props = defineProps({
+  timer: { type: Boolean },
+})
+
 const store = useAppStore()
 
 const searchConfig = computed(() => store.config?.search)
@@ -199,7 +203,7 @@ useInterval(
   () => {
     loadTasks()
   },
-  5000,
+  computed(() => (props.timer ? 5000 : 0)),
   true
 )
 
