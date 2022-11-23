@@ -90,7 +90,7 @@ export const oneDarkTheme = EditorView.theme(
       },
     },
   },
-  { dark: true }
+  { dark: false }
 )
 
 export const oneDarkHighlightStyle = HighlightStyle.define([
