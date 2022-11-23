@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"go-drive/common"
 	"go-drive/common/drive_util"
@@ -512,14 +513,12 @@ func InitAdminRoutes(
 	scriptDriveRoutes := r.Group("/scripts")
 	driveRepositoryLock := sync.Mutex{}
 
-	// get available drives from repository
-	scriptDriveRoutes.GET("/available", func(c *gin.Context) {
+	var loadAvailableDriveScripts = func(ctx context.Context, forceLoad bool) ([]script.AvailableDriveScript, error) {
 		driveRepositoryLock.Lock()
 		defer driveRepositoryLock.Unlock()
 
 		cacheFile := filepath.Join(config.TempDir, "drives-repository-cache.json")
 
-		forceLoad := utils.ToBool(c.Query("force"))
 		var result []script.AvailableDriveScript = nil
 
 		if !forceLoad {
@@ -532,22 +531,29 @@ func InitAdminRoutes(
 		}
 
 		if result == nil {
-			scripts, e := script.ListAvailableScriptsFromRepository(c.Request.Context(), config.DriveRepositoryURL)
+			scripts, e := script.ListAvailableScriptsFromRepository(ctx, config.DriveRepositoryURL)
 			if e != nil {
-				_ = c.Error(e)
-				return
+				return result, e
 			}
 			result = scripts
 
 			data, e := json.Marshal(scripts)
 			if e != nil {
-				_ = c.Error(e)
-				return
+				return result, e
 			}
 			if e := os.WriteFile(cacheFile, data, 0644); e != nil {
-				_ = c.Error(e)
-				return
+				return result, e
 			}
+		}
+		return result, nil
+	}
+
+	// get available drives from repository
+	scriptDriveRoutes.GET("/available", func(c *gin.Context) {
+		result, e := loadAvailableDriveScripts(c.Request.Context(), utils.ToBool(c.Query("force")))
+		if e != nil {
+			_ = c.Error(e)
+			return
 		}
 		SetResult(c, result)
 	})
@@ -562,20 +568,28 @@ func InitAdminRoutes(
 		SetResult(c, scripts)
 	})
 
-	scriptDriveRoutes.POST("/install", func(c *gin.Context) {
-		ads := script.AvailableDriveScript{}
-		if e := c.Bind(&ads); e != nil {
+	scriptDriveRoutes.POST("/install/:name", func(c *gin.Context) {
+		name := c.Param("name")
+		scripts, e := loadAvailableDriveScripts(c.Request.Context(), false)
+		if e != nil {
 			_ = c.Error(e)
 			return
 		}
+
+		ads, ok := utils.ArrayFind(scripts, func(item script.AvailableDriveScript, _ int) bool { return item.Name == name })
+		if !ok {
+			_ = c.Error(err.NewNotFoundError())
+			return
+		}
+
 		if e := script.InstallDriveScript(c.Request.Context(), config, ads); e != nil {
 			_ = c.Error(e)
 			return
 		}
 	})
 
-	scriptDriveRoutes.DELETE("/uninstall", func(c *gin.Context) {
-		name := c.Query("name")
+	scriptDriveRoutes.DELETE("/uninstall/:name", func(c *gin.Context) {
+		name := c.Param("name")
 		if e := script.UninstallDriveScript(config, name); e != nil {
 			_ = c.Error(e)
 			return
