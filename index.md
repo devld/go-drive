@@ -189,7 +189,7 @@ BUILD_VERSION=version make all
 
 ## 开始使用
 
-通过上述方式运行后，访问 [http://localhost:8089](http://localhost:8089)，如需在子路径运行，比如 `http://example.com/drive，请参考 [如何使用 Nginx 反向代理 go-drive？](#如何使用-nginx-反向代理-go-drive)。
+通过上述方式运行后，访问 [http://localhost:8089](http://localhost:8089)，如需在子路径运行，比如 `http://example.com/drive`，请参考 [如何使用 Nginx 反向代理 go-drive？](#如何使用-nginx-反向代理-go-drive)。
 
 
 首次运行后，默认账号为：`admin`，密码为 `123456`，**登录后请立即修改密码**。 
