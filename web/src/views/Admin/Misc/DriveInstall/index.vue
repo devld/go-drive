@@ -181,7 +181,7 @@ const loadData = async (force?: boolean) => {
 const doInstall = async (item: DriveScript) => {
   item.loading = true
   try {
-    await installDriveScript(item.script!)
+    await installDriveScript(item.script!.name)
     loadData()
   } catch (e: any) {
     alert(e.message)

@@ -177,23 +177,25 @@ export function listInstalledDriveScripts() {
   return http.get<InstalledDriveScript[]>('/admin/scripts/installed')
 }
 
-export function installDriveScript(s: AvailableDriveScript) {
-  return http.post<void>('/admin/scripts/install', s)
+export function installDriveScript(name: string) {
+  return http.post<void>(`/admin/scripts/install/${encodeURIComponent(name)}`)
 }
 
 export function uninstallDriveScript(name: string) {
-  return http.delete<void>('/admin/scripts/uninstall', {
-    params: { name },
-  })
+  return http.delete<void>(
+    `/admin/scripts/uninstall/${encodeURIComponent(name)}`
+  )
 }
 
 export function getDriveScriptContent(name: string) {
-  return http.get<DriveScriptContent>(`/admin/scripts/content/${name}`)
+  return http.get<DriveScriptContent>(
+    `/admin/scripts/content/${encodeURIComponent(name)}`
+  )
 }
 
 export function saveDriveScriptContent(
   name: string,
   content: Partial<DriveScriptContent>
 ) {
-  return http.put(`/admin/scripts/content/${name}`, content)
+  return http.put(`/admin/scripts/content/${encodeURIComponent(name)}`, content)
 }
