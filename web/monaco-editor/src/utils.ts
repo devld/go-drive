@@ -49,6 +49,13 @@ export function setupJavaScript(opt: JavaScriptSetupOptions) {
       filePath: `${item.name}.d.ts`,
     }))
   )
+  opt.extraLibs.forEach((item) => {
+    monaco.editor.createModel(
+      item.content,
+      'typescript',
+      monaco.Uri.parse(`${item.name}.d.ts`)
+    )
+  })
 }
 
 export function setupDataExchanging(handlers: Record<string, MessageHandler>) {

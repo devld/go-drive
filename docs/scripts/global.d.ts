@@ -8,22 +8,48 @@ declare type SM = { [key: string]: string };
 /** Map */
 declare type M<T = any> = { [key: string]: T };
 
+/**
+ * Pause for a while
+ *
+ * Example: `sleep(ms(1000))`
+ *
+ * @param t duration
+ */
 declare function sleep(t: Duration): void;
 
+/** Creates a new Context */
 declare function newContext(): Context;
+
+/** Wraps a Context and cancels it after the timeout.
+ *
+ * Example: `newContextWithTimeout(newContext(), ms(30 * 1000))`
+ *
+ * @param parent parent context
+ * @param timeout timeout
+ * @returns **`Cancel` must be called at the function ends**
+ */
 declare function newContextWithTimeout(
   parent: Context,
   timeout: Duration
 ): ContextWithTimeout;
+
+/** The progress callback of TaskCtx */
 declare type TaskCtxOnUpdate = (loaded: number, total: number) => void;
+/**
+ *
+ * @param ctx wrapped Context
+ * @param onUpdate on progress update callback
+ */
 declare function newTaskCtx(ctx: Context, onUpdate?: TaskCtxOnUpdate): TaskCtx;
 
 /** Context of Go */
 declare interface Context {
+  /** Detects error of this Context, such as whether it was cancelled, timed out, etc. Any errors will be thrown */
   Err(): void;
 }
 
 declare interface ContextWithTimeout extends Context {
+  /** Cancel this Context. Cancel **MUST** be called at the end of the Context's use (whether successful or unsuccessful) */
   Cancel(): void;
 }
 
@@ -41,26 +67,65 @@ declare interface TaskCtx extends Context {
   Total(total: number, abs: boolean): void;
 }
 
+/**
+ * Create a Bytes from string
+ * @param s content
+ */
 declare function newBytes(s: string): Bytes;
+/**
+ * Create an empty Bytes
+ * @param n size
+ */
 declare function newEmptyBytes(n: number): Bytes;
+/**
+ * Creates a temporary file that can be used for reading and writing. It will be deleted after closing
+ */
 declare function newTempFile(): TempFile;
 
 declare interface Bytes {
+  /**
+   * Returns the size of this Bytes
+   */
   Len(): number;
+  /**
+   * Create a Bytes slice from this Bytes
+   * @param start start position
+   * @param end end position(exclusion)
+   */
   Slice(start: number, end: number): Bytes;
+  /**
+   * Converts this Bytes to string
+   */
   String(): string;
 }
 
 /** Wrapper of Go io.Reader */
 declare interface Reader {
+  /**
+   * Read contents into dest Bytes. It reads up to `dest.Len()`.
+   * @param dest the data will be read into
+   * @returns how much data has been read, returns `-1` if no more data
+   */
   Read(dest: Bytes): number;
+  /**
+   * Read the whole data as string
+   */
   ReadAsString(): string;
+  /**
+   * Creates a Reader that is limited to reading `n` data.
+   *
+   * Typically used to slice Reader
+   */
   LimitReader(n: number): Reader;
+  /**
+   * Wraps this Reader and reports the progress to `ctx` when it is read
+   */
   ProgressReader(ctx: TaskCtx): Reader;
 }
 
 /** Wrapper of Go io.ReadCloser */
 declare interface ReadCloser extends Reader {
+  /** Close this Reader */
   Close(): void;
 }
 
@@ -72,11 +137,22 @@ declare const SEEK_CURRENT = 1;
 declare const SEEK_END = 2;
 
 declare interface TempFile extends ReadCloser {
+  /** Writes data into this file */
   Write(b: Bytes): void;
+  /** Copy data from `r` into this file */
   CopyFrom(r: Reader): void;
+  /**
+   * Seek sets the offset for the next Read or Write on file to offset, interpreted according to whence:
+   * - `SEEK_START`(`0`) means relative to the origin of the file
+   * - `SEEK_CURRENT`(`1`) means relative to the current offset
+   * - `SEEK_END`(`2`) means relative to the end.
+   *
+   * It returns the new absolute offset.
+   */
   SeekTo(offset: number, whence: number): number;
 }
 
+/** The EntryType is `file` or `dir` */
 declare type EntryType = "file" | "dir";
 
 declare interface EntryMeta {
@@ -87,8 +163,11 @@ declare interface EntryMeta {
 }
 
 declare interface ContentURL {
+  /** The URL */
   URL: string;
+  /** The Headers passed to when sending request */
   Header?: SM;
+  /** Is this request have to go through the server proxy */
   Proxy?: boolean;
 }
 
@@ -122,12 +201,18 @@ declare interface DriveEntry {
   Path(): string;
   Name(): string;
   Type(): EntryType;
+  /** Returns the size of this entry. Returns `-1` if not available */
   Size(): number;
   Meta(): EntryMeta;
+  /** Last modification time, in milliseconds */
   ModTime(): number;
+  /** Get the entry's download URL. It throws `ErrUnsupported` when not supported */
   GetURL(ctx: Context): ContentURL;
+  /** Get the Reader of the entry's content. It throws `ErrUnsupported` when not supported */
   GetReader(ctx: Context): ReadCloser;
+  /** Returns the wrapped real Entry */
   Unwrap(): DriveEntry;
+  /** Returns the cached data of this entry */
   Data(): SM | null;
   Drive(): DriveInstance;
 }
@@ -163,14 +248,17 @@ declare interface HttpResponse {
   Status: number;
   Headers: HttpHeaders;
   Body: ReadCloser;
+  /** Returns the `Content-Length`, returns `-1` if no `Content-Length` */
   BodySize(): number;
-  /** Read the whole body as string. HttpResponse.Text will dispose this HttpResponse */
+  /** Read the whole body as string. `HttpResponse.Text` will dispose this HttpResponse */
   Text(): string;
   Dispose(): void;
 }
 
+/** Creates a FormData for http request */
 declare function newFormData(): HttpFormData;
 
+/** Sends a HTTP request */
 declare function http(
   ctx: Context,
   method: HttpMethod,
@@ -180,7 +268,7 @@ declare function http(
 ): HttpResponse;
 
 declare type FormItemType =
-  | 'md'
+  | "md"
   | "textarea"
   | "text"
   | "password"
@@ -197,12 +285,15 @@ declare interface FormItemOption {
 
 declare interface FormItemForm {
   Key: string;
+  /** Display name */
   Name: string;
   Form: FormItem[];
 }
 
 declare interface FormItemForms {
+  /** The display text of the add button */
   AddText?: string;
+  /** The maximum items count can be added */
   MaxItems?: number;
   Forms: FormItemForm[];
 }
