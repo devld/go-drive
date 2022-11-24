@@ -95,6 +95,12 @@ type Reader struct {
 func (r Reader) Read(dest Bytes) int {
 	n, e := r.r.Read(dest.b)
 	if e != nil {
+		if e == io.EOF {
+			if n > 0 {
+				return n
+			}
+			return -1
+		}
 		r.vm.ThrowError(e)
 	}
 	return n

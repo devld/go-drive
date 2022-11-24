@@ -55,7 +55,7 @@ declare interface Drive {
 
 declare interface DriveDataStore {
   Save(data: SM): void;
-  Load(...keys: string[]): SM;
+  Load<K extends string, T extends { [key in K]: string | undefined }>(...keys: K[]): T;
 }
 
 declare interface DriveCacheItem {
