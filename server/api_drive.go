@@ -55,7 +55,10 @@ func InitDriveRoutes(
 	}
 
 	scriptsDir, _ := config.GetDir(config.DriveUploadersDir, false)
-	router.Static("/drive-uploader", scriptsDir)
+	router.Group("/", func(c *gin.Context) {
+		c.Header("Cache-Control", "no-cache")
+		c.Next()
+	}).Static("/drive-uploader", scriptsDir)
 
 	signatureAuthRoute := router.Group("/", SignatureAuth(signer, userDAO, false))
 
