@@ -51,7 +51,7 @@ function qiniuUploader(ctx) {
         return res;
       }
 
-      const res = await ctx.request({
+      res = await ctx.request({
         method: "put",
         url: multipartURL + "/" + uploadId + "/" + (seq + 1),
         headers: {
@@ -84,6 +84,7 @@ function qiniuUploader(ctx) {
     },
     onCleanup() {
       if (res) return;
+      if (!uploadId) return;
       ctx
         .request({
           method: "delete",
