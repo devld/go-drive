@@ -297,7 +297,7 @@ func (f *fsFile) Name() string {
 	return utils.PathBase(f.path)
 }
 
-func (f *fsFile) GetReader(context.Context) (io.ReadCloser, error) {
+func (f *fsFile) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
 	if !f.Type().IsFile() {
 		return nil, err.NewNotAllowedError()
 	}
@@ -309,7 +309,20 @@ func (f *fsFile) GetReader(context.Context) (io.ReadCloser, error) {
 	if !exists {
 		return nil, err.NewNotFoundMessageError(i18n.T("drive.file_not_exists"))
 	}
-	return os.Open(path)
+	file, e := os.Open(path)
+	if e != nil {
+		return nil, e
+	}
+	if start >= 0 {
+		_, e = file.Seek(start, io.SeekStart)
+		if e != nil {
+			return nil, e
+		}
+		if size > 0 {
+			return drive_util.LimitReadCloser(file, size), nil
+		}
+	}
+	return file, nil
 }
 
 func (f *fsFile) GetURL(context.Context) (*types.ContentURL, error) {

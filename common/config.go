@@ -38,21 +38,22 @@ const (
 
 	TempDir = "temp"
 
-	DefaultListen            = ":8089"
-	DefaultAPIPath           = ""
-	DefaultWebPath           = ""
-	DefaultDataDir           = "./"
-	DefaultWebDir            = "./web"
-	DefaultLangDir           = "./lang"
-	DefaultLang              = "en-US"
-	DefaultOAuthRedirectURI  = "https://go-drive.top/oauth_callback"
-	DefaultMaxConcurrentTask = 100
-	DefaultFreeFs            = false
-	DefaultThumbnailTTL      = 30 * 24 * time.Hour
-	DefaultAuthValidity      = 2 * time.Hour
-	DefaultAuthAutoRefresh   = true
-	DefaultWebDavPrefix      = "/dav"
-	DefaultSearcher          = "bleve"
+	DefaultListen              = ":8089"
+	DefaultAPIPath             = ""
+	DefaultWebPath             = ""
+	DefaultDataDir             = "./"
+	DefaultWebDir              = "./web"
+	DefaultLangDir             = "./lang"
+	DefaultLang                = "en-US"
+	DefaultOAuthRedirectURI    = "https://go-drive.top/oauth_callback"
+	DefaultMaxConcurrentTask   = 100
+	DefaultFreeFs              = false
+	DefaultThumbnailTTL        = 30 * 24 * time.Hour
+	DefaultAuthValidity        = 2 * time.Hour
+	DefaultAuthAutoRefresh     = true
+	DefaultWebDavPrefix        = "/dav"
+	DefaultWebDavMaxCacheItems = 1000
+	DefaultSearcher            = "bleve"
 
 	DefaultConfigFile = "config.yml"
 
@@ -141,6 +142,7 @@ type WebDavConfig struct {
 	Enabled        bool   `yaml:"enabled"`
 	Prefix         string `yaml:"prefix"`
 	AllowAnonymous bool   `yaml:"allow-anonymous"`
+	MaxCacheItems  int    `yaml:"max-cache-items"`
 }
 
 type SearchConfig struct {
@@ -174,8 +176,9 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 			AutoRefresh: DefaultAuthAutoRefresh,
 		},
 		WebDav: WebDavConfig{
-			Enabled: false,
-			Prefix:  DefaultWebDavPrefix,
+			Enabled:       false,
+			Prefix:        DefaultWebDavPrefix,
+			MaxCacheItems: DefaultWebDavMaxCacheItems,
 		},
 		Search: SearchConfig{
 			Type: DefaultSearcher,

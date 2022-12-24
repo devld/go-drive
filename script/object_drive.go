@@ -129,8 +129,8 @@ func (e Entry) GetURL(ctx interface{}) *types.ContentURL {
 	return r
 }
 
-func (e Entry) GetReader(ctx interface{}) ReadCloser {
-	r, err := e.e.GetReader(GetContext(ctx))
+func (e Entry) GetReader(ctx interface{}, start, size int64) ReadCloser {
+	r, err := e.e.GetReader(GetContext(ctx), start, size)
 	if err != nil {
 		e.vm.ThrowError(err)
 	}

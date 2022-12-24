@@ -3,6 +3,7 @@ package drive_util
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -95,16 +96,16 @@ func CopyReaderToTempFile(ctx types.TaskCtx, reader io.Reader, tempDir string) (
 	return file, nil
 }
 
-func GetIContentReader(ctx context.Context, content types.IContentReader) (io.ReadCloser, error) {
+func GetIContentReader(ctx context.Context, content types.IContentReader, start, size int64) (io.ReadCloser, error) {
 	u, e := content.GetURL(ctx)
 	if e == nil {
-		return GetURL(ctx, u.URL, u.Header)
+		return GetURL(ctx, u.URL, u.Header, start, size)
 	}
-	return content.GetReader(ctx)
+	return content.GetReader(ctx, start, size)
 }
 
 func CopyIContent(ctx types.TaskCtx, content types.IContentReader, dst io.Writer) error {
-	reader, e := GetIContentReader(ctx, content)
+	reader, e := GetIContentReader(ctx, content, -1, -1)
 	if e != nil {
 		return e
 	}
@@ -116,7 +117,7 @@ func CopyIContent(ctx types.TaskCtx, content types.IContentReader, dst io.Writer
 }
 
 func CopyIContentToTempFile(ctx types.TaskCtx, content types.IContentReader, tempDir string) (*os.File, error) {
-	reader, e := GetIContentReader(ctx, content)
+	reader, e := GetIContentReader(ctx, content, -1, -1)
 	if e != nil {
 		return nil, e
 	}
@@ -167,7 +168,7 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 	if !err.IsUnsupportedError(e) {
 		return e
 	}
-	reader, e := content.GetReader(ctx)
+	reader, e := content.GetReader(ctx, -1, -1)
 	if e != nil {
 		return e
 	}
@@ -280,8 +281,11 @@ func FindEntries(ctx types.TaskCtx, root types.IDrive, pattern string, bytesProg
 		ctx = task.DummyContext()
 	}
 	result := make([]types.IEntry, 0)
-	dfs := NewDriveFS(root, "")
-	e := doublestar.GlobWalk(dfs, pattern, func(path string, d fs.DirEntry) error {
+	dfs, e := NewDriveFS(root, "", nil)
+	if e != nil {
+		return nil, e
+	}
+	e = doublestar.GlobWalk(dfs, pattern, func(path string, d fs.DirEntry) error {
 		entry, e := root.Get(ctx, path)
 		if e != nil {
 			return e
@@ -443,24 +447,51 @@ func ProgressReader(reader io.Reader, ctx types.TaskCtx) io.Reader {
 	return &progressReader{r: reader, ctx: ctx}
 }
 
-func GetURL(ctx context.Context, u string, header types.SM) (io.ReadCloser, error) {
+func getURL(ctx context.Context, u string, header types.SM) (int, io.ReadCloser, error) {
 	req, e := http.NewRequestWithContext(ctx, "GET", u, nil)
 	if e != nil {
-		return nil, e
+		return 0, nil, e
 	}
 	for k, v := range header {
 		req.Header.Set(k, v)
 	}
 	resp, e := http.DefaultClient.Do(req)
 	if e != nil {
-		return nil, e
+		return 0, nil, e
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		_ = resp.Body.Close()
-		return nil, err.NewRemoteApiError(resp.StatusCode,
+		return resp.StatusCode, nil, err.NewRemoteApiError(resp.StatusCode,
 			i18n.T("util.request_failed", strconv.Itoa(resp.StatusCode)))
 	}
-	return resp.Body, nil
+	return resp.StatusCode, resp.Body, nil
+}
+
+func BuildRangeHeader(start, size int64) string {
+	rangeStr := ""
+	if start >= 0 {
+		rangeStr = fmt.Sprintf("bytes=%d-", start)
+		if size > 0 {
+			rangeStr += fmt.Sprintf("%d", start+size-1)
+		}
+	}
+	return rangeStr
+}
+
+func GetURL(ctx context.Context, u string, header types.SM, start, size int64) (io.ReadCloser, error) {
+	rangeStr := BuildRangeHeader(start, size)
+	if rangeStr != "" {
+		header = utils.MapCopy(header, nil)
+		header["Range"] = rangeStr
+	}
+	s, b, e := getURL(ctx, u, header)
+	if e != nil {
+		return nil, e
+	}
+	if rangeStr != "" && s != http.StatusPartialContent {
+		return nil, err.NewUnsupportedMessageError("Range request not supported")
+	}
+	return b, nil
 }
 
 func NewURLContentReader(url string, headers types.SM, proxy bool) types.IContentReader {
@@ -473,8 +504,8 @@ type contentReaderImpl struct {
 	proxy   bool
 }
 
-func (t *contentReaderImpl) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	return GetURL(ctx, t.url, t.headers)
+func (t *contentReaderImpl) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+	return GetURL(ctx, t.url, t.headers, start, size)
 }
 
 func (t *contentReaderImpl) GetURL(context.Context) (*types.ContentURL, error) {
@@ -494,4 +525,13 @@ func RequireFileNotExists(ctx context.Context, d types.IDrive, p string) (types.
 		return nil, e
 	}
 	return nil, nil
+}
+
+type limitedReadCloser struct {
+	io.Reader
+	io.Closer
+}
+
+func LimitReadCloser(rc io.ReadCloser, n int64) io.ReadCloser {
+	return limitedReadCloser{io.LimitReader(rc, n), rc}
 }

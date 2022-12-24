@@ -505,10 +505,16 @@ func (s *s3Entry) Name() string {
 	return utils.PathBase(s.key)
 }
 
-func (s *s3Entry) GetReader(ctx context.Context) (io.ReadCloser, error) {
+func (s *s3Entry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+	var awsRange *string
+	rangeStr := drive_util.BuildRangeHeader(start, size)
+	if rangeStr != "" {
+		awsRange = aws.String(rangeStr)
+	}
 	obj, e := s.c.c.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: s.c.bucket,
 		Key:    aws.String(s.key),
+		Range:  awsRange,
 	})
 	if e != nil {
 		return nil, e

@@ -244,7 +244,7 @@ var DriveImpl = {
   upload: function (ctx, path, size, override, config) {
     return useLocalProvider(size);
   },
-  getReader: function (ctx, entry) {
+  getReader: function (ctx, entry, start, size) {
     throw ErrUnsupported();
   },
   getURL: function (ctx, entry) {
