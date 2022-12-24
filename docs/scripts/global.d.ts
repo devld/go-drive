@@ -209,7 +209,7 @@ declare interface DriveEntry {
   /** Get the entry's download URL. It throws `ErrUnsupported` when not supported */
   GetURL(ctx: Context): ContentURL;
   /** Get the Reader of the entry's content. It throws `ErrUnsupported` when not supported */
-  GetReader(ctx: Context): ReadCloser;
+  GetReader(ctx: Context, start: number, size: number): ReadCloser;
   /** Returns the wrapped real Entry */
   Unwrap(): DriveEntry;
   /** Returns the cached data of this entry */

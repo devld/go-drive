@@ -455,12 +455,12 @@ func (g *gdriveEntry) Name() string {
 	return utils.PathBase(g.path)
 }
 
-func (g *gdriveEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
+func (g *gdriveEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
 	u, e := g.GetURL(ctx)
 	if e != nil {
 		return nil, e
 	}
-	return drive_util.GetURL(ctx, u.URL, u.Header)
+	return drive_util.GetURL(ctx, u.URL, u.Header, start, size)
 }
 
 func (g *gdriveEntry) GetURL(context.Context) (*types.ContentURL, error) {

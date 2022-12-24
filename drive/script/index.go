@@ -186,10 +186,10 @@ type scriptDriveEntry struct {
 }
 
 // GetReader gets the reader of this entry
-func (se *scriptDriveEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
+func (se *scriptDriveEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
 	vm := se.d.vm.Fork()
 	defer func() { _ = vm.Dispose() }()
-	v, e := se.d.call(vm, "getReader", s.NewContext(vm, ctx), se.s)
+	v, e := se.d.call(vm, "getReader", s.NewContext(vm, ctx), se.s, start, size)
 	if e != nil {
 		return nil, e
 	}

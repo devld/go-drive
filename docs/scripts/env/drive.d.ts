@@ -47,7 +47,7 @@ declare interface Drive {
     config: SM
   ): DriveUploadConfig | undefined;
 
-  getReader(ctx: Context, entry: Entry): ReadCloser;
+  getReader(ctx: Context, entry: Entry, start: number, size: number): ReadCloser;
   getURL?(ctx: Context, entry: Entry): ContentURL;
   hasThumbnail?(entry: Entry): boolean;
   getThumbnail?(ctx: Context, entry: Entry): ReadCloser | ContentURL;

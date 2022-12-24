@@ -99,7 +99,7 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry T
 		"GO_DRIVE_ENTRY_URL="+entry.GetExternalURL())
 
 	if entry.Type().IsFile() && s.writeContent {
-		reader, e := entry.GetReader(ctx)
+		reader, e := entry.GetReader(ctx, -1, -1)
 		if e != nil {
 			return e
 		}

@@ -397,7 +397,7 @@ func (o *oneDriveEntry) Name() string {
 	return utils.PathBase(o.path)
 }
 
-func (o *oneDriveEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
+func (o *oneDriveEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
 	u, resp, e := o.get(ctx)
 	if e != nil {
 		return nil, e
@@ -405,7 +405,7 @@ func (o *oneDriveEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	if resp != nil {
 		return resp.Response().Body, nil
 	}
-	return drive_util.GetURL(ctx, u, nil)
+	return drive_util.GetURL(ctx, u, nil, start, size)
 }
 
 func (o *oneDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {

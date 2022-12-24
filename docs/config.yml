@@ -131,6 +131,8 @@ auth:
 #  prefix: /dav
 # allow anonymous access?
 #  allow-anonymous: false
+# maximum number of files to be cached at the same time, default is 1000
+#  max-cache-items: 1000
 
 # Search configuration
 search:

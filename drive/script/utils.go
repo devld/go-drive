@@ -305,7 +305,10 @@ type fakeContentReader struct {
 	reader io.Reader
 }
 
-func (fcr fakeContentReader) GetReader(ctx context.Context) (io.ReadCloser, error) {
+func (fcr fakeContentReader) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+	if start >= 0 || size > 0 {
+		return nil, err.NewUnsupportedError()
+	}
 	return wrapReader(fcr.reader), nil
 }
 

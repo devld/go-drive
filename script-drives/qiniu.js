@@ -254,7 +254,7 @@ var DriveImpl = {
       token: getUploadSignature(this._ak, this._sk, this._bucket, path),
     });
   },
-  getReader: function (ctx, entry) {
+  getReader: function (ctx, entry, start, size) {
     throw ErrUnsupported();
   },
   getURL: function (ctx, entry) {

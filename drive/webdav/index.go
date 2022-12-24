@@ -316,10 +316,18 @@ func (w *webDavEntry) Name() string {
 	return utils.PathBase(w.path)
 }
 
-func (w *webDavEntry) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	resp, e := w.d.c.Get(ctx, w.path, nil)
+func (w *webDavEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+	headers := types.SM{}
+	rangeStr := drive_util.BuildRangeHeader(start, size)
+	if rangeStr != "" {
+		headers["Range"] = rangeStr
+	}
+	resp, e := w.d.c.Get(ctx, w.path, headers)
 	if e != nil {
 		return nil, e
+	}
+	if rangeStr != "" && resp.Status() != http.StatusPartialContent {
+		return nil, err.NewUnsupportedError()
 	}
 	return resp.Response().Body, nil
 }

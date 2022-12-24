@@ -21,8 +21,14 @@ var webdavHTTPMethods = []string{
 func InitWebdavAccess(router gin.IRouter, config common.Config,
 	access *drive.Access, userAuth *UserAuth) error {
 
+	cfp, e := drive_util.NewCacheFillPool(config.WebDav.MaxCacheItems, config.TempDir)
+	if e != nil {
+		return e
+	}
+
 	wa := &webdavAccess{
 		access:  access,
+		cfp:     cfp,
 		config:  config,
 		lockSys: webdav.NewMemLS(),
 	}
@@ -42,6 +48,7 @@ func InitWebdavAccess(router gin.IRouter, config common.Config,
 
 type webdavAccess struct {
 	access  *drive.Access
+	cfp     *drive_util.CacheFilePool
 	lockSys webdav.LockSystem
 	config  common.Config
 }
@@ -56,9 +63,15 @@ func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 		return
 	}
 
+	driveFs, e := drive_util.NewDriveFS(drive, w.config.TempDir, w.cfp)
+	if e != nil {
+		c.AbortWithError(http.StatusInternalServerError, e)
+		return
+	}
+
 	handler := webdav.Handler{
 		Prefix:     w.config.WebDav.Prefix,
-		FileSystem: webDavFS{drive_util.NewDriveFS(drive, w.config.TempDir)},
+		FileSystem: webDavFS{driveFs},
 		LockSystem: w.lockSys,
 	}
 	handler.ServeHTTP(c.Writer, c.Request)

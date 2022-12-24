@@ -284,7 +284,10 @@ func (f *ftpEntry) Name() string {
 	return utils.PathBase(f.path)
 }
 
-func (f *ftpEntry) GetReader(context.Context) (io.ReadCloser, error) {
+func (f *ftpEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+	if start >= 0 || size > 0 {
+		return nil, err.NewUnsupportedError()
+	}
 	return utils.NewLazyReader(func() (io.ReadCloser, error) {
 		r, w := io.Pipe()
 		go func() {

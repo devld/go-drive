@@ -2,20 +2,21 @@ package drive_util
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	err "go-drive/common/errors"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"sync"
 	"time"
 )
 
-func NewDriveFS(d types.IDrive, tempDir string) *DriveFS {
-	return &DriveFS{d, tempDir}
+func NewDriveFS(d types.IDrive, tempDir string, cfp *CacheFilePool) (*DriveFS, error) {
+	return &DriveFS{d, tempDir, cfp}, nil
 }
 
 type DriveFSFile interface {
@@ -30,6 +31,8 @@ type DriveFSFile interface {
 type DriveFS struct {
 	drive   types.IDrive
 	tempDir string
+
+	cfp *CacheFilePool
 }
 
 func (w *DriveFS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
@@ -119,6 +122,7 @@ func (w *DriveFS) newDriveFSFile(e types.IEntry, flag int) *driveFSFile {
 		seekPos = e.Size()
 	}
 	return &driveFSFile{
+		fs:       w,
 		e:        e,
 		seekPos:  seekPos,
 		mu:       sync.Mutex{},
@@ -128,10 +132,11 @@ func (w *DriveFS) newDriveFSFile(e types.IEntry, flag int) *driveFSFile {
 }
 
 type driveFSFile struct {
-	e               types.IEntry
-	file            *os.File
-	cacheFile       *utils.CacheFile
-	cacheFileReader io.ReadSeekCloser
+	fs *DriveFS
+
+	e      types.IEntry
+	file   *os.File
+	reader io.ReadSeekCloser
 
 	children []types.IEntry
 	dirPos   int
@@ -147,8 +152,8 @@ func (w *driveFSFile) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if w.cacheFile != nil {
-		_ = w.cacheFile.Close()
+	if w.reader != nil {
+		_ = w.reader.Close()
 	}
 
 	if w.file == nil {
@@ -180,36 +185,38 @@ func (w *driveFSFile) Close() error {
 }
 
 func (w *driveFSFile) getFile() error {
-	if w.file != nil || w.cacheFile != nil {
+	if w.file != nil || w.reader != nil {
 		return nil
 	}
 
 	if w.openFlag == os.O_RDONLY {
-		cf, e := utils.NewCacheFile(w.e.Size(), w.tempDir, "go-drive-temp")
+		if w.fs.cfp == nil {
+			return errors.New("not readable")
+		}
+		dispatcherEntry := GetIEntry(w.e, func(e types.IEntry) bool {
+			_, ok := e.(types.IDispatcherEntry)
+			return ok
+		})
+		cacheKey := fmt.Sprintf("m:%d,s:%d,", w.e.ModTime(), w.e.Size())
+		if dispatcherEntry == nil {
+			cacheKey += "rp:" + dispatcherEntry.(types.IDispatcherEntry).GetRealPath()
+		} else {
+			cacheKey += "p:" + w.e.Path()
+		}
+		reader, e := w.fs.cfp.GetReader(cacheKey, w.e.Size(),
+			func(start, size int64) (io.ReadCloser, error) {
+				return GetIContentReader(context.Background(), w.e, start, size)
+			},
+		)
 		if e != nil {
 			return e
 		}
-		cfr, e := cf.GetReader()
+		_, e = reader.Seek(w.seekPos, io.SeekStart)
 		if e != nil {
-			_ = cf.Close()
+			_ = reader.Close()
 			return e
 		}
-		_, e = cfr.Seek(w.seekPos, io.SeekStart)
-		if e != nil {
-			_ = cf.Close()
-			return e
-		}
-		if w.e.Size() > 0 {
-			go func() {
-				e := CopyIContent(task.NewContextWrapper(context.Background()), w.e, cf)
-				if e != nil {
-					log.Printf("error copy file: %v", e)
-					_ = cf.Close()
-				}
-			}()
-		}
-		w.cacheFileReader = cfr
-		w.cacheFile = cf
+		w.reader = reader
 		return nil
 	}
 
@@ -252,8 +259,8 @@ func (w *driveFSFile) Read(p []byte) (n int, err error) {
 	if e := w.getFile(); e != nil {
 		return 0, e
 	}
-	if w.cacheFile != nil {
-		n, err = w.cacheFileReader.Read(p)
+	if w.reader != nil {
+		n, err = w.reader.Read(p)
 	} else {
 		n, err = w.file.Read(p)
 	}
@@ -263,8 +270,8 @@ func (w *driveFSFile) Read(p []byte) (n int, err error) {
 func (w *driveFSFile) Seek(offset int64, whence int) (int64, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.cacheFile != nil {
-		return w.cacheFileReader.Seek(offset, whence)
+	if w.reader != nil {
+		return w.reader.Seek(offset, whence)
 	}
 	if w.file == nil {
 		// a fake file opened with flag = 0, used to get file size
@@ -477,7 +484,7 @@ func (c *createdEntry) Name() string {
 	return utils.PathBase(c.path)
 }
 
-func (c *createdEntry) GetReader(_ context.Context) (io.ReadCloser, error) {
+func (c *createdEntry) GetReader(_ context.Context, _, _ int64) (io.ReadCloser, error) {
 	return nil, err.NewNotAllowedError()
 }
 
