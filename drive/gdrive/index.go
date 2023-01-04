@@ -229,7 +229,11 @@ func (g *GDrive) getParentTarget(path string, ctx context.Context) (*gdriveEntry
 
 func (g *GDrive) getByPath(path string, ctx context.Context) (*gdriveEntry, error) {
 	if utils.IsRootPath(path) {
-		return &gdriveEntry{id: "root", isDir: true, modTime: -1, d: g}, nil
+		id := "root"
+		if g.driveId != "" {
+			id = g.driveId
+		}
+		return &gdriveEntry{id: id, isDir: true, modTime: -1, d: g}, nil
 	}
 	if cached, _ := g.cache.GetEntry(path); cached != nil {
 		return cached.(*gdriveEntry), nil
@@ -268,6 +272,10 @@ func (g *GDrive) List(ctx context.Context, path string) ([]types.IEntry, error) 
 
 	gFiles := make([]*drive.File, 0)
 	nextPageToken := ""
+
+	if g.driveId != "" && id == "root" {
+		id = g.driveId
+	}
 
 	for {
 		req := g.s.Files.List().Context(ctx)
