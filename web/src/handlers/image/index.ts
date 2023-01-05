@@ -11,6 +11,7 @@ export default {
     description: T('handler.image.desc'),
     icon: '#icon-image',
   },
+  style: { fullscreen: true },
   view: {
     name: 'ImageView',
     component: wrapAsyncComponent(() => import('./ImageView.vue')),

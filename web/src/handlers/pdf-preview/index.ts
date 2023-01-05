@@ -10,6 +10,7 @@ export default {
     description: T('handler.pdf.desc'),
     icon: '#icon-play-circle',
   },
+  style: { fullscreen: true },
   view: {
     name: 'PDFPreviewView',
     component: PDFPreviewView,

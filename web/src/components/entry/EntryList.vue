@@ -487,6 +487,7 @@ defineExpose({
 
 .entry-list__empty {
   user-select: none;
+  -webkit-user-select: none;
   text-align: center;
   padding: 32px 0;
   color: var(--secondary-text-color);

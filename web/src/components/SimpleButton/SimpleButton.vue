@@ -49,6 +49,7 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
   cursor: pointer;
   transition: 0.3s;
   user-select: none;
+  -webkit-user-select: none;
   line-height: 20px;
 
   & + .simple-button {

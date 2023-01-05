@@ -43,7 +43,7 @@ const previewURL = computed(() =>
   position: relative;
   overflow: hidden;
   width: 100vw;
-  height: 100vh;
+  height: 100%;
   padding-top: 48px;
   background-color: var(--secondary-bg-color);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);

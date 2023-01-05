@@ -10,6 +10,7 @@ export default {
     description: T('handler.office.desc'),
     icon: '#icon-play-circle',
   },
+  style: { fullscreen: true },
   view: {
     name: 'OfficePreviewView',
     component: OfficePreviewView,

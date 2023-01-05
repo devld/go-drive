@@ -118,7 +118,7 @@ onUnmounted(() => {
 @import url('photoswipe/dist/photoswipe.css');
 .image-view-page {
   width: 100vw;
-  height: 100vh;
+  height: 100%;
 
   &.loading {
     .pswp__img {

@@ -53,6 +53,7 @@ svg {
   background-color: transparent;
   color: var(--primary-text-color);
   user-select: none;
+  -webkit-user-select: none;
   cursor: pointer;
   text-decoration: none;
 
@@ -89,6 +90,7 @@ svg {
     font-weight: normal;
     text-align: center;
     user-select: none;
+    -webkit-user-select: none;
     white-space: nowrap;
     background-color: var(--thead-bg-color);
   }
@@ -145,6 +147,7 @@ svg {
 
   .label {
     user-select: none;
+    -webkit-user-select: none;
     display: block;
     margin-bottom: 6px;
   }
