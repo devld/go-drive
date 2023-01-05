@@ -36,6 +36,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
   overflow: hidden;
   white-space: nowrap;
   user-select: none;
+  -webkit-user-select: none;
   padding: 0 10px;
   margin: 0;
   height: 48px;

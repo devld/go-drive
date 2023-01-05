@@ -4,6 +4,7 @@
     v-show="overlayShowing"
     ref="overlayEl"
     class="dialog-view dialog-view__overlay"
+    :class="{ 'dialog-view--fullscreen': fullscreen }"
     @click="overlayClicked"
   >
     <Transition :name="transition" @after-leave="onDialogClosed">
@@ -63,6 +64,9 @@ const props = defineProps({
     default: true,
   },
   eager: {
+    type: Boolean,
+  },
+  fullscreen: {
     type: Boolean,
   },
   lockScroll: {
@@ -188,6 +192,7 @@ onBeforeUnmount(() => {
   font-size: 28px;
   font-weight: normal;
   user-select: none;
+  -webkit-user-select: none;
   padding: 16px 48px 16px 16px;
 }
 
@@ -202,5 +207,25 @@ onBeforeUnmount(() => {
 
 .dialog-view__body {
   overflow: hidden;
+}
+
+.dialog-view--fullscreen {
+  .dialog-view__content {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dialog-view__body {
+    width: 100%;
+    flex: 1;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
 }
 </style>

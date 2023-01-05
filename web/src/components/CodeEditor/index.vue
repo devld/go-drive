@@ -119,5 +119,6 @@ onMounted(initEditor)
   justify-content: center;
   align-items: center;
   user-select: none;
+  -webkit-user-select: none;
 }
 </style>

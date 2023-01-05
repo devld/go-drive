@@ -31,6 +31,7 @@ defineProps({
 <style lang="scss">
 .error-view {
   user-select: none;
+  -webkit-user-select: none;
   text-align: center;
   padding: 40px 0;
 

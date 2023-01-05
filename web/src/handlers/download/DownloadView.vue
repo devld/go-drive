@@ -91,6 +91,7 @@ const downloadFiles = () => {
     margin: 0 0 20px;
     font-weight: normal;
     user-select: none;
+    -webkit-user-select: none;
 
     .close-button {
       float: right;
@@ -123,6 +124,7 @@ const downloadFiles = () => {
     margin-top: 16px;
     transition: 0.3s;
     user-select: none;
+    -webkit-user-select: none;
 
     &:hover {
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);

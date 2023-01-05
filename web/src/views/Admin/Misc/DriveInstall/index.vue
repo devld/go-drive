@@ -90,7 +90,7 @@
       </table>
     </div>
 
-    <DialogView v-model:show="edit.showing">
+    <DialogView v-model:show="edit.showing" fullscreen>
       <div class="drive-script-editor-wrapper">
         <DriveCodeEditor
           v-if="edit.name"
@@ -269,6 +269,6 @@ loadData()
 
 .drive-script-editor-wrapper {
   width: 100vw;
-  height: 100vh;
+  height: 100%;
 }
 </style>

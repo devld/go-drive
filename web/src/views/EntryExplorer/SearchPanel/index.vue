@@ -222,6 +222,7 @@ defineExpose({ setActive })
   font-size: 14px;
   color: var(--secondary-text-color);
   user-select: none;
+  -webkit-user-select: none;
   border-radius: 2px;
   border: solid 1px var(--secondary-text-color);
 }

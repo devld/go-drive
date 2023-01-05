@@ -148,8 +148,8 @@ loadFile()
 <style lang="scss">
 .text-edit-view {
   position: relative;
-  width: 90vw;
-  height: calc(100vh - 64px);
+  width: 100vw;
+  height: 100%;
   padding-top: 48px;
   background-color: var(--secondary-bg-color);
   overflow: hidden;
@@ -190,15 +190,7 @@ loadFile()
     font-size: 24px;
     text-transform: uppercase;
     user-select: none;
-  }
-}
-
-@media screen and (max-width: 900px) {
-  .text-edit-view {
-    width: 100vw;
-    height: 100vh;
-    max-width: unset;
-    margin: 0;
+    -webkit-user-select: none;
   }
 }
 </style>

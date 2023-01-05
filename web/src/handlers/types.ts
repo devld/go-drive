@@ -45,6 +45,12 @@ export type EntryHandlerDisplay<A> =
   | EntryHandlerDisplayConfig
   | ((e: A) => EntryHandlerDisplayConfig)
 
+export interface EntryHandlerStyleConfig {
+  fullscreen?: boolean
+}
+
+export type EntryHandlerStyle = EntryHandlerStyleConfig
+
 export interface EntryHandlerView {
   name: string
   component: any
@@ -85,6 +91,7 @@ export type EntryHandlerFunc<A> = (
 export interface BaseEntryHandler<A> {
   name: string
   display: EntryHandlerDisplay<A>
+  style?: EntryHandlerStyle
   supports: EntrySupportsFunc<A>
   multiple?: boolean
   view?: EntryHandlerView

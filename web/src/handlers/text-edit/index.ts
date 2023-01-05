@@ -19,6 +19,7 @@ export default {
     ),
     icon: '#icon-cursor-text',
   }),
+  style: { fullscreen: true },
   view: {
     name: 'TextEditView',
     component: wrapAsyncComponent(() => import('./TextEditView.vue')),

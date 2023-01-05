@@ -1,21 +1,26 @@
 <template>
-  <DialogView class="entry-handler-dialog" eager :show="showing">
+  <DialogView class="entry-handler-dialog" eager :show="showing" :fullscreen="dialogStyle.fullscreen">
     <HandlerView ref="view" v-bind="events" />
   </DialogView>
 </template>
 <script setup lang="ts">
 import HandlerView from './HandlerView.vue'
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { Entry } from '@/types'
 import {
   EntryHandlerExecutionParams,
   EntryHandlerExecutionOption,
   EntryHandlerViewHandle,
 } from './types'
+import { getHandler } from './handlers';
 
 let opt: EntryHandlerExecutionOption
 let data: EntryHandlerExecutionParams
 let handlerName: string
+
+const dialogStyle = reactive({
+  fullscreen: false
+})
 
 const events = {
   onRefresh: () => opt.onRefresh?.(),
@@ -47,6 +52,10 @@ const handle: EntryHandlerViewHandle = {
     handlerName = handlerName_
     opt = opt_
     data = data_
+
+    const handler = getHandler(handlerName)
+    dialogStyle.fullscreen = handler?.style?.fullscreen ?? false
+
     return view.value!.show(handlerName, data, opt.ctx)
   },
   get hide() {

@@ -49,6 +49,7 @@ const multiple = computed(() => Array.isArray(props.entry))
   width: 280px;
   overflow: hidden;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .entry-menu__entry {
@@ -81,6 +82,7 @@ const multiple = computed(() => Array.isArray(props.entry))
   margin: 0;
   padding: 0;
   user-select: none;
+  -webkit-user-select: none;
   overflow-x: hidden;
   overflow-y: auto;
 }
