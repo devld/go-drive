@@ -331,6 +331,8 @@ const onDragEnter = (e: DragEvent) => {
   if (!e.dataTransfer) return
   if (!isDataTransferHasFiles(e.dataTransfer)) return
 
+  e.dataTransfer.dropEffect = 'copy'
+
   e.preventDefault()
   clearTimeout(dragLeaveTimeout)
   toggleDropZoneActive(true)
