@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-page">
+  <div v-if="store.isAdmin" class="admin-page">
     <ul class="menu-list">
       <li
         v-for="m in menus"
@@ -14,17 +14,22 @@
       <RouterView />
     </div>
   </div>
+  <div v-else class="admin-page-permission-error-message">
+    {{ $t('p.admin.admin_group_required') }}
+  </div>
 </template>
 <script lang="ts">
 export default { name: 'AdminPage' }
 </script>
 <script setup lang="ts">
+import { useAppStore } from '@/store'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
 
+const store = useAppStore()
 const router = useRouter()
 
 const menus = [
@@ -40,6 +45,15 @@ const menus = [
 const currentMenu = computed(() => router.currentRoute.value.path)
 </script>
 <style lang="scss">
+.admin-page-permission-error-message {
+  height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .admin-page {
   max-width: 1000px;
   margin: 16px auto 0;

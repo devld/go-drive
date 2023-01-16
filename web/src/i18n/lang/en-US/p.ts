@@ -1,5 +1,6 @@
 export default {
   admin: {
+    admin_group_required: "Permission of group 'admin' required",
     oauth_connected: 'Already connected to {p}',
     t_site: 'Site',
     t_users: 'Users',

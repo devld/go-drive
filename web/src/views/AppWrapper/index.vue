@@ -65,7 +65,10 @@ import { alert, loading } from '@/utils/ui-utils'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store'
+import { useRouter } from 'vue-router'
+import { EXPLORER_PATH_BASE } from '@/config'
 
+const router = useRouter()
 const store = useAppStore()
 const { t } = useI18n()
 
@@ -91,12 +94,20 @@ const login = () => {
   store.toggleLogin(true)
 }
 
+const toIndexPage = () => {
+  store.destroy()
+  if (router.currentRoute.value.path.startsWith(EXPLORER_PATH_BASE)) {
+    const href = router.resolve(`${EXPLORER_PATH_BASE}/`).href
+    location.href = href
+  }
+  location.reload()
+}
+
 const logout = async () => {
   loading(true)
   try {
     await logoutApi()
-    await store.getUser()
-    location.reload()
+    toIndexPage()
   } catch (e: any) {
     alert(e.message)
   } finally {
@@ -106,7 +117,7 @@ const logout = async () => {
 
 const afterLogin = () => {
   loginDialogShowing.value = false
-  location.reload()
+  toIndexPage()
 }
 </script>
 <style lang="scss">

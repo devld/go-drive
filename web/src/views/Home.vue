@@ -1,7 +1,9 @@
 <template>
-  <EntryExplorer base-path="/_" />
+  <EntryExplorer :base-path="EXPLORER_PATH_BASE" />
 </template>
 <script lang="ts">
+import { EXPLORER_PATH_BASE } from '@/config'
+
 export default { name: 'HomePage' }
 </script>
 <script setup lang="ts">
