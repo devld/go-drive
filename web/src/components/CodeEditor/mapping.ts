@@ -37,6 +37,7 @@ const languages: O<string[]> = {
   ini: ['ini'],
   java: ['java'],
   javascript: ['js', 'jsx'],
+  json: ['json'],
   julia: ['jl'],
   kotlin: ['kt', 'kts', 'ktm'],
   lua: ['lua'],
