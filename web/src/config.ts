@@ -1,3 +1,5 @@
+export const EXPLORER_PATH_BASE = '/_'
+
 export const TEXT_EDITOR_MAX_FILE_SIZE = 128 * 1024 // 128kb
 
 export const DEFAULT_TEXT_FILE_EXTS = [

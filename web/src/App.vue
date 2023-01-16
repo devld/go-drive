@@ -1,25 +1,17 @@
 <template>
-  <div v-if="inited" class="app">
+  <div v-if="store.inited" class="app">
     <RouterView />
   </div>
 </template>
 <script setup lang="ts">
 import { alert } from '@/utils/ui-utils'
-import { ref } from 'vue'
 import { useAppStore } from './store'
 
 const store = useAppStore()
 
-const inited = ref(false)
-
-store
-  .init()
-  .then(() => {
-    inited.value = true
-  })
-  .catch((e) => {
-    alert(e.message)
-  })
+store.init().catch((e) => {
+  alert(e.message)
+})
 </script>
 
 <style lang="scss">

@@ -34,6 +34,8 @@ const configOptions = mapOf(
 )
 
 interface AppState {
+  inited: boolean
+
   user?: User
   config?: Readonly<Config>
 
@@ -44,6 +46,7 @@ interface AppState {
 
 export const useAppStore = defineStore('app', {
   state: (): AppState => ({
+    inited: false,
     user: undefined,
     config: undefined,
     showLogin: false,
@@ -89,6 +92,11 @@ export const useAppStore = defineStore('app', {
     async init() {
       await this.getConfig()
       await this.getUser()
+      this.inited = true
+    },
+    destroy() {
+      this.user = undefined
+      this.inited = false
     },
   },
 })

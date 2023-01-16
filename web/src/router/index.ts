@@ -3,6 +3,7 @@ import AppWrapper from '@/views/AppWrapper/index.vue'
 import { T } from '@/i18n'
 import { setTitle } from '@/utils'
 import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
+import { EXPLORER_PATH_BASE } from '@/config'
 
 import Home from '@/views/Home.vue'
 import AdminIndex from '@/views/Admin/index.vue'
@@ -11,11 +12,11 @@ const routes: RouteRecordRaw[] = [
   {
     component: AppWrapper,
     path: '/',
-    redirect: '/_/',
+    redirect: `${EXPLORER_PATH_BASE}/`,
     children: [
       {
         name: 'Home',
-        path: '/_/:path(.*)',
+        path: `${EXPLORER_PATH_BASE}/:path(.*)`,
         component: Home,
         props: true,
       },

@@ -1,5 +1,6 @@
 export default {
   admin: {
+    admin_group_required: "需要 'admin' 用户组权限",
     oauth_connected: '已连接到 {p}',
     t_site: '站点',
     t_users: '用户',
