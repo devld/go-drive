@@ -1,3 +1,29 @@
+function __consoleWrite__(level, args) {
+  var argsArr = [level];
+  for (var i = 0; i < args.length; i++) {
+    argsArr.push(args[i]);
+  }
+  consoleWrite.apply(undefined, argsArr);
+}
+
+var console = {
+  debug: function () {
+    __consoleWrite__("DEBUG", arguments);
+  },
+  error: function () {
+    __consoleWrite__("ERROR", arguments);
+  },
+  info: function () {
+    __consoleWrite__(" INFO", arguments);
+  },
+  log: function () {
+    __consoleWrite__("  LOG", arguments);
+  },
+  warn: function () {
+    __consoleWrite__(" WARN", arguments);
+  },
+};
+
 function ms(ms) {
   return ms * 1000000;
 }

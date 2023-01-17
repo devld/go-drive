@@ -5,18 +5,24 @@ import (
 	"errors"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	s "go-drive/script"
 	"io"
+	"sync"
 )
+
+var sT = i18n.TPrefix("drive.script.")
 
 func init() {
 	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
 		Type:        "script",
 		DisplayName: t("name"),
 		README:      t("readme"),
-		ConfigForm:  []types.FormItem{},
+		ConfigForm: []types.FormItem{
+			{Field: "pool", Label: sT("form.pool.label"), Type: "text", Description: sT("form.pool.description")},
+		},
 		Factory: drive_util.DriveFactory{
 			Create:     newScriptDrive,
 			InitConfig: initConfig,
@@ -26,7 +32,34 @@ func init() {
 }
 
 type ScriptDrive struct {
-	vm *s.VM
+	baseVM *s.VM
+	pool   *s.VMPool
+
+	// data is the place where the data of the script instance is stored
+	data map[string]*s.Value
+	mu   sync.RWMutex
+}
+
+func (sd *ScriptDrive) setData(vm *s.VM, args s.Values) interface{} {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+	data := args.Get(0)
+	keys := data.Keys()
+	for _, k := range keys {
+		sd.data[k] = data.Get(k)
+	}
+	return nil
+}
+
+func (sd *ScriptDrive) getData(vm *s.VM, args s.Values) interface{} {
+	sd.mu.RLock()
+	defer sd.mu.RUnlock()
+	key := args.Get(0).String()
+	v, ok := sd.data[key]
+	if !ok {
+		vm.ThrowError(errors.New(key + " not found"))
+	}
+	return v.InternalValue()
 }
 
 func (sd *ScriptDrive) call(vm *s.VM, fn string, args ...interface{}) (*s.Value, error) {
@@ -41,20 +74,27 @@ func (sd *ScriptDrive) call(vm *s.VM, fn string, args ...interface{}) (*s.Value,
 	return vm.Call(context.Background(), fn, args...)
 }
 
-func (sd *ScriptDrive) Meta(ctx context.Context) types.DriveMeta {
-	vm := sd.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+func (sd *ScriptDrive) Meta(ctx context.Context) (types.DriveMeta, error) {
+	vm, e := sd.pool.Get()
+	if e != nil {
+		return types.DriveMeta{}, e
+	}
+	defer func() { _ = sd.pool.Return(vm) }()
 	v, e := sd.call(vm, "meta", s.NewContext(vm, ctx))
 	r := types.DriveMeta{}
-	if e == nil {
-		v.ParseInto(&r)
+	if e != nil {
+		return r, nil
 	}
-	return r
+	v.ParseInto(&r)
+	return r, nil
 }
 
 func (sd *ScriptDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
-	vm := sd.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := sd.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = sd.pool.Return(vm) }()
 	v, e := sd.call(vm, "get", s.NewContext(vm, ctx), path)
 	if e != nil {
 		return nil, e
@@ -63,8 +103,11 @@ func (sd *ScriptDrive) Get(ctx context.Context, path string) (types.IEntry, erro
 }
 
 func (sd *ScriptDrive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
-	vm := sd.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := sd.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = sd.pool.Return(vm) }()
 	v, e := sd.call(vm, "save", s.NewTaskCtx(vm, ctx), path, size, override, s.NewReader(vm, reader))
 	if e != nil {
 		return nil, e
@@ -73,8 +116,11 @@ func (sd *ScriptDrive) Save(ctx types.TaskCtx, path string, size int64, override
 }
 
 func (sd *ScriptDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	vm := sd.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := sd.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = sd.pool.Return(vm) }()
 	v, e := sd.call(vm, "makeDir", s.NewContext(vm, ctx), path)
 	if e != nil {
 		return nil, e
@@ -83,8 +129,11 @@ func (sd *ScriptDrive) MakeDir(ctx context.Context, path string) (types.IEntry, 
 }
 
 func (sd *ScriptDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	vm := sd.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := sd.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = sd.pool.Return(vm) }()
 	v, e := sd.call(vm, "copy", s.NewTaskCtx(vm, ctx), s.NewEntry(vm, from), to, override)
 	if e != nil {
 		return nil, e
@@ -93,8 +142,11 @@ func (sd *ScriptDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, ove
 }
 
 func (sd *ScriptDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	vm := sd.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := sd.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = sd.pool.Return(vm) }()
 	v, e := sd.call(vm, "move", s.NewTaskCtx(vm, ctx), s.NewEntry(vm, from), to, override)
 	if e != nil {
 		return nil, e
@@ -103,8 +155,11 @@ func (sd *ScriptDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, ove
 }
 
 func (sd *ScriptDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
-	vm := sd.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := sd.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = sd.pool.Return(vm) }()
 	v, e := sd.call(vm, "list", s.NewContext(vm, ctx), path)
 	if e != nil {
 		return nil, e
@@ -120,15 +175,21 @@ func (sd *ScriptDrive) List(ctx context.Context, path string) ([]types.IEntry, e
 }
 
 func (sd *ScriptDrive) Delete(ctx types.TaskCtx, path string) error {
-	vm := sd.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
-	_, e := sd.call(vm, "delete", s.NewTaskCtx(vm, ctx), path)
+	vm, e := sd.pool.Get()
+	if e != nil {
+		return e
+	}
+	defer func() { _ = sd.pool.Return(vm) }()
+	_, e = sd.call(vm, "delete", s.NewTaskCtx(vm, ctx), path)
 	return e
 }
 
 func (sd *ScriptDrive) Upload(ctx context.Context, path string, size int64, override bool, config types.SM) (*types.DriveUploadConfig, error) {
-	vm := sd.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := sd.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = sd.pool.Return(vm) }()
 	v, e := sd.call(vm, "upload", s.NewContext(vm, ctx), path, size, override, config)
 	if e != nil {
 		return nil, e
@@ -149,7 +210,8 @@ func (sd *ScriptDrive) valueToEntry(v *s.Value) *scriptDriveEntry {
 }
 
 func (sd *ScriptDrive) Dispose() error {
-	_ = sd.vm.Dispose()
+	_ = sd.baseVM.Dispose()
+	_ = sd.pool.Dispose()
 	return nil
 }
 
@@ -187,8 +249,11 @@ type scriptDriveEntry struct {
 
 // GetReader gets the reader of this entry
 func (se *scriptDriveEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
-	vm := se.d.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := se.d.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = se.d.pool.Return(vm) }()
 	v, e := se.d.call(vm, "getReader", s.NewContext(vm, ctx), se.s, start, size)
 	if e != nil {
 		return nil, e
@@ -201,8 +266,11 @@ func (se *scriptDriveEntry) GetReader(ctx context.Context, start, size int64) (i
 }
 
 func (se *scriptDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
-	vm := se.d.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := se.d.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = se.d.pool.Return(vm) }()
 	v, e := se.d.call(vm, "getURL", s.NewContext(vm, ctx), se.s)
 	if e != nil {
 		return nil, e
@@ -249,8 +317,11 @@ func (se *scriptDriveEntry) EntryData() types.SM {
 }
 
 func (se *scriptDriveEntry) HasThumbnail() bool {
-	vm := se.d.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := se.d.pool.Get()
+	if e != nil {
+		return false
+	}
+	defer func() { _ = se.d.pool.Return(vm) }()
 	v, e := se.d.call(vm, "hasThumbnail", se.s)
 	if e != nil {
 		return false
@@ -259,8 +330,11 @@ func (se *scriptDriveEntry) HasThumbnail() bool {
 }
 
 func (se *scriptDriveEntry) Thumbnail(ctx context.Context) (types.IContentReader, error) {
-	vm := se.d.vm.Fork()
-	defer func() { _ = vm.Dispose() }()
+	vm, e := se.d.pool.Get()
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = se.d.pool.Return(vm) }()
 	v, e := se.d.call(vm, "getThumbnail", s.NewContext(vm, ctx), se.s)
 	if e != nil {
 		return nil, e

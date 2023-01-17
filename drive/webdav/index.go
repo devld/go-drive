@@ -89,8 +89,8 @@ type Drive struct {
 	c *req.Client
 }
 
-func (w *Drive) Meta(context.Context) types.DriveMeta {
-	return types.DriveMeta{Writable: true}
+func (w *Drive) Meta(context.Context) (types.DriveMeta, error) {
+	return types.DriveMeta{Writable: true}, nil
 }
 
 func (w *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {

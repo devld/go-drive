@@ -32,6 +32,34 @@ function defineCreate(fn) {
       if (typeof drive[fnName] !== "function") continue;
       global["__drive_" + fnName] = drive[fnName].bind(drive);
     }
+
+    var props = Object.keys(drive).filter(function (key) {
+      return key[0] === "$";
+    });
+    /**
+     * @type {PropertyDescriptorMap}
+     */
+    var descriptors = {};
+    var values = {};
+    props.forEach(function (key) {
+      descriptors[key] = {
+        configurable: false,
+        get: function () {
+          return getData(key);
+        },
+        set: function (v) {
+          var dat = {};
+          dat[key] = v;
+          setData(dat);
+        },
+        enumerable: true,
+      };
+      values[key] = drive[key];
+    });
+
+    setData(values);
+    Object.defineProperties(drive, descriptors);
+    Object.freeze(drive);
   };
 }
 

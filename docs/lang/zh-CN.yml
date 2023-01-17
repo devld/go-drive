@@ -239,7 +239,11 @@ drive:
   script:
     name: 脚本
     readme: 使用 JavaScript 驱动盘。该盘无配置参数，请在保存后在下方进行具体配置
+    invalid_pool_config: "无效的 Pool 配置: {{ 1 }}"
     form:
+      pool:
+        label: Pool
+        description: JavaScript 运行时池配置，格式为 'MaxTotal,MaxIdle,MinIdle,IdleTime'，默认值为：'100,50,10,30m'。详情请见 https://pkg.go.dev/github.com/jolestar/go-commons-pool#ObjectPoolConfig
       script:
         label: 脚本文件
         description: 选择 scripts 文件夹中的脚本

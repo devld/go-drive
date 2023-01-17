@@ -37,6 +37,10 @@ func (vs Values) Get(index int) *Value {
 	return vs.vs[index]
 }
 
+func (vs Values) Len() int {
+	return len(vs.vs)
+}
+
 type Value struct {
 	vm  *VM
 	v   otto.Value
@@ -185,6 +189,10 @@ func (v *Value) ParseInto(dest interface{}) {
 func (v *Value) Raw() interface{} {
 	r, _ := v.v.Export()
 	return r
+}
+
+func (v *Value) InternalValue() interface{} {
+	return v.v
 }
 
 func (v *Value) Call(thisValue interface{}, args ...interface{}) *Value {

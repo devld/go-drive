@@ -127,6 +127,10 @@ func (d *RootDrive) ReloadMounts() error {
 	return d.root.reloadMounts()
 }
 
+func (d *RootDrive) Dispose() error {
+	return d.root.Dispose()
+}
+
 func (d *RootDrive) DriveInitConfig(ctx context.Context, name string) (*drive_util.DriveInitConfig, error) {
 	dc, e := d.driveStorage.GetDrive(name)
 	if e != nil {

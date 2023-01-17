@@ -17,7 +17,6 @@ func init() {
 func main() {
 	ch := registry.NewComponentHolder()
 
-	log.Println("Starting server...")
 	engine, e := Initialize(context.Background(), ch)
 	if e != nil {
 		log.Fatalln(e)

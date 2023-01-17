@@ -80,7 +80,18 @@ func (d *DispatcherDrive) reloadMounts() error {
 	return nil
 }
 
-func (d *DispatcherDrive) Meta(context.Context) types.DriveMeta {
+func (d *DispatcherDrive) Dispose() error {
+	d.mux.Lock()
+	defer d.mux.Unlock()
+	for _, d := range d.drives {
+		if disposable, ok := d.(types.IDisposable); ok {
+			_ = disposable.Dispose()
+		}
+	}
+	return nil
+}
+
+func (d *DispatcherDrive) Meta(context.Context) (types.DriveMeta, error) {
 	panic("not supported")
 }
 
@@ -388,7 +399,11 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 	if utils.IsRootPath(path) {
 		drives := make([]types.IEntry, 0, len(d.drives))
 		for k, v := range d.drives {
-			drives = append(drives, &driveEntry{d: d, path: k, name: k, meta: v.Meta(ctx)})
+			meta, e := v.Meta(ctx)
+			if e != nil {
+				return nil, e
+			}
+			drives = append(drives, &driveEntry{d: d, path: k, name: k, meta: meta})
 		}
 		entries = drives
 	} else {

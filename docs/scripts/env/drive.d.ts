@@ -2,6 +2,11 @@
 
 declare const selfDrive: DriveInstance;
 
+/** set drive's instance data */
+declare function setData(d: M): void;
+/** get drive's instance data by key */
+declare function getData(key: string): any;
+
 declare interface DriveMeta {
   Writable: boolean;
   Props?: M;
@@ -47,7 +52,12 @@ declare interface Drive {
     config: SM
   ): DriveUploadConfig | undefined;
 
-  getReader(ctx: Context, entry: Entry, start: number, size: number): ReadCloser;
+  getReader(
+    ctx: Context,
+    entry: Entry,
+    start: number,
+    size: number
+  ): ReadCloser;
   getURL?(ctx: Context, entry: Entry): ContentURL;
   hasThumbnail?(entry: Entry): boolean;
   getThumbnail?(ctx: Context, entry: Entry): ReadCloser | ContentURL;
@@ -55,7 +65,9 @@ declare interface Drive {
 
 declare interface DriveDataStore {
   Save(data: SM): void;
-  Load<K extends string, T extends { [key in K]: string | undefined }>(...keys: K[]): T;
+  Load<K extends string, T extends { [key in K]: string | undefined }>(
+    ...keys: K[]
+  ): T;
 }
 
 declare interface DriveCacheItem {
