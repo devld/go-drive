@@ -114,8 +114,8 @@ func (s *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, er
 	return &s3Entry{key: ec.Path, c: s, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 
-func (s *Drive) Meta(context.Context) types.DriveMeta {
-	return types.DriveMeta{Writable: true}
+func (s *Drive) Meta(context.Context) (types.DriveMeta, error) {
+	return types.DriveMeta{Writable: true}, nil
 }
 
 func (s *Drive) get(path string, ctx context.Context) (*s3Entry, error) {

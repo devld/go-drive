@@ -2,9 +2,23 @@ package script
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"strings"
 	"sync"
 	"time"
 )
+
+func vm_consoleWrite(vm *VM, args Values) interface{} {
+	level := args.Get(0).String()
+	msg := make([]string, args.Len()-1)
+	for i := range msg {
+		msg[i] = fmt.Sprintf("%v", args.Get(i+1))
+	}
+
+	log.Printf("%s %s", level, strings.Join(msg, " "))
+	return nil
+}
 
 // vm_newContext: () Context
 func vm_newContext(vm *VM, args Values) interface{} {
@@ -80,4 +94,21 @@ type contextWithTimeout struct {
 func (cwt contextWithTimeout) Dispose() {
 	cwt.Context.vm.RemoveDisposable(cwt)
 	cwt.Cancel()
+}
+
+// vm_newLocker: () *locker
+func vm_newLocker(vm *VM, args Values) interface{} {
+	return &locker{&sync.Mutex{}}
+}
+
+type locker struct {
+	mu *sync.Mutex
+}
+
+func (l *locker) Lock() {
+	l.mu.Lock()
+}
+
+func (l *locker) Unlock() {
+	l.mu.Unlock()
 }

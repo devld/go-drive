@@ -3,6 +3,7 @@ package script
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
@@ -13,6 +14,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -20,6 +23,13 @@ import (
 //go:embed helper.js
 var helperScript []byte
 var baseVM *s.VM
+
+const (
+	DefaultPoolMaxTotal = 100
+	DefaultPoolMaxIdle  = 50
+	DefaultPoolMinIdle  = 10
+	DefaultPoolIdleTime = time.Duration(30 * time.Minute)
+)
 
 func init() {
 	vm, e := s.NewVM()
@@ -47,14 +57,23 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.
 		return nil, err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
 	}
 
+	poolConfig, e := parsePoolConfig(config["pool"])
+	if e != nil {
+		return nil, err.NewNotAllowedMessageError(i18n.T("drive.script.invalid_pool_config", e.Error()))
+	}
+
 	vm, e := createVm(driveUtils.Config, cfg["_script"])
 	if e != nil {
 		return nil, e
 	}
 
 	d := &ScriptDrive{
-		vm: vm,
+		baseVM: vm,
+		data:   make(map[string]*s.Value),
 	}
+
+	vm.Set("setData", s.WrapVmCall(vm, d.setData))
+	vm.Set("getData", s.WrapVmCall(vm, d.getData))
 
 	_, e = vm.Call(context.Background(), "__driveCreate", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
 
@@ -63,6 +82,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.
 		return nil, e
 	}
 	vm.Set("selfDrive", s.NewDrive(vm, d))
+	d.pool = s.NewVMPool(vm, poolConfig)
 
 	return d, nil
 }
@@ -170,6 +190,35 @@ func init_(ctx context.Context, data, config types.SM, driveUtils drive_util.Dri
 
 	_, e = vm.Call(context.Background(), "__driveInit", s.NewContext(vm, ctx), data, config, newScriptDriveUtils(vm, driveUtils))
 	return e
+}
+
+// parsePoolConfig parses config like this: MaxTotal,MaxIdle,MinIdle,IdleTime
+func parsePoolConfig(arg string) (*s.VMPoolConfig, error) {
+	args := strings.Split(strings.ReplaceAll(arg, " ", ""), ",")
+	c := &s.VMPoolConfig{
+		MaxTotal: DefaultPoolMaxTotal,
+		MaxIdle:  DefaultPoolMaxIdle,
+		MinIdle:  DefaultPoolMinIdle,
+		IdleTime: DefaultPoolIdleTime,
+	}
+
+	if len(args) > 0 {
+		c.MaxTotal = types.SV(args[0]).Int(DefaultPoolMaxTotal)
+	}
+	if len(args) > 1 {
+		c.MaxIdle = types.SV(args[1]).Int(DefaultPoolMaxIdle)
+	}
+	if len(args) > 2 {
+		c.MinIdle = types.SV(args[2]).Int(DefaultPoolMinIdle)
+	}
+	if len(args) > 3 {
+		c.IdleTime = types.SV(args[3]).Duration(DefaultPoolIdleTime)
+	}
+
+	if c.MaxIdle < c.MinIdle {
+		return nil, errors.New("MaxIdle must be greater than or equal to MinIdle")
+	}
+	return c, nil
 }
 
 func newScriptDriveUtils(vm *s.VM, utils drive_util.DriveUtils) *scriptDriveUtils {

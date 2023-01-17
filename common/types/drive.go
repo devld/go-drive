@@ -107,7 +107,7 @@ type DriveMeta struct {
 // All API with TaskCtx argument should report operation progress to TaskCtx if possible.
 type IDrive interface {
 	// Meta returns the metadata of this drive
-	Meta(ctx context.Context) DriveMeta
+	Meta(ctx context.Context) (DriveMeta, error)
 	// Get gets the entry. If the path is not exist, Get should returns err.NewNotFoundError
 	Get(ctx context.Context, path string) (IEntry, error)
 	// Save reads from reader and "save" the file.

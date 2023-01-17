@@ -9,6 +9,13 @@ declare type SM = { [key: string]: string };
 declare type M<T = any> = { [key: string]: T };
 
 /**
+ * write something to console
+ * @param level string
+ * @param msg messages
+ */
+declare function consoleWrite(level: string, ...msg: string[]): void;
+
+/**
  * Pause for a while
  *
  * Example: `sleep(ms(1000))`
@@ -42,6 +49,9 @@ declare type TaskCtxOnUpdate = (loaded: number, total: number) => void;
  */
 declare function newTaskCtx(ctx: Context, onUpdate?: TaskCtxOnUpdate): TaskCtx;
 
+/** create a locker */
+declare function newLocker(): Locker;
+
 /** Context of Go */
 declare interface Context {
   /** Detects error of this Context, such as whether it was cancelled, timed out, etc. Any errors will be thrown */
@@ -65,6 +75,11 @@ declare interface TaskCtx extends Context {
    * @param abs is absolute value
    */
   Total(total: number, abs: boolean): void;
+}
+
+declare interface Locker {
+  Lock(): void;
+  Unlock(): void;
 }
 
 /**

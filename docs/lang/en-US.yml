@@ -239,7 +239,11 @@ drive:
   script:
     name: Script
     readme: Use the JavaScript driver. There are no configuration parameters for this, please save it and configure it below
+    invalid_pool_config: "Invalid Pool configuration: {{ 1 }}"
     form:
+      pool:
+        label: Pool
+        description: JavaScript runtime pool configuration in the format of 'MaxTotal,MaxIdle,MinIdle,IdleTime' with default values of '100,50,10,30m'. See https://pkg.go.dev/github.com/jolestar/go-commons-pool#ObjectPoolConfig for details
       script:
         label: Script File
         description: Select the script in the scripts folder

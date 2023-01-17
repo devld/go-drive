@@ -7,6 +7,7 @@ import (
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
 	"go-drive/common/types"
+	"log"
 )
 
 // executes after all other jobs registered
@@ -41,7 +42,7 @@ func init() {
 				Forms:   flowForms,
 			}, Required: true},
 		},
-		Do: func(ctx context.Context, params types.SM, ch *registry.ComponentsHolder, log func(string)) error {
+		Do: func(ctx context.Context, params types.SM, ch *registry.ComponentsHolder, logFn func(string)) error {
 			ops := params.GetMapList("ops")
 			if len(ops) == 0 {
 				return errors.New("empty ops")
@@ -52,12 +53,12 @@ func init() {
 				job := GetJob(jobKey)
 				delete(op, "$key")
 				delete(op, "_ignoreErr")
-				e := job.Do(ctx, op, ch, log)
+				e := job.Do(ctx, op, ch, logFn)
 				if e != nil && !ignoreError {
 					return fmt.Errorf("flow execution error at step %d: %s", i+1, e.Error())
 				}
 				if e != nil {
-					fmt.Printf("ignored error at step %d: %s", i+1, e.Error())
+					log.Printf("ignored error at step %d: %s", i+1, e.Error())
 				}
 			}
 			return nil

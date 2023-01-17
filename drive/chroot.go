@@ -76,7 +76,7 @@ func NewChrootWrapper(d types.IDrive, chroot *Chroot) *ChrootWrapper {
 	return &ChrootWrapper{d: d, Chroot: chroot}
 }
 
-func (c *ChrootWrapper) Meta(ctx context.Context) types.DriveMeta {
+func (c *ChrootWrapper) Meta(ctx context.Context) (types.DriveMeta, error) {
 	return c.d.Meta(ctx)
 }
 

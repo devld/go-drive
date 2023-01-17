@@ -13,6 +13,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
+	github.com/jolestar/go-commons-pool/v2 v2.1.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/orcaman/concurrent-map v1.0.0
 	github.com/pkg/sftp v1.13.4

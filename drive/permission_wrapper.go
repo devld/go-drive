@@ -39,7 +39,7 @@ func NewPermissionWrapperDrive(drive types.IDrive, permissions utils.PermMap, si
 	}
 }
 
-func (p *PermissionWrapperDrive) Meta(ctx context.Context) types.DriveMeta {
+func (p *PermissionWrapperDrive) Meta(ctx context.Context) (types.DriveMeta, error) {
 	return p.drive.Meta(ctx)
 }
 

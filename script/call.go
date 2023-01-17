@@ -5,6 +5,8 @@ import "go-drive/common/utils"
 func initVarsForVm(v *VM) {
 	v.o.Set("DEBUG", utils.IsDebugOn)
 
+	v.o.Set("consoleWrite", WrapVmCall(v, vm_consoleWrite))
+
 	v.o.Set("newFormData", WrapVmCall(v, vm_newFormData))
 	v.o.Set("http", WrapVmCall(v, vm_http))
 
@@ -13,6 +15,7 @@ func initVarsForVm(v *VM) {
 	v.o.Set("newContext", WrapVmCall(v, vm_newContext))
 	v.o.Set("newContextWithTimeout", WrapVmCall(v, vm_newContextWithTimeout))
 	v.o.Set("newTaskCtx", WrapVmCall(v, vm_newTaskCtx))
+	v.o.Set("newLocker", WrapVmCall(v, vm_newLocker))
 
 	v.o.Set("newBytes", WrapVmCall(v, func(vm *VM, args Values) interface{} {
 		return NewBytes(vm, args.Get(0).Raw())
