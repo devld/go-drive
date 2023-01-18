@@ -110,18 +110,50 @@ export function pathClean(path: string) {
   return paths.join('/')
 }
 
-export function entryMatches(entry: Entry, matches: string | string[]) {
+export function entryMatches(
+  entry: Entry | string,
+  matches: string | string[]
+) {
+  const name = typeof entry === 'object' ? entry.name : entry
+  const meta = typeof entry === 'object' ? entry.meta : undefined
   const matches_ = Array.isArray(matches) ? matches : [matches]
   for (const m of matches_) {
     // matches full filename
-    if (m.startsWith('/') && entry.name.toLowerCase() === m.substring(1)) {
+    if (m.startsWith('/') && name.toLowerCase() === m.substring(1)) {
       return true
     }
     // match ext
-    const ext = entry.meta.ext || filenameExt(entry.name)
+    const ext = meta?.ext || filenameExt(name)
     if (m === ext) return true
   }
   return false
+}
+
+export function createEntryExtMatcher<T extends string = string>(
+  extsMap: Record<T, string[]>
+): (entry: Entry | string) => T | undefined {
+  const extMapping: Record<string, T> = {}
+  const fullNameMapping: Record<string, T> = {}
+  Object.keys(extsMap).forEach((icon_) => {
+    const icon = icon_ as T
+    extsMap[icon].forEach((ext) => {
+      if (ext.startsWith('/')) {
+        fullNameMapping[ext.substring(1)] = icon
+      } else {
+        extMapping[ext] = icon
+      }
+    })
+  })
+  return (entry: Entry | string) => {
+    const name = typeof entry === 'object' ? entry.name : entry
+    const meta = typeof entry === 'object' ? entry.meta : undefined
+    let icon = fullNameMapping[name.toLocaleLowerCase()]
+    if (!icon) {
+      const ext = meta?.ext || filenameExt(name)
+      icon = extMapping[ext]
+    }
+    return icon
+  }
 }
 
 export function getRouteQuery(q: LocationQuery, key: string) {

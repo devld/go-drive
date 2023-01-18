@@ -1,5 +1,5 @@
 import { Entry } from '@/types'
-import { filenameExt } from '@/utils'
+import { createEntryExtMatcher, filenameExt } from '@/utils'
 
 const fileExts: O<string[]> = {
   log: [
@@ -112,17 +112,7 @@ const fileExts: O<string[]> = {
   apk: ['apk'],
 }
 
-const extMapping: O<string> = {}
-const fullNameMapping: O<string> = {}
-Object.keys(fileExts).forEach((icon) => {
-  fileExts[icon].forEach((ext) => {
-    if (ext.startsWith('/')) {
-      fullNameMapping[ext.substring(1)] = icon
-    } else {
-      extMapping[ext] = icon
-    }
-  })
-})
+const fileIconMatcher = createEntryExtMatcher(fileExts)
 
 const dirIcon = 'folder'
 const parentDirIcon = 'iconfanhuishangyiji'
@@ -132,11 +122,7 @@ export function getIconSVG(entry: Entry) {
   let icon
   if (entry.type === 'dir') icon = dirIcon
   if (entry.type === 'file') {
-    icon = fullNameMapping[entry.name.toLocaleLowerCase()]
-    if (!icon) {
-      const ext = entry.meta.ext || filenameExt(entry.name)
-      icon = extMapping[ext] || fileFallbackIcon
-    }
+    icon = fileIconMatcher(entry) || fileFallbackIcon
   }
   if (entry.name === '..') icon = parentDirIcon
   return '#icon-' + icon

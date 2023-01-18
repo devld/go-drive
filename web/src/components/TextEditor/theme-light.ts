@@ -14,10 +14,10 @@ const chalky = '#e5c07b',
   whiskey = '#d19a66',
   violet = '#c678dd',
   darkBackground = '#f5f5f5',
-  highlightBackground = '#f1f1f1',
+  highlightBackground = '#dddddd',
   background = '#ffffff',
-  tooltipBackground = '#353a42',
-  selection = '#eeeeee',
+  tooltipBackground = '#f1f1f1',
+  selection = '#409eff',
   cursor = '#528bff'
 
 export const oneDarkTheme = EditorView.theme(
@@ -47,7 +47,7 @@ export const oneDarkTheme = EditorView.theme(
       backgroundColor: '#6199ff2f',
     },
 
-    '.cm-activeLine': { backgroundColor: highlightBackground },
+    '.cm-activeLine': { backgroundColor: 'transparent' },
     '.cm-selectionMatch': { backgroundColor: '#aafe661a' },
 
     '&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
