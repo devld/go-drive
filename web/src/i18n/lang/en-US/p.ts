@@ -21,7 +21,7 @@ export default {
         'Enable office files preview via online services provided by Microsoft and Google',
       text_file_exts: 'Text file extensions',
       text_file_exts_desc:
-        'List of text file extensions supported for viewing and editing, separated by comma',
+        "List of text file extensions(or match the full filename starting with '/', e.g. '/.gitignore') supported for viewing and editing, separated by comma",
       image_file_exts: 'Image file extensions',
       image_file_exts_desc:
         'List of supported image file extensions, separated by comma',
@@ -33,7 +33,7 @@ export default {
         'List of supported video file extensions, separated by comma',
       monaco_editor_exts: 'Use the Monaco editor',
       monaco_editor_exts_desc:
-        'Comma-separated file extensions, which will be opened using the Monaco editor',
+        "Comma-separated file extensions(or match the full filename starting with '/', e.g. '/.gitignore'), which will be opened using the Monaco editor",
       thumbnail_config: 'Thumbnail config',
       thumbnail_mapping: 'Thumbnail Generator Mapping',
       thumbnail_mapping_tips:

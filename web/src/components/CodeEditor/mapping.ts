@@ -1,5 +1,5 @@
 // from https://gist.github.com/ppisarczyk/43962d06686722d26d176fad46879d41
-const languages: O<string[]> = {
+export const languages: O<string[]> = {
   abap: ['abap'],
   apex: ['cls'],
   bat: ['bat', 'cmd'],
