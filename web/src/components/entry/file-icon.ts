@@ -12,6 +12,10 @@ const fileExts: O<string[]> = {
     'properties',
     'log',
     'txt',
+    '/.gitignore',
+    '/.gitconfig',
+    '/dockerfile',
+    '/.vimrc',
   ],
   mp: ['mp3', 'm4a', 'flac', 'mid', 'midi', 'wav'],
   exe: ['exe', 'deb', 'sh', 'rpm', 'com', 'jar', 'msi'],
@@ -109,9 +113,14 @@ const fileExts: O<string[]> = {
 }
 
 const extMapping: O<string> = {}
+const fullNameMapping: O<string> = {}
 Object.keys(fileExts).forEach((icon) => {
   fileExts[icon].forEach((ext) => {
-    extMapping[ext] = icon
+    if (ext.startsWith('/')) {
+      fullNameMapping[ext.substring(1)] = icon
+    } else {
+      extMapping[ext] = icon
+    }
   })
 })
 
@@ -120,10 +129,15 @@ const parentDirIcon = 'iconfanhuishangyiji'
 const fileFallbackIcon = 'file'
 
 export function getIconSVG(entry: Entry) {
-  const ext = entry.meta.ext || filenameExt(entry.name)
   let icon
   if (entry.type === 'dir') icon = dirIcon
-  if (entry.type === 'file') icon = extMapping[ext] || fileFallbackIcon
+  if (entry.type === 'file') {
+    icon = fullNameMapping[entry.name.toLocaleLowerCase()]
+    if (!icon) {
+      const ext = entry.meta.ext || filenameExt(entry.name)
+      icon = extMapping[ext] || fileFallbackIcon
+    }
+  }
   if (entry.name === '..') icon = parentDirIcon
   return '#icon-' + icon
 }

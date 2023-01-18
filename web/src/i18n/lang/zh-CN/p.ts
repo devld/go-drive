@@ -20,7 +20,7 @@ export default {
       office_preview_enabled_desc:
         '通过微软和谷歌提供的在线服务来预览 Office 文件',
       text_file_exts: '文本文件后缀名',
-      text_file_exts_desc: '支持查看和编辑的文本文件后缀名列表，用英文逗号隔开',
+      text_file_exts_desc: '支持查看和编辑的文本文件后缀名列表（或以 \'/\' 开头匹配全文件名，如 \'/.gitignore\'），用英文逗号隔开',
       image_file_exts: '图片文件后缀名',
       image_file_exts_desc: '支持查看的图片文件后缀名列表，用英文逗号隔开',
       audio_file_exts: '音频文件后缀名',
@@ -29,7 +29,7 @@ export default {
       video_file_exts_desc: '支持查看的视频文件后缀名列表，用英文逗号隔开',
       monaco_editor_exts: '使用 Monaco 编辑器',
       monaco_editor_exts_desc:
-        '用英文逗号隔开的文件后缀名，这些文件将会使用 Monaco 编辑器打开',
+        '用英文逗号隔开的文件后缀名（或以 \'/\' 开头匹配全文件名，如 \'/.gitignore\'），这些文件将会使用 Monaco 编辑器打开',
       thumbnail_config: '缩略图配置',
       thumbnail_mapping: '缩略图生成器映射',
       thumbnail_mapping_tips:

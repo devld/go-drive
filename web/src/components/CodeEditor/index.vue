@@ -1,6 +1,11 @@
 <template>
   <div class="code-editor">
     <iframe ref="el" class="code-editor__inner"></iframe>
+    <div class="code-editor__languages">
+      <select v-model="selectedLanguage">
+        <option v-for="(_, l) in languages" :key="l" :value="l">{{ l }}</option>
+      </select>
+    </div>
     <div v-if="loading" class="code-editor__loading">Editor loading...</div>
   </div>
 </template>
@@ -12,6 +17,7 @@ import {
 } from '../../../monaco-editor/src/types'
 import { getEnv } from './js-script-env'
 import { useEditorSetup, useEditorTheme } from './utils'
+import { languages } from './mapping'
 
 const props = defineProps({
   modelValue: {
@@ -42,22 +48,30 @@ const mode = computed(() => {
   const [lang, env] = props.type.split('-', 2)
   return { lang, env }
 })
-const language = computed(() => mode.value?.lang)
+const selectedLanguage = ref<string>()
+watch(
+  mode,
+  (m) => {
+    selectedLanguage.value = m?.lang
+  },
+  { immediate: true }
+)
 
 const url = computed(
   () =>
     `./code-editor/index.html?id=${id}&lang=${encodeURIComponent(
-      mode.value?.lang ?? ''
+      selectedLanguage.value ?? ''
     )}`
 )
 
 const initEditor = () => {
   loading.value = true
   el.value!.src = url.value
+  lastValue = undefined
 }
 const prepareEditor = () => {
   let jsEnv: JavaScriptSetupOptions | undefined
-  switch (language.value) {
+  switch (mode.value?.lang) {
     case 'javascript':
       jsEnv = getEnv(mode.value?.env)
       if (jsEnv) editorEmit('setupJs', jsEnv)
@@ -93,7 +107,7 @@ const setDisabled = () => {
 
 watch(() => props.modelValue, setValue)
 watch(() => props.disabled, setDisabled)
-watch(language, initEditor)
+watch(selectedLanguage, initEditor)
 onMounted(initEditor)
 </script>
 <style lang="scss">
@@ -107,6 +121,17 @@ onMounted(initEditor)
   border: none;
   width: 100%;
   height: 100%;
+}
+
+.code-editor__languages {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  opacity: 0.4;
+
+  &:hover {
+    opacity: 1;
+  }
 }
 
 .code-editor__loading {

@@ -4,7 +4,7 @@ import focus from './directives/focus'
 import longPress from './directives/long-press'
 import markdown from './directives/markdown'
 import lazySrc from './directives/lazy-src'
-import { Task, User } from '../types'
+import { Entry, Task, User } from '../types'
 import { Directive, Plugin } from 'vue'
 import { LocationQuery } from 'vue-router'
 
@@ -108,6 +108,20 @@ export function pathClean(path: string) {
     else paths.push(s)
   })
   return paths.join('/')
+}
+
+export function entryMatches(entry: Entry, matches: string | string[]) {
+  const matches_ = Array.isArray(matches) ? matches : [matches]
+  for (const m of matches_) {
+    // matches full filename
+    if (m.startsWith('/') && entry.name.toLowerCase() === m.substring(1)) {
+      return true
+    }
+    // match ext
+    const ext = entry.meta.ext || filenameExt(entry.name)
+    if (m === ext) return true
+  }
+  return false
 }
 
 export function getRouteQuery(q: LocationQuery, key: string) {

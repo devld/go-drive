@@ -34,7 +34,7 @@ import { getLang } from '@/components/CodeEditor/mapping'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import TextEditor from '@/components/TextEditor/index.vue'
 import { Entry } from '@/types'
-import { filename as filenameFn, filenameExt } from '@/utils'
+import { entryMatches, filename as filenameFn, filenameExt } from '@/utils'
 import { ApiError } from '@/utils/http'
 import { alert } from '@/utils/ui-utils'
 import { computed, nextTick, ref, watch } from 'vue'
@@ -74,7 +74,7 @@ const el = ref<HTMLElement | null>(null)
 
 const useMonacoEditor = computed(() => {
   const ext = props.ctx.config.options['web.monacoEditorExts']
-  return ext && ext.length > 0 && ext.includes(filenameExt(filename.value))
+  return ext && ext.length > 0 && entryMatches(props.entry, ext)
 })
 const monacoEditorType = computed(() => {
   const ext = filenameExt(filename.value)
