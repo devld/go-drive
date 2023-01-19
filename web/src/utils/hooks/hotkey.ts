@@ -15,11 +15,9 @@ function hotKeyHandler(this: HotKeyHTMLElement, e: KeyboardEvent) {
   if (!e.key) return
   const target = e.target as HotKeyHTMLElement
   if (
-    (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') &&
-    !e.ctrlKey &&
-    !e.altKey &&
-    !e.shiftKey &&
-    e.key.length === 1
+    target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.contentEditable === 'true'
   ) {
     return
   }

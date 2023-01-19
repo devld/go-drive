@@ -355,9 +355,15 @@ const { onDragStart, onDragOver, onDrop } = useEntryDarg(
   (d) => emit('drag-action', d)
 )
 
-useHotKey(() => {
-  toggleViewMode()
-}, 't')
+useHotKey(toggleViewMode, 't')
+useHotKey(
+  (e) => {
+    toggleSelectAll()
+    e.preventDefault()
+  },
+  'a',
+  { ctrl: true }
+)
 
 defineExpose({
   focusOnEntry,
