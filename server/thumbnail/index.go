@@ -124,7 +124,10 @@ func createHandlers(items []common.ThumbnailHandlerItem) (map[string]map[string]
 }
 
 func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error) {
-	thumbnailEntry := m.createThumbnailEntry(entry)
+	thumbnailEntry, e := m.createThumbnailEntry(entry)
+	if e != nil {
+		return nil, e
+	}
 
 	itemPath := m.getItem(thumbnailEntry)
 	t, e := m.tryToGetFromCache(thumbnailEntry, itemPath)
@@ -138,7 +141,7 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 	return m.doMake(ctx, thumbnailEntry, itemPath)
 }
 
-func (m *Maker) createThumbnailEntry(entry types.IEntry) ThumbnailEntry {
+func (m *Maker) createThumbnailEntry(entry types.IEntry) (ThumbnailEntry, error) {
 	// we need to use the absolute path of this entry to generate thumbnail cache key
 	// so we get the wrapped IDispatcherEntry here
 	dispatcherEntry := drive_util.GetIEntry(entry, func(e types.IEntry) bool {
@@ -156,7 +159,11 @@ func (m *Maker) createThumbnailEntry(entry types.IEntry) ThumbnailEntry {
 	} else {
 		externalURL += "/content/"
 	}
-	externalURL += entry.Path()
+	pathURL, e := url.Parse(entry.Path())
+	if e != nil {
+		return nil, e
+	}
+	externalURL += pathURL.String()
 
 	ako, ok := entry.Meta().Props["accessKey"]
 	ak := ""
@@ -173,7 +180,7 @@ func (m *Maker) createThumbnailEntry(entry types.IEntry) ThumbnailEntry {
 		IEntry:           entry,
 		IDispatcherEntry: dispatcherEntry.(types.IDispatcherEntry),
 		externalURL:      externalURL,
-	}
+	}, nil
 }
 
 func (m *Maker) resolveHandler(entry ThumbnailEntry) ([]TypeHandler, error) {
