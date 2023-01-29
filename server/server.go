@@ -16,6 +16,7 @@ import (
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
 	"net/http"
+	"os"
 	"reflect"
 	"runtime"
 	"time"
@@ -55,7 +56,11 @@ func InitServer(config common.Config,
 	engine := gin.New()
 
 	engine.Use(gin.CustomRecovery(handlePanic))
-	engine.Use(Logger())
+
+	if noLogRequest, _ := os.LookupEnv("NO_LOG_REQUEST"); noLogRequest == "" {
+		engine.Use(Logger())
+	}
+
 	engine.Use(apiResultHandler(messageSource))
 
 	userAuth := NewUserAuth(userDAO)

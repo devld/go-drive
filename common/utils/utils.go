@@ -19,8 +19,8 @@ import (
 var IsDebugOn bool
 
 func init() {
-	_, exists := os.LookupEnv("DEBUG")
-	IsDebugOn = exists
+	debugOn, _ := os.LookupEnv("DEBUG")
+	IsDebugOn = debugOn != ""
 }
 
 func FileExists(path string) (bool, error) {
