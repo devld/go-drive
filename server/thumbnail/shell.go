@@ -3,6 +3,7 @@ package thumbnail
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
@@ -129,7 +130,7 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry T
 	}
 
 	if e != nil {
-		log.Printf("shell thumbnail handler error: %v. stderr: %s", e, stdErr.String())
+		log.Printf("shell thumbnail handler error: %v. stderr(base64): %s", e, base64.StdEncoding.EncodeToString(stdErr.Bytes()))
 	}
 
 	return e
