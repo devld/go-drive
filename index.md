@@ -315,7 +315,7 @@ Dropbox 使用 JavaScript 实现，请参考[安装其他 Drive](#安装其他-d
 ```yaml
 search:
   enabled: true
-  type: bleve
+  type: sqlite
 ```
 
 然后重启应用即可。
