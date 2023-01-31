@@ -1,0 +1,25 @@
+<style>
+  .page-en-version-link {
+      position: absolute;
+      top: 1em;
+      left: 1em;
+      color: #fff;
+  }
+</style>
+<script>
+  var enLink = document.createElement("a");
+  enLink.href =
+    "https://translate.google.com/translate?sl=auto&tl=en&hl=zh-CN&client=webapp&u=" +
+    encodeURIComponent(location.origin + location.pathname + location.search);
+  enLink.classList.add("page-en-version-link");
+  enLink.innerText = "English Version";
+  document.body.appendChild(enLink);
+
+  if (location.pathname === "/") {
+    var releaseLink = document.createElement("a");
+    releaseLink.classList.add("btn");
+    releaseLink.href = "https://github.com/devld/go-drive/releases";
+    releaseLink.innerText = "Download";
+    document.querySelector("header.page-header").appendChild(releaseLink);
+  }
+</script>
