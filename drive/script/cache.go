@@ -20,7 +20,7 @@ func (sc *scriptDriveCache) PutEntries(entries []scriptEntryStruct, ttl time.Dur
 }
 
 func (sc *scriptDriveCache) PutEntry(entry scriptEntryStruct, ttl time.Duration) {
-	if e := sc.c.PutEntry(*structToEntry(&entry), ttl); e != nil {
+	if e := sc.c.PutEntry(structToEntry(&entry), ttl); e != nil {
 		sc.vm.ThrowError(e)
 	}
 }
@@ -63,7 +63,6 @@ func (sc *scriptDriveCache) GetChildren(path string) interface{} {
 	return a
 }
 
-func structToEntry(e *scriptEntryStruct) *types.IEntry {
-	var a types.IEntry = &scriptDriveEntry{s: e}
-	return &a
+func structToEntry(e *scriptEntryStruct) types.IEntry {
+	return &scriptDriveEntry{s: e}
 }

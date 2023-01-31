@@ -137,8 +137,8 @@ auth:
 # Search configuration
 search:
   enabled: false
-  # searcher type: currently only bleve is supported
-  type: bleve
+  # searcher type: currently sqlite, bleve(deprecated) are supported
+  type: sqlite
 
 # API path. If go-drive is running behind reverse proxy(eg. Nginx) and it's in subpath,
 # then you need to specify the API path

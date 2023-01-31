@@ -92,10 +92,10 @@ func (w *DriveFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	if e != nil {
 		return nil, mapError(e)
 	}
-	return utils.ArrayMap(entries, func(t *types.IEntry) *fs.DirEntry {
-		var a fs.DirEntry = entryToFileInfo(*t).(entryFileInfo)
-		return &a
-	}), nil
+	return utils.ArrayMap(
+		entries,
+		func(t *types.IEntry) fs.DirEntry { return entryToFileInfo(*t).(entryFileInfo) },
+	), nil
 }
 
 func (w *DriveFS) Mkdir(ctx context.Context, name string, _ os.FileMode) error {
@@ -372,10 +372,10 @@ func (w *driveFSFile) ReadDir(n int) ([]fs.DirEntry, error) {
 	if e != nil {
 		return nil, e
 	}
-	return utils.ArrayMap(r, func(t *fs.FileInfo) *fs.DirEntry {
-		var a fs.DirEntry = (*t).(entryFileInfo)
-		return &a
-	}), nil
+	return utils.ArrayMap(
+		r,
+		func(t *fs.FileInfo) fs.DirEntry { return (*t).(entryFileInfo) },
+	), nil
 }
 
 func entryToFileInfo(e types.IEntry) fs.FileInfo {

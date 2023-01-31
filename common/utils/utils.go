@@ -207,10 +207,10 @@ func flattenStringMap(prefix string, val interface{}, separator string, result m
 	result[prefix] = fmt.Sprintf("%v", val)
 }
 
-func ArrayMap[TF any, TT any](a []TF, convert func(*TF) *TT) []TT {
+func ArrayMap[TF any, TT any](a []TF, convert func(*TF) TT) []TT {
 	r := make([]TT, len(a))
 	for i := range a {
-		r[i] = *convert(&a[i])
+		r[i] = convert(&a[i])
 	}
 	return r
 }

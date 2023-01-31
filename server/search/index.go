@@ -155,7 +155,7 @@ func (s *Service) search(path, query string, from, size int,
 }
 
 func (s *Service) indexAll(ctx types.TaskCtx, path string, ignoreError bool) error {
-	_ = s.s.DeleteDir(ctx, path)
+	_ = s.s.Delete(ctx, path)
 	ctx.Total(0, true)
 	ctx.Progress(0, true)
 	filters, e := s.loadFilters()
@@ -332,7 +332,7 @@ func (s *Service) onDeleted(dc types.DriveListenerContext, path string) {
 		return
 	}
 	_, _ = s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
-		e := s.s.DeleteDir(ctx, path)
+		e := s.s.Delete(ctx, path)
 		if e != nil {
 			log.Printf("Error deleting index %s: %s", utils.LogSanitize(path), e)
 		}

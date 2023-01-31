@@ -19,10 +19,7 @@ func newValue(vm *VM, v otto.Value) *Value {
 }
 
 func newValues(vm *VM, vs []otto.Value) Values {
-	return Values{vm, utils.ArrayMap(vs, func(t *otto.Value) **Value {
-		a := newValue(vm, *t)
-		return &a
-	})}
+	return Values{vm, utils.ArrayMap(vs, func(t *otto.Value) *Value { return newValue(vm, *t) })}
 }
 
 type Values struct {

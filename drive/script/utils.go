@@ -94,9 +94,8 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 	}
 
 	scripts, _ := ListDriveScripts(driveUtils.Config)
-	scriptOptions := (utils.ArrayMap(scripts, func(t *DriveScript) *types.FormItemOption {
-		a := types.FormItemOption{Value: t.Name + ".js", Name: t.DisplayName}
-		return &a
+	scriptOptions := (utils.ArrayMap(scripts, func(t *DriveScript) types.FormItemOption {
+		return types.FormItemOption{Value: t.Name + ".js", Name: t.DisplayName}
 	}))
 
 	initForm := make([]types.FormItem, 1)

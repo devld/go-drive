@@ -72,10 +72,7 @@ func (d Drive) List(ctx interface{}, path string) []Entry {
 	if e != nil {
 		d.vm.ThrowError(e)
 	}
-	return utils.ArrayMap(entries, func(t *types.IEntry) *Entry {
-		r := NewEntry(d.vm, *t)
-		return &r
-	})
+	return utils.ArrayMap(entries, func(t *types.IEntry) Entry { return NewEntry(d.vm, *t) })
 }
 
 func (d Drive) Delete(ctx interface{}, path string) {
