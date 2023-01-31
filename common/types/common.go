@@ -127,12 +127,24 @@ func (s SV) Float64(defVal float64) float64 {
 	return v
 }
 
+var durationDaysPattern = regexp.MustCompile(`^((\d+)d)([\d]+)?`)
+
 func (s SV) Duration(defVal time.Duration) time.Duration {
-	dur, e := time.ParseDuration(string(s))
-	if e != nil {
-		dur = defVal
+	strVal := string(s)
+	result := time.Duration(0)
+	daysMatch := durationDaysPattern.FindStringSubmatch(strVal)
+	if daysMatch != nil {
+		result = time.Duration(SV(daysMatch[2]).Int64(0) * int64(24*time.Hour))
+		strVal = strings.TrimPrefix(strVal, daysMatch[1])
 	}
-	return dur
+	if strVal != "" {
+		dur, e := time.ParseDuration(strVal)
+		if e != nil {
+			return defVal
+		}
+		result += dur
+	}
+	return result
 }
 
 func (s SV) UnixTime(defVal *time.Time) time.Time {

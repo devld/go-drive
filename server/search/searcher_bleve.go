@@ -123,13 +123,8 @@ func (s *BleveSearcher) Index(ctx types.TaskCtx, entries []types.EntrySearchItem
 	return nil
 }
 
-// Delete remove an entry from the index
-func (s *BleveSearcher) Delete(path string) error {
-	return s.index.Delete(path)
-}
-
-// DeleteDir remove all entries in the dir from the index
-func (s *BleveSearcher) DeleteDir(ctx types.TaskCtx, dirPath string) error {
+// Delete remove all entries in the dir(or single file) from the index
+func (s *BleveSearcher) Delete(ctx types.TaskCtx, dirPath string) error {
 	ctx.Total(1, false)
 	total := uint64(0)
 	dirIndexPath := dirPath
@@ -160,14 +155,14 @@ func (s *BleveSearcher) DeleteDir(ctx types.TaskCtx, dirPath string) error {
 			if e := ctx.Err(); e != nil {
 				return e
 			}
-			e := s.Delete(hit.ID)
+			e := s.index.Delete(hit.ID)
 			if e != nil {
 				return e
 			}
 			ctx.Progress(1, false)
 		}
 	}
-	e := s.Delete(dirPath)
+	e := s.index.Delete(dirPath)
 	if e != nil {
 		return e
 	}

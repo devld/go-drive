@@ -36,10 +36,8 @@ type Searcher interface {
 	Search(path string, query string, from, size int) ([]types.EntrySearchResultItem, error)
 	// Index add or update an entry to the index
 	Index(ctx types.TaskCtx, entries []types.EntrySearchItem) error
-	// Delete remove an entry from the index
-	Delete(path string) error
-	// DeleteDir remove all entries in the dir from the index
-	DeleteDir(ctx types.TaskCtx, dirPath string) error
+	// Delete remove all entries in the dir(or single file) from the index
+	Delete(ctx types.TaskCtx, dirPath string) error
 
 	// Examples returns a list of example search queries
 	Examples() []string

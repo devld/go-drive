@@ -168,10 +168,7 @@ func (sd *ScriptDrive) List(ctx context.Context, path string) ([]types.IEntry, e
 	if arr == nil {
 		panic("invalid value got from drive")
 	}
-	return utils.ArrayMap(arr, func(t **s.Value) *types.IEntry {
-		var a types.IEntry = sd.valueToEntry(*t)
-		return &a
-	}), nil
+	return utils.ArrayMap(arr, func(t **s.Value) types.IEntry { return sd.valueToEntry(*t) }), nil
 }
 
 func (sd *ScriptDrive) Delete(ctx types.TaskCtx, path string) error {
