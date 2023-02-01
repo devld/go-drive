@@ -7,20 +7,20 @@ import (
 	"go-drive/common/registry"
 	"go-drive/common/types"
 
-	cmap "github.com/orcaman/concurrent-map"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type UserDAO struct {
 	db    *DB
-	cache cmap.ConcurrentMap
+	cache cmap.ConcurrentMap[string, types.User]
 }
 
 func NewUserDAO(db *DB, ch *registry.ComponentsHolder) *UserDAO {
 	dao := &UserDAO{
 		db:    db,
-		cache: cmap.New(),
+		cache: cmap.New[types.User](),
 	}
 	ch.Add("userDAO", dao)
 	return dao
@@ -28,7 +28,7 @@ func NewUserDAO(db *DB, ch *registry.ComponentsHolder) *UserDAO {
 
 func (u *UserDAO) GetUser(username string) (types.User, error) {
 	if cached, ok := u.cache.Get(username); ok {
-		return cached.(types.User), nil
+		return cached, nil
 	}
 
 	user := types.User{}

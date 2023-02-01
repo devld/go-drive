@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Jeffail/tunny"
-	"github.com/google/uuid"
-	cmap "github.com/orcaman/concurrent-map"
 	"go-drive/common"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
@@ -16,11 +13,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Jeffail/tunny"
+	"github.com/google/uuid"
+	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
 type TunnyRunner struct {
 	pool       *tunny.Pool
-	store      cmap.ConcurrentMap
+	store      cmap.ConcurrentMap[string, *tunnyTaskCtx]
 	tickerStop func()
 }
 
@@ -29,7 +30,7 @@ var cleanThreshold = 10 * time.Minute
 func NewTunnyRunner(config common.Config, ch *registry.ComponentsHolder) *TunnyRunner {
 	tr := &TunnyRunner{
 		pool:  tunny.NewFunc(config.MaxConcurrentTask, executor),
-		store: cmap.New(),
+		store: cmap.New[*tunnyTaskCtx](),
 	}
 	tr.tickerStop = utils.TimeTick(tr.clean, 30*time.Second)
 	ch.Add("taskRunner", tr)
@@ -88,8 +89,7 @@ func (t *TunnyRunner) ExecuteAndWait(runnable Runnable, timeout time.Duration, o
 
 func (t *TunnyRunner) GetTasks(group string) ([]Task, error) {
 	tasks := make([]Task, 0)
-	for _, v := range t.store.Items() {
-		w := v.(*tunnyTaskCtx)
+	for _, w := range t.store.Items() {
 		if group == "" || w.task.Group == group || strings.HasPrefix(w.task.Group, group+"/") {
 			tasks = append(tasks, *w.task)
 		}
@@ -102,15 +102,14 @@ func (t *TunnyRunner) GetTask(id string) (Task, error) {
 	if !ok {
 		return Task{}, ErrorNotFound
 	}
-	return *w.(*tunnyTaskCtx).task, nil
+	return *w.task, nil
 }
 
 func (t *TunnyRunner) StopTask(id string) (Task, error) {
-	temp, ok := t.store.Get(id)
+	w, ok := t.store.Get(id)
 	if !ok {
 		return Task{}, ErrorNotFound
 	}
-	w := temp.(*tunnyTaskCtx)
 	if w.task.Finished() {
 		return *w.task, nil
 	}
@@ -119,20 +118,17 @@ func (t *TunnyRunner) StopTask(id string) (Task, error) {
 }
 
 func (t *TunnyRunner) RemoveTask(id string) error {
-	temp, ok := t.store.Get(id)
+	w, ok := t.store.Get(id)
 	if !ok {
 		return ErrorNotFound
 	}
-	w := temp.(*tunnyTaskCtx)
 	w.cancel()
 	t.store.Remove(w.task.Id)
 	return nil
 }
 
 func (t *TunnyRunner) Dispose() error {
-	t.store.IterCb(func(key string, v interface{}) {
-		v.(*tunnyTaskCtx).cancel()
-	})
+	t.store.IterCb(func(key string, v *tunnyTaskCtx) { v.cancel() })
 	t.pool.Close()
 	t.tickerStop()
 	return nil
@@ -140,8 +136,7 @@ func (t *TunnyRunner) Dispose() error {
 
 func (t *TunnyRunner) clean() {
 	ids := make([]string, 0)
-	t.store.IterCb(func(key string, v interface{}) {
-		t := v.(*tunnyTaskCtx)
+	t.store.IterCb(func(key string, t *tunnyTaskCtx) {
 		if t.task.Finished() && (time.Now().Unix()-t.task.UpdatedAt.Unix() > int64(cleanThreshold.Seconds())) {
 			ids = append(ids, t.task.Id)
 		}
@@ -162,8 +157,8 @@ func (t *TunnyRunner) Status() (string, types.SM, error) {
 	err := 0
 	canceled := 0
 
-	t.store.IterCb(func(key string, v interface{}) {
-		switch v.(*tunnyTaskCtx).task.Status {
+	t.store.IterCb(func(key string, v *tunnyTaskCtx) {
+		switch v.task.Status {
 		case Pending:
 			pending++
 		case Running:
