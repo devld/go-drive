@@ -15,7 +15,7 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/jolestar/go-commons-pool/v2 v2.1.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/orcaman/concurrent-map v1.0.0
+	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/pkg/sftp v1.13.4
 	github.com/robertkrimen/otto v0.0.0-20221011175642-09fc211e5ab1
 	github.com/robfig/cron/v3 v3.0.1

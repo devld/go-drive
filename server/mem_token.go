@@ -1,19 +1,20 @@
 package server
 
 import (
-	"github.com/google/uuid"
-	cmap "github.com/orcaman/concurrent-map"
-	"go-drive/common/errors"
+	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
+	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
 type MemTokenStore struct {
-	store cmap.ConcurrentMap
+	store cmap.ConcurrentMap[string, types.Token]
 
 	validity    time.Duration
 	autoRefresh bool
@@ -35,7 +36,7 @@ func NewMemTokenStore(validity time.Duration, autoRefresh bool, cleanupDuration 
 		panic("invalid cleanupDuration")
 	}
 	tokenStore := &MemTokenStore{
-		store:       cmap.New(),
+		store:       cmap.New[types.Token](),
 		validity:    validity,
 		autoRefresh: autoRefresh,
 		mux:         &sync.Mutex{},
@@ -58,11 +59,10 @@ func (m *MemTokenStore) Create(value types.Session) (types.Token, error) {
 func (m *MemTokenStore) Update(token string, value types.Session) (types.Token, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	t, ok := m.store.Get(token)
+	tt, ok := m.store.Get(token)
 	if !ok {
 		return types.Token{}, err.NewUnauthorizedError(i18n.T("api.mem_token.invalid_token"))
 	}
-	tt := t.(types.Token)
 	tt.Value = value
 	if m.refreshEnabled() {
 		tt.ExpiredAt = time.Now().Add(m.validity).Unix()
@@ -76,11 +76,10 @@ func (m *MemTokenStore) Validate(token string) (types.Token, error) {
 		m.mux.Lock()
 		defer m.mux.Unlock()
 	}
-	t, ok := m.store.Get(token)
+	tt, ok := m.store.Get(token)
 	if !ok {
 		return types.Token{}, err.NewUnauthorizedError(i18n.T("api.mem_token.invalid_token"))
 	}
-	tt := t.(types.Token)
 	if !m.isValid(tt) {
 		return types.Token{}, err.NewUnauthorizedError(i18n.T("api.mem_token.invalid_token"))
 	}
@@ -106,8 +105,8 @@ func (m *MemTokenStore) refreshEnabled() bool {
 
 func (m *MemTokenStore) clean() {
 	keys := make([]string, 0)
-	m.store.IterCb(func(key string, v interface{}) {
-		if !m.isValid(v.(types.Token)) {
+	m.store.IterCb(func(key string, v types.Token) {
+		if !m.isValid(v) {
 			keys = append(keys, key)
 		}
 	})
