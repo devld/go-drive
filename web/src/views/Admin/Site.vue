@@ -17,13 +17,27 @@ const { t } = useI18n()
 
 const configForms: OptionsForm[] = [
   {
-    title: t('p.admin.site.app_name'),
-    defaultOpen: true,
-    form: [{ field: 'app.name', type: 'text' }],
+    title: t('p.admin.site.site_settings'),
+    form: [
+      { field: 'app.name', label: t('p.admin.site.app_name'), type: 'text' },
+      {
+        field: 'app.styles',
+        label: t('p.admin.site.global_styles'),
+        type: 'code',
+        code: { type: 'css', typeSelectable: false, height: '300px' },
+        width: '100%',
+      },
+      {
+        field: 'app.scripts',
+        label: t('p.admin.site.inject_scripts'),
+        type: 'code',
+        code: { type: 'javascript', typeSelectable: false, height: '300px' },
+        width: '100%',
+      },
+    ],
   },
   {
     title: t('p.admin.site.file_preview_config'),
-    defaultOpen: true,
     form: [
       {
         field: 'web.textFileExts',

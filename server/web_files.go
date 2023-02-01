@@ -6,9 +6,9 @@ import (
 	"errors"
 	"go-drive/common"
 	"go-drive/storage"
-	hTmpl "html/template"
 	"io"
 	"io/fs"
+	"log"
 	"net/http"
 	path2 "path"
 	"strconv"
@@ -16,6 +16,8 @@ import (
 	"sync"
 	tTmpl "text/template"
 	"time"
+
+	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
 var templateAllowedExt = map[string]bool{
@@ -75,6 +77,7 @@ func (r rootFs) Open(name string) (http.File, error) {
 	}
 	defer func() { _ = file.Close() }()
 	if e != nil {
+		log.Println("error processing file", e)
 		return nil, e
 	}
 	return newProcessedFile(name, []byte(content)), nil
@@ -83,15 +86,13 @@ func (r rootFs) Open(name string) (http.File, error) {
 func newTemplateProcessor(filter func(stat fs.FileInfo) bool) *templateProcessor {
 	return &templateProcessor{
 		filter: filter,
-		cache:  map[string]*templateCache{},
-		mux:    sync.Mutex{},
+		cache:  cmap.New[*templateCache](),
 	}
 }
 
 type templateProcessor struct {
 	filter func(stat fs.FileInfo) bool
-	cache  map[string]*templateCache
-	mux    sync.Mutex
+	cache  cmap.ConcurrentMap[string, *templateCache]
 }
 
 func (tp *templateProcessor) Process(file http.File, data interface{}) ([]byte, error) {
@@ -107,15 +108,10 @@ func (tp *templateProcessor) Process(file http.File, data interface{}) ([]byte, 
 	name := stat.Name()
 	tag := strconv.FormatInt(stat.ModTime().UnixMilli(), 10) + strconv.FormatInt(stat.Size(), 10)
 
-	cached, ok := tp.cache[name]
+	cached, ok := tp.cache.Get(name)
 	if !ok {
-		tp.mux.Lock()
-		defer tp.mux.Unlock()
-		cached, ok = tp.cache[name]
-		if !ok {
-			cached = newTemplateCache(stat.Name())
-			tp.cache[name] = cached
-		}
+		cached = newTemplateCache(stat.Name())
+		tp.cache.Set(name, cached)
 	}
 
 	if tag != cached.tag {
@@ -144,8 +140,7 @@ func newTemplateCache(name string) *templateCache {
 }
 
 type templateCache struct {
-	tT *tTmpl.Template
-	hT *hTmpl.Template
+	t *tTmpl.Template
 
 	name string
 	tag  string
@@ -153,25 +148,16 @@ type templateCache struct {
 }
 
 func (c *templateCache) Execute(w io.Writer, data interface{}) error {
-	if c.tT != nil {
-		return c.tT.Execute(w, data)
+	if c.t == nil {
+		panic("not initialized")
 	}
-	if c.hT != nil {
-		return c.hT.Execute(w, data)
-	}
-	panic("not initialized")
+	return c.t.Execute(w, data)
 }
 
 func (c *templateCache) Parse(text string) error {
-	if strings.HasSuffix(c.name, ".html") {
-		c.hT = hTmpl.New("")
-		_, e := c.hT.Parse(text)
-		return e
-	} else {
-		c.tT = tTmpl.New("")
-		_, e := c.tT.Parse(text)
-		return e
-	}
+	c.t = tTmpl.New("")
+	_, e := c.t.Parse(text)
+	return e
 }
 
 func newProcessedFile(name string, content []byte) http.File {

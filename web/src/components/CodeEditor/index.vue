@@ -1,7 +1,7 @@
 <template>
-  <div class="code-editor">
+  <div class="code-editor" :style="{ 'min-height': height }">
     <iframe ref="el" class="code-editor__inner"></iframe>
-    <div class="code-editor__languages">
+    <div v-if="typeSelectable" class="code-editor__languages">
       <select v-model="selectedLanguage">
         <option v-for="(_, l) in languages" :key="l" :value="l">{{ l }}</option>
       </select>
@@ -25,6 +25,14 @@ const props = defineProps({
   },
   type: {
     type: String,
+  },
+  typeSelectable: {
+    type: Boolean,
+    default: true,
+  },
+  height: {
+    type: String,
+    default: '500px',
   },
   disabled: {
     type: Boolean,
@@ -113,7 +121,6 @@ onMounted(initEditor)
 <style lang="scss">
 .code-editor {
   height: 0;
-  min-height: 500px;
   position: relative;
 }
 

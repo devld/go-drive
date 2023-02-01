@@ -35,6 +35,8 @@ export interface FormItemForms {
 
 export interface FormItemCode {
   type: string
+  typeSelectable?: boolean
+  height?: string
 }
 
 export interface BaseFormItem extends O {

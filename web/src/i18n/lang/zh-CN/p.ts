@@ -11,7 +11,10 @@ export default {
     t_statistics: '统计信息',
     save: '保存',
     site: {
+      site_settings: '站点',
       app_name: '站点标题',
+      global_styles: '全局 CSS 样式',
+      inject_scripts: '插入脚本',
       anonymous_root_path: '匿名用户根路径',
       anonymous_root_path_desc:
         '限制未登录的用户只能访问这个目录下的资源，路径不以 / 开头',
