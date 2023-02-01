@@ -147,9 +147,19 @@ docker run -d --name go-drive -p 8089:8089 -v $(pwd)/go-drive-data:/app/data dev
 - `-v $(pwd)/go-drive-data:/app/data` 将当前目录下的 `go-drive-data` 映射到容器内的 `/app/data`
 
 
-> 如需修改配置文件，最好将配置文件也映射至容器外。
->
-> 这种情况下，需要先将配置文件复制出来，然后指定 `-v` 参数映射配置文件到容器内的 `/app/config.yml`
+
+如需修改配置文件，最好将配置文件也映射至容器外。这种情况下，需要先将配置文件提取出来：
+
+```bash
+cid=$(docker run -d devld/go-drive) && docker cp $cid:/app/config.yml . && docker stop $cid && docker rm $cid
+```
+
+然后指定 `-v` 参数映射配置文件到容器内的 `/app/config.yml`
+
+```bash
+mkdir go-drive-data
+docker run -d --name go-drive -p 8089:8089 -v $(pwd)/go-drive-data:/app/data -v $(pwd)/config.yml:/app/config.yml devld/go-drive
+```
 
 
 #### 直接运行
