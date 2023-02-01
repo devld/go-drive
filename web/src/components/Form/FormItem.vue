@@ -97,7 +97,7 @@
       <CodeEditor
         v-if="item.type === 'code'"
         :model-value="modelValue"
-        :type="item.code?.type"
+        v-bind="item.code ?? {}"
         :disabled="disabled || item.disabled"
         @update:model-value="stringInput"
       />

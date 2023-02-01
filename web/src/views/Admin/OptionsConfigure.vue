@@ -5,6 +5,7 @@
       :key="i"
       class="options-group"
       :open="form.defaultOpen"
+      @toggle="onDetailsToggle(i)"
     >
       <summary>
         <h3 class="options-group-title">
@@ -13,7 +14,7 @@
         </h3>
       </summary>
 
-      <div class="options-form">
+      <div v-if="detailsInited[i]" class="options-form">
         <SimpleForm
           ref="configFormElsSet"
           v-model="configValues[i]"
@@ -51,6 +52,8 @@ const configFormElsSet = (el: InstanceType<SimpleFormType>) =>
   configFormEls.push(el)
 
 onUpdated(() => configFormEls.splice(0))
+
+const detailsInited = ref({} as Record<number, boolean>)
 
 const loading = ref(false)
 const saving = ref(false)
@@ -110,8 +113,21 @@ const saveConfig = async () => {
   }
 }
 
-watch(() => props.forms, loadConfig)
-loadConfig()
+const onDetailsToggle = (i: number) => {
+  detailsInited.value[i] = true
+}
+
+const init = () => {
+  loadConfig()
+
+  detailsInited.value = {}
+  props.forms.forEach((f, i) => {
+    if (f.defaultOpen) detailsInited.value[i] = true
+  })
+}
+
+watch(() => props.forms, init)
+init()
 </script>
 
 <style lang="scss">

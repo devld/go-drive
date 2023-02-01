@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build-monaco-editor": "cd monaco-editor && npm install && npm run build",
-    "build": "npm run build-monaco-editor && vue-tsc --noEmit && vite build",
+    "build-web": "vue-tsc --noEmit && vite build",
+    "build": "npm run build-monaco-editor && npm run build-web",
     "preview": "vite preview",
     "lint": "vue-tsc --noEmit && eslint"
   },

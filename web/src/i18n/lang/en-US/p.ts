@@ -11,7 +11,10 @@ export default {
     t_statistics: 'Statistics',
     save: 'Save',
     site: {
+      site_settings: 'Site',
       app_name: 'Site Title',
+      global_styles: 'Global CSS',
+      inject_scripts: 'Inject Script',
       anonymous_root_path: 'Anonymous Root Path',
       anonymous_root_path_desc:
         'Restrict non-logged-in users to access resources in this directory only, with paths that do not start with /',

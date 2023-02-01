@@ -4,17 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/static/icon/android-chrome-192x192.png" />
-    <title>
-      <%- mode === 'production' ? '{{ (.Options.Get "app.name") }}' : 'Drive' %>
-    </title>
+    <title><%- mode === 'production' ? '{{ (.Options.Get "app.name") }}' : 'Drive' %></title>
     <link rel="stylesheet" href="/static/iconfont/iconfont.css" />
     <% if (mode === 'production') { %>
     <script>
       var ___config___ = {
-        api: '{{ .Config.APIPath }}',
-        appName: '{{ (.Options.Get "app.name") }}',
-        version: '{{ .Config.Version }}',
+        api: JSON.parse('{{ .Json (.Config.APIPath) }}'),
+        appName: JSON.parse('{{ .Json (.Options.Get "app.name") }}'),
+        version: JSON.parse('{{ .Json (.Config.Version) }}'),
       }
+    </script>
+    <script id="appStyles" type="text/plain">{{ (.Options.Get "app.styles") }}</script>
+    <script id="appScripts" type="text/plain">{{ (.Options.Get "app.scripts") }}</script>
+    <script id="appInitScripts">
+      (function() {
+        function a(id, type) {
+          var t = document.getElementById(id)
+          var n = document.createElement(type)
+          n.innerHTML = t.innerHTML
+          document.head.appendChild(n)
+          t.parentElement.removeChild(t)
+        }
+        a('appStyles', 'style')
+        a('appScripts', 'script')
+        var initScripts = document.getElementById('appInitScripts')
+        initScripts.parentElement.removeChild(initScripts)
+      })()
     </script>
     <% } else { %>
     <script>
@@ -24,9 +39,11 @@
         version: '',
       }
     </script>
-    <% } %>
-    <% if (mode === 'development' && typeof (VITE_DEBUG_API) === 'string') { %>
-    <script>___config___.api = '<%= VITE_DEBUG_API %>'</script>
+    <% } %> <% if (mode === 'development' && typeof (VITE_DEBUG_API) ===
+    'string') { %>
+    <script>
+      ___config___.api = '<%= VITE_DEBUG_API %>'
+    </script>
     <% } %>
   </head>
   <body>
