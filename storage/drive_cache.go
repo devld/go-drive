@@ -20,9 +20,17 @@ type DriveCacheDAO struct {
 
 func NewDriveCacheDAO(db *DB, ch *registry.ComponentsHolder) *DriveCacheDAO {
 	c := &DriveCacheDAO{db: db}
-	c.timerStop = utils.TimeTick(c.cleanExpired, 60*time.Second)
 	ch.Add("driveCacheDAO", c)
 	return c
+}
+
+func (d *DriveCacheDAO) StartCleaner(period time.Duration) {
+	if d.timerStop != nil {
+		d.timerStop()
+	}
+	if period > 0 {
+		d.timerStop = utils.TimeTick(d.cleanExpired, period)
+	}
 }
 
 func (d *DriveCacheDAO) cleanExpired() {
@@ -34,7 +42,9 @@ func (d *DriveCacheDAO) cleanExpired() {
 }
 
 func (d *DriveCacheDAO) Dispose() error {
-	d.timerStop()
+	if d.timerStop != nil {
+		d.timerStop()
+	}
 	return nil
 }
 

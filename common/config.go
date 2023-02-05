@@ -55,6 +55,9 @@ const (
 	DefaultWebDavMaxCacheItems = 1000
 	DefaultSearcher            = "bleve"
 
+	DefaultCacheType                      = "mem"
+	DefaultCacheCleanPeriod time.Duration = 10 * time.Minute
+
 	DefaultConfigFile = "config.yml"
 
 	DefaultDrivesDir          = "script-drives"
@@ -101,6 +104,8 @@ type Config struct {
 	WebDav WebDavConfig `yaml:"web-dav"`
 
 	Search SearchConfig `yaml:"search"`
+
+	Cache CacheConfig `yaml:"cache"`
 
 	Version string
 	RevHash string
@@ -151,6 +156,11 @@ type SearchConfig struct {
 	Config  types.SM `yaml:"config"`
 }
 
+type CacheConfig struct {
+	Type        string        `yaml:"type"`
+	CleanPeriod time.Duration `yaml:"clean-period"`
+}
+
 func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	config := Config{
 		Listen:      DefaultListen,
@@ -182,6 +192,10 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		},
 		Search: SearchConfig{
 			Type: DefaultSearcher,
+		},
+		Cache: CacheConfig{
+			Type:        DefaultCacheType,
+			CleanPeriod: DefaultCacheCleanPeriod,
 		},
 
 		Version: version,

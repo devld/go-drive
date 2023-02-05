@@ -15,11 +15,12 @@ import (
 )
 
 type RootDrive struct {
-	root              *DispatcherDrive
-	driveStorage      *storage.DriveDAO
-	mountStorage      *storage.PathMountDAO
-	driveDataStorage  *storage.DriveDataDAO
-	driveCacheStorage *storage.DriveCacheDAO
+	root             *DispatcherDrive
+	driveStorage     *storage.DriveDAO
+	mountStorage     *storage.PathMountDAO
+	driveDataStorage *storage.DriveDataDAO
+
+	driveCacheMgr drive_util.DriveCacheManager
 
 	config common.Config
 
@@ -36,14 +37,22 @@ func NewRootDrive(
 	ch *registry.ComponentsHolder) (*RootDrive, error) {
 	root := NewDispatcherDrive(mountStorage, config)
 	r := &RootDrive{
-		root:              root,
-		driveStorage:      driveStorage,
-		mountStorage:      mountStorage,
-		driveDataStorage:  dataStorage,
-		driveCacheStorage: driveCacheStorage,
-		config:            config,
-		mux:               &sync.Mutex{},
+		root:             root,
+		driveStorage:     driveStorage,
+		mountStorage:     mountStorage,
+		driveDataStorage: dataStorage,
+		config:           config,
+		mux:              &sync.Mutex{},
 	}
+
+	switch config.Cache.Type {
+	case "db":
+		r.driveCacheMgr = driveCacheStorage
+		driveCacheStorage.StartCleaner(config.Cache.CleanPeriod)
+	default:
+		r.driveCacheMgr = drive_util.NewMemDriveCacheManager(config.Cache.CleanPeriod)
+	}
+
 	if e := r.ReloadMounts(); e != nil {
 		return nil, e
 	}
@@ -128,6 +137,7 @@ func (d *RootDrive) ReloadMounts() error {
 }
 
 func (d *RootDrive) Dispose() error {
+	_ = d.driveCacheMgr.Dispose()
 	return d.root.Dispose()
 }
 
@@ -166,7 +176,7 @@ func (d *RootDrive) createDriveUtils(name string) drive_util.DriveUtils {
 	return drive_util.DriveUtils{
 		Data: d.driveDataStorage.GetDataStore(name),
 		CreateCache: func(de drive_util.EntryDeserialize) drive_util.DriveCache {
-			return d.driveCacheStorage.GetCacheStore(name, de)
+			return d.driveCacheMgr.GetCacheStore(name, de)
 		},
 		Config: d.config,
 	}

@@ -215,6 +215,18 @@ func ArrayMap[TF any, TT any](a []TF, convert func(*TF) TT) []TT {
 	return r
 }
 
+func ArrayMapWithError[TF any, TT any](a []TF, convert func(*TF) (TT, error)) ([]TT, error) {
+	r := make([]TT, len(a))
+	for i := range a {
+		t, e := convert(&a[i])
+		if e != nil {
+			return nil, e
+		}
+		r[i] = t
+	}
+	return r, nil
+}
+
 func ArrayFind[T any](a []T, matches func(T, int) bool) (ret T, ok bool) {
 	for i := range a {
 		if matches(a[i], i) {
