@@ -10,7 +10,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"io"
 	"mime"
 	"net/http"
 	"os"
@@ -407,26 +406,12 @@ func findContentType(ctx context.Context, fs FileSystem, ls LockSystem, name str
 			return ctype, err
 		}
 	}
-	f, err := fs.OpenFile(ctx, name, os.O_RDONLY, 0)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
 	// This implementation is based on serveContent's code in the standard net/http package.
 	ctype := mime.TypeByExtension(filepath.Ext(name))
 	if ctype != "" {
 		return ctype, nil
 	}
-	// Read a chunk to decide between utf-8 text and binary.
-	var buf [512]byte
-	n, err := io.ReadFull(f, buf[:])
-	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
-		return "", err
-	}
-	ctype = http.DetectContentType(buf[:n])
-	// Rewind file.
-	_, err = f.Seek(0, io.SeekStart)
-	return ctype, err
+	return "application/octet-stream", nil
 }
 
 // ETager is an optional interface for the os.FileInfo objects
