@@ -20,9 +20,9 @@ $(build_dir)/go-drive: $(build_dir)
 	CGO_CFLAGS="-Wno-return-local-addr" \
 	go build -o $(build_dir) -ldflags \
 		"-w -s \
-		-X 'go-drive/common.version=${BUILD_VERSION}' \
-		-X 'go-drive/common.revHash=$(shell git rev-parse HEAD)' \
-		-X 'go-drive/common.buildAt=$(shell date -R)'"
+		-X 'go-drive/common.Version=${BUILD_VERSION}' \
+		-X 'go-drive/common.RevHash=$(shell git rev-parse HEAD)' \
+		-X 'go-drive/common.BuildAt=$(shell date -R)'"
 
 $(build_dir)/web: $(build_dir) web/dist
 	cp -R web/dist $(build_dir)/web
