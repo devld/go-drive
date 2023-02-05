@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+type DriveCacheManager interface {
+	types.IDisposable
+	GetCacheStore(ns string, deserialize EntryDeserialize) DriveCache
+}
+
 type EntrySerialize = func(types.IEntry) EntryCacheItem
 type EntryDeserialize = func(EntryCacheItem) (types.IEntry, error)
 
