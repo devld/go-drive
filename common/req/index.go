@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
+	"go-drive/common"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
@@ -17,6 +19,7 @@ import (
 )
 
 const maxReadableBodySize int64 = 10 * 1024 * 1024 // 10MB
+var DefaultUserAgent = fmt.Sprintf("go-drive/%s", common.Version)
 var absoluteURLPattern = regexp.MustCompile("(?i)^https?://")
 
 var defaultClient = &http.Client{
@@ -101,6 +104,7 @@ func (h *Client) newRequest(method string, requestUrl string, headers types.SM,
 	if e != nil {
 		return nil, e
 	}
+	req.Header.Set("User-Agent", DefaultUserAgent)
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}

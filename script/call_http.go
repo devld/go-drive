@@ -2,6 +2,7 @@ package script
 
 import (
 	"bytes"
+	gReq "go-drive/common/req"
 	"go-drive/common/utils"
 	"io"
 	"mime/multipart"
@@ -53,6 +54,7 @@ func vm_http(vm *VM, args Values) interface{} {
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
+	req.Header.Set("User-Agent", gReq.DefaultUserAgent)
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
