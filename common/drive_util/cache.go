@@ -9,6 +9,7 @@ import (
 type DriveCacheManager interface {
 	types.IDisposable
 	GetCacheStore(ns string, deserialize EntryDeserialize) DriveCache
+	EvictCacheStore(ns string) error
 }
 
 type EntrySerialize = func(types.IEntry) EntryCacheItem

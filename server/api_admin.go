@@ -39,7 +39,6 @@ func InitAdminRoutes(
 	userDAO *storage.UserDAO,
 	groupDAO *storage.GroupDAO,
 	driveDAO *storage.DriveDAO,
-	driveCacheDAO *storage.DriveCacheDAO,
 	driveDataDAO *storage.DriveDataDAO,
 	permissionDAO *storage.PathPermissionDAO,
 	pathMountDAO *storage.PathMountDAO) error {
@@ -250,14 +249,14 @@ func InitAdminRoutes(
 			_ = c.Error(e)
 			return
 		}
-		_ = driveCacheDAO.Remove(name)
+		_ = rootDrive.ClearDriveCache(name)
 	})
 
 	// delete drive
 	r.DELETE("/drive/:name", func(c *gin.Context) {
 		name := c.Param("name")
 		e := driveDAO.DeleteDrive(name)
-		_ = driveCacheDAO.Remove(name)
+		_ = rootDrive.ClearDriveCache(name)
 		_ = driveDataDAO.Remove(name)
 		if e != nil {
 			_ = c.Error(e)
@@ -474,7 +473,7 @@ func InitAdminRoutes(
 	// clean drive cache
 	r.DELETE("/drive-cache/:name", func(c *gin.Context) {
 		name := c.Param("name")
-		e := driveCacheDAO.Remove(name)
+		e := rootDrive.ClearDriveCache(name)
 		if e != nil {
 			_ = c.Error(e)
 			return
