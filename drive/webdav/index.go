@@ -45,8 +45,6 @@ func NewDrive(ctx context.Context, config types.SM,
 
 	cacheTtl := config.GetDuration("cache_ttl", -1)
 
-	u = strings.TrimRight(u, "/")
-
 	uu, e := url.Parse(u)
 	if e != nil {
 		return nil, e
@@ -55,7 +53,7 @@ func NewDrive(ctx context.Context, config types.SM,
 
 	w := &Drive{
 		username: username, password: password,
-		cacheTTL: cacheTtl, pathPrefix: pathPrefix,
+		cacheTTL: cacheTtl, pathPrefix: strings.TrimRight(pathPrefix, "/"),
 	}
 
 	if cacheTtl <= 0 {
@@ -71,7 +69,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	w.c = client
 
 	// check
-	_, e = w.Get(ctx, "/")
+	_, e = w.Get(ctx, "")
 	if e != nil {
 		return nil, e
 	}
@@ -97,15 +95,30 @@ func (w *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	if cached, _ := w.cache.GetEntry(path); cached != nil {
 		return cached, nil
 	}
-	resp, e := w.c.Request(ctx, "PROPFIND", utils.BuildURL(path), types.SM{"Depth": "0"}, nil)
-	if e != nil {
-		return nil, e
+	var entry types.IEntry
+	if utils.IsRootPath(path) {
+		resp, e := w.c.Request(ctx, "PROPFIND", "/", types.SM{"Depth": "0"}, nil)
+		if e != nil {
+			return nil, e
+		}
+		res := multiStatus{}
+		if e := resp.XML(&res); e != nil {
+			return nil, e
+		}
+		entry = w.newEntry(res.Response[0])
+	} else {
+		entries, e := w.List(ctx, utils.PathParent(path))
+		if e != nil {
+			return nil, e
+		}
+		var ok bool
+		entry, ok = utils.ArrayFind(entries, func(t types.IEntry, i int) bool {
+			return t.Path() == path
+		})
+		if !ok {
+			return nil, err.NewNotFoundError()
+		}
 	}
-	res := multiStatus{}
-	if e := resp.XML(&res); e != nil {
-		return nil, e
-	}
-	entry := w.newEntry(res.Response[0])
 	_ = w.cache.PutEntry(entry, w.cacheTTL)
 	return entry, nil
 }
@@ -187,7 +200,7 @@ func (w *Drive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	if cached, _ := w.cache.GetChildren(path); cached != nil {
 		return cached, nil
 	}
-	resp, e := w.c.Request(ctx, "PROPFIND", utils.BuildURL(path), types.SM{"Depth": "1"}, nil)
+	resp, e := w.c.Request(ctx, "PROPFIND", utils.BuildURL(path)+"/", types.SM{"Depth": "1"}, nil)
 	if e != nil {
 		return nil, e
 	}
