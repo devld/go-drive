@@ -136,6 +136,10 @@ func (d *RootDrive) ReloadMounts() error {
 	return d.root.reloadMounts()
 }
 
+func (d *RootDrive) ClearDriveCache(ns string) error {
+	return d.driveCacheMgr.EvictCacheStore(ns)
+}
+
 func (d *RootDrive) Dispose() error {
 	_ = d.driveCacheMgr.Dispose()
 	return d.root.Dispose()

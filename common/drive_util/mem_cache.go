@@ -31,6 +31,23 @@ func (m *MemDriveCacheManager) GetCacheStore(ns string, deserialize EntryDeseria
 	return &memDriveCache{mgr: m, ns: ns, deserialize: deserialize}
 }
 
+func (m *MemDriveCacheManager) EvictCacheStore(ns string) error {
+	node, parent := m.findNode(ns)
+	if node == nil {
+		return nil
+	}
+	node.mu.Lock()
+	node.data = nil
+	node.childrenNames = nil
+	node.mu.Unlock()
+	if parent != nil {
+		parent.mu.Lock()
+		delete(parent.children, node.key)
+		parent.mu.Unlock()
+	}
+	return nil
+}
+
 func (m *MemDriveCacheManager) findNode(path string) (*memDriveCacheNode, *memDriveCacheNode) {
 	var node *memDriveCacheNode = m.cache
 	var parent *memDriveCacheNode = nil
@@ -115,14 +132,17 @@ func (m *memDriveCache) Evict(path string, descendants bool) error {
 		return nil
 	}
 	node.mu.Lock()
-	defer node.mu.Unlock()
 	node.data = nil
 	node.childrenNames = nil
 	if descendants {
 		node.children = make(map[string]*memDriveCacheNode)
-		if parent != nil {
-			delete(parent.children, node.key)
-		}
+		node.mu.Unlock()
+
+		parent.mu.Lock()
+		delete(parent.children, node.key)
+		parent.mu.Unlock()
+	} else {
+		node.mu.Unlock()
 	}
 	return nil
 }

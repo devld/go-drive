@@ -52,7 +52,7 @@ func (d *DriveCacheDAO) GetCacheStore(ns string, deserialize drive_util.EntryDes
 	return &dbDriveNamespacedCacheStore{db: d.db, ns: ns, deserialize: deserialize}
 }
 
-func (d *DriveCacheDAO) Remove(ns string) error {
+func (d *DriveCacheDAO) EvictCacheStore(ns string) error {
 	return d.db.C().Delete(&types.DriveCache{}, "drive = ?", ns).Error
 }
 
