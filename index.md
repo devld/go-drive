@@ -27,6 +27,7 @@ title: go-drive
   - [通过 WebDAV 访问](#通过-webdav-访问)
 - [设置相关](#设置相关)
   - [站点相关设置](#站点相关设置)
+    - [自定义样式](#自定义样式)
     - [文件预览配置](#文件预览配置)
     - [匿名用户根路径](#匿名用户根路径)
     - [缩略图配置](#缩略图配置)
@@ -359,6 +360,78 @@ web-dav:
 ## 设置相关
 
 ### 站点相关设置
+
+#### 自定义样式
+
+在站点配置中，你可以通过“全局CSS样式”（及“插入脚本”）来向网页中注入自定义的样式代码（及 JavaScript 代码）。
+
+自定义样式示例
+
+```css
+/* 覆盖正常（明亮）模式的一些样式 */
+@media (prefers-color-scheme: light) {
+    
+    /* 覆盖一些 CSS 变量 */
+    :root {
+        --primary-bg-color: rgba(255, 255, 255, 0.4) !important;
+        --secondary-bg-color: rgba(255, 255, 255, 0.6) !important;
+        --hover-bg-color: rgba(255, 255, 255, 0.4) !important;
+        --secondary-text-color: rgb(61, 61, 61) !important;
+        --form-value-bg-color: transparent !important;
+    }
+
+    /* Markdown 背景色 */
+    .markdown-body {
+        --color-canvas-default: transparent !important;
+    }
+
+    /* 全局背景 */
+    body {
+        background-color: rgb(0, 77, 101);
+        background-image: url('https://go-drive.top/bing-wallpaper');
+        background-repeat: no-repeat;
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+
+    /* 其他样式覆盖 */
+    .app-header {
+        color: #fff;
+    }
+
+    .app-header .plain-button {
+        color: #fff;
+    }
+
+    .search-panel,
+    .files-list,
+    .dialog-view__content {
+        backdrop-filter: blur(4px);
+    }
+    
+    .handler-title-bar {
+        background-color: #fff;
+    }
+
+    .simple-button {
+        border-radius: 8px;
+    }
+
+    .drives-manager .not-enabled-drive {
+        color: #666 !important;
+    }
+
+    .admin-page {
+        background-color: rgba(255, 255, 255, 0.8) !important;
+    }
+}
+
+/* 暗黑模式的样式 */
+@media (prefers-color-scheme: dark) {
+  /* ... */
+}
+```
 
 #### 文件预览配置
 
