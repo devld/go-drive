@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io/fs"
 	"mime"
 	"net/http"
 	"os"
@@ -165,37 +166,15 @@ var liveProps = map[xml.Name]struct {
 //
 // Each Propstat has a unique status and each property name will only be part
 // of one Propstat element.
-func props(ctx context.Context, fs FileSystem, ls LockSystem, name string, pnames []xml.Name) ([]Propstat, error) {
-	f, err := fs.OpenFile(ctx, name, os.O_RDONLY, 0)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	fi, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	isDir := fi.IsDir()
-
-	var deadProps map[xml.Name]Property
-	if dph, ok := f.(DeadPropsHolder); ok {
-		deadProps, err = dph.DeadProps()
-		if err != nil {
-			return nil, err
-		}
-	}
+func props(ctx context.Context, fs FileSystem, ls LockSystem, info fs.FileInfo, name string, pnames []xml.Name) ([]Propstat, error) {
+	isDir := info.IsDir()
 
 	pstatOK := Propstat{Status: http.StatusOK}
 	pstatNotFound := Propstat{Status: http.StatusNotFound}
 	for _, pn := range pnames {
-		// If this file has dead properties, check if they contain pn.
-		if dp, ok := deadProps[pn]; ok {
-			pstatOK.Props = append(pstatOK.Props, dp)
-			continue
-		}
 		// Otherwise, it must either be a live property or we don't know it.
 		if prop := liveProps[pn]; prop.findFn != nil && (prop.dir || !isDir) {
-			innerXML, err := prop.findFn(ctx, fs, ls, name, fi)
+			innerXML, err := prop.findFn(ctx, fs, ls, name, info)
 			if err != nil {
 				return nil, err
 			}
@@ -213,34 +192,14 @@ func props(ctx context.Context, fs FileSystem, ls LockSystem, name string, pname
 }
 
 // Propnames returns the property names defined for resource name.
-func propnames(ctx context.Context, fs FileSystem, ls LockSystem, name string) ([]xml.Name, error) {
-	f, err := fs.OpenFile(ctx, name, os.O_RDONLY, 0)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	fi, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	isDir := fi.IsDir()
+func propnames(ctx context.Context, fs FileSystem, ls LockSystem, info fs.FileInfo, name string) ([]xml.Name, error) {
+	isDir := info.IsDir()
 
-	var deadProps map[xml.Name]Property
-	if dph, ok := f.(DeadPropsHolder); ok {
-		deadProps, err = dph.DeadProps()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	pnames := make([]xml.Name, 0, len(liveProps)+len(deadProps))
+	pnames := make([]xml.Name, 0, len(liveProps))
 	for pn, prop := range liveProps {
 		if prop.findFn != nil && (prop.dir || !isDir) {
 			pnames = append(pnames, pn)
 		}
-	}
-	for pn := range deadProps {
-		pnames = append(pnames, pn)
 	}
 	return pnames, nil
 }
@@ -253,8 +212,8 @@ func propnames(ctx context.Context, fs FileSystem, ls LockSystem, name string) (
 // returned if they are named in 'include'.
 //
 // See http://www.webdav.org/specs/rfc4918.html#METHOD_PROPFIND
-func allprop(ctx context.Context, fs FileSystem, ls LockSystem, name string, include []xml.Name) ([]Propstat, error) {
-	pnames, err := propnames(ctx, fs, ls, name)
+func allprop(ctx context.Context, fs FileSystem, ls LockSystem, info fs.FileInfo, name string, include []xml.Name) ([]Propstat, error) {
+	pnames, err := propnames(ctx, fs, ls, info, name)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +227,7 @@ func allprop(ctx context.Context, fs FileSystem, ls LockSystem, name string, inc
 			pnames = append(pnames, pn)
 		}
 	}
-	return props(ctx, fs, ls, name, pnames)
+	return props(ctx, fs, ls, info, name, pnames)
 }
 
 // Patch patches the properties of resource name. The return values are
