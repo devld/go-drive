@@ -789,7 +789,6 @@ func walkFS(ctx context.Context, fs FileSystem, depth int, name string, info os.
 
 	for _, fileInfo := range fileInfos {
 		filename := path.Join(name, fileInfo.Name())
-		fileInfo, err := fs.Stat(ctx, filename)
 		if err != nil {
 			if err := walkFn(filename, fileInfo, err); err != nil && err != filepath.SkipDir {
 				return err
