@@ -13,7 +13,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path"
 	"regexp"
 	"sync"
 )
@@ -69,18 +68,12 @@ func (h *Client) BuildURL(requestUrl string) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	p := path.Join(h.baseURL.Path, ru.Path)
-	qs := h.baseURL.Query()
-	for k, v := range ru.Query() {
-		qs[k] = v
-	}
-	u := url.URL{
-		Scheme:   h.baseURL.Scheme,
-		Opaque:   h.baseURL.Opaque,
-		User:     h.baseURL.User,
-		Host:     h.baseURL.Host,
-		Path:     p,
-		RawQuery: qs.Encode(),
+	u := h.baseURL.JoinPath(ru.Path)
+	if ru.RawQuery != "" {
+		if u.RawQuery != "" {
+			u.RawQuery += "&"
+		}
+		u.RawQuery += ru.RawQuery
 	}
 	return u.String(), nil
 }
