@@ -66,7 +66,7 @@ const routes: RouteRecordRaw[] = [
             name: 'SysStats',
             path: '/admin/stats',
             component: () => import('@/views/Admin/SysStats.vue'),
-            meta: { title: T('routes.title.Statistics') },
+            meta: { title: T('routes.title.statistics') },
           },
         ],
       },
