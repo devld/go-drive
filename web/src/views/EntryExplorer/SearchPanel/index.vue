@@ -255,7 +255,7 @@ defineExpose({ setActive })
   flex-wrap: wrap;
   align-items: center;
   font-size: 14px;
-  padding: 16px 0;
+  padding: 16px;
   color: var(--secondary-text-color);
   text-align: center;
 
