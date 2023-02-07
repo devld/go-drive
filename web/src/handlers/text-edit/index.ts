@@ -1,7 +1,7 @@
 import { wrapAsyncComponent } from '@/components/async'
-import { DEFAULT_TEXT_FILE_EXTS, TEXT_EDITOR_MAX_FILE_SIZE } from '@/config'
+import { TEXT_EDITOR_MAX_FILE_SIZE } from '@/config'
 import { T } from '@/i18n'
-import { entryMatches, filenameExt } from '@/utils'
+import { entryMatches } from '@/utils'
 import { EntryHandler } from '../types'
 
 export default {
@@ -26,9 +26,6 @@ export default {
   },
   supports: ({ entry }, { options }) =>
     entry.type === 'file' &&
-    entryMatches(
-      entry,
-      options['web.textFileExts'] || DEFAULT_TEXT_FILE_EXTS
-    ) &&
+    entryMatches(entry, options['web.textFileExts']) &&
     entry.size <= TEXT_EDITOR_MAX_FILE_SIZE,
 } as EntryHandler

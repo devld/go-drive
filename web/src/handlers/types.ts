@@ -1,3 +1,4 @@
+import type { ConfigOptionsMap } from '@/store/options'
 import { Config, Entry, User } from '@/types'
 import { UIUtils } from '@/utils/ui-utils'
 
@@ -59,7 +60,7 @@ export interface EntryHandlerView {
 export interface EntryHandlerContext {
   user?: User
   config: Config
-  options: O
+  options: ConfigOptionsMap
 }
 
 export interface EntryHandlerSupportsParams<A = Entry | Entry[]> {

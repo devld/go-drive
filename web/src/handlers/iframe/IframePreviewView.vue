@@ -1,8 +1,8 @@
 <template>
-  <div class="office-preview-view">
+  <div class="iframe-preview-view">
     <HandlerTitleBar :title="filename" @close="emit('close')">
       <template #actions>
-        <select v-model="serviceIndex">
+        <select v-if="services.length > 1" v-model="serviceIndex">
           <option v-for="(s, i) in services" :key="s.name" :value="i">
             {{ s.name }}
           </option>
@@ -11,9 +11,10 @@
     </HandlerTitleBar>
 
     <iframe
+      v-if="previewURL"
       ref="iframe"
       :key="previewURL"
-      class="office-preview-iframe"
+      class="preview-iframe"
       :src="previewURL"
       frameborder="0"
     ></iframe>
@@ -23,8 +24,9 @@
 import { fileUrl } from '@/api'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { Entry } from '@/types'
-import { buildURL, filename as filenameFn } from '@/utils'
+import { entryMatches, filename as filenameFn, filenameExt } from '@/utils'
 import { computed, ref, watch } from 'vue'
+import { EntryHandlerContext } from '../types'
 
 const props = defineProps({
   entry: {
@@ -32,43 +34,48 @@ const props = defineProps({
     required: true,
   },
   entries: { type: Array as PropType<Entry[]> },
+  ctx: {
+    type: Object as PropType<EntryHandlerContext>,
+    required: true,
+  },
 })
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const path = computed(() => props.entry.path)
 const filename = computed(() => filenameFn(path.value))
+const fileExt = computed(() => filenameExt(filename.value))
 const fileURL = computed(() => fileUrl(path.value, props.entry.meta))
 
-const services = [
-  {
-    name: 'Microsoft',
-    url: (u: string) =>
-      buildURL('https://view.officeapps.live.com/op/embed.aspx', { src: u }),
-  },
-  {
-    name: 'Google',
-    url: (u: string) =>
-      buildURL('https://docs.google.com/gview?embedded=true', { url: u }),
-  },
-]
+const services = computed(() =>
+  props.ctx.options['web.externalFileViewers'].filter((e) =>
+    entryMatches(props.entry, e.exts)
+  )
+)
 
-const STORAGE_KEY = 'office-preview-service'
-const serviceIndex = ref(+(localStorage.getItem(STORAGE_KEY) ?? '0') || 0)
-if (!services[serviceIndex.value]) serviceIndex.value = 0
+const storageKey = computed(() => `iframe-preview:${fileExt.value}`)
+const serviceIndex = ref(+(localStorage.getItem(storageKey.value) ?? '0') || 0)
+if (!services.value[serviceIndex.value]) serviceIndex.value = 0
 watch(
   () => serviceIndex.value,
   (v) => {
-    localStorage.setItem(STORAGE_KEY, `${v}`)
+    localStorage.setItem(storageKey.value, `${v}`)
   }
 )
 
-const service = computed(() => services[serviceIndex.value])
+const service = computed(() => services.value[serviceIndex.value])
 
-const previewURL = computed(() => service.value.url(fileURL.value))
+const previewURL = computed(() => {
+  if (!service.value) return
+  let url = service.value.url
+
+  url = url.replace('{URL}', encodeURIComponent(fileURL.value))
+  url = url.replace('{NAME}', encodeURIComponent(filename.value))
+  return url
+})
 </script>
 <style lang="scss">
-.office-preview-view {
+.iframe-preview-view {
   position: relative;
   overflow: hidden;
   width: 100vw;
@@ -85,7 +92,7 @@ const previewURL = computed(() => service.value.url(fileURL.value))
     right: 0;
   }
 
-  .office-preview-iframe {
+  .preview-iframe {
     width: 100%;
     height: 100%;
   }

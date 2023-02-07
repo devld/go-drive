@@ -12,7 +12,6 @@ import { filenameExt, filename as filenameFn, dir, pathJoin } from '@/utils'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Entry } from '@/types'
 import { EntryHandlerContext } from '../types'
-import { DEFAULT_IMAGE_FILE_EXTS } from '@/config'
 
 const props = defineProps({
   entry: {
@@ -30,9 +29,7 @@ const props = defineProps({
 })
 
 function isSupportedImageExt(ext: string) {
-  return (
-    props.ctx.options['web.imageFileExts'] || DEFAULT_IMAGE_FILE_EXTS
-  ).includes(ext)
+  return props.ctx.options['web.imageFileExts'].includes(ext)
 }
 
 const emit = defineEmits<{

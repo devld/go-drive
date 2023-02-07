@@ -60,6 +60,35 @@ export function formatPercent(n: number, based?: number) {
   return (n * 100).toFixed(1) + '%'
 }
 
+export function stringSplitN(s: string, delim: string | RegExp, n: number) {
+  if (n <= 0) return s.split(s)
+  if (typeof delim === 'object') {
+    delim = new RegExp(delim, 'g')
+  }
+  const result = []
+  let i = 0
+  let matchedLen = 0
+  while (i < s.length) {
+    if (result.length === n - 1) break
+    let p: number
+    if (typeof delim === 'string') {
+      p = s.indexOf(delim, i)
+      matchedLen = delim.length
+    } else {
+      const r = delim.exec(s)
+      p = r?.index ?? -1
+      if (r) matchedLen = r[0].length
+    }
+    if (p === -1) {
+      break
+    }
+    result.push(s.slice(i, p))
+    i = p + matchedLen
+  }
+  result.push(s.slice(i))
+  return result
+}
+
 export function isParentPath(path: string, parent: string) {
   if (isRootPath(path)) return false
   if (isRootPath(parent)) return true
@@ -112,7 +141,7 @@ export function pathClean(path: string) {
 
 export function entryMatches(
   entry: Entry | string,
-  matches: string | string[]
+  matches: string | readonly string[]
 ) {
   const name = typeof entry === 'object' ? entry.name : entry
   const meta = typeof entry === 'object' ? entry.meta : undefined

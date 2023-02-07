@@ -1,4 +1,3 @@
-import { DEFAULT_VIDEO_FILE_EXTS } from '@/config'
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
@@ -17,8 +16,6 @@ export default {
   },
   supports: ({ entry }, { options }) =>
     entry.type === 'file' &&
-    (options['web.videoFileExts'] || DEFAULT_VIDEO_FILE_EXTS).includes(
-      filenameExt(entry.name)
-    ),
+    options['web.videoFileExts'].includes(filenameExt(entry.name)),
   order: 1001,
 } as EntryHandler
