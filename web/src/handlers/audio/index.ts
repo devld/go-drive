@@ -1,5 +1,4 @@
 import { wrapAsyncComponent } from '@/components/async'
-import { DEFAULT_AUDIO_FILE_EXTS } from '@/config'
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
@@ -17,8 +16,6 @@ export default {
   },
   supports: ({ entry }, { options }) =>
     entry.type === 'file' &&
-    (options['web.audioFileExts'] || DEFAULT_AUDIO_FILE_EXTS).includes(
-      filenameExt(entry.name)
-    ),
+    options['web.audioFileExts'].includes(filenameExt(entry.name)),
   order: 1000,
 } as EntryHandler

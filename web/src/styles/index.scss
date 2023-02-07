@@ -56,6 +56,8 @@ svg {
   -webkit-user-select: none;
   cursor: pointer;
   text-decoration: none;
+  margin: 0;
+  padding: 0;
 
   &.small {
     font-size: 16px;
@@ -182,7 +184,7 @@ svg {
   }
 
   textarea.value {
-    resize: none;
+    resize: vertical;
   }
 }
 

@@ -19,11 +19,12 @@ export default {
       anonymous_root_path_desc:
         '限制未登录的用户只能访问这个目录下的资源，路径不以 / 开头',
       file_preview_config: '文件预览配置',
-      office_preview_enabled: 'Office 预览',
-      office_preview_enabled_desc:
-        '通过微软和谷歌提供的在线服务来预览 Office 文件',
+      external_file_viewers: '外部文件预览器',
+      external_file_viewers_desc:
+        '使用第三方的服务预览文件（注意：如果服务由第三方提供，那么第三方服务必须可以访问到此应用）。配置格式为每行一条：文件后缀名列表（使用英文逗号隔开）<空格>URL模板<空格>服务名称。以 # 开头的行为注释，将被忽略。',
       text_file_exts: '文本文件后缀名',
-      text_file_exts_desc: '支持查看和编辑的文本文件后缀名列表（或以 \'/\' 开头匹配全文件名，如 \'/.gitignore\'），用英文逗号隔开',
+      text_file_exts_desc:
+        "支持查看和编辑的文本文件后缀名列表（或以 '/' 开头匹配全文件名，如 '/.gitignore'），用英文逗号隔开",
       image_file_exts: '图片文件后缀名',
       image_file_exts_desc: '支持查看的图片文件后缀名列表，用英文逗号隔开',
       audio_file_exts: '音频文件后缀名',
@@ -32,7 +33,7 @@ export default {
       video_file_exts_desc: '支持查看的视频文件后缀名列表，用英文逗号隔开',
       monaco_editor_exts: '使用 Monaco 编辑器',
       monaco_editor_exts_desc:
-        '用英文逗号隔开的文件后缀名（或以 \'/\' 开头匹配全文件名，如 \'/.gitignore\'），这些文件将会使用 Monaco 编辑器打开',
+        "用英文逗号隔开的文件后缀名（或以 '/' 开头匹配全文件名，如 '/.gitignore'），这些文件将会使用 Monaco 编辑器打开",
       thumbnail_config: '缩略图配置',
       thumbnail_mapping: '缩略图生成器映射',
       thumbnail_mapping_tips:

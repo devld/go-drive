@@ -1,43 +1,18 @@
 import { getConfig, getUser } from '@/api'
 import { Config, User } from '@/types'
-import { isAdmin, mapOf } from '@/utils'
+import { isAdmin } from '@/utils'
 import { createPinia, defineStore } from 'pinia'
+import { ConfigOptions, ConfigOptionsMap } from './options'
 
-const stringList = (v?: string) => {
-  v = v?.trim()
-  if (!v) return
-  const l = Object.freeze((v || '').split(',').map((e) => e.trim()))
-  return l.length === 0 ? undefined : l
+interface TypedConfig extends Config {
+  options: ConfigOptionsMap
 }
-
-const configOptions = mapOf(
-  [
-    { key: 'web.officePreviewEnabled', process: (v?: string) => !!v },
-    {
-      key: 'web.textFileExts',
-      process: stringList,
-    },
-    {
-      key: 'web.imageFileExts',
-      process: stringList,
-    },
-    {
-      key: 'web.videoFileExts',
-      process: stringList,
-    },
-    {
-      key: 'web.monacoEditorExts',
-      process: stringList,
-    },
-  ],
-  (e) => e.key
-)
 
 interface AppState {
   inited: boolean
 
   user?: User
-  config?: Readonly<Config>
+  config?: Readonly<TypedConfig>
 
   showLogin: boolean
 
@@ -59,9 +34,6 @@ export const useAppStore = defineStore('app', {
     setUser(user?: User) {
       this.user = user
     },
-    setConfig(config: Config) {
-      this.config = config
-    },
     toggleLogin(show: boolean) {
       this.showLogin = show
     },
@@ -79,15 +51,18 @@ export const useAppStore = defineStore('app', {
       return user
     },
     async getConfig() {
-      const config = Object.freeze(await getConfig(Object.keys(configOptions)))
+      const config = Object.freeze(await getConfig(Object.keys(ConfigOptions)))
       Object.keys(config.options).forEach((key) => {
-        if (configOptions[key]) {
-          config.options[key] = configOptions[key].process(config.options[key])
+        const co = ConfigOptions[key]
+        if (!co) return
+        if (!config.options[key] && co.defaultValue) {
+          config.options[key] = co.defaultValue
         }
+        config.options[key] = co.process(config.options[key])
       })
       Object.freeze(config.options)
-      this.config = config
-      return config
+      this.config = config as TypedConfig
+      return config as TypedConfig
     },
     async init() {
       await this.getConfig()

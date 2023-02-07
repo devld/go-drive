@@ -26,7 +26,7 @@ export default {
     },
     zip: {
       name: 'Zip Download',
-      desc: 'Create zip archive'
+      desc: 'Create zip archive',
     },
     delete: {
       name: 'Delete',
@@ -43,17 +43,13 @@ export default {
       name: 'Gallery',
       desc: 'View images',
     },
-    office: {
-      name: 'View',
-      desc: 'Preview Office File',
-    },
-    pdf: {
-      name: 'View',
-      desc: 'Preview PDF File',
+    iframe: {
+      name: 'Preview',
+      desc: 'Preview this file',
     },
     audio: {
       name: 'Play',
-      desc: 'Play music'
+      desc: 'Play music',
     },
     video: {
       name: 'Play',

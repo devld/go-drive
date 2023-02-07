@@ -9,6 +9,7 @@ import {
   DEFAULT_IMAGE_FILE_EXTS,
   DEFAULT_TEXT_FILE_EXTS,
   DEFAULT_VIDEO_FILE_EXTS,
+  DEFAULT_EXTERNAL_FILE_PREVIEWERS,
 } from '@/config'
 import { useI18n } from 'vue-i18n'
 import OptionsConfigure, { OptionsForm } from './OptionsConfigure.vue'
@@ -44,7 +45,7 @@ const configForms: OptionsForm[] = [
         label: t('p.admin.site.text_file_exts'),
         description: t('p.admin.site.text_file_exts_desc'),
         type: 'textarea',
-        defaultValue: DEFAULT_TEXT_FILE_EXTS.join(','),
+        defaultValue: DEFAULT_TEXT_FILE_EXTS,
         fillDefaultIfEmpty: true,
       },
       {
@@ -52,7 +53,7 @@ const configForms: OptionsForm[] = [
         label: t('p.admin.site.image_file_exts'),
         description: t('p.admin.site.image_file_exts_desc'),
         type: 'textarea',
-        defaultValue: DEFAULT_IMAGE_FILE_EXTS.join(','),
+        defaultValue: DEFAULT_IMAGE_FILE_EXTS,
         fillDefaultIfEmpty: true,
       },
       {
@@ -60,7 +61,7 @@ const configForms: OptionsForm[] = [
         label: t('p.admin.site.audio_file_exts'),
         description: t('p.admin.site.audio_file_exts_desc'),
         type: 'textarea',
-        defaultValue: DEFAULT_AUDIO_FILE_EXTS.join(','),
+        defaultValue: DEFAULT_AUDIO_FILE_EXTS,
         fillDefaultIfEmpty: true,
       },
       {
@@ -68,7 +69,7 @@ const configForms: OptionsForm[] = [
         label: t('p.admin.site.video_file_exts'),
         description: t('p.admin.site.video_file_exts_desc'),
         type: 'textarea',
-        defaultValue: DEFAULT_VIDEO_FILE_EXTS.join(','),
+        defaultValue: DEFAULT_VIDEO_FILE_EXTS,
         fillDefaultIfEmpty: true,
       },
       {
@@ -78,10 +79,13 @@ const configForms: OptionsForm[] = [
         type: 'textarea',
       },
       {
-        field: 'web.officePreviewEnabled',
-        label: t('p.admin.site.office_preview_enabled'),
-        description: t('p.admin.site.office_preview_enabled_desc'),
-        type: 'checkbox',
+        field: 'web.externalFileViewers',
+        label: t('p.admin.site.external_file_viewers'),
+        description: t('p.admin.site.external_file_viewers_desc'),
+        type: 'textarea',
+        defaultValue: DEFAULT_EXTERNAL_FILE_PREVIEWERS,
+        fillDefaultIfEmpty: true,
+        width: '100%',
       },
     ],
   },

@@ -26,7 +26,7 @@ export default {
     },
     zip: {
       name: '打包下载',
-      desc: '创建 zip 压缩包'
+      desc: '创建 zip 压缩包',
     },
     delete: {
       name: '删除',
@@ -43,17 +43,13 @@ export default {
       name: '画廊',
       desc: '查看图片',
     },
-    office: {
+    iframe: {
       name: '预览',
-      desc: '预览 Office 文件',
-    },
-    pdf: {
-      name: '预览',
-      desc: '预览 PDF 文件',
+      desc: '预览这个文件',
     },
     audio: {
       name: '播放',
-      desc: '播放音乐'
+      desc: '播放音乐',
     },
     video: {
       name: '播放',

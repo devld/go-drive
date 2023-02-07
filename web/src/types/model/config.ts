@@ -20,3 +20,9 @@ export interface Config {
 
   search?: SearchConfig
 }
+
+export interface ExternalFilePreviewer {
+  exts: string[]
+  name: string
+  url: string
+}

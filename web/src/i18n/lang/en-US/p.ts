@@ -19,9 +19,9 @@ export default {
       anonymous_root_path_desc:
         'Restrict non-logged-in users to access resources in this directory only, with paths that do not start with /',
       file_preview_config: 'File Preview config',
-      office_preview_enabled: 'Office Preview',
-      office_preview_enabled_desc:
-        'Enable office files preview via online services provided by Microsoft and Google',
+      external_file_viewers: 'External File Viewers',
+      external_file_viewers_desc:
+        'Use third-party services preview file (note: if the service is provided by a third-party, then the third-party service must have access to this application). The configuration format is one per line: [list of file extensions(separated by commas)]<space>[URL template]<space>[service name]. Lines starting with # are comments and will be ignored.',
       text_file_exts: 'Text file extensions',
       text_file_exts_desc:
         "List of text file extensions(or match the full filename starting with '/', e.g. '/.gitignore') supported for viewing and editing, separated by comma",

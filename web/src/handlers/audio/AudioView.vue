@@ -12,7 +12,6 @@ import APlayer from 'aplayer'
 import 'aplayer/dist/APlayer.min.css'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { EntryHandlerContext } from '../types'
-import { DEFAULT_AUDIO_FILE_EXTS } from '@/config'
 import { filenameBase, filenameExt } from '@/utils'
 
 const props = defineProps({
@@ -45,9 +44,7 @@ const init = () => {
   const audioFiles = props.entries.filter(
     (f) =>
       f.type === 'file' &&
-      (
-        props.ctx.options['web.audioFileExts'] || DEFAULT_AUDIO_FILE_EXTS
-      ).includes(filenameExt(f.name))
+      props.ctx.options['web.audioFileExts'].includes(filenameExt(f.name))
   )
   audio = audioFiles.map((f) => ({
     name: filenameBase(f.name),
