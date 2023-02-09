@@ -238,7 +238,7 @@ drive:
     invalid_root_path: "Root path must starts with '/'"
   script:
     name: Script
-    readme: Use the JavaScript driver. There are no configuration parameters for this, please save it and configure it below
+    readme: Use the JavaScript driver. Please save it and configure it below
     invalid_pool_config: "Invalid Pool configuration: {{ 1 }}"
     form:
       pool:

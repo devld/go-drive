@@ -72,3 +72,7 @@ func (d *dbDriveNamespacedDataStore) Load(keys ...string) (types.SM, error) {
 	}
 	return r, nil
 }
+
+func (d *dbDriveNamespacedDataStore) Clear() error {
+	return d.db.C().Delete(&types.DriveData{}, "drive = ?", d.ns).Error
+}

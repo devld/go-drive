@@ -218,30 +218,37 @@ func ListDriveScripts(config common.Config) ([]DriveScript, error) {
 		return []DriveScript{}, nil
 	}
 	result := make([]DriveScript, 0)
-
 	for _, entry := range entries {
 		n := strings.ToLower(entry.Name())
 		if !strings.HasSuffix(n, ".js") {
 			continue
 		}
-
-		scriptFile, e := os.Open(filepath.Join(scriptsPath, entry.Name()))
+		ds, e := readDriveScriptMeta(entry.Name(), config)
 		if e != nil {
 			continue
 		}
-		r := bufio.NewReader(scriptFile)
-		name := readMetaValue(r, true, entry.Name())
-		description := readMetaValue(r, false, "")
-		_ = scriptFile.Close()
-
-		result = append(result, DriveScript{
-			Name:        strings.TrimRight(entry.Name(), ".js"),
-			DisplayName: name,
-			Description: description,
-		})
+		result = append(result, ds)
 	}
-
 	return result, nil
+}
+
+func readDriveScriptMeta(file string, config common.Config) (DriveScript, error) {
+	scriptsPath, _ := config.GetDir(config.DrivesDir, false)
+	scriptFile, e := os.Open(filepath.Join(scriptsPath, file))
+	if e != nil {
+		return DriveScript{}, e
+	}
+	defer func() {
+		_ = scriptFile.Close()
+	}()
+	r := bufio.NewReader(scriptFile)
+	name := readMetaValue(r, true, file)
+	description := readMetaValue(r, false, "")
+	return DriveScript{
+		Name:        strings.TrimRight(file, ".js"),
+		DisplayName: name,
+		Description: description,
+	}, nil
 }
 
 var metaPrefixRegexp = regexp.MustCompile(`^\s*//\s*`)

@@ -88,35 +88,33 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.
 }
 
 func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
+	selectedScript := config["script"]
+	if selectedScript == "" {
+		return nil, err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
+	}
+	selectedScript += ".js"
+
 	cfg, e := driveUtils.Data.Load("_script")
 	if e != nil {
 		return nil, e
 	}
-
-	scripts, _ := ListDriveScripts(driveUtils.Config)
-	scriptOptions := (utils.ArrayMap(scripts, func(t *DriveScript) types.FormItemOption {
-		return types.FormItemOption{Value: t.Name + ".js", Name: t.DisplayName}
-	}))
-
-	initForm := make([]types.FormItem, 1)
-	initForm[0] = types.FormItem{
-		Field:       "_script",
-		Label:       t("form.script.label"),
-		Description: t("form.script.description"),
-		Type:        "select",
-		Options:     &scriptOptions,
-		Required:    true,
-		Disabled:    cfg["_script"] != "",
-	}
-	values := make(types.SM, 1)
-	values["_script"] = cfg["_script"]
-
-	if cfg["_script"] != "" {
-		s, ok := utils.ArrayFind(scripts, func(s DriveScript, _ int) bool { return s.Name+".js" == cfg["_script"] })
-		if ok {
-			initForm = append(initForm, types.FormItem{Type: "md", Description: s.Description})
+	if cfg["_script"] != selectedScript {
+		if e := driveUtils.Data.Clear(); e != nil {
+			return nil, e
 		}
 	}
+	if e := driveUtils.Data.Save(types.SM{"_script": selectedScript}); e != nil {
+		return nil, e
+	}
+
+	initForm := make([]types.FormItem, 0, 1)
+	values := make(types.SM)
+
+	ds, e := readDriveScriptMeta(selectedScript, driveUtils.Config)
+	if e != nil {
+		return nil, e
+	}
+	initForm = append(initForm, types.FormItem{Type: "md", Description: ds.Description})
 
 	retCfg := &drive_util.DriveInitConfig{
 		Configured: false,
@@ -124,11 +122,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 		Value:      values,
 	}
 
-	if cfg["_script"] == "" {
-		return retCfg, nil
-	}
-
-	vm, e := createVm(driveUtils.Config, cfg["_script"])
+	vm, e := createVm(driveUtils.Config, selectedScript)
 	if e != nil {
 		return nil, e
 	}

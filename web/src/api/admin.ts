@@ -78,7 +78,7 @@ export function deleteDrive(name: string) {
 }
 
 export function getDriveInitConfig(name: string) {
-  return http.get<DriveInitConfig>(`/admin/drive/${name}/init`)
+  return http.post<DriveInitConfig>(`/admin/drive/${name}/init-config`)
 }
 
 export function initDrive(name: string, data: O<string>) {

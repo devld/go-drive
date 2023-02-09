@@ -180,7 +180,7 @@ func InitAdminRoutes(
 
 	// get drive factories
 	r.GET("/drive-factories", func(c *gin.Context) {
-		ds := drive_util.GetRegisteredDrives()
+		ds := drive_util.GetRegisteredDrives(config)
 		sort.Slice(ds, func(i, j int) bool { return ds[i].Type < ds[j].Type })
 		SetResult(c, ds)
 	})
@@ -193,7 +193,7 @@ func InitAdminRoutes(
 			return
 		}
 		for i, d := range drives {
-			f := drive_util.GetDrive(d.Type)
+			f := drive_util.GetDrive(d.Type, config)
 			if f == nil {
 				continue
 			}
@@ -233,7 +233,7 @@ func InitAdminRoutes(
 			_ = c.Error(e)
 			return
 		}
-		f := drive_util.GetDrive(d.Type)
+		f := drive_util.GetDrive(d.Type, config)
 		if f == nil {
 			_ = c.Error(err.NewNotAllowedMessageError(i18n.T("api.admin.unknown_drive_type", d.Type)))
 			return
@@ -265,7 +265,7 @@ func InitAdminRoutes(
 	})
 
 	// get drive initialization information
-	r.GET("/drive/:name/init", func(c *gin.Context) {
+	r.POST("/drive/:name/init-config", func(c *gin.Context) {
 		name := c.Param("name")
 		data, e := rootDrive.DriveInitConfig(c.Request.Context(), name)
 		if e != nil {
