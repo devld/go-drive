@@ -35,6 +35,7 @@ type DriveCacheFactory = func(EntryDeserialize) DriveCache
 type DriveDataStore interface {
 	Save(types.SM) error
 	Load(...string) (types.SM, error)
+	Clear() error
 }
 
 type DriveUtils struct {

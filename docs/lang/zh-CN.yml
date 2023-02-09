@@ -238,7 +238,7 @@ drive:
     invalid_root_path: "根路径必须以 '/' 开头"
   script:
     name: 脚本
-    readme: 使用 JavaScript 驱动盘。该盘无配置参数，请在保存后在下方进行具体配置
+    readme: 使用 JavaScript 驱动盘。请保存后在下方进行具体配置
     invalid_pool_config: "无效的 Pool 配置: {{ 1 }}"
     form:
       pool:

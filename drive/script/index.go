@@ -3,9 +3,9 @@ package script
 import (
 	"context"
 	"errors"
+	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
-	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	s "go-drive/script"
@@ -13,21 +13,26 @@ import (
 	"sync"
 )
 
-var sT = i18n.TPrefix("drive.script.")
-
 func init() {
-	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
-		Type:        "script",
-		DisplayName: t("name"),
-		README:      t("readme"),
-		ConfigForm: []types.FormItem{
-			{Field: "pool", Label: sT("form.pool.label"), Type: "text", Description: sT("form.pool.description")},
-		},
-		Factory: drive_util.DriveFactory{
-			Create:     newScriptDrive,
-			InitConfig: initConfig,
-			Init:       init_,
-		},
+	drive_util.RegisterDynamicDrive("script", func(config common.Config) *drive_util.DriveFactoryConfig {
+		scripts, _ := ListDriveScripts(config)
+		scriptOptions := (utils.ArrayMap(scripts, func(t *DriveScript) types.FormItemOption {
+			return types.FormItemOption{Value: t.Name, Name: t.DisplayName}
+		}))
+
+		return &drive_util.DriveFactoryConfig{
+			DisplayName: t("name"),
+			README:      t("readme"),
+			ConfigForm: []types.FormItem{
+				{Field: "script", Label: t("form.script.label"), Type: "select", Description: t("form.script.description"), Options: &scriptOptions, Required: true},
+				{Field: "pool", Label: t("form.pool.label"), Type: "text", Description: t("form.pool.description")},
+			},
+			Factory: drive_util.DriveFactory{
+				Create:     newScriptDrive,
+				InitConfig: initConfig,
+				Init:       init_,
+			},
+		}
 	})
 }
 
