@@ -142,18 +142,25 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, rea
 }
 
 func (f *Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	path = f.getPath(path)
-	if exists, _ := utils.FileExists(path); exists {
-		return f.Get(ctx, path)
-	}
-	if e := os.Mkdir(path, 0755); e != nil {
+	fPath := f.getPath(path)
+	stat, e := os.Stat(fPath)
+	if e != nil && !os.IsNotExist(e) {
 		return nil, e
 	}
-	stat, e := os.Stat(path)
+	if e == nil {
+		if !stat.IsDir() {
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
+		}
+		return f.newFsFile(fPath, stat)
+	}
+	if e := os.Mkdir(fPath, 0755); e != nil {
+		return nil, e
+	}
+	stat, e = os.Stat(fPath)
 	if e != nil {
 		return nil, e
 	}
-	return f.newFsFile(path, stat)
+	return f.newFsFile(fPath, stat)
 }
 
 func (f *Drive) Copy(types.TaskCtx, types.IEntry, string, bool) (types.IEntry, error) {
