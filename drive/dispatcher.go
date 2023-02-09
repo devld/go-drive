@@ -2,6 +2,7 @@ package drive
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go-drive/common"
 	"go-drive/common/drive_util"
@@ -20,36 +21,38 @@ import (
 
 var pathRegexp = regexp.MustCompile(`^/?([^/]+)(/(.*))?$`)
 
+const maxMountDepth = 10
+
 // DispatcherDrive splits drive name and key from the raw key.
 // Then dispatch request to the specified drive.
 type DispatcherDrive struct {
-	drives map[string]types.IDrive
-	mounts map[string]map[string]types.PathMount
+	_drives map[string]types.IDrive
+	_mounts map[string]map[string]types.PathMount
+
+	_drivesMux *sync.RWMutex
+	_mountsMux *sync.RWMutex
 
 	tempDir string
 
 	mountStorage *storage.PathMountDAO
-
-	drivesMux *sync.RWMutex
-	mountsMux *sync.RWMutex
 
 	drivesLock *utils.KeyLock
 }
 
 func NewDispatcherDrive(mountStorage *storage.PathMountDAO, config common.Config) *DispatcherDrive {
 	return &DispatcherDrive{
-		drives:       make(map[string]types.IDrive),
+		_drives:      make(map[string]types.IDrive),
+		_drivesMux:   &sync.RWMutex{},
+		_mountsMux:   &sync.RWMutex{},
 		mountStorage: mountStorage,
 		tempDir:      config.TempDir,
-		drivesMux:    &sync.RWMutex{},
-		mountsMux:    &sync.RWMutex{},
 	}
 }
 
 func (d *DispatcherDrive) setDrives(drives map[string]types.IDrive) {
-	d.drivesMux.Lock()
-	defer d.drivesMux.Unlock()
-	for _, d := range d.drives {
+	d._drivesMux.Lock()
+	defer d._drivesMux.Unlock()
+	for _, d := range d._drives {
 		if disposable, ok := d.(types.IDisposable); ok {
 			_ = disposable.Dispose()
 		}
@@ -58,13 +61,13 @@ func (d *DispatcherDrive) setDrives(drives map[string]types.IDrive) {
 	for k, v := range drives {
 		newDrives[k] = v
 	}
-	d.drives = newDrives
+	d._drives = newDrives
 	d.drivesLock = utils.NewKeyLock(len(drives))
 }
 
 func (d *DispatcherDrive) reloadMounts() error {
-	d.mountsMux.Lock()
-	defer d.mountsMux.Unlock()
+	d._mountsMux.Lock()
+	defer d._mountsMux.Unlock()
 	mounts, e := d.mountStorage.GetMounts()
 	if e != nil {
 		return e
@@ -79,14 +82,26 @@ func (d *DispatcherDrive) reloadMounts() error {
 		ms[*m.Path] = t
 	}
 
-	d.mounts = ms
+	d._mounts = ms
 	return nil
 }
 
+func (d *DispatcherDrive) drives() map[string]types.IDrive {
+	d._drivesMux.RLock()
+	defer d._drivesMux.RUnlock()
+	return d._drives
+}
+
+func (d *DispatcherDrive) mounts() map[string]map[string]types.PathMount {
+	d._mountsMux.RLock()
+	defer d._mountsMux.RUnlock()
+	return d._mounts
+}
+
 func (d *DispatcherDrive) Dispose() error {
-	d.drivesMux.Lock()
-	defer d.drivesMux.Unlock()
-	for _, d := range d.drives {
+	d._drivesMux.Lock()
+	defer d._drivesMux.Unlock()
+	for _, d := range d._drives {
 		if disposable, ok := d.(types.IDisposable); ok {
 			_ = disposable.Dispose()
 		}
@@ -99,9 +114,17 @@ func (d *DispatcherDrive) Meta(context.Context) (types.DriveMeta, error) {
 }
 
 func (d *DispatcherDrive) resolve(path string) (string, types.IDrive, string, error) {
-	targetPath := d.resolveMount(path)
-	if targetPath != "" {
+	mountDepth := 0
+	for {
+		targetPath := d.resolveMount(path)
+		if targetPath == "" {
+			break
+		}
+		mountDepth++
 		path = targetPath
+		if mountDepth > maxMountDepth {
+			return "", nil, "", errors.New("maximum mounting depth exceeded")
+		}
 	}
 	paths := pathRegexp.FindStringSubmatch(path)
 	if paths == nil {
@@ -109,9 +132,7 @@ func (d *DispatcherDrive) resolve(path string) (string, types.IDrive, string, er
 	}
 	driveName := paths[1]
 	entryPath := paths[3]
-	d.drivesMux.RLock()
-	drive, ok := d.drives[driveName]
-	d.drivesMux.RUnlock()
+	drive, ok := d.drives()[driveName]
 	if !ok {
 		if utils.IsRootPath(utils.PathParent(path)) {
 			return "", nil, "", err.NewNotFoundMessageError(i18n.T("error.root_not_writable"))
@@ -124,12 +145,11 @@ func (d *DispatcherDrive) resolve(path string) (string, types.IDrive, string, er
 func (d *DispatcherDrive) resolveMount(path string) string {
 	tree := utils.PathParentTree(path)
 	var mountAt, prefix string
-	d.mountsMux.RLock()
-	defer d.mountsMux.RUnlock()
+	mounts := d.mounts()
 	for _, p := range tree {
 		dir := utils.PathParent(p)
 		name := utils.PathBase(p)
-		temp := d.mounts[dir]
+		temp := mounts[dir]
 		if temp != nil {
 			mountAt = temp[name].MountAt
 			if mountAt != "" {
@@ -151,9 +171,7 @@ func (d *DispatcherDrive) resolveMount(path string) string {
 func (d *DispatcherDrive) resolveMountedChildren(path string) ([]types.PathMount, bool) {
 	result := make([]types.PathMount, 0)
 	isSelf := false
-	d.mountsMux.RLock()
-	defer d.mountsMux.RUnlock()
-	for mountParent, mounts := range d.mounts {
+	for mountParent, mounts := range d.mounts() {
 		for mountName, m := range mounts {
 			mountPath := path2.Join(mountParent, mountName)
 			if mountPath == path || utils.IsPathParent(mountPath, path) {
@@ -406,18 +424,17 @@ func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, 
 func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	var entries []types.IEntry
 	if utils.IsRootPath(path) {
-		d.drivesMux.RLock()
-		drives := make([]types.IEntry, 0, len(d.drives))
-		for k, v := range d.drives {
+
+		drives := d.drives()
+		driveEntries := make([]types.IEntry, 0, len(drives))
+		for k, v := range drives {
 			meta, e := v.Meta(ctx)
 			if e != nil {
-				d.drivesMux.RUnlock()
 				return nil, e
 			}
-			drives = append(drives, &driveEntry{d: d, path: k, name: k, meta: meta})
+			driveEntries = append(driveEntries, &driveEntry{d: d, path: k, name: k, meta: meta})
 		}
-		d.drivesMux.RUnlock()
-		entries = drives
+		entries = driveEntries
 	} else {
 		driveName, drive, realPath, e := d.resolve(path)
 		if e != nil {
@@ -430,9 +447,7 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 		entries = d.mapDriveEntries(path, driveName, list)
 	}
 
-	d.mountsMux.RLock()
-	ms := d.mounts[path]
-	d.mountsMux.RUnlock()
+	ms := d.mounts()[path]
 	if ms != nil {
 		mountedMap := make(map[string]types.IEntry, len(entries))
 		for name, m := range ms {
