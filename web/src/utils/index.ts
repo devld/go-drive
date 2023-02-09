@@ -145,10 +145,14 @@ export function entryMatches(
 ) {
   const name = typeof entry === 'object' ? entry.name : entry
   const meta = typeof entry === 'object' ? entry.meta : undefined
-  const matches_ = Array.isArray(matches) ? matches : [matches]
+  const matches_ = (Array.isArray(matches) ? matches : [matches]) as string[]
   for (const m of matches_) {
     // matches full filename
     if (m.startsWith('/') && name.toLowerCase() === m.substring(1)) {
+      return true
+    }
+    // multiple extensions
+    if (m.includes('.') && name.toLowerCase().endsWith('.' + m)) {
       return true
     }
     // match ext
@@ -176,7 +180,7 @@ export function createEntryExtMatcher<T extends string = string>(
   return (entry: Entry | string) => {
     const name = typeof entry === 'object' ? entry.name : entry
     const meta = typeof entry === 'object' ? entry.meta : undefined
-    let icon = fullNameMapping[name.toLocaleLowerCase()]
+    let icon = fullNameMapping[name.toLowerCase()]
     if (!icon) {
       const ext = meta?.ext || filenameExt(name)
       icon = extMapping[ext]

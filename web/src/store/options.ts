@@ -29,7 +29,7 @@ const externalFileViewers = (v?: string): readonly ExternalFilePreviewer[] => {
       .map((e) => stringSplitN(e, /\s+/, 3))
       .filter((e) => e.length === 3)
       .flatMap((parts) => {
-        const exts = parts[0].toLocaleLowerCase().split(',')
+        const exts = parts[0].toLowerCase().split(',')
         const viewer: ExternalFilePreviewer = {
           exts,
           name: parts[2],
