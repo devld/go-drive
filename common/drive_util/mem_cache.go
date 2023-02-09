@@ -4,17 +4,12 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"log"
-	"strings"
-	"sync"
 	"time"
 )
 
 func NewMemDriveCacheManager(cleanPeriod time.Duration) *MemDriveCacheManager {
 	mm := &MemDriveCacheManager{
-		cache: &memDriveCacheNode{
-			key:      "", // root
-			children: make(map[string]*memDriveCacheNode),
-		},
+		cache: utils.NewPathTreeNode[memCacheData](""),
 	}
 	if cleanPeriod > 0 {
 		mm.timerStop = utils.TimeTick(mm.clean, cleanPeriod)
@@ -23,7 +18,7 @@ func NewMemDriveCacheManager(cleanPeriod time.Duration) *MemDriveCacheManager {
 }
 
 type MemDriveCacheManager struct {
-	cache     *memDriveCacheNode
+	cache     *utils.PathTreeNode[memCacheData]
 	timerStop func()
 }
 
@@ -32,78 +27,44 @@ func (m *MemDriveCacheManager) GetCacheStore(ns string, deserialize EntryDeseria
 }
 
 func (m *MemDriveCacheManager) EvictCacheStore(ns string) error {
-	node, parent := m.findNode(ns)
+	node, parent := m.cache.Get(ns)
 	if node == nil {
 		return nil
 	}
-	node.mu.Lock()
-	node.data = nil
-	node.childrenNames = nil
-	node.mu.Unlock()
+	node.L().Lock()
+	node.Data.EntryCacheItem = nil
+	node.L().Unlock()
 	if parent != nil {
-		parent.mu.Lock()
-		delete(parent.children, node.key)
-		parent.mu.Unlock()
+		parent.L().Lock()
+		parent.RemoveChild(node.Key())
+		parent.L().Unlock()
 	}
 	return nil
 }
 
-func (m *MemDriveCacheManager) findNode(path string) (*memDriveCacheNode, *memDriveCacheNode) {
-	var node *memDriveCacheNode = m.cache
-	var parent *memDriveCacheNode = nil
-	if utils.IsRootPath(path) {
-		return node, parent
-	}
-	for _, i := range strings.Split(utils.CleanPath(path), "/") {
-		node.mu.RLock()
-		t, ok := node.children[i]
-		if !ok {
-			node.mu.RUnlock()
-			return nil, nil
-		}
-		parent = node
-		node.mu.RUnlock()
-		node = t
-	}
-	return node, parent
-}
-
-func (m *MemDriveCacheManager) createNodeIfNotExists(path string) *memDriveCacheNode {
-	node := m.cache
-	for _, i := range strings.Split(utils.CleanPath(path), "/") {
-		node.mu.Lock()
-		t, ok := node.children[i]
-		if !ok {
-			t = &memDriveCacheNode{key: i, children: make(map[string]*memDriveCacheNode)}
-			node.children[i] = t
-		}
-		node.mu.Unlock()
-		node = t
-	}
-	return node
-}
-
-func (m *MemDriveCacheManager) _cleanNode(node, parent *memDriveCacheNode, cleaned, total *int) {
-	node.mu.Lock()
-	defer node.mu.Unlock()
-	for _, v := range utils.MapValues(node.children) {
+func (m *MemDriveCacheManager) _cleanNode(node, parent *utils.PathTreeNode[memCacheData], cleaned, total *int) {
+	children := node.Children()
+	for _, v := range children {
 		m._cleanNode(v, node, cleaned, total)
 	}
 	*total++
-	if parent == nil {
+	if parent == nil || len(children) != 0 {
 		return
 	}
-	if len(node.children) == 0 &&
-		(node.data == nil || (node.expiresAt != nil && node.expiresAt.Before(time.Now()))) {
+	node.L().RLock()
+	if node.Data.isInvalid() {
 		*cleaned++
-		delete(parent.children, node.key)
+		parent.RemoveChild(node.Key())
 	}
+	node.L().RUnlock()
 }
 
 func (m *MemDriveCacheManager) clean() {
 	cleaned, total := 0, 0
+	t := time.Now().UnixMicro()
 	m._cleanNode(m.cache, nil, &cleaned, &total)
-	log.Printf("[MemDriveCacheManager] %d of %d cache items cleaned", cleaned, total)
+	log.Printf("[MemDriveCacheManager] %d of %d cache items cleaned(%fms)",
+		cleaned, total, float64(time.Now().UnixMicro()-t)/1000)
 }
 
 func (m *MemDriveCacheManager) Dispose() error {
@@ -127,22 +88,17 @@ func (m *memDriveCache) addNs(path string) string {
 }
 
 func (m *memDriveCache) Evict(path string, descendants bool) error {
-	node, parent := m.mgr.findNode(m.addNs(path))
+	node, parent := m.mgr.cache.Get(m.addNs(path))
 	if node == nil {
 		return nil
 	}
-	node.mu.Lock()
-	node.data = nil
-	node.childrenNames = nil
-	if descendants {
-		node.children = make(map[string]*memDriveCacheNode)
-		node.mu.Unlock()
+	node.L().Lock()
+	node.Data.EntryCacheItem = nil
+	node.Data.childrenNames = nil
+	node.L().Unlock()
 
-		parent.mu.Lock()
-		delete(parent.children, node.key)
-		parent.mu.Unlock()
-	} else {
-		node.mu.Unlock()
+	if descendants {
+		parent.RemoveChild(node.Key())
 	}
 	return nil
 }
@@ -162,22 +118,31 @@ func (m *memDriveCache) GetChildren(path string) ([]types.IEntry, error) {
 }
 
 func (m *memDriveCache) GetChildrenRaw(path string) ([]EntryCacheItem, error) {
-	node, _ := m.mgr.findNode(m.addNs(path))
+	node, _ := m.mgr.cache.Get(m.addNs(path))
 	if node == nil {
 		return nil, nil
 	}
-	node.mu.RLock()
-	defer node.mu.RUnlock()
-	if node.childrenNames == nil {
+	node.L().RLock()
+	if node.Data.childrenNames == nil {
+		node.L().RUnlock()
 		return nil, nil
 	}
-	data := make([]EntryCacheItem, 0, len(node.childrenNames))
-	for _, key := range node.childrenNames {
-		t, ok := node.children[key]
-		if !ok || (t.expiresAt != nil && t.expiresAt.Before(time.Now())) || t.data == nil {
+	childrenNames := node.Data.childrenNames
+	node.L().RUnlock()
+
+	data := make([]EntryCacheItem, 0, len(childrenNames))
+	for _, key := range node.Data.childrenNames {
+		t, _ := node.Get(key)
+		if t == nil {
 			return nil, nil
 		}
-		data = append(data, *t.data)
+		t.L().RLock()
+		if t.Data.isInvalid() {
+			t.L().RUnlock()
+			return nil, nil
+		}
+		data = append(data, *t.Data.EntryCacheItem)
+		t.L().RUnlock()
 	}
 	return data, nil
 }
@@ -191,23 +156,20 @@ func (m *memDriveCache) GetEntry(path string) (types.IEntry, error) {
 }
 
 func (m *memDriveCache) GetEntryRaw(path string) (*EntryCacheItem, error) {
-	node, _ := m.mgr.findNode(m.addNs(path))
+	node, _ := m.mgr.cache.Get(m.addNs(path))
 	if node == nil {
 		return nil, nil
 	}
-	node.mu.RLock()
-	defer node.mu.RUnlock()
-	if node.expiresAt != nil && node.expiresAt.Before(time.Now()) {
+	node.L().RLock()
+	defer node.L().RUnlock()
+	if node.Data.isInvalid() {
 		return nil, nil
 	}
-	return node.data, nil
+	return node.Data.EntryCacheItem, nil
 }
 
 func (m *memDriveCache) PutChildren(parentPath string, entries []types.IEntry, ttl time.Duration) error {
-	node := m.mgr.createNodeIfNotExists(m.addNs(parentPath))
-	node.mu.Lock()
-	defer node.mu.Unlock()
-	childrenNames := make([]string, 0, len(entries))
+	node := m.mgr.cache.Create(m.addNs(parentPath))
 
 	var expiresAt *time.Time
 	if ttl > 0 {
@@ -215,18 +177,23 @@ func (m *memDriveCache) PutChildren(parentPath string, entries []types.IEntry, t
 		expiresAt = &t
 	}
 
+	childrenNames := make([]string, 0, len(entries))
+	children := make(map[string]memCacheData, len(entries))
+
 	for _, i := range entries {
 		name := utils.PathBase(i.Path())
 		childrenNames = append(childrenNames, name)
 		cacheData := SerializeEntry(i)
-		node.children[name] = &memDriveCacheNode{
-			data:      &cacheData,
-			key:       name,
-			children:  make(map[string]*memDriveCacheNode),
-			expiresAt: expiresAt,
+		children[name] = memCacheData{
+			EntryCacheItem: &cacheData,
+			expiresAt:      expiresAt,
 		}
 	}
-	node.childrenNames = childrenNames
+
+	node.AddChildren(children)
+	node.L().Lock()
+	node.Data.childrenNames = childrenNames
+	node.L().Unlock()
 	return nil
 }
 
@@ -240,19 +207,20 @@ func (m *memDriveCache) PutEntries(entries []types.IEntry, ttl time.Duration) er
 }
 
 func (m *memDriveCache) PutEntry(entry types.IEntry, ttl time.Duration) error {
-	node := m.mgr.createNodeIfNotExists(m.addNs(entry.Path()))
-	node.mu.Lock()
-	defer node.mu.Unlock()
-
-	cacheData := SerializeEntry(entry)
-	node.data = &cacheData
+	node := m.mgr.cache.Create(m.addNs(entry.Path()))
 
 	var expiresAt *time.Time
 	if ttl > 0 {
 		t := time.Now().Add(ttl)
 		expiresAt = &t
 	}
-	node.expiresAt = expiresAt
+
+	node.L().Lock()
+	defer node.L().Unlock()
+
+	cacheData := SerializeEntry(entry)
+	node.Data.EntryCacheItem = &cacheData
+	node.Data.expiresAt = expiresAt
 	return nil
 }
 
@@ -260,14 +228,18 @@ func (m *memDriveCache) Dispose() error {
 	return m.EvictAll()
 }
 
-type memDriveCacheNode struct {
-	mu            sync.RWMutex
-	key           string
-	data          *EntryCacheItem
+type memCacheData struct {
+	*EntryCacheItem
 	childrenNames []string
-	children      map[string]*memDriveCacheNode
+	expiresAt     *time.Time
+}
 
-	expiresAt *time.Time
+func (mcd memCacheData) isExpired() bool {
+	return (mcd.expiresAt != nil && mcd.expiresAt.Before(time.Now()))
+}
+
+func (mcd memCacheData) isInvalid() bool {
+	return mcd.EntryCacheItem == nil || mcd.isExpired()
 }
 
 var _ DriveCache = (*memDriveCache)(nil)
