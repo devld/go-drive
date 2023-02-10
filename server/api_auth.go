@@ -2,18 +2,26 @@ package server
 
 import (
 	"go-drive/common/types"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-func InitAuthRoutes(r gin.IRouter, ua *UserAuth, tokenStore types.TokenStore) error {
+func InitAuthRoutes(r gin.IRouter, ua *UserAuth,
+	tokenStore types.TokenStore, failBan *FailBanGroup) error {
+
 	ar := authRoute{userAuth: ua, tokenStore: tokenStore}
 
 	r.POST("/auth/init", ar.init)
 
 	auth := r.Group("/auth", TokenAuth(tokenStore))
 	{
-		auth.POST("/login", ar.login)
+		auth.POST(
+			"/login",
+			failBan.LimiterByIP("/login", 5*time.Minute, 5),
+			ar.login,
+		)
+
 		auth.POST("/logout", ar.logout)
 		auth.GET("/user", ar.getUser)
 	}

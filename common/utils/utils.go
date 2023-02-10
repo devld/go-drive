@@ -6,7 +6,6 @@ import (
 	"go-drive/common/types"
 	"math"
 	"math/rand"
-	"net/http"
 	"net/url"
 	"os"
 	path2 "path"
@@ -129,16 +128,6 @@ func RandString(n int) string {
 	return string(b)
 }
 
-func GetRealIP(r *http.Request) string {
-	clientIP := r.RemoteAddr[:strings.LastIndex(r.RemoteAddr, ":")]
-	forwarded := r.Header.Get("X-Forwarded-For")
-	if forwarded == "" {
-		return clientIP
-	}
-	ips := strings.Split(forwarded, ",")
-	return strings.TrimSpace(ips[0])
-}
-
 var lineEndRegexp = regexp.MustCompile("\r?\n")
 
 func SplitLines(s string) []string {
@@ -232,7 +221,7 @@ func ArrayFind[T any](a []T, matches func(T, int) bool) (ret T, ok bool) {
 		if matches(a[i], i) {
 			ret = a[i]
 			ok = true
-			return a[i], true
+			return
 		}
 	}
 	return

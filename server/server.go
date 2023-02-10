@@ -66,10 +66,13 @@ func InitServer(config common.Config,
 
 	router := engine.Group(config.APIPath)
 
+	failBanGroup := NewFailBanGroup(10 * time.Minute)
+	ch.Add("failBanGroup", failBanGroup)
+
 	if e := InitCommonRoutes(ch, router, optionsDAO, tokenStore, runner); e != nil {
 		return nil, e
 	}
-	if e := InitAuthRoutes(router, userAuth, tokenStore); e != nil {
+	if e := InitAuthRoutes(router, userAuth, tokenStore, failBanGroup); e != nil {
 		return nil, e
 	}
 	if e := InitAdminRoutes(router, ch, config, bus, driveAccess, rootDrive, searcher, tokenStore, optionsDAO,
