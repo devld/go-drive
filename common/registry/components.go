@@ -1,6 +1,9 @@
 package registry
 
-import "fmt"
+import (
+	"fmt"
+	"go-drive/common/types"
+)
 
 type ComponentsHolder struct {
 	c map[string]interface{}
@@ -32,4 +35,15 @@ func (c *ComponentsHolder) Gets(matches func(c interface{}) bool) []interface{} 
 		}
 	}
 	return cs
+}
+
+func (c *ComponentsHolder) Dispose() error {
+	disposables := c.Gets(func(c interface{}) bool {
+		_, ok := c.(types.IDisposable)
+		return ok
+	})
+	for _, a := range disposables {
+		_ = a.(types.IDisposable).Dispose()
+	}
+	return nil
 }

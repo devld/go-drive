@@ -1,8 +1,10 @@
 package server
 
 import (
+	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"log"
@@ -31,18 +33,17 @@ type MemTokenStore struct {
 // - autoRefresh: refresh token by adding `validity` after each token access
 //
 // - cleanupDuration: cleanup invalid token each `cleanupDuration`
-func NewMemTokenStore(validity time.Duration, autoRefresh bool, cleanupDuration time.Duration) *MemTokenStore {
-	if cleanupDuration <= 0 {
-		panic("invalid cleanupDuration")
-	}
+func NewMemTokenStore(config common.Config, ch *registry.ComponentsHolder) (*MemTokenStore, error) {
+	authConfig := config.Auth
 	tokenStore := &MemTokenStore{
 		store:       cmap.New[types.Token](),
-		validity:    validity,
-		autoRefresh: autoRefresh,
+		validity:    authConfig.Validity,
+		autoRefresh: authConfig.AutoRefresh,
 		mux:         &sync.Mutex{},
 	}
-	tokenStore.tickerStop = utils.TimeTick(tokenStore.clean, cleanupDuration)
-	return tokenStore
+	tokenStore.tickerStop = utils.TimeTick(tokenStore.clean, 2*authConfig.Validity)
+	ch.Add("memTokenStore", tokenStore)
+	return tokenStore, nil
 }
 
 func (m *MemTokenStore) Create(value types.Session) (types.Token, error) {
