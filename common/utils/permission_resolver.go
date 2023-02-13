@@ -4,69 +4,37 @@ import (
 	"fmt"
 	"go-drive/common/types"
 	"sort"
-	"strings"
 )
 
 var rootPath = ""
 
-var privilegedPermMap = PermMap{
-	types.AnySubject: map[string]*PathPermItem{
-		rootPath: {
-			PathPermission: types.PathPermission{
-				ID:         0,
-				Path:       &rootPath,
-				Subject:    types.AnySubject,
-				Permission: types.PermissionReadWrite,
-				Policy:     types.PolicyAccept,
-			},
-		},
-	},
+var privilegedPermMap PermMap
+
+func init() {
+	privilegedPermMap = NewPermMap([]types.PathPermission{{
+		ID:         0,
+		Path:       &rootPath,
+		Subject:    types.AnySubject,
+		Permission: types.PermissionReadWrite,
+		Policy:     types.PolicyAccept,
+	}})
 }
 
 // PermMap is map of [subject][path]
-type PermMap map[string]map[string]*PathPermItem
+type PermMap map[string]*PathTreeNode[*pathPermItem]
 
 func NewPermMap(permissions []types.PathPermission) PermMap {
 	result := make(PermMap)
 	for _, p := range permissions {
 		sp, ok := result[p.Subject]
 		if !ok {
-			sp = make(map[string]*PathPermItem)
+			sp = NewPathTreeNodeNonLock[*pathPermItem]("")
 			result[p.Subject] = sp
 		}
-		sp[*p.Path] = &PathPermItem{
+		sp.Add(*p.Path, &pathPermItem{
 			PathPermission: p,
 			depth:          int8(PathDepth(*p.Path)),
-			descendant:     make([]*PathPermItem, 0),
-		}
-	}
-	for _, pms := range result {
-		added := make(map[string]bool)
-		for p := range pms {
-			paths := PathParentTree(p)
-			for _, pathPart := range paths {
-				if _, ok := pms[pathPart]; !ok {
-					added[pathPart] = true
-				}
-			}
-		}
-		for p := range added {
-			// virtual path node helps finding path descendant
-			pms[p] = &PathPermItem{
-				PathPermission: types.PathPermission{Path: &p},
-				depth:          -1,
-				descendant:     make([]*PathPermItem, 0),
-			}
-		}
-	}
-	for _, sp := range result {
-		for _, p := range sp {
-			for _, c := range sp {
-				if c.depth >= 0 && p.depth < c.depth && strings.HasPrefix(*c.Path, *p.Path) {
-					p.descendant = append(p.descendant, c)
-				}
-			}
-		}
+		})
 	}
 	return result
 }
@@ -90,40 +58,45 @@ func (pm PermMap) Filter(session types.Session) PermMap {
 
 // ResolvePath resolves permission of the path
 func (pm PermMap) ResolvePath(path string) types.Permission {
-	paths := PathParentTree(path)
-	items := make([]*PathPermItem, 0)
+	items := make([]*pathPermItem, 0)
 	for _, p := range pm {
-		for _, pathPart := range paths {
-			if temp, ok := p[pathPart]; ok && temp.depth >= 0 {
-				items = append(items, temp)
+		p.GetCb(path, func(n *PathTreeNode[*pathPermItem]) {
+			if n.Data != nil {
+				items = append(items, n.Data)
 			}
-		}
+		})
 	}
 	return resolveAcceptedPermissions(items)
 }
 
 // ResolveDescendant resolves permissions of the path's descendant
-func (pm PermMap) ResolveDescendant(path string) map[string]types.Permission {
-	result := make(map[string]types.Permission)
+func (pm PermMap) ResolveDescendant(path string) (types.Permission, bool) {
+	result := make([]*pathPermItem, 0)
 	for _, p := range pm {
-		if item, ok := p[path]; ok {
-			for _, t := range item.descendant {
-				result[*item.Path] = resolveAcceptedPermissions(t.descendant)
-			}
+		node, _ := p.Get(path)
+		if node == nil {
+			continue
 		}
+		node.Visit(func(n *PathTreeNode[*pathPermItem]) {
+			if n.Data != nil {
+				result = append(result, n.Data)
+			}
+		})
 	}
-	return result
+	if len(result) == 0 {
+		return 0, false
+	}
+	return resolveAcceptedPermissions(result), true
 }
 
-type PathPermItem struct {
+type pathPermItem struct {
 	types.PathPermission
 	// if depth == -1, this node is a virtual node that holds descendant
-	depth      int8
-	descendant []*PathPermItem
+	depth int8
 }
 
-func (p PathPermItem) String() string {
-	return fmt.Sprintf("%s,%s,%d,%d (%v)", *p.Path, p.Subject, p.Permission, p.Policy, p.descendant)
+func (p pathPermItem) String() string {
+	return fmt.Sprintf("%s,%s,%d,%d", *p.Path, p.Subject, p.Permission, p.Policy)
 }
 
 func makeSubjects(session types.Session) []string {
@@ -140,7 +113,7 @@ func makeSubjects(session types.Session) []string {
 	return subjects
 }
 
-func resolveAcceptedPermissions(items []*PathPermItem) types.Permission {
+func resolveAcceptedPermissions(items []*pathPermItem) types.Permission {
 	sort.Slice(items, func(i, j int) bool { return pathPermissionLess(items[i], items[j]) })
 	acceptedPermission := types.PermissionEmpty
 	rejectedPermission := types.PermissionEmpty
@@ -157,7 +130,7 @@ func resolveAcceptedPermissions(items []*PathPermItem) types.Permission {
 	return acceptedPermission
 }
 
-func pathPermissionLess(a, b *PathPermItem) bool {
+func pathPermissionLess(a, b *pathPermItem) bool {
 	if a.depth != b.depth {
 		return a.depth > b.depth
 	}

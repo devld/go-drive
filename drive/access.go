@@ -18,9 +18,10 @@ type Access struct {
 	rootDrive *RootDrive
 
 	perms         utils.PermMap
-	permMux       *sync.Mutex
+	permMux       *sync.RWMutex
 	permissionDAO *storage.PathPermissionDAO
-	options       *storage.OptionsDAO
+
+	options *storage.OptionsDAO
 
 	ch  *registry.ComponentsHolder
 	bus event.Bus
@@ -33,7 +34,7 @@ func NewAccess(ch *registry.ComponentsHolder,
 
 	da := &Access{
 		rootDrive:     rootDrive,
-		permMux:       &sync.Mutex{},
+		permMux:       &sync.RWMutex{},
 		permissionDAO: permissionDAO,
 		options:       options,
 		ch:            ch,
@@ -77,8 +78,12 @@ func (da *Access) GetDrive(session types.Session, signer EntrySigner) (types.IDr
 		signer = &chrootEntrySigner{signer, chroot}
 	}
 
+	da.permMux.RLock()
+	perms := da.perms
+	da.permMux.RUnlock()
+
 	var drive types.IDrive = NewListenerWrapper(
-		NewPermissionWrapperDrive(da.rootDrive.Get(), da.perms.Filter(session), signer),
+		NewPermissionWrapperDrive(da.rootDrive.Get(), perms.Filter(session), signer),
 		types.DriveListenerContext{
 			Session: &session,
 			Drive:   da.rootDrive.Get(),
@@ -99,6 +104,8 @@ func (da *Access) GetRootDrive() types.IDrive {
 }
 
 func (da *Access) GetPerms() utils.PermMap {
+	da.permMux.RLock()
+	defer da.permMux.RUnlock()
 	return da.perms
 }
 
