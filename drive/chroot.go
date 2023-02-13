@@ -112,7 +112,7 @@ func (c *ChrootWrapper) Copy(ctx types.TaskCtx, from types.IEntry, to string, ov
 	if e != nil {
 		return nil, e
 	}
-	entry, e := c.d.Copy(ctx, from, toP, override)
+	entry, e := c.d.Copy(ctx, unwrapEntry(from), toP, override)
 	return c.wrapEntry(entry), e
 }
 
@@ -121,7 +121,7 @@ func (c *ChrootWrapper) Move(ctx types.TaskCtx, from types.IEntry, to string, ov
 	if e != nil {
 		return nil, e
 	}
-	entry, e := c.d.Move(ctx, from, toP, override)
+	entry, e := c.d.Move(ctx, unwrapEntry(from), toP, override)
 	return c.wrapEntry(entry), e
 }
 
@@ -163,6 +163,13 @@ func (c *ChrootWrapper) wrapEntry(e types.IEntry) types.IEntry {
 		path:   c.UnwrapPath(e.Path()),
 		c:      c,
 	}
+}
+
+func unwrapEntry(e types.IEntry) types.IEntry {
+	if ee, ok := e.(*chrootEntry); ok {
+		return ee.IEntry
+	}
+	return e
 }
 
 func (c *ChrootWrapper) wrapEntries(es []types.IEntry) []types.IEntry {

@@ -102,6 +102,9 @@ func (p *PermissionWrapperDrive) Copy(ctx types.TaskCtx, from types.IEntry, to s
 	if e != nil {
 		return nil, e
 	}
+	if e := p.requireDescendantPermission(from.Path(), types.PermissionRead); e != nil {
+		return nil, e
+	}
 	if e := p.requireDescendantPermission(to, types.PermissionReadWrite); e != nil {
 		return nil, e
 	}
@@ -205,16 +208,8 @@ func (p *PermissionWrapperDrive) requirePermission(path string, require types.Pe
 
 func (p *PermissionWrapperDrive) requireDescendantPermission(path string, require types.Permission) error {
 	pp := p.pm.ResolvePath(path)
-	ok := pp&require == require
-	if ok {
-		permission := p.pm.ResolveDescendant(path)
-		for _, p := range permission {
-			if p&require != require {
-				ok = false
-				break
-			}
-		}
-	}
+	dp, defined := p.pm.ResolveDescendant(path)
+	ok := pp&require == require && (!defined || dp&require == require)
 	if !ok {
 		return err.NewNotAllowedMessageError(i18n.T("api.permission_wrapper.no_subfolder_permission"))
 	}
