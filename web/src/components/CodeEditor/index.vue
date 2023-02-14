@@ -150,7 +150,7 @@ onMounted(initEditor)
   display: flex;
   justify-content: center;
   align-items: center;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 }
 </style>

@@ -440,8 +440,8 @@ onBeforeMount(() => {
     border: none;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-    user-select: none;
     -webkit-user-select: none;
+    user-select: none;
   }
 
   .task-manager {

@@ -13,6 +13,7 @@
 
       <FormItem
         v-else
+        :id="`${idPrefix}${item.field!}`"
         :ref="addFieldsRef"
         v-model="data[item.field!]"
         :item="item"
@@ -54,6 +55,8 @@ const props = defineProps({
     type: Boolean,
   },
 })
+
+const idPrefix = `form-${Math.round(Math.random() * 1000000)}-`
 
 const data = ref<O>({})
 let fields: InstanceType<typeof FormItem>[] = []

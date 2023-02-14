@@ -191,8 +191,8 @@ onBeforeUnmount(() => {
   min-width: 200px;
   font-size: 28px;
   font-weight: normal;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   padding: 16px 48px 16px 16px;
 }
 

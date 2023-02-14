@@ -52,8 +52,8 @@ svg {
   border: none;
   background-color: transparent;
   color: var(--primary-text-color);
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   cursor: pointer;
   text-decoration: none;
   margin: 0;
@@ -91,8 +91,8 @@ svg {
   th {
     font-weight: normal;
     text-align: center;
-    user-select: none;
     -webkit-user-select: none;
+    user-select: none;
     white-space: nowrap;
     background-color: var(--thead-bg-color);
   }
@@ -148,8 +148,8 @@ svg {
   }
 
   .label {
-    user-select: none;
     -webkit-user-select: none;
+    user-select: none;
     display: block;
     margin-bottom: 6px;
   }

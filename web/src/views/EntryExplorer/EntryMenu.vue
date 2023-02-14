@@ -48,8 +48,8 @@ const multiple = computed(() => Array.isArray(props.entry))
   padding: 20px 0;
   width: 280px;
   overflow: hidden;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 }
 
 .entry-menu__entry {
@@ -81,8 +81,8 @@ const multiple = computed(() => Array.isArray(props.entry))
   max-height: 40vh;
   margin: 0;
   padding: 0;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   overflow-x: hidden;
   overflow-y: auto;
 }

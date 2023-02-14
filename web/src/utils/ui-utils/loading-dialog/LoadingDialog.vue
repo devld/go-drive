@@ -80,8 +80,8 @@ defineExpose({ show, hide })
 
 .loading-dialog__text {
   max-width: 50vw;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   margin-top: 1em;
   word-break: break-all;
 }

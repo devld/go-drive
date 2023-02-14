@@ -189,8 +189,8 @@ loadFile()
     font-weight: bold;
     font-size: 24px;
     text-transform: uppercase;
-    user-select: none;
     -webkit-user-select: none;
+    user-select: none;
   }
 }
 </style>
