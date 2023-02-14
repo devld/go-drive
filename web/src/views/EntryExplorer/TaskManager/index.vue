@@ -51,8 +51,8 @@ const emit = defineEmits<{
     line-height: 60px;
     text-align: center;
     color: var(--secondary-text-color);
-    user-select: none;
     -webkit-user-select: none;
+    user-select: none;
   }
 }
 </style>

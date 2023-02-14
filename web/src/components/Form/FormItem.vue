@@ -1,6 +1,11 @@
 <template>
   <div class="form-item" :class="{ error: !!error, required: item.required }">
-    <span v-if="item.label" class="label">
+    <Component
+      :is="valueId ? 'label' : 'span'"
+      v-if="item.label"
+      :for="valueId"
+      class="label"
+    >
       <span>{{ item.label }}</span>
       <span v-if="item.required" class="form-item-required">*</span>
       <a
@@ -8,11 +13,11 @@
         class="form-item-help"
         href="javascript:;"
         :title="s(item.description)"
-        @click="toggleHelpShowing"
+        @click.stop="toggleHelpShowing"
       >
         <Icon svg="#icon-help" />
       </a>
-    </span>
+    </Component>
     <span
       v-if="item.description && (!item.label || helpShowing)"
       class="description"
@@ -21,10 +26,11 @@
     </span>
     <div class="value-wrapper">
       <div v-if="slots.value" class="value full-width">
-        <slot name="value" />
+        <slot :id="valueId" name="value" />
       </div>
       <textarea
         v-if="item.type === 'textarea'"
+        :id="valueId"
         class="value full-width"
         :name="item.field"
         :value="modelValue"
@@ -36,6 +42,7 @@
       />
       <input
         v-if="item.type === 'text'"
+        :id="valueId"
         class="value full-width"
         type="text"
         :name="item.field"
@@ -47,6 +54,7 @@
       />
       <input
         v-if="item.type === 'password'"
+        :id="valueId"
         class="value full-width"
         type="password"
         :name="item.field"
@@ -58,6 +66,7 @@
       />
       <input
         v-if="item.type === 'checkbox'"
+        :id="valueId"
         class="value"
         type="checkbox"
         :name="item.field"
@@ -68,6 +77,7 @@
       />
       <select
         v-if="item.type === 'select'"
+        :id="valueId"
         class="value full-width"
         :name="item.field"
         :value="modelValue"
@@ -108,13 +118,16 @@
 <script setup lang="ts">
 import { isT } from '@/i18n'
 import { FormItem } from '@/types'
-import { ref, useSlots } from 'vue'
+import { ref, computed, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FormItemForm from './FormItemForm.vue'
 
 import CodeEditor from '../CodeEditor/index.vue'
 
 const props = defineProps({
+  id: {
+    type: String,
+  },
   modelValue: {
     type: String,
   },
@@ -134,6 +147,10 @@ const emit = defineEmits<{
 }>()
 
 const error = ref<I18nText | null>(null)
+const valueId = computed(() => {
+  if (props.item.type === 'form' || props.item.type === 'code') return
+  return props.id
+})
 
 const { t } = useI18n()
 

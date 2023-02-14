@@ -50,8 +50,8 @@ const currentMenu = computed(() => router.currentRoute.value.path)
   display: flex;
   justify-content: center;
   align-items: center;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 }
 
 .admin-page {
