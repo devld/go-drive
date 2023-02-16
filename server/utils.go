@@ -60,10 +60,7 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, skipOnEmptySi
 				username = string(temp)
 			}
 
-			if signer.Validate(path+username, signature) {
-				session.AllowedPath = make(map[string]types.Permission, 1)
-				session.AllowedPath[path] = types.PermissionRead
-			} else {
+			if !signer.Validate(path+username, signature) {
 				_ = c.Error(err.NewBadRequestError("bad signature"))
 				c.Abort()
 				return
@@ -85,8 +82,8 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, skipOnEmptySi
 	}
 }
 
-func MakeSignature(signer *utils.Signer, path, username string, notAfter time.Time) string {
-	signature := signer.Sign(path+username, notAfter)
+func MakeSignature(signer *utils.Signer, path, username string, ttl time.Duration) string {
+	signature := signer.Sign(path+username, time.Now().Add(ttl))
 	return signature + "." + utils.Base64URLEncode([]byte(username))
 }
 

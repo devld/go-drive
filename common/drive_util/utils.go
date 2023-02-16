@@ -22,6 +22,25 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 )
 
+type metaEntryWrapper struct {
+	types.IEntry
+	props types.M
+}
+
+func (me *metaEntryWrapper) Meta() types.EntryMeta {
+	meta := me.IEntry.Meta()
+	meta.Props = utils.MapCopy(me.props, utils.MapCopy(meta.Props, nil))
+	return meta
+}
+
+func (me *metaEntryWrapper) GetIEntry() types.IEntry {
+	return me.IEntry
+}
+
+func WrapEntryWithMeta(entry types.IEntry, props types.M) types.IEntry {
+	return &metaEntryWrapper{IEntry: entry, props: props}
+}
+
 func GetIEntry(entry types.IEntry, test func(iEntry types.IEntry) bool) types.IEntry {
 	if entry == nil {
 		return nil

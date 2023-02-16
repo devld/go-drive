@@ -118,7 +118,7 @@ type driveRoute struct {
 
 func (dr *driveRoute) getDrive(c *gin.Context) (types.IDrive, error) {
 	session := GetSession(c)
-	return dr.access.GetDrive(session, &entrySigner{session, dr.signer})
+	return dr.access.GetDrive(session)
 }
 
 func (dr *driveRoute) list(c *gin.Context) {
@@ -141,9 +141,9 @@ func (dr *driveRoute) list(c *gin.Context) {
 	}
 	session := GetSession(c)
 	res := make([]entryJson, 0, len(entries)+1)
-	res = append(res, *newEntryJson(entry, session))
+	res = append(res, *dr.newEntryJson(entry, session))
 	for _, v := range entries {
-		res = append(res, *newEntryJson(v, session))
+		res = append(res, *dr.newEntryJson(v, session))
 	}
 	SetResult(c, res)
 }
@@ -160,7 +160,7 @@ func (dr *driveRoute) get(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, newEntryJson(entry, GetSession(c)))
+	SetResult(c, dr.newEntryJson(entry, GetSession(c)))
 }
 
 func (dr *driveRoute) makeDir(c *gin.Context) {
@@ -175,7 +175,7 @@ func (dr *driveRoute) makeDir(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, newEntryJson(entry, GetSession(c)))
+	SetResult(c, dr.newEntryJson(entry, GetSession(c)))
 }
 
 func (dr *driveRoute) copyEntry(c *gin.Context) {
@@ -202,7 +202,7 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 		if e != nil {
 			return nil, e
 		}
-		return newEntryJson(r, session), nil
+		return dr.newEntryJson(r, session), nil
 	}, 2*time.Second, task.WithNameGroup(from+" -> "+to, "drive/copy"))
 
 	if e != nil {
@@ -236,7 +236,7 @@ func (dr *driveRoute) move(c *gin.Context) {
 		if e != nil {
 			return nil, e
 		}
-		return newEntryJson(r, session), nil
+		return dr.newEntryJson(r, session), nil
 	}, 2*time.Second, task.WithNameGroup(from+" -> "+to, "drive/move"))
 
 	if e != nil {
@@ -426,7 +426,9 @@ func (dr *driveRoute) getThumbnail(c *gin.Context) {
 	}
 	makeCtx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
-	file, e := dr.thumbnail.Make(makeCtx, entry)
+	file, e := dr.thumbnail.Make(
+		makeCtx, dr.wrapEntryWithAccessKey(entry, c.Query(common.SignatureQueryKey)),
+	)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -476,7 +478,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 		if e != nil {
 			return nil, e
 		}
-		return newEntryJson(r, session), nil
+		return dr.newEntryJson(r, session), nil
 	}, 2*time.Second, task.WithNameGroup(path, "drive/write"))
 	if e != nil {
 		_ = c.Error(e)
@@ -541,7 +543,7 @@ func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 		}
 		_ = tempFile.Close()
 		_ = dr.chunkUploader.DeleteUpload(id)
-		return newEntryJson(entry, session), nil
+		return dr.newEntryJson(entry, session), nil
 	}, 2*time.Second, task.WithNameGroup(path, "drive/chunk-merge"))
 	if e != nil {
 		_ = c.Error(e)
@@ -599,16 +601,7 @@ func (dr *driveRoute) search(c *gin.Context) {
 	SetResult(c, r)
 }
 
-type entryJson struct {
-	Path    string          `json:"path"`
-	Name    string          `json:"name"`
-	Type    types.EntryType `json:"type"`
-	Size    int64           `json:"size"`
-	Meta    types.M         `json:"meta"`
-	ModTime int64           `json:"modTime"`
-}
-
-func newEntryJson(e types.IEntry, s types.Session) *entryJson {
+func (dr *driveRoute) newEntryJson(e types.IEntry, s types.Session) *entryJson {
 	entryMeta := e.Meta()
 	meta := utils.MapCopy(entryMeta.Props, nil)
 	meta["writable"] = entryMeta.Writable
@@ -622,6 +615,7 @@ func newEntryJson(e types.IEntry, s types.Session) *entryJson {
 			meta["thumbnail"] = true
 		}
 	}
+	meta["accessKey"] = MakeSignature(dr.signer, e.Path(), s.User.Username, dr.config.SignatureTTL)
 
 	if !s.HasUserGroup(types.AdminUserGroup) {
 		delete(meta, "mountAt")
@@ -636,25 +630,21 @@ func newEntryJson(e types.IEntry, s types.Session) *entryJson {
 	}
 }
 
+func (dr *driveRoute) wrapEntryWithAccessKey(entry types.IEntry, accessKey string) types.IEntry {
+	return drive_util.WrapEntryWithMeta(entry, types.M{"accessKey": accessKey})
+}
+
+type entryJson struct {
+	Path    string          `json:"path"`
+	Name    string          `json:"name"`
+	Type    types.EntryType `json:"type"`
+	Size    int64           `json:"size"`
+	Meta    types.M         `json:"meta"`
+	ModTime int64           `json:"modTime"`
+}
+
 type uploadConfig struct {
 	Provider string      `json:"provider"`
 	Path     string      `json:"path,omitempty"`
 	Config   interface{} `json:"config"`
-}
-
-type entrySigner struct {
-	session types.Session
-	signer  *utils.Signer
-}
-
-func (es *entrySigner) GetSignature(path string, notAfter time.Time) string {
-	return MakeSignature(es.signer, path, es.session.User.Username, notAfter)
-}
-
-func (es *entrySigner) CheckSignature(path string) bool {
-	if es.session.AllowedPath == nil {
-		return false
-	}
-	_, ok := es.session.AllowedPath[path]
-	return ok
 }

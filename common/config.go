@@ -51,6 +51,7 @@ const (
 	DefaultThumbnailTTL        = 30 * 24 * time.Hour
 	DefaultAuthValidity        = 2 * time.Hour
 	DefaultAuthAutoRefresh     = true
+	DefaultSignatureTTL        = 12 * time.Hour
 	DefaultWebDavPrefix        = "/dav"
 	DefaultWebDavMaxCacheItems = 1000
 	DefaultSearcher            = "bleve"
@@ -100,6 +101,8 @@ type Config struct {
 
 	Thumbnail ThumbnailConfig `yaml:"thumbnail"`
 	Auth      AuthConfig      `yaml:"auth"`
+
+	SignatureTTL time.Duration `yaml:"signature-ttl"`
 
 	WebDav WebDavConfig `yaml:"web-dav"`
 
@@ -185,6 +188,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 			Validity:    DefaultAuthValidity,
 			AutoRefresh: DefaultAuthAutoRefresh,
 		},
+		SignatureTTL: DefaultSignatureTTL,
 		WebDav: WebDavConfig{
 			Enabled:       false,
 			Prefix:        DefaultWebDavPrefix,

@@ -7,7 +7,6 @@ import (
 	"go-drive/common/utils"
 	"go-drive/storage"
 	"sync"
-	"time"
 )
 
 const (
@@ -68,14 +67,10 @@ func (da *Access) GetChroot(s types.Session) (*Chroot, error) {
 	return NewChroot(rootPath, nil), nil
 }
 
-func (da *Access) GetDrive(session types.Session, signer EntrySigner) (types.IDrive, error) {
+func (da *Access) GetDrive(session types.Session) (types.IDrive, error) {
 	chroot, e := da.GetChroot(session)
 	if e != nil {
 		return nil, e
-	}
-
-	if signer != nil && chroot != nil {
-		signer = &chrootEntrySigner{signer, chroot}
 	}
 
 	da.permMux.RLock()
@@ -83,7 +78,7 @@ func (da *Access) GetDrive(session types.Session, signer EntrySigner) (types.IDr
 	da.permMux.RUnlock()
 
 	var drive types.IDrive = NewListenerWrapper(
-		NewPermissionWrapperDrive(da.rootDrive.Get(), perms.Filter(session), signer),
+		NewPermissionWrapperDrive(da.rootDrive.Get(), perms.Filter(session)),
 		types.DriveListenerContext{
 			Session: &session,
 			Drive:   da.rootDrive.Get(),
@@ -118,17 +113,4 @@ func (da *Access) ReloadPerm() error {
 	}
 	da.perms = utils.NewPermMap(all)
 	return nil
-}
-
-type chrootEntrySigner struct {
-	signer EntrySigner
-	chroot *Chroot
-}
-
-func (es *chrootEntrySigner) GetSignature(path string, notAfter time.Time) string {
-	return es.signer.GetSignature(es.chroot.UnwrapPath(path), notAfter)
-}
-
-func (es *chrootEntrySigner) CheckSignature(path string) bool {
-	return es.signer.CheckSignature(es.chroot.UnwrapPath(path))
 }
