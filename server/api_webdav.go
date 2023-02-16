@@ -56,7 +56,7 @@ type webdavAccess struct {
 func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 	session := GetSession(c)
 
-	drive, e := w.access.GetDrive(session, nil)
+	drive, e := w.access.GetDrive(session)
 	if e != nil {
 		log.Printf("GetDrive error: %v", e)
 		c.AbortWithError(http.StatusInternalServerError, e)

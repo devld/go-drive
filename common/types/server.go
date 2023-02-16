@@ -5,8 +5,7 @@ const (
 )
 
 type Session struct {
-	User        User
-	AllowedPath map[string]Permission
+	User User
 }
 
 func (s *Session) IsAnonymous() bool {

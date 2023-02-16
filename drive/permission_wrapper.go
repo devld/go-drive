@@ -7,17 +7,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"time"
 )
-
-const (
-	accessKeyValidity = 12 * time.Hour
-)
-
-type EntrySigner interface {
-	GetSignature(path string, notAfter time.Time) string
-	CheckSignature(path string) bool
-}
 
 // PermissionWrapperDrive intercept the request
 // based on the permission information in the database.
@@ -26,16 +16,14 @@ type EntrySigner interface {
 // Permissions for users take precedence over permissions for user groups.
 // REJECT takes precedence over ACCEPT
 type PermissionWrapperDrive struct {
-	drive  types.IDrive
-	pm     utils.PermMap
-	signer EntrySigner
+	drive types.IDrive
+	pm    utils.PermMap
 }
 
-func NewPermissionWrapperDrive(drive types.IDrive, permissions utils.PermMap, signer EntrySigner) *PermissionWrapperDrive {
+func NewPermissionWrapperDrive(drive types.IDrive, permissions utils.PermMap) *PermissionWrapperDrive {
 	return &PermissionWrapperDrive{
-		drive:  drive,
-		pm:     permissions,
-		signer: signer,
+		drive: drive,
+		pm:    permissions,
 	}
 }
 
@@ -44,31 +32,18 @@ func (p *PermissionWrapperDrive) Meta(ctx context.Context) (types.DriveMeta, err
 }
 
 func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
-	canRead := false
-	if p.signer != nil {
-		canRead = p.signer.CheckSignature(path)
-	}
-	var permission = types.PermissionRead
-	if !canRead {
-		var e error
-		permission, e = p.requirePermission(path, types.PermissionRead)
-		if e != nil {
-			return nil, e
-		}
+	permission, e := p.requirePermission(path, types.PermissionRead)
+	if e != nil {
+		return nil, e
 	}
 	entry, e := p.drive.Get(ctx, path)
 	if e != nil {
 		return nil, e
 	}
-	ak := ""
-	if p.signer != nil {
-		ak = p.signer.GetSignature(path, time.Now().Add(accessKeyValidity))
-	}
 	return &permissionWrapperEntry{
 		p:          p,
 		IEntry:     entry,
 		permission: permission,
-		accessKey:  ak,
 	}, nil
 }
 
@@ -154,18 +129,9 @@ func (p *PermissionWrapperDrive) List(ctx context.Context, path string) ([]types
 		}
 		per := p.pm.ResolvePath(e.Path())
 		if per.Readable() {
-			accessKey := ""
-			if p.signer != nil {
-				accessKey = p.signer.GetSignature(e.Path(), time.Now().Add(accessKeyValidity))
-			}
 			result = append(
 				result,
-				&permissionWrapperEntry{
-					p:          p,
-					IEntry:     e,
-					permission: per,
-					accessKey:  accessKey,
-				},
+				&permissionWrapperEntry{p: p, IEntry: e, permission: per},
 			)
 		}
 	}
@@ -220,17 +186,12 @@ type permissionWrapperEntry struct {
 	types.IEntry
 	p          *PermissionWrapperDrive
 	permission types.Permission
-	accessKey  string
 }
 
 func (p *permissionWrapperEntry) Meta() types.EntryMeta {
 	meta := p.IEntry.Meta()
 	meta.Readable = meta.Readable && p.permission.Readable()
 	meta.Writable = meta.Writable && p.permission.Writable()
-	if p.accessKey != "" {
-		meta.Props = utils.MapCopy(meta.Props, nil)
-		meta.Props["accessKey"] = p.accessKey
-	}
 	return meta
 }
 
