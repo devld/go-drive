@@ -2,8 +2,14 @@ import type {
   JavaScriptLibItem,
   JavaScriptSetupOptions,
 } from '../../../monaco-editor/src/types'
+import {
+  D_SERVER_ENVS_MAP,
+  D_SERVER_GLOBAL,
+  D_SERVER_LIBS,
+  D_BROWSER_ENVS_MAP,
+} from './d-ts-imports'
 
-export const consoleLib: JavaScriptLibItem = {
+export const serverConsoleLib: JavaScriptLibItem = {
   name: 'console',
   content: `interface Console {
     debug(...message?: any[]): void;
@@ -15,30 +21,32 @@ export const consoleLib: JavaScriptLibItem = {
   declare const console: Console;`,
 }
 
-const commonLibs: Readonly<JavaScriptLibItem[]> = Object.freeze([
-  consoleLib,
-  ...Object.keys(JS_DECLARATIONS.libs).map((name) => ({
-    name,
-    content: JS_DECLARATIONS.libs[name],
-  })),
-  { name: 'global', content: JS_DECLARATIONS.global },
-])
-
-export const baseOptions = (
+export const serverBaseOptions = (
   libs: JavaScriptLibItem[]
 ): JavaScriptSetupOptions => ({
   target: 'es5',
   lib: ['es5'],
-  extraLibs: [...commonLibs, ...libs],
+  extraLibs: [serverConsoleLib, ...D_SERVER_LIBS, D_SERVER_GLOBAL, ...libs],
 })
 
-export const getEnv = (name?: string) => {
-  const content = name ? JS_DECLARATIONS.env[name] : undefined
-  if (typeof content !== 'string') {
-    if (name) {
+export const browserBaseOptions = (
+  libs?: JavaScriptLibItem[]
+): JavaScriptSetupOptions => ({ extraLibs: libs })
+
+export const getEnv = (name: string) => {
+  if (name.startsWith('server-')) {
+    name = name.substring(7)
+    const env = D_SERVER_ENVS_MAP[name]
+    if (!env) {
       console.warn('[CodeEditor] unknown env: ' + name)
+      return
     }
+    return serverBaseOptions([env])
+  }
+  const env = D_BROWSER_ENVS_MAP[name]
+  if (!env) {
+    console.warn('[CodeEditor] unknown env: ' + name)
     return
   }
-  return baseOptions([{ name: name!, content: content! }])
+  return browserBaseOptions([env])
 }

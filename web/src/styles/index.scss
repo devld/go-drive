@@ -26,6 +26,10 @@
   @import 'highlight.js/scss/agate.scss';
 }
 
+.full-width {
+  width: 100%;
+}
+
 img,
 picture,
 video,
@@ -81,6 +85,7 @@ svg {
 .simple-table {
   border: none;
   border-spacing: 0;
+  table-layout: fixed;
 
   th,
   td {

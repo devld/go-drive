@@ -1,8 +1,7 @@
 <template>
   <div class="misc-settings">
     <RootPermissions />
-    <DriveInstall @timer="timer = $event" />
-    <SearchIndex :timer="timer" />
+    <SearchIndex timer />
     <CleanInvalid />
     <CleanCache />
   </div>
@@ -15,10 +14,6 @@ import CleanCache from './CleanCache.vue'
 import CleanInvalid from './CleanInvalid.vue'
 import RootPermissions from './RootPermissions.vue'
 import SearchIndex from './SearchIndex.vue'
-import DriveInstall from './DriveInstall/index.vue'
-import { ref } from 'vue'
-
-const timer = ref(true)
 </script>
 <style lang="scss">
 .misc-settings {

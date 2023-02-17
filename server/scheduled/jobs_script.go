@@ -39,7 +39,7 @@ func init() {
 		ParamsForm: []types.FormItem{
 			{
 				Field: "code", Label: t("code"), Description: t("code_desc"),
-				Type: "code", Code: &types.FormItemCode{Type: "javascript-jobs"},
+				Type: "code", Code: &types.FormItemCode{Type: "javascript-server-jobs"},
 				DefaultValue: defaultCodeValue, Required: true,
 			},
 		},

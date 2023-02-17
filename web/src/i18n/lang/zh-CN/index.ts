@@ -17,9 +17,10 @@ export default {
       users: '用户',
       groups: '用户组',
       drives: '盘',
+      extra_drives: '其他盘',
       jobs: '任务',
       misc: '其他',
-      statistics: '统计信息',
+      statistics: '状态',
     },
   },
   md: {

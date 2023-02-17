@@ -29,6 +29,7 @@ export function createEditor(language: string) {
 const JsTargets: Record<string, monaco.languages.typescript.ScriptTarget> = {
   es5: monaco.languages.typescript.ScriptTarget.ES5,
   es6: monaco.languages.typescript.ScriptTarget.ES2015,
+  latest: monaco.languages.typescript.ScriptTarget.Latest,
 }
 
 export function setupJavaScript(opt: JavaScriptSetupOptions) {
@@ -41,21 +42,24 @@ export function setupJavaScript(opt: JavaScriptSetupOptions) {
     allowJs: true,
     lib: opt.lib,
     target:
-      JsTargets[opt.target] || monaco.languages.typescript.ScriptTarget.Latest,
+      JsTargets[opt.target ?? 'latest'] ||
+      monaco.languages.typescript.ScriptTarget.Latest,
   })
-  monaco.languages.typescript.javascriptDefaults.setExtraLibs(
-    opt.extraLibs.map((item) => ({
-      content: item.content,
-      filePath: `${item.name}.d.ts`,
-    }))
-  )
-  opt.extraLibs.forEach((item) => {
-    monaco.editor.createModel(
-      item.content,
-      'typescript',
-      monaco.Uri.parse(`${item.name}.d.ts`)
+  if (opt.extraLibs) {
+    monaco.languages.typescript.javascriptDefaults.setExtraLibs(
+      opt.extraLibs.map((item) => ({
+        content: item.content,
+        filePath: `${item.name}.d.ts`,
+      }))
     )
-  })
+    opt.extraLibs.forEach((item) => {
+      monaco.editor.createModel(
+        item.content,
+        'typescript',
+        monaco.Uri.parse(`${item.name}.d.ts`)
+      )
+    })
+  }
 }
 
 export function setupDataExchanging(handlers: Record<string, MessageHandler>) {
