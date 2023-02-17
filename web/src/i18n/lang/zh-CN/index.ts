@@ -3,11 +3,6 @@ import p from './p'
 import handlers from './handlers'
 
 export default {
-  error: {
-    not_allowed: '不允许的操作',
-    not_found: '资源不存在',
-    server_error: '服务器错误',
-  },
   form: {
     required_msg: '{f}是必填的',
   },
@@ -19,6 +14,7 @@ export default {
       drives: '盘',
       extra_drives: '其他盘',
       jobs: '任务',
+      path_meta: '路径属性',
       misc: '其他',
       statistics: '状态',
     },

@@ -1,3 +1,4 @@
+import { ListViewMode } from '@/components/entry'
 import {
   createViewHandler,
   executeFunctionalHandler,
@@ -11,10 +12,10 @@ import {
   EntryHandlerExecutionOption,
   EntryHandlerExecutionParams,
 } from '@/handlers/types'
-import { Entry } from '@/types'
+import { Entry, EntryPathMeta, User } from '@/types'
 import { dir, getRouteQuery, pathClean } from '@/utils'
 import uiUtils from '@/utils/ui-utils'
-import { computed, onBeforeUnmount, Ref } from 'vue'
+import { computed, onBeforeUnmount, ref, Ref, watch } from 'vue'
 import { RouteLocationNormalizedLoaded } from 'vue-router'
 
 export type ResolveHandlerByRoute = (
@@ -217,4 +218,73 @@ export const useEntryHandler = (
     executeHandler,
     onRouteChanged,
   }
+}
+
+export const useEntriesListState = (
+  currentDir: Ref<Entry | undefined>,
+  user: Ref<User | undefined>
+) => {
+  const viewMode = ref<ListViewMode>()
+  const sortBy = ref<string>()
+  const filterFn = ref<Fn1<Entry, boolean>>()
+
+  const storeKey = (path: string) =>
+    `entries-list:${user.value?.username || ''}:${path}`
+
+  const init = (meta?: EntryPathMeta) => {
+    const path = currentDir.value?.path
+    if (typeof path !== 'string') return
+
+    let newViewMode: ListViewMode | undefined
+    let newSortBy: string | undefined
+    let newFilterFn: Fn1<Entry, boolean> | undefined
+
+    const stored = localStorage.getItem(storeKey(path))
+    if (stored) {
+      const segments = stored.split(',')
+      newViewMode = (segments[0] as ListViewMode) || undefined
+      newSortBy = segments[1] || undefined
+    }
+
+    if (meta) {
+      newViewMode = newViewMode || (meta.defaultMode as ListViewMode)
+      newSortBy = newSortBy || meta.defaultSort
+      if (meta.hiddenPattern) {
+        try {
+          const re = new RegExp(meta.hiddenPattern, 'i')
+          newFilterFn = (entry) => !re.test(entry.name)
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    viewMode.value = newViewMode
+    sortBy.value = newSortBy
+    filterFn.value = newFilterFn
+  }
+
+  const storeConfig = () => {
+    const path = currentDir.value?.path
+    if (typeof path !== 'string') return
+
+    localStorage.setItem(
+      storeKey(path),
+      [viewMode.value, sortBy.value].join(',')
+    )
+  }
+
+  watch(currentDir, (dir) => init(dir?.meta.pathMeta), { immediate: true })
+
+  const onViewModeChange = (newViewMode: ListViewMode) => {
+    viewMode.value = newViewMode
+    storeConfig()
+  }
+
+  const onSortByChange = (newSortBy: string) => {
+    sortBy.value = newSortBy
+    storeConfig()
+  }
+
+  return { viewMode, sortBy, filterFn, onViewModeChange, onSortByChange }
 }

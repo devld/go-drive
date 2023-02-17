@@ -41,17 +41,20 @@ func InitDriveRoutes(
 	runner task.Runner,
 	tokenStore types.TokenStore,
 	userDAO *storage.UserDAO,
-	optionsDAO *storage.OptionsDAO) error {
+	optionsDAO *storage.OptionsDAO,
+	pathMetaDAO *storage.PathMetaDAO) error {
 
 	dr := driveRoute{
 		config:        config,
 		access:        access,
 		searcher:      searcher,
+		tokenStore:    tokenStore,
 		chunkUploader: chunkUploader,
 		thumbnail:     thumbnail,
 		runner:        runner,
 		signer:        signer,
 		options:       optionsDAO,
+		pathMeta:      pathMetaDAO,
 	}
 
 	scriptsDir, _ := config.GetDir(config.DriveUploadersDir, false)
@@ -74,6 +77,10 @@ func InitDriveRoutes(
 
 	// list entries/drives
 	router.GET("/entries/*path", SignatureAuth(signer, userDAO, true), tokenAuth, dr.list)
+
+	// set path password
+	r.POST("/password/*path", dr.setPathPassword)
+
 	// get entry info
 	r.GET("/entry/*path", dr.get)
 	// mkdir
@@ -108,12 +115,14 @@ type driveRoute struct {
 	access   *drive.Access
 	searcher *search.Service
 
+	tokenStore    types.TokenStore
 	chunkUploader *ChunkUploader
 	thumbnail     *thumbnail.Maker
 	runner        task.Runner
 	signer        *utils.Signer
 
-	options *storage.OptionsDAO
+	options  *storage.OptionsDAO
+	pathMeta *storage.PathMetaDAO
 }
 
 func (dr *driveRoute) getDrive(c *gin.Context) (types.IDrive, error) {
@@ -121,10 +130,43 @@ func (dr *driveRoute) getDrive(c *gin.Context) (types.IDrive, error) {
 	return dr.access.GetDrive(session)
 }
 
+func (dr *driveRoute) setPathPassword(c *gin.Context) {
+	path := utils.CleanPath(c.Param("path"))
+	password := c.Query("password")
+	if e := dr._setPassword(c, path, password); e != nil {
+		_ = c.Error(e)
+		return
+	}
+}
+
+func (dr *driveRoute) _setPassword(c *gin.Context, path, password string) error {
+	if password == "" {
+		return nil
+	}
+	if len(password) > 32 {
+		password = password[:32]
+	}
+	meta, e := dr.pathMeta.GetMerged(path)
+	if e != nil {
+		return e
+	}
+	if meta == nil || meta.Password.V == "" {
+		return nil
+	}
+	return UpdateSession(c, dr.tokenStore, func(session *types.Session) {
+		session.Props["password:"+meta.Password.Path] = password
+	})
+}
+
 func (dr *driveRoute) list(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
 	d, e := dr.getDrive(c)
 	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+
+	if e := dr._setPassword(c, path, c.Query("password")); e != nil {
 		_ = c.Error(e)
 		return
 	}

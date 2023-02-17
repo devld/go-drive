@@ -70,7 +70,8 @@ func (d NotFoundError) Name() string {
 
 // NotAllowedError 403
 type NotAllowedError struct {
-	msg string
+	msg  string
+	data types.M
 }
 
 func (d NotAllowedError) Error() string {
@@ -83,6 +84,10 @@ func (d NotAllowedError) Code() int {
 
 func (d NotAllowedError) Name() string {
 	return "NOT_ALLOWED"
+}
+
+func (d NotAllowedError) Data() types.M {
+	return d.data
 }
 
 // PermissionDeniedError 403
@@ -176,7 +181,7 @@ func NewNotFoundMessageError(msg string) NotFoundError {
 }
 
 func NewNotAllowedError() NotAllowedError {
-	return NotAllowedError{i18n.T("error.not_allowed")}
+	return NotAllowedError{i18n.T("error.not_allowed"), nil}
 }
 
 func NewPermissionDeniedError(msg string) PermissionDeniedError {
@@ -184,7 +189,11 @@ func NewPermissionDeniedError(msg string) PermissionDeniedError {
 }
 
 func NewNotAllowedMessageError(msg string) NotAllowedError {
-	return NotAllowedError{msg}
+	return NotAllowedError{msg, nil}
+}
+
+func NewNotAllowedMessageDataError(msg string, data types.M) NotAllowedError {
+	return NotAllowedError{msg, data}
 }
 
 func NewUnsupportedError() UnsupportedError {

@@ -41,7 +41,8 @@ func InitAdminRoutes(
 	driveDAO *storage.DriveDAO,
 	driveDataDAO *storage.DriveDataDAO,
 	permissionDAO *storage.PathPermissionDAO,
-	pathMountDAO *storage.PathMountDAO) error {
+	pathMountDAO *storage.PathMountDAO,
+	pathMetaDAO *storage.PathMetaDAO) error {
 
 	r = r.Group("/admin", TokenAuth(tokenStore), AdminGroupRequired())
 
@@ -325,6 +326,44 @@ func InitAdminRoutes(
 		}
 		// permissions updated
 		if e := access.ReloadPerm(); e != nil {
+			_ = c.Error(e)
+			return
+		}
+	})
+
+	// endregion
+
+	// region path meta
+
+	// get all path meta
+	r.GET("/path-meta", func(c *gin.Context) {
+		res, e := pathMetaDAO.GetAll()
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+		SetResult(c, res)
+	})
+
+	// create or add path meta
+	r.POST("/path-meta/*path", func(c *gin.Context) {
+		path := utils.CleanPath(c.Param("path"))
+		data := types.PathMeta{}
+		if e := c.Bind(&data); e != nil {
+			_ = c.Error(e)
+			return
+		}
+		data.Path = &path
+		if e := pathMetaDAO.Set(data); e != nil {
+			_ = c.Error(e)
+			return
+		}
+	})
+
+	// delete path meta by path
+	r.DELETE("/path-meta/*path", func(c *gin.Context) {
+		path := utils.CleanPath(c.Param("path"))
+		if e := pathMetaDAO.Delete(path); e != nil {
 			_ = c.Error(e)
 			return
 		}

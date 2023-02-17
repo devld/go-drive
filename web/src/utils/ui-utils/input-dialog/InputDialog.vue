@@ -12,9 +12,9 @@
       v-else
       v-model="text"
       v-focus
+      :type="opts.type || 'text'"
       class="input-dialog__input"
       :placeholder="s(placeholder)"
-      type="text"
       :disabled="!!loading"
     />
     <div v-if="validationError" class="input-dialog__validation">

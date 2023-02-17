@@ -9,6 +9,7 @@ import {
   Job,
   JobDefinition,
   JobExecution,
+  PathMeta,
   PathMountSource,
   PathPermission,
   ServiceStatsItem,
@@ -95,6 +96,18 @@ export function getPermissions(path: string) {
 
 export function savePermissions(path: string, permissions: O[]) {
   return http.put<void>(`/admin/path-permissions/${path}`, permissions)
+}
+
+export function getAllPathMeta() {
+  return http.get<PathMeta[]>('/admin/path-meta')
+}
+
+export function savePathMeta(path: string, data: Partial<PathMeta>) {
+  return http.post<void>(`/admin/path-meta/${path}`, data)
+}
+
+export function deletePathMeta(path: string) {
+  return http.delete<void>(`/admin/path-meta/${path}`)
 }
 
 export function mountPaths(pathTo: string, mounts: PathMountSource[]) {

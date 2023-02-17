@@ -14,6 +14,8 @@ export default {
   toggle_to_list: 'Toggle to list mode (T)',
   toggle_to_thumbnail: 'Toggle to thumbnail mode (T)',
   toggle_sort: 'Toggle sort mode',
+  password_protected: 'Password Required',
+  input_password: 'Please input the password',
   sort: {
     name_asc: 'Name Asc',
     name_desc: 'Name Desc',

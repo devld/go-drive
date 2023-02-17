@@ -57,6 +57,8 @@ drive:
   file_not_exists: File not exist
   invalid_path: Invalid path
   file_not_downloadable: This file is not downloadable
+  path_meta:
+    incorrect_password: Password is incorrect
   root:
     invalid_drive_type: Invalid drive type '{{ 1 }}'
     invalid_drive_config: Invalid drive config of '{{ 1 }}'

@@ -14,14 +14,16 @@
       <EntryListView
         ref="entryListEl"
         v-model:selection="selectedEntries"
-        v-model:sort="sortBy"
-        :view-mode="viewMode"
         :path="path"
+        :sort="sortBy"
+        :view-mode="viewMode"
+        :filter="filterFn"
         show-toggles
         draggable
         :get-link="getLink"
         @entries-change="onEntriesChanged"
-        @update:view-mode="onViewModeChanged"
+        @update:view-mode="onViewModeChange"
+        @update:sort="onSortByChange"
         @entries-load="onEntriesLoaded"
         @entry-click="onEntryClicked"
         @entry-menu="showEntryMenu"
@@ -68,7 +70,7 @@ export default { name: 'EntryExplorer' }
 <script setup lang="ts">
 import { fileUrl } from '@/api'
 import { mountPaths } from '@/api/admin'
-import { EntryEventData, ListViewMode } from '@/components/entry'
+import { EntryEventData } from '@/components/entry'
 import { EntryDragData } from '@/components/entry/useDrag'
 import { EntryHandler, EntryHandlersMenu } from '@/handlers/types'
 import { useAppStore } from '@/store'
@@ -88,13 +90,15 @@ import {
 } from 'vue-router'
 import { EntriesLoadData } from '../EntryListView/types'
 import EntryMenu from './EntryMenu.vue'
-import { useEntryExplorer, useEntryHandler } from './explorer'
+import {
+  useEntryExplorer,
+  useEntryHandler,
+  useEntriesListState,
+} from './explorer'
 import NewEntryArea from './NewEntryArea.vue'
 import ReadmeContent from './ReadmeContent.vue'
 import SearchPanel from './SearchPanel/index.vue'
 import { EntryMenuClickData } from './types'
-
-const VIEW_MODE_STORAGE_KEY = 'entries-list-view-mode'
 
 const HISTORY_FLAG = '_h'
 const setHistoryFlag = () => {
@@ -110,6 +114,7 @@ const { t } = useI18n()
 
 const store = useAppStore()
 const router = useRouter()
+const user = computed(() => store.user)
 
 const props = defineProps({
   basePath: {
@@ -129,15 +134,8 @@ const selectedEntries = ref<Entry[]>([])
 const entryMenuData = ref<EntryHandlersMenu | undefined>()
 const entryMenuShowing = ref(false)
 
-const viewMode = ref<ListViewMode>(
-  (localStorage.getItem(VIEW_MODE_STORAGE_KEY) as ListViewMode) || 'list'
-)
-const onViewModeChanged = debounce((mode) => {
-  viewMode.value = mode
-  localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
-}, 500)
-
-const sortBy = ref(undefined)
+const { viewMode, sortBy, onViewModeChange, onSortByChange, filterFn } =
+  useEntriesListState(currentDirEntry, user)
 
 const entryListEl = ref<InstanceType<typeof EntryListView> | null>(null)
 const newEntryAreaEl = ref<InstanceType<typeof NewEntryArea> | null>(null)

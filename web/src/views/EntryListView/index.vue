@@ -28,13 +28,15 @@
 export default { name: 'EntryListView' }
 </script>
 <script setup lang="ts">
-import { listEntries } from '@/api'
+import { setPathPassword, listEntries } from '@/api'
 import { HttpError, RequestTask } from '@/utils/http'
 import { EntryEventData, GetLinkFn, ListViewMode } from '@/components/entry'
 import { Entry } from '@/types'
 import { ref, computed, watch } from 'vue'
 import { EntriesLoadData } from './types'
 import { EntryDragData } from '@/components/entry/useDrag'
+import { input } from '@/utils/ui-utils'
+import { T } from '@/i18n'
 
 const props = defineProps({
   path: {
@@ -127,10 +129,40 @@ const loadEntries = async () => {
     }
   } catch (e: any) {
     if (e.isCancel) return
+    if (e.response?.data?.data?.passwordRequired) {
+      if (await onPathRequired()) return
+    }
     error.value = e
     emit('error', e)
   } finally {
     emit('loading', false)
+  }
+}
+
+const onPathRequired = async () => {
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    let password
+    try {
+      password = await input({
+        type: 'password',
+        title: T('app.password_protected'),
+        placeholder: T('app.input_password'),
+        validator: {
+          pattern: /^.+$/,
+          message: T('app.input_password'),
+        },
+      })
+    } catch {
+      return false
+    }
+    try {
+      await setPathPassword(currentPath.value!, password)
+    } catch {
+      continue
+    }
+    loadEntries()
+    return true
   }
 }
 

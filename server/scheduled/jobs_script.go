@@ -54,7 +54,7 @@ func ExecuteJobCode(ctx context.Context, code interface{}, ch *registry.Componen
 	vm := baseVM.Fork()
 	defer func() { _ = vm.Dispose() }()
 
-	vm.Set("drive", s.NewDrive(vm, ch.Get("driveAccess").(*drive.Access).GetRootDrive()))
+	vm.Set("drive", s.NewDrive(vm, ch.Get("driveAccess").(*drive.Access).GetRootDrive(nil)))
 	vm.Set("log", onLog)
 
 	_, e := vm.Run(ctx, code)

@@ -45,7 +45,8 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	}
 	pathPermissionDAO := storage.NewPathPermissionDAO(db, ch)
 	optionsDAO := storage.NewOptionsDAO(db, ch)
-	access, err := drive.NewAccess(ch, rootDrive, pathPermissionDAO, optionsDAO, bus)
+	pathMetaDAO := storage.NewPathMetaDAO(db, ch)
+	access, err := drive.NewAccess(ch, rootDrive, pathPermissionDAO, optionsDAO, pathMetaDAO, bus)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, scheduledDAO, jobExecutor, fileMessageSource)
+	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, pathMetaDAO, scheduledDAO, jobExecutor, fileMessageSource)
 	if err != nil {
 		return nil, err
 	}
