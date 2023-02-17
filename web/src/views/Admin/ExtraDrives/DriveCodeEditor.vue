@@ -4,7 +4,7 @@
       <ul class="drive-code-files">
         <li
           v-for="tab in fileTabs"
-          :key="tab.name"
+          :key="tab.filename"
           class="drive-code-file"
           :class="{ active: tab.filename === activeTab }"
           @click="activeTab = tab.filename"
@@ -13,7 +13,7 @@
         </li>
       </ul>
       <SimpleButton :loading="saving" :disabled="loading" @click="onSave">{{
-        $t('p.admin.misc.extra_drive_save')
+        $t('p.admin.extra_drive.save')
       }}</SimpleButton>
       <button class="plain-button close-button" @click="emit('close')">
         <Icon svg="#icon-close" />
@@ -23,8 +23,9 @@
       <CodeEditor
         v-for="tab in fileTabs"
         v-show="tab.filename === activeTab"
-        :key="tab.name"
+        :key="tab.filename"
         v-model="tab.content"
+        :type-selectable="false"
         :type="tab.type"
         @save="onSave"
       />
@@ -71,7 +72,7 @@ const fileTabs = computed(() => {
     {
       name: props.name,
       filename: `${props.name}.js`,
-      type: 'javascript-drive',
+      type: 'javascript-server-drive',
       content: c.drive,
       prop: 'drive',
     },
@@ -80,7 +81,7 @@ const fileTabs = computed(() => {
     r.push({
       name: props.name,
       filename: `${props.name}-uploader.js`,
-      type: 'javascript',
+      type: 'javascript-uploader',
       content: c.uploader,
       prop: 'uploader',
     })

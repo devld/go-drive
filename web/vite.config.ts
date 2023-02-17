@@ -4,7 +4,6 @@ import path from 'path'
 import { injectHtml, minifyHtml } from 'vite-plugin-html'
 import vueI18n from '@intlify/vite-plugin-vue-i18n'
 import { visualizer } from 'rollup-plugin-visualizer'
-import fs from 'fs'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -19,9 +18,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  define: {
-    JS_DECLARATIONS: JSON.stringify(readEnvDeclarations()),
-  },
+  define: {},
 
   plugins: [
     vue(),
@@ -49,33 +46,3 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }))
-
-function readEnvDeclarations() {
-  const dir = '../docs/scripts'
-
-  const global = fs
-    .readFileSync(path.join(dir, 'global.d.ts'))
-    .toString('utf-8')
-
-  const readDeclarations = (dir: string) => {
-    return fs
-      .readdirSync(dir)
-      .filter(
-        (name) =>
-          name.endsWith('.d.ts') && fs.statSync(path.join(dir, name)).isFile()
-      )
-      .map((name) => ({
-        name: name.substring(0, name.length - 5), // .d.ts
-        content: fs.readFileSync(path.join(dir, name)).toString('utf-8'),
-      }))
-      .reduce((a, c) => {
-        a[c.name] = c.content
-        return a
-      }, {} as Record<string, string>)
-  }
-
-  const libs = readDeclarations(path.join(dir, 'libs'))
-  const env = readDeclarations(path.join(dir, 'env'))
-
-  return { global, env, libs }
-}

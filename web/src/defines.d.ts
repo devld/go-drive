@@ -22,15 +22,6 @@ import { s } from '@/i18n'
 declare global {
   declare type O<T = any> = Record<string, T>
 
-  declare const JS_DECLARATIONS: {
-    /** global declarations */
-    global: string
-    /** global libraries declarations */
-    libs: Record<string, string>
-    /** specified environment declarations */
-    env: Record<string, string>
-  }
-
   declare type Fn<R = any> = () => R
   declare type Fn1<A = any, R = any> = (arg1: A) => R
   declare type Fnn<

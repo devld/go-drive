@@ -18,6 +18,7 @@ import {
 import { getEnv } from './js-script-env'
 import { useEditorSetup, useEditorTheme } from './utils'
 import { languages } from './mapping'
+import { stringSplitN } from '@/utils'
 
 const props = defineProps({
   modelValue: {
@@ -53,7 +54,7 @@ let lastValue: string | undefined
 
 const mode = computed(() => {
   if (!props.type) return
-  const [lang, env] = props.type.split('-', 2)
+  const [lang, env] = stringSplitN(props.type, '-', 2)
   return { lang, env }
 })
 const selectedLanguage = ref<string>()
@@ -81,8 +82,10 @@ const prepareEditor = () => {
   let jsEnv: JavaScriptSetupOptions | undefined
   switch (mode.value?.lang) {
     case 'javascript':
-      jsEnv = getEnv(mode.value?.env)
-      if (jsEnv) editorEmit('setupJs', jsEnv)
+      if (mode.value?.env) {
+        jsEnv = getEnv(mode.value?.env)
+        if (jsEnv) editorEmit('setupJs', jsEnv)
+      }
       break
   }
 }

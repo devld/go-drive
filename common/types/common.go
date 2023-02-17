@@ -55,7 +55,7 @@ type FormItemForms struct {
 }
 
 type FormItemCode struct {
-	// javascript-jobs
+	// javascript-server-jobs
 	Type string `json:"type"`
 }
 

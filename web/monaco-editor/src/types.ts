@@ -7,9 +7,9 @@ export interface JavaScriptLibItem {
   content: string
 }
 export interface JavaScriptSetupOptions {
-  target: string
-  lib: string[]
-  extraLibs: JavaScriptLibItem[]
+  target?: string
+  lib?: string[]
+  extraLibs?: JavaScriptLibItem[]
 }
 
 export interface EditorInMessageTypes {

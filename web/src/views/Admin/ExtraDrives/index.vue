@@ -1,18 +1,22 @@
 <template>
-  <div class="section">
-    <h3 class="section-title">
-      {{ $t('p.admin.misc.extra_drive') }}
+  <div class="extra-drives-manager">
+    <div class="page-actions">
       <SimpleButton :loading="loading" @click="loadData(true)">{{
-        $t('p.admin.misc.extra_drive_refresh_repository')
+        $t('p.admin.extra_drive.refresh_repository')
       }}</SimpleButton>
-    </h3>
+    </div>
     <div class="extra-drives-table">
-      <table class="simple-table">
+      <table class="simple-table full-width">
+        <colgroup>
+          <col />
+          <col />
+          <col width="110" />
+        </colgroup>
         <thead>
           <tr>
-            <th>{{ $t('p.admin.misc.extra_drive_name') }}</th>
-            <th>{{ $t('p.admin.misc.extra_drive_scripts') }}</th>
-            <th>{{ $t('p.admin.misc.extra_drive_ops') }}</th>
+            <th>{{ $t('p.admin.extra_drive.name') }}</th>
+            <th>{{ $t('p.admin.extra_drive.scripts') }}</th>
+            <th>{{ $t('p.admin.extra_drive.ops') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -52,13 +56,13 @@
                   </div>
                 </template>
               </td>
-              <td class="line">
+              <td class="line center">
                 <SimpleButton
                   v-if="item.installed"
                   icon="#icon-edit"
                   :loading="item.loading"
                   :disabled="loading"
-                  :title="$t('p.admin.misc.extra_drive_edit')"
+                  :title="$t('p.admin.extra_drive.edit')"
                   @click="editDrive(item)"
                 />
                 <SimpleButton
@@ -67,7 +71,7 @@
                   icon="#icon-delete"
                   :loading="item.loading"
                   :disabled="loading"
-                  :title="$t('p.admin.misc.extra_drive_uninstall')"
+                  :title="$t('p.admin.extra_drive.uninstall')"
                   @click="doUninstall(item)"
                 />
                 <SimpleButton
@@ -75,7 +79,7 @@
                   icon="#icon-add"
                   :loading="item.loading"
                   :disabled="loading"
-                  :title="$t('p.admin.misc.extra_drive_install')"
+                  :title="$t('p.admin.extra_drive.install')"
                   @click="doInstall(item)"
                 />
               </td>
@@ -197,7 +201,7 @@ const doInstall = async (item: DriveScript) => {
 const doUninstall = async (item: DriveScript) => {
   try {
     await confirm({
-      message: t('p.admin.misc.extra_drive_uninstall_confirm'),
+      message: t('p.admin.extra_drive.uninstall_confirm'),
       confirmType: 'danger',
     })
   } catch {
@@ -245,30 +249,42 @@ const onScriptEditClose = () => {
 loadData()
 </script>
 <style lang="scss">
-.script-drive-name {
-  text-decoration: none;
-  color: inherit;
+.extra-drives-manager {
+  padding: 16px;
 
-  &.has-description {
-    cursor: pointer;
+  .page-actions {
+    margin-bottom: 16px;
   }
-}
 
-.script-drive-url {
-  max-width: 40vw;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  a {
+  .script-drive-name {
     text-decoration: none;
     color: inherit;
-    color: var(--link-color);
-  }
-}
 
-.drive-script-editor-wrapper {
-  width: 100vw;
-  height: 100%;
+    &.has-description {
+      cursor: pointer;
+    }
+  }
+
+  .script-drive-url {
+    max-width: 40vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    a {
+      text-decoration: none;
+      color: inherit;
+      color: var(--link-color);
+    }
+  }
+
+  .drive-script-editor-wrapper {
+    width: 100vw;
+    height: 100%;
+  }
+
+  .extra-drives-table .markdown-body {
+    background-color: transparent;
+  }
 }
 </style>

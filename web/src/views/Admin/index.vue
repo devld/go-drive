@@ -37,6 +37,7 @@ const menus = [
   { name: t('p.admin.t_users'), path: '/admin/users' },
   { name: t('p.admin.t_groups'), path: '/admin/groups' },
   { name: t('p.admin.t_drives'), path: '/admin/drives' },
+  { name: t('p.admin.t_extra_drives'), path: '/admin/extra-drives' },
   { name: t('p.admin.t_jobs'), path: '/admin/jobs' },
   { name: t('p.admin.t_misc'), path: '/admin/misc' },
   { name: t('p.admin.t_statistics'), path: '/admin/stats' },
