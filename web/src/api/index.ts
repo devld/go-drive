@@ -27,6 +27,12 @@ export function listEntries(path: string) {
   return http.get<Entry[]>(`/entries/${path}`)
 }
 
+export function setPathPassword(path: string, password: string) {
+  return http.post<Task<void>>(`/password/${path}`, undefined, {
+    params: { password },
+  })
+}
+
 export function getEntry(path: string) {
   return http.get<Entry>(`/entry/${path}`)
 }

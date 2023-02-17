@@ -14,6 +14,8 @@ export default {
   toggle_to_list: '切换到列表模式 (T)',
   toggle_to_thumbnail: '切换到缩略图模式 (T)',
   toggle_sort: '切换排序方式',
+  password_protected: '密码保护',
+  input_password: '请输入密码',
   sort: {
     name_asc: '文件名升序',
     name_desc: '文件名降序',

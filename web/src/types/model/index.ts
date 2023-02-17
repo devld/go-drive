@@ -38,13 +38,20 @@ export type EntryType = 'dir' | 'file'
 
 export type EntryMetaUseProxy = boolean | 'cors' | 'referrer'
 
+export interface EntryPathMeta {
+  defaultSort?: string
+  defaultMode?: string
+  hiddenPattern?: string
+}
+
 export interface EntryMeta extends O<any> {
   accessKey?: string
   writable?: boolean
-
+  thumbnail?: string
+  mountAt?: string
   /** real extension of this entry */
   ext?: string
-
+  pathMeta?: EntryPathMeta
   useProxy?: EntryMetaUseProxy
 }
 

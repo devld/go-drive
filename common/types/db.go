@@ -102,6 +102,17 @@ type PathPermission struct {
 	Policy uint8 `gorm:"column:policy;not null" json:"policy"`
 }
 
+type PathMeta struct {
+	Path          *string `gorm:"column:path;primaryKey;not null;type:string;size:4096" json:"path"`
+	Password      string  `gorm:"column:password;type:string;size:64" json:"password"`
+	DefaultSort   string  `gorm:"column:default_sort;type:string;size:32" json:"defaultSort"`
+	DefaultMode   string  `gorm:"column:default_mode;type:string;size:32" json:"defaultMode"`
+	HiddenPattern string  `gorm:"column:hidden_pattern;type:string;size:4096" json:"hiddenPattern"`
+
+	// Recursive Password|DefaultSort|DefaultMode|HiddenPattern
+	Recursive uint32 `gorm:"column:recursive;not null" json:"recursive"`
+}
+
 type Job struct {
 	ID          uint   `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	Description string `gorm:"column:description;not null;type:text" json:"description"`

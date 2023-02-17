@@ -612,7 +612,7 @@ func (d *driveEntry) Size() int64 {
 }
 
 func (d *driveEntry) Meta() types.EntryMeta {
-	return types.EntryMeta{Readable: true, Writable: true, Props: d.meta.Props}
+	return types.EntryMeta{Readable: true, Writable: d.meta.Writable, Props: d.meta.Props}
 }
 
 func (d *driveEntry) ModTime() int64 {

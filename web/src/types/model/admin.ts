@@ -49,6 +49,15 @@ export interface PathPermission {
   policy: PathPermissionPolicy
 }
 
+export interface PathMeta {
+  path: string
+  password: string
+  defaultSort: string
+  defaultMode: string
+  hiddenPattern: string
+  recursive: number
+}
+
 export interface PathMountSource {
   path: string
   name: string

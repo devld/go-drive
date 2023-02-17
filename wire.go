@@ -36,6 +36,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 		storage.NewDriveDataDAO,
 		storage.NewOptionsDAO,
 		storage.NewScheduledDAO,
+		storage.NewPathMetaDAO,
 		wire.Bind(new(task.Runner), new(*task.TunnyRunner)),
 		task.NewTunnyRunner,
 		utils.NewSigner,

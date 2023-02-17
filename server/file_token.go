@@ -85,7 +85,7 @@ func (f *FileTokenStore) readFile(token string, read bool) (*types.Token, error)
 	if !read {
 		return nil, nil
 	}
-	s := types.Session{}
+	s := types.NewSession()
 	file, e := os.Open(filePath)
 	if e != nil {
 		return nil, e

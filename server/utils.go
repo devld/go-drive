@@ -46,7 +46,7 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, skipOnEmptySi
 			return
 		}
 
-		session := types.Session{}
+		session := types.NewSession()
 		var username string
 
 		path := utils.CleanPath(c.Param("path"))
@@ -138,7 +138,7 @@ func BasicAuth(userAuth *UserAuth, realm string, allowAnonymous bool) gin.Handle
 		}
 
 		username, password, ok := c.Request.BasicAuth()
-		session := types.Session{}
+		session := types.NewSession()
 		if ok {
 			user, e := userAuth.AuthByUsernamePassword(username, password)
 			if e != nil {
@@ -244,18 +244,24 @@ func GetSession(c *gin.Context) types.Session {
 	if s, exists := c.Get(keySession); exists {
 		return s.(types.Session)
 	}
-	return types.Session{}
+	return types.NewSession()
 }
 
 func SetSession(c *gin.Context, session types.Session) {
 	c.Set(keySession, session)
 }
 
-func UpdateSessionUser(c *gin.Context, tokenStore types.TokenStore, user types.User) error {
+func UpdateSession(c *gin.Context, tokenStore types.TokenStore, update func(session *types.Session)) error {
 	session := GetSession(c)
-	session.User = user
-	_, e := tokenStore.Update(GetToken(c), session)
-	return e
+	update(&session)
+	if token := GetToken(c); token != "" {
+		_, e := tokenStore.Update(token, session)
+		if e != nil {
+			return e
+		}
+	}
+	SetSession(c, session)
+	return nil
 }
 
 func TranslateV(c *gin.Context, ms i18n.MessageSource, v interface{}) interface{} {

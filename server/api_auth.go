@@ -35,7 +35,7 @@ type authRoute struct {
 }
 
 func (a *authRoute) init(c *gin.Context) {
-	token, e := a.tokenStore.Create(types.Session{})
+	token, e := a.tokenStore.Create(types.NewSession())
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -54,14 +54,14 @@ func (a *authRoute) login(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	e = UpdateSessionUser(c, a.tokenStore, user)
+	e = UpdateSession(c, a.tokenStore, func(session *types.Session) { session.User = user })
 	if e != nil {
 		_ = c.Error(e)
 	}
 }
 
 func (a *authRoute) logout(c *gin.Context) {
-	_ = UpdateSessionUser(c, a.tokenStore, types.User{})
+	_ = UpdateSession(c, a.tokenStore, func(session *types.Session) { session.User = types.User{} })
 }
 
 func (a *authRoute) getUser(c *gin.Context) {

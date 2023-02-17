@@ -3,11 +3,6 @@ import p from './p'
 import handlers from './handlers'
 
 export default {
-  error: {
-    not_allowed: 'Operation not allowed',
-    not_found: 'Resource not found',
-    server_error: 'Server Error',
-  },
   form: {
     required_msg: '{f} is required',
   },
@@ -19,6 +14,7 @@ export default {
       drives: 'Drives',
       extra_drives: 'Extra Drives',
       jobs: 'Jobs',
+      path_meta: 'Path Attrs',
       misc: 'Misc',
       statistics: 'Statistics',
     },

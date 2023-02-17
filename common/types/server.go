@@ -5,7 +5,12 @@ const (
 )
 
 type Session struct {
-	User User
+	User  User
+	Props SM
+}
+
+func NewSession() Session {
+	return Session{User: User{}, Props: SM{}}
 }
 
 func (s *Session) IsAnonymous() bool {

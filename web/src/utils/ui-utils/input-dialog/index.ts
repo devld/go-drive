@@ -13,6 +13,7 @@ export interface InputDialogValidator {
 }
 
 export interface InputDialogOptions extends BaseDialogOptions {
+  type?: string
   text?: string
   placeholder?: I18nText
   multipleLine?: boolean

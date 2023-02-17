@@ -57,6 +57,8 @@ drive:
   file_not_exists: 文件不存在
   invalid_path: 无效的路径
   file_not_downloadable: 无法下载这个文件
+  path_meta:
+    incorrect_password: 密码不正确
   root:
     invalid_drive_type: 无效的 Drive 类型 '{{ 1 }}'
     invalid_drive_config: Drive '{{ 1 }}' 的配置有问题
