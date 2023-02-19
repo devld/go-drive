@@ -364,6 +364,8 @@ defineExpose({
 }
 
 .entry-list__toggles {
+  display: flex;
+  gap: 8px;
   margin-left: auto;
 
   .icon {

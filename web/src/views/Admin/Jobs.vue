@@ -10,6 +10,12 @@
       </div>
       <div class="simple-table-wrapper">
         <table class="simple-table">
+          <colgroup>
+            <col style="min-width: 100px" />
+            <col style="width: 100px" />
+            <col style="width: 120px" />
+            <col style="width: 112px" />
+          </colgroup>
           <thead>
             <tr>
               <th>{{ $t('p.admin.jobs.desc') }}</th>
@@ -25,9 +31,9 @@
               :class="{ 'job-disabled': !j.enabled }"
             >
               <td class="center">{{ j.description }}</td>
-              <td class="center line">{{ j.schedule }}</td>
+              <td class="center">{{ j.schedule }}</td>
               <td class="center">{{ j.nextRun && formatTime(j.nextRun) }}</td>
-              <td class="center line">
+              <td class="center">
                 <SimpleButton
                   :title="$t('p.admin.jobs.view_log')"
                   small

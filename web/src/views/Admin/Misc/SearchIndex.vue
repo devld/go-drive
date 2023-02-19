@@ -17,8 +17,15 @@
         </SimpleForm>
       </div>
 
-      <div class="search-index-tasks">
+      <div class="search-index-tasks simple-table-wrapper">
         <table class="simple-table">
+          <colgroup>
+            <col style="min-width: 150px" />
+            <col style="min-width: 100px" />
+            <col style="width: 150px" />
+            <col style="width: 150px" />
+            <col style="width: 50px" />
+          </colgroup>
           <thead>
             <tr>
               <th>{{ $t('p.admin.misc.search_th_path') }}</th>
@@ -36,7 +43,9 @@
                   :class="`search-index-op-${task.group.split('/')[1]}`"
                   >{{ searchIndexType[task.group] }}</span
                 >
-                <span class="search-index-op-path">{{ task.name }}</span>
+                <span class="search-index-op-path" @click="alert(task.name)">{{
+                  task.name
+                }}</span>
               </td>
               <td class="center line">{{ taskStatus(task) }}</td>
               <td class="center line">{{ formatTime(task.createdAt) }}</td>
@@ -215,19 +224,7 @@ loadIndexFilters()
 }
 
 .search-index-tasks {
-  position: relative;
   font-size: 14px;
-  overflow: auto hidden;
-
-  .simple-table {
-    width: 100%;
-  }
-
-  th:last-child,
-  td:last-child {
-    position: sticky;
-    right: 0;
-  }
 }
 
 .search-index-op,

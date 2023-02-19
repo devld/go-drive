@@ -5,9 +5,7 @@
 
 // theme
 :root {
-
-  @each $prop,
-  $val in $theme-default {
+  @each $prop, $val in $theme-default {
     --#{$prop}: #{$val};
   }
 }
@@ -15,9 +13,7 @@
 // theme dark
 @media (prefers-color-scheme: dark) {
   :root {
-
-    @each $prop,
-    $val in $theme-dark {
+    @each $prop, $val in $theme-dark {
       --#{$prop}: #{$val};
     }
   }
@@ -76,9 +72,7 @@ svg {
   overflow: auto hidden;
 
   .simple-table {
-    td {
-      white-space: nowrap;
-    }
+    width: 100%;
   }
 }
 
@@ -99,6 +93,8 @@ svg {
     -webkit-user-select: none;
     user-select: none;
     white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
     background-color: var(--thead-bg-color);
   }
 
@@ -130,6 +126,8 @@ svg {
 
   .line {
     white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .center {

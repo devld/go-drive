@@ -200,7 +200,7 @@ defineExpose({ setActive })
 }
 
 .search-panel__result {
-  max-height: 70vh;
+  max-height: min(500px, 70vh);
   overflow: hidden auto;
 }
 
