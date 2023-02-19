@@ -9,6 +9,10 @@
         />
       </div>
       <table class="simple-table">
+        <colgroup>
+          <col style="min-width: 100px" />
+          <col style="width: 80px" />
+        </colgroup>
         <thead>
           <tr>
             <th>{{ $t('p.admin.group.name') }}</th>

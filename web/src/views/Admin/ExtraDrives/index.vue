@@ -8,9 +8,9 @@
     <div class="extra-drives-table">
       <table class="simple-table full-width">
         <colgroup>
-          <col />
-          <col />
-          <col width="110" />
+          <col style="min-width: 100px" />
+          <col style="min-width: 100px" />
+          <col style="width: 110px" />
         </colgroup>
         <thead>
           <tr>

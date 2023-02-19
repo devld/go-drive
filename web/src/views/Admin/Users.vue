@@ -9,6 +9,10 @@
         />
       </div>
       <table class="simple-table">
+        <colgroup>
+          <col style="min-width: 100px" />
+          <col style="width: 80px" />
+        </colgroup>
         <thead>
           <tr>
             <th>{{ $t('p.admin.user.username') }}</th>
@@ -117,8 +121,8 @@ const userForm = computed<FormItem[]>(() => [
     field: 'rootPath',
     label: t('p.admin.user.f_rootPath'),
     description: t('p.admin.user.f_rootPath_desc'),
-    type: 'text'
-  }
+    type: 'text',
+  },
 ])
 
 const loadUsers = async () => {

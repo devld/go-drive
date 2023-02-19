@@ -18,6 +18,11 @@
         </SimpleButton>
       </div>
       <table class="simple-table">
+        <colgroup>
+          <col style="min-width: 100px"/>
+          <col style="min-width: 100px" />
+          <col style="width: 80px" />
+        </colgroup>
         <thead>
           <tr>
             <th>{{ $t('p.admin.drive.name') }}</th>

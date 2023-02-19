@@ -1,6 +1,12 @@
 <template>
   <div class="permissions">
     <table class="simple-table">
+      <colgroup>
+        <col />
+        <col style="width: 70px" />
+        <col style="width: 80px" />
+        <col style="width: 50px" />
+      </colgroup>
       <thead>
         <tr>
           <th>{{ $t('p.admin.p_edit.subject') }}</th>
