@@ -40,7 +40,7 @@
       v-model:show="entryMenuShowing"
       overlay-close
       esc-close
-      transition="top-fade"
+      transition="scale-opacity"
     >
       <EntryMenu
         v-if="entryMenuData"
@@ -279,6 +279,7 @@ const showEntryMenu = ({ entry, event }: EntryEventData) => {
   if (!menu) return
 
   event && event.preventDefault()
+  navigator.vibrate?.(15)
 
   if (event && event instanceof MouseEvent) {
     if (event.altKey) {
