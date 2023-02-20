@@ -56,7 +56,8 @@ type FormItemForms struct {
 
 type FormItemCode struct {
 	// javascript-server-jobs
-	Type string `json:"type"`
+	Type           string `json:"type"`
+	TypeSelectable bool   `json:"typeSelectable"`
 }
 
 type FormItem struct {

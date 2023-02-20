@@ -93,6 +93,15 @@
       </div>
       <div class="simple-table-wrapper">
         <table class="simple-table">
+          <colgroup>
+            <col style="width: 80px" />
+            <col style="width: 100px" />
+            <col style="width: 100px" />
+            <col style="width: 100px" />
+            <col style="min-width: 150px" />
+            <col style="min-width: 150px" />
+            <col style="width: 50px" />
+          </colgroup>
           <thead>
             <tr>
               <th>{{ $t('p.admin.jobs.status') }}</th>
@@ -113,7 +122,7 @@
               <td class="center">
                 {{ (e.completedAt && formatTime(e.completedAt)) || '' }}
               </td>
-              <td class="right">
+              <td class="center">
                 {{
                   e.completedAt
                     ? new Date(e.completedAt).getTime() -
@@ -436,6 +445,10 @@ loadJobDefinitions()
 
   .job-executions {
     padding: 16px;
+
+    .simple-table {
+      font-size: 14px;
+    }
   }
 
   .job-disabled {
