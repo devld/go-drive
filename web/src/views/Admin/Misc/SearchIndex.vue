@@ -37,7 +37,7 @@
           </thead>
           <tbody>
             <tr v-for="task in tasks" :key="task.id">
-              <td class="line">
+              <td>
                 <span
                   class="search-index-op"
                   :class="`search-index-op-${task.group.split('/')[1]}`"
@@ -245,7 +245,7 @@ loadIndexFilters()
 }
 
 .search-index-op-path {
-  border: solid 1px var(--secondary-text-color);
+  word-break: break-all;
   padding: 2px 4px;
   border-radius: 4px;
 }
