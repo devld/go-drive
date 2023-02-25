@@ -367,6 +367,7 @@ defineExpose({
   display: flex;
   gap: 8px;
   margin-left: auto;
+  align-items: flex-start;
 
   .icon {
     color: var(--secondary-text-color);
