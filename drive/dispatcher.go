@@ -13,6 +13,7 @@ import (
 	"go-drive/common/utils"
 	"go-drive/storage"
 	"io"
+	"log"
 	path2 "path"
 	"regexp"
 	"strings"
@@ -449,7 +450,7 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 
 	ms := d.mounts()[path]
 	if ms != nil {
-		mountedMap := make(map[string]types.IEntry, len(entries))
+		mountedMap := make(map[string]types.IEntry, len(ms))
 		for name, m := range ms {
 			_, drive, entryPath, e := d.resolve(m.MountAt)
 			if e != nil {
@@ -460,7 +461,9 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 				if err.IsNotFoundError(e) {
 					continue
 				}
-				return nil, e
+				log.Println("get mounted entry(" + entryPath + ") error: " + e.Error())
+				// ignore error
+				continue
 			}
 			mountedMap[name] = &entryWrapper{d: d, path: path2.Join(path, name), IEntry: entry, mountAt: m.MountAt}
 		}
