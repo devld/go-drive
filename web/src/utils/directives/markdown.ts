@@ -25,9 +25,11 @@ async function getRender() {
         }
         if ('href' in node) {
           const a = node as HTMLAnchorElement
-          a.dataset.href = a.getAttribute('href')!
-          a.href = 'javascript:;'
-          a.target = ''
+          const href = a.getAttribute('href') ?? ''
+          if (href.startsWith('#')) {
+            a.dataset.href = href
+            a.href = 'javascript:;'
+          }
         }
       })
 
