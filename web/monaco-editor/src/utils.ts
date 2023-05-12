@@ -6,6 +6,10 @@ import {
   MESSAGE_KEY_PREFIX,
 } from './types'
 
+// https://github.com/go-gitea/gitea/pull/21734/commits/cea7458c79f74805f384ea721c2fd2a7517284a0
+monaco.languages.register({ id: 'vs.editor.nullLanguage' })
+monaco.languages.setLanguageConfiguration('vs.editor.nullLanguage', {})
+
 export const queries = parseQueries()
 
 const messageKey = MESSAGE_KEY_PREFIX + queries['id']
