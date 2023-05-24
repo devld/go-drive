@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install build-essential
-        run: sudo apt-get install zip build-essential gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-mingw-w64-x86-64
+        run: sudo apt-get update && sudo apt-get install zip build-essential gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-mingw-w64-x86-64
 
       - name: Cache downloaded cross-build environment
         id: cache-cross-build-env
