@@ -172,7 +172,7 @@ func unwrapEntry(e types.IEntry) types.IEntry {
 		return ok
 	})
 	if ee != nil {
-		return ee
+		return ee.(*chrootEntry).IEntry
 	}
 	return e
 }
