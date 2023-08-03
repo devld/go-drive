@@ -99,11 +99,11 @@ func (d *OptionsDAO) get(key string, getCache bool) (types.Option, error) {
 	}
 	var option types.Option
 	e := d.db.C().Where("`key` = ?", key).Take(&option).Error
-	if e == nil {
-		d.cache.Set(key, option)
-	}
 	if errors.Is(e, gorm.ErrRecordNotFound) {
 		e = nil
+	}
+	if e == nil {
+		d.cache.Set(key, option)
 	}
 	return option, e
 }
