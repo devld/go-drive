@@ -79,7 +79,7 @@ func (s *SQLiteSearcher) Index(ctx types.TaskCtx, entries []types.EntrySearchIte
 	})
 	for i := 0; i < len(data); i += 500 {
 		end := int(math.Min(float64(i+500), float64(len(data))))
-		s.db.Where("path in ?",
+		s.db.Where("`path` in ?",
 			utils.ArrayMap(data[i:end], func(t *entry) string { return t.Path })).Delete(&entry{})
 	}
 	return s.db.CreateInBatches(data, 150).Error
@@ -88,7 +88,7 @@ func (s *SQLiteSearcher) Index(ctx types.TaskCtx, entries []types.EntrySearchIte
 func (s *SQLiteSearcher) Search(path string, query string, from int, size int) ([]types.EntrySearchResultItem, error) {
 	tx := s.db.Model(&entry{}).Offset(from).Limit(size)
 	if path != "" {
-		tx = tx.Where("path LIKE (? || '%')", path+"/")
+		tx = tx.Where("`path` LIKE (? || '%')", path+"/")
 	}
 
 	tx = s.buildQuery(tx, query)
@@ -111,7 +111,7 @@ func (s *SQLiteSearcher) Delete(ctx types.TaskCtx, dirPath string) error {
 	ctx.Total(1, false)
 	for {
 		var entries []entry
-		if e := s.db.Where("path LIKE (? || '%')", dirPath+"/").Limit(999).Find(&entries).Error; e != nil {
+		if e := s.db.Where("`path` LIKE (? || '%')", dirPath+"/").Limit(999).Find(&entries).Error; e != nil {
 			return e
 		}
 		if len(entries) == 0 {
@@ -119,14 +119,14 @@ func (s *SQLiteSearcher) Delete(ctx types.TaskCtx, dirPath string) error {
 		}
 		ctx.Total(int64(len(entries)), false)
 		if e := s.db.Where(
-			"path IN ("+strings.TrimSuffix(strings.Repeat("?, ", len(entries)), ", ")+")",
+			"`path` IN ("+strings.TrimSuffix(strings.Repeat("?, ", len(entries)), ", ")+")",
 			utils.ArrayMap(entries, func(t *entry) interface{} { return t.Path })...,
 		).Delete(&entry{}).Error; e != nil {
 			return e
 		}
 		ctx.Progress(int64(len(entries)), false)
 	}
-	if e := s.db.Delete(&entry{}, "path = ?", dirPath).Error; e != nil {
+	if e := s.db.Delete(&entry{}, "`path` = ?", dirPath).Error; e != nil {
 		return e
 	}
 	ctx.Progress(1, false)
@@ -167,20 +167,20 @@ func (s *SQLiteSearcher) buildQuery(tx *gorm.DB, query string) *gorm.DB {
 				continue
 			}
 			modTime := time.Now().Add(-duration)
-			where_ = "mod_time > ?"
+			where_ = "`mod_time` > ?"
 			values_ = []interface{}{modTime}
 		} else if m := sizeQueryPattern.FindStringSubmatch(query); m != nil {
 			size := types.SV(m[2]).DataSize(-1)
 			if size < 0 {
 				continue
 			}
-			where_ = "size >= 0 AND size " + m[1] + " ?"
+			where_ = "`size` >= 0 AND `size` " + m[1] + " ?"
 			values_ = []interface{}{size}
 		} else if strings.HasPrefix(query, "type:") {
-			where_ = "type = ?"
+			where_ = "`type` = ?"
 			values_ = []interface{}{query[5:]}
 		} else {
-			where_, values_ = buildWildcardQuery(query, "name")
+			where_, values_ = buildWildcardQuery(query, "`name`")
 		}
 		where = append(where, where_)
 		values = append(values, values_...)

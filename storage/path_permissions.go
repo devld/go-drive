@@ -27,7 +27,7 @@ func (p *PathPermissionDAO) GetAll() ([]types.PathPermission, error) {
 
 func (p *PathPermissionDAO) GetByPath(path string) ([]types.PathPermission, error) {
 	r := make([]types.PathPermission, 0)
-	if e := p.db.C().Find(&r, "path = ?", path).Error; e != nil {
+	if e := p.db.C().Find(&r, "`path` = ?", path).Error; e != nil {
 		return nil, e
 	}
 	return r, nil
@@ -35,7 +35,7 @@ func (p *PathPermissionDAO) GetByPath(path string) ([]types.PathPermission, erro
 
 func (p *PathPermissionDAO) SavePathPermissions(path string, permissions []types.PathPermission) error {
 	return p.db.C().Transaction(func(tx *gorm.DB) error {
-		if e := tx.Delete(&types.PathPermission{}, "path = ?", path).Error; e != nil {
+		if e := tx.Delete(&types.PathPermission{}, "`path` = ?", path).Error; e != nil {
 			return e
 		}
 		for _, p := range permissions {
@@ -49,5 +49,5 @@ func (p *PathPermissionDAO) SavePathPermissions(path string, permissions []types
 }
 
 func (p *PathPermissionDAO) DeleteByPath(path string) error {
-	return p.db.C().Delete(&types.PathPermission{}, "path = ?", path).Error
+	return p.db.C().Delete(&types.PathPermission{}, "`path` = ?", path).Error
 }

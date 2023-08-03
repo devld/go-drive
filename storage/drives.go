@@ -28,7 +28,7 @@ func (d *DriveDAO) GetDrives() ([]types.Drive, error) {
 
 func (d *DriveDAO) GetDrive(name string) (types.Drive, error) {
 	var config types.Drive
-	e := d.db.C().Where("name = ?", name).Take(&config).Error
+	e := d.db.C().Where("`name` = ?", name).Take(&config).Error
 	if errors.Is(e, gorm.ErrRecordNotFound) {
 		return config, err.NewNotFoundError()
 	}
@@ -36,7 +36,7 @@ func (d *DriveDAO) GetDrive(name string) (types.Drive, error) {
 }
 
 func (d *DriveDAO) AddDrive(drive types.Drive) (types.Drive, error) {
-	e := d.db.C().Where("name = ?", drive.Name).Take(&types.Drive{}).Error
+	e := d.db.C().Where("`name` = ?", drive.Name).Take(&types.Drive{}).Error
 	if e == nil {
 		return types.Drive{},
 			err.NewNotAllowedMessageError(i18n.T("storage.drives.drive_exists", drive.Name))
@@ -54,5 +54,5 @@ func (d *DriveDAO) UpdateDrive(name string, drive types.Drive) error {
 }
 
 func (d *DriveDAO) DeleteDrive(name string) error {
-	return d.db.C().Delete(&types.Drive{}, "name = ?", name).Error
+	return d.db.C().Delete(&types.Drive{}, "`name` = ?", name).Error
 }

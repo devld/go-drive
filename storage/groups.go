@@ -34,7 +34,7 @@ func (g *GroupDAO) ListGroup() ([]types.Group, error) {
 func (g *GroupDAO) GetGroup(name string) (GroupWithUsers, error) {
 	gus := GroupWithUsers{}
 	group := types.Group{}
-	e := g.db.C().First(&group, "name = ?", name).Error
+	e := g.db.C().First(&group, "`name` = ?", name).Error
 	if errors.Is(e, gorm.ErrRecordNotFound) {
 		return gus, err.NewNotFoundMessageError(i18n.T("storage.groups.group_not_exists", name))
 	}
@@ -45,7 +45,7 @@ func (g *GroupDAO) GetGroup(name string) (GroupWithUsers, error) {
 
 	users := make([]types.User, 0)
 	ugs := make([]types.UserGroup, 0)
-	e = g.db.C().Find(&ugs, "group_name = ?", name).Error
+	e = g.db.C().Find(&ugs, "`group_name` = ?", name).Error
 	if e != nil {
 		return gus, e
 	}
@@ -53,7 +53,7 @@ func (g *GroupDAO) GetGroup(name string) (GroupWithUsers, error) {
 	for i, ug := range ugs {
 		usernames[i] = ug.Username
 	}
-	e = g.db.C().Find(&users, "username IN (?)", usernames).Error
+	e = g.db.C().Find(&users, "`username` IN (?)", usernames).Error
 	gus.Users = users
 
 	return gus, e
@@ -72,7 +72,7 @@ func saveUserGroup(users []types.User, name string, db *gorm.DB) error {
 }
 
 func (g *GroupDAO) AddGroup(group GroupWithUsers) (GroupWithUsers, error) {
-	e := g.db.C().Where("name = ?", group.Name).Take(&types.Group{}).Error
+	e := g.db.C().Where("`name` = ?", group.Name).Take(&types.Group{}).Error
 	if e == nil {
 		return GroupWithUsers{},
 			err.NewNotAllowedMessageError(i18n.T("storage.groups.group_exists", group.Name))
@@ -95,14 +95,14 @@ func (g *GroupDAO) UpdateGroup(name string, gus GroupWithUsers) error {
 	}
 	return g.db.C().Transaction(func(tx *gorm.DB) error {
 		group := types.Group{}
-		e := tx.First(&group, "name = ?", name).Error
+		e := tx.First(&group, "`name` = ?", name).Error
 		if errors.Is(e, gorm.ErrRecordNotFound) {
 			return err.NewNotFoundMessageError(i18n.T("storage.groups.group_not_exists", name))
 		}
 		if e != nil {
 			return e
 		}
-		if e := tx.Delete(&types.UserGroup{}, "group_name = ?", name).Error; e != nil {
+		if e := tx.Delete(&types.UserGroup{}, "`group_name` = ?", name).Error; e != nil {
 			return e
 		}
 		return saveUserGroup(gus.Users, group.Name, tx)
@@ -111,16 +111,16 @@ func (g *GroupDAO) UpdateGroup(name string, gus GroupWithUsers) error {
 
 func (g *GroupDAO) DeleteGroup(name string) error {
 	return g.db.C().Transaction(func(tx *gorm.DB) error {
-		s := tx.Delete(types.Group{}, "name = ?", name)
+		s := tx.Delete(types.Group{}, "`name` = ?", name)
 		if s.Error != nil {
 			return s.Error
 		}
 		if s.RowsAffected != 1 {
 			return err.NewNotFoundMessageError(i18n.T("storage.groups.group_not_exists", name))
 		}
-		if e := tx.Where("group_name = ?", name).Delete(&types.UserGroup{}).Error; e != nil {
+		if e := tx.Where("`group_name` = ?", name).Delete(&types.UserGroup{}).Error; e != nil {
 			return e
 		}
-		return tx.Where("subject = ?", types.GroupSubject(name)).Delete(&types.PathPermission{}).Error
+		return tx.Where("`subject` = ?", types.GroupSubject(name)).Delete(&types.PathPermission{}).Error
 	})
 }

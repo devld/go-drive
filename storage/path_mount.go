@@ -25,7 +25,7 @@ func (p *PathMountDAO) GetMounts() ([]types.PathMount, error) {
 }
 
 func saveMount(db *gorm.DB, mount types.PathMount, override bool) error {
-	e := db.Where("path = ? AND name = ?", mount.Path, mount.Name).Take(&types.PathMount{}).Error
+	e := db.Where("`path` = ? AND `name` = ?", mount.Path, mount.Name).Take(&types.PathMount{}).Error
 	if e == nil {
 		if override {
 			// update
@@ -51,7 +51,7 @@ func saveMounts(db *gorm.DB, mounts []types.PathMount, override bool) error {
 
 func deleteMounts(db *gorm.DB, mounts []types.PathMount) error {
 	for _, m := range mounts {
-		e := db.Delete(&types.PathMount{}, "path = ? AND name = ?", m.Path, m.Name).Error
+		e := db.Delete(&types.PathMount{}, "`path` = ? AND `name` = ?", m.Path, m.Name).Error
 		if e != nil {
 			return e
 		}
@@ -72,7 +72,7 @@ func (p *PathMountDAO) DeleteMounts(mounts []types.PathMount) error {
 }
 
 func (p *PathMountDAO) DeleteByMountAt(path string) error {
-	return p.db.C().Delete(&types.PathMount{}, "mount_at = ?", path).Error
+	return p.db.C().Delete(&types.PathMount{}, "`mount_at` = ?", path).Error
 }
 
 func (p *PathMountDAO) DeleteAndSaveMounts(deletes []types.PathMount, newMounts []types.PathMount, override bool) error {
