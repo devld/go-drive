@@ -224,6 +224,7 @@ loadGroups()
   }
 
   .users-list {
+    flex-shrink: 0;
     padding: 16px;
   }
 
@@ -246,6 +247,8 @@ loadGroups()
   }
 
   .group-item {
+    white-space: nowrap;
+
     &:not(:last-child) {
       margin-right: 10px;
     }
