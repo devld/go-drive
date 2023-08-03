@@ -46,7 +46,7 @@ func (d *OptionsDAO) set(db *gorm.DB, key, value string) error {
 	if o.Key == "" {
 		return db.Create(&types.Option{Key: key, Value: value}).Error
 	}
-	e = db.Model(&types.Option{}).Where("key = ?", key).
+	e = db.Model(&types.Option{}).Where("`key` = ?", key).
 		Update("value", value).Error
 	if e == nil {
 		d.cache.Remove(key)
@@ -98,7 +98,7 @@ func (d *OptionsDAO) get(key string, getCache bool) (types.Option, error) {
 		}
 	}
 	var option types.Option
-	e := d.db.C().Where("key = ?", key).Take(&option).Error
+	e := d.db.C().Where("`key` = ?", key).Take(&option).Error
 	if e == nil {
 		d.cache.Set(key, option)
 	}
@@ -109,7 +109,7 @@ func (d *OptionsDAO) get(key string, getCache bool) (types.Option, error) {
 }
 
 func (d *OptionsDAO) Delete(key string) error {
-	e := d.db.C().Delete(&types.Option{}, "key = ?", key).Error
+	e := d.db.C().Delete(&types.Option{}, "`key` = ?", key).Error
 	if e == nil {
 		d.cache.Remove(key)
 	}
