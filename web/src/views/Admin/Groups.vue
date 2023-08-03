@@ -212,6 +212,7 @@ loadUsers()
   }
 
   .groups-list {
+    flex-shrink: 0;
     padding: 16px;
   }
 
@@ -234,6 +235,8 @@ loadUsers()
   }
 
   .user-item {
+    white-space: nowrap;
+
     &:not(:last-child) {
       margin-right: 10px;
     }
