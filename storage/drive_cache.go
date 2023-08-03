@@ -35,7 +35,7 @@ func (d *DriveCacheDAO) StartCleaner(period time.Duration) {
 
 func (d *DriveCacheDAO) cleanExpired() {
 	now := time.Now().Unix()
-	rows := d.db.C().Delete(&types.DriveCache{}, "expires_at > 0 AND expires_at < ?", now).RowsAffected
+	rows := d.db.C().Delete(&types.DriveCache{}, "`expires_at` > 0 AND `expires_at` < ?", now).RowsAffected
 	if utils.IsDebugOn && rows > 0 {
 		log.Printf("%d expired caches item cleaned", rows)
 	}
@@ -53,7 +53,7 @@ func (d *DriveCacheDAO) GetCacheStore(ns string, deserialize drive_util.EntryDes
 }
 
 func (d *DriveCacheDAO) EvictCacheStore(ns string) error {
-	return d.db.C().Delete(&types.DriveCache{}, "drive = ?", ns).Error
+	return d.db.C().Delete(&types.DriveCache{}, "`drive` = ?", ns).Error
 }
 
 type dbDriveNamespacedCacheStore struct {
@@ -71,7 +71,7 @@ func (d *dbDriveNamespacedCacheStore) put(db *gorm.DB, path string, cacheType ui
 	path = path + "/"
 	var c int64 = 0
 	e := db.Model(&types.DriveCache{}).Where(
-		"drive = ? AND path = ? AND depth = ? AND type = ?",
+		"`drive` = ? AND `path` = ? AND `depth` = ? AND `type` = ?",
 		d.ns, path, depth, cacheType,
 	).Count(&c).Error
 	if e != nil {
@@ -92,7 +92,7 @@ func (d *dbDriveNamespacedCacheStore) get(path string, cacheType uint8) (string,
 	path = path + "/"
 	c := types.DriveCache{}
 	e := d.db.C().Take(&c,
-		"drive = ? AND path = ? AND depth = ? AND type = ?",
+		"`drive` = ? AND `path` = ? AND `depth` = ? AND `type` = ?",
 		d.ns, path, depth, cacheType,
 	).Error
 	if e == gorm.ErrRecordNotFound {
@@ -118,10 +118,10 @@ func (d *dbDriveNamespacedCacheStore) delete(db *gorm.DB, path string, descendan
 	depth := utils.PathDepth(path)
 	if descendants {
 		return db.Delete(&types.DriveCache{},
-			"drive = ? AND depth >= ? AND path LIKE (? || '%')", d.ns, depth, pathLike(path)).Error
+			"`drive` = ? AND `depth` >= ? AND `path` LIKE (? || '%')", d.ns, depth, pathLike(path)).Error
 	} else {
 		return db.Delete(&types.DriveCache{},
-			"drive = ? AND path = ? AND depth = ?", d.ns, path+"/", depth).Error
+			"`drive` = ? AND `path` = ? AND `depth` = ?", d.ns, path+"/", depth).Error
 	}
 }
 
@@ -161,7 +161,7 @@ func (d *dbDriveNamespacedCacheStore) Evict(path string, descendants bool) error
 }
 
 func (d *dbDriveNamespacedCacheStore) EvictAll() error {
-	return d.db.C().Delete(&types.DriveCache{}, "drive = ?", d.ns).Error
+	return d.db.C().Delete(&types.DriveCache{}, "`drive` = ?", d.ns).Error
 }
 
 func (d *dbDriveNamespacedCacheStore) GetEntryRaw(path string) (*drive_util.EntryCacheItem, error) {
@@ -191,7 +191,7 @@ func (d *dbDriveNamespacedCacheStore) GetChildrenRaw(path string) ([]drive_util.
 
 	items := make([]types.DriveCache, 0)
 	if e := d.db.C().Find(&items,
-		"drive = ? AND type = ? AND depth = ? AND path LIKE (? || '%')",
+		"`drive` = ? AND `type` = ? AND `depth` = ? AND `path` LIKE (? || '%')",
 		d.ns, types.CacheEntry, depth+1, pathLike(path),
 	).Error; e != nil {
 		return nil, e
