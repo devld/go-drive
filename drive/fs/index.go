@@ -109,22 +109,39 @@ func (f *Drive) Get(_ context.Context, path string) (types.IEntry, error) {
 }
 
 func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, reader io.Reader) (types.IEntry, error) {
+	var fileMode os.FileMode = 0644
 	path = f.getPath(path)
-	if !override {
-		if e := requireFile(path, false); e != nil {
+	var e error
+
+	fileInfo, e := os.Stat(path)
+	if e != nil {
+		if !os.IsNotExist(e) {
 			return nil, e
+		}
+		e = nil
+	}
+
+	if fileInfo != nil {
+		fileMode = fileInfo.Mode()
+	}
+
+	if !override {
+		if fileInfo != nil {
+			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 		}
 	}
 	fileMoved := false
-	var e error
 	if tf, ok := reader.(*utils.TempFile); ok {
 		fileMoved, e = tf.TransferTo(path)
 		if e != nil {
 			return nil, e
 		}
+		if fileMoved {
+			_ = os.Chmod(path, fileMode)
+		}
 	}
 	if !fileMoved {
-		file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+		file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fileMode)
 		if e != nil {
 			return nil, e
 		}
