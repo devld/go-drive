@@ -81,5 +81,5 @@ func (s *ScheduledDAO) DeleteJobExecutions(jobId uint) error {
 func (s *ScheduledDAO) UpdateAllRunningJobExecutionsToFailed() error {
 	return s.db.C().Model(&types.JobExecution{}).
 		Where("`status` = ?", types.JobExecutionRunning).
-		Update("`status`", types.JobExecutionFailed).Error
+		Update("status", types.JobExecutionFailed).Error
 }
