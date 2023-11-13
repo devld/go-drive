@@ -23,7 +23,7 @@
     "@codemirror/lang-sql": "^6.3.3",
     "@codemirror/lang-xml": "^6.0.2",
     "aplayer": "^1.10.1",
-    "axios": "^0.25.0",
+    "axios": "^1.6.0",
     "codemirror": "^6.0.1",
     "dompurify": "^2.3.8",
     "github-markdown-css": "^5.1.0",
