@@ -1,7 +1,7 @@
 import { getLang } from '@/i18n'
 import { waitPromise } from '@/utils'
 import { ApiError, wrapAxios } from '@/utils/http/utils'
-import Axios, { AxiosRequestConfig } from 'axios'
+import Axios, { AxiosHeaders, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios'
 
 export const AUTH_PARAM = 'token'
 
@@ -37,18 +37,18 @@ const doAuth = waitPromise(async () => {
 
 const axios = Axios.create(BASE_CONFIG)
 
-async function processConfig(config: AxiosRequestConfig) {
+async function processConfig(config: InternalAxiosRequestConfig) {
   if (config._t === undefined) config._t = -1
   config._t++
   if (config._t > MAX_RETRY) throw new ApiError(-1, 'max retry reached')
 
-  if (!config.headers) config.headers = {}
+  if (!config.headers) config.headers = new AxiosHeaders()
 
   const token = getToken() ?? (await doAuth())
-  config.headers[AUTH_HEADER] = token
+  config.headers.set(AUTH_HEADER, token)
   config._tokenUsing = token
 
-  config.headers['Accept-Language'] = getLang()
+  config.headers.set('Accept-Language', getLang())
 
   return config
 }

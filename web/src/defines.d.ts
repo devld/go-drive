@@ -84,7 +84,7 @@ declare module 'vue-router' {
 }
 
 declare module 'axios' {
-  interface AxiosRequestConfig {
+  interface InternalAxiosRequestConfig {
     _axios?: AxiosInstance
     /** retries times */
     _t?: number

@@ -1,13 +1,13 @@
 import Axios, {
   AxiosError,
   AxiosInstance,
-  AxiosRequestConfig,
   CancelTokenSource,
+  InternalAxiosRequestConfig,
 } from 'axios'
 import { Http, HttpRequestConfig } from './types'
 
 export class ApiError extends Error {
-  static from(e: AxiosError) {
+  static from(e: AxiosError<any>) {
     if (!e.response) return e
     const status = e.response.status
     const res = e.response.data
@@ -116,7 +116,7 @@ function wrapConfig<T>(
   config: HttpRequestConfig | undefined,
   axios: any
 ) {
-  const config_: AxiosRequestConfig = { ...config }
+  const config_ = { ...config } as InternalAxiosRequestConfig
 
   config_.cancelToken = task.token
   config_._axios = axios
