@@ -1,6 +1,6 @@
 module go-drive
 
-go 1.19
+go 1.20
 
 require (
 	github.com/Jeffail/tunny v0.1.4
