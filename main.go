@@ -5,17 +5,12 @@ import (
 	"go-drive/common"
 	"go-drive/common/registry"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 func main() {
 	ch := registry.NewComponentHolder()
