@@ -10,9 +10,16 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    container: debian:10
     steps:
-      - name: Install build-essential
-        run: sudo apt-get update && sudo apt-get install zip build-essential gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-mingw-w64-x86-64
+      - name: Install tools
+        run: | 
+          apt-get update -y && apt-get install -y git curl tar zip build-essential gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-mingw-w64-x86-64
+
+          curl -s -L https://github.com/mislav/hub/releases/download/v2.14.2/hub-linux-amd64-2.14.2.tgz -o /tmp/hub.tgz
+          mkdir /tmp/hub-installer
+          tar xf /tmp/hub.tgz --strip-components 1 -C /tmp/hub-installer
+          /tmp/hub-installer/install
 
       - name: Cache downloaded cross-build environment
         id: cache-cross-build-env
@@ -48,19 +55,33 @@ jobs:
           pkg_file=/tmp/cross-build-env/packages
 
           for i in `cat ${pkg_file}`; do
-            sudo tar xf "/tmp/cross-build-env/${i}.tgz" --strip-components 1 -C /usr/local
+            tar xf "/tmp/cross-build-env/${i}.tgz" --strip-components 1 -C /usr/local
           done
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: "^1.21.4"
 
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v2.1.2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
+      - name: Configure git
+        run: git config --global --add safe.directory $(pwd)
+        
+      - name: Show building env info
+        run: |
+          ldd --version
+          hub --version
+          go version
+          npm --version
+          node --version
+          git log -n1
 
       - name: Test
         run: go test -v ./...
@@ -97,6 +118,7 @@ jobs:
         run: |
           set -e
           for i in `find build/ -maxdepth 1 -type f -name '*.tar.gz' -or -name '*.zip'`; do
+            echo "adding artifact: ${i}"
             assets="${assets} -a ${i}"
           done
           hub release create -d -p ${assets} -m "Release ${GITHUB_REF##*/}" ${GITHUB_REF##*/}
