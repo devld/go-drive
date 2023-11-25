@@ -130,7 +130,7 @@ const changeSaveState = (saved: boolean) => {
 }
 
 const onKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 's' && e.ctrlKey && !readonly.value) {
+  if (e.key === 's' && (e.ctrlKey || e.metaKey) && !readonly.value) {
     e.preventDefault()
     saveFile()
   }
