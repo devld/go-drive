@@ -35,7 +35,7 @@ import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import TextEditor from '@/components/TextEditor/index.vue'
 import { Entry } from '@/types'
 import { entryMatches, filename as filenameFn, filenameExt } from '@/utils'
-import { ApiError } from '@/utils/http'
+import { HttpError } from '@/utils/http'
 import { alert } from '@/utils/ui-utils'
 import { computed, nextTick, ref, watch } from 'vue'
 import { EntryHandlerContext } from '../types'
@@ -57,7 +57,7 @@ const emit = defineEmits<{
   (e: 'save-state', v: boolean): void
 }>()
 
-const error = ref<ApiError | null>(null)
+const error = ref<HttpError | null>(null)
 const inited = ref(false)
 
 const content = ref('')

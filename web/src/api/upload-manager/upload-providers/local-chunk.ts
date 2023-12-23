@@ -52,7 +52,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
     this._mergeLock = true
     try {
       return await taskDone(
-        http.post(`/chunk-content/${this.task.path}`, null, {
+        http.post<Task>(`/chunk-content/${this.task.path}`, null, {
           params: { id: this._uploadId, override: this.task.override ? '1' : '' },
         }),
         (task) => {

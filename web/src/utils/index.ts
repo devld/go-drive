@@ -201,6 +201,9 @@ export function encodeQuery(q: O) {
     .join('&')
 }
 
+export const isPlainObject = (o: any) =>
+  Object.prototype.toString.call(o) === '[object Object]'
+
 export function buildURL(url: string, q: O) {
   if (typeof url !== 'string') return
   const encodedQ = encodeQuery(q) || ''
@@ -295,32 +298,14 @@ export function throttle<
 }
 
 export function waitPromise<T = any>(fn: Fnn) {
-  const promises: { resolve: Fn1<T>; reject: Fn1 }[] = []
-  let waiting = false
+  let promise: Promise<T> | undefined
   return function (this: any, ...params: any[]) {
-    if (!waiting) {
-      waiting = true
-      fn.apply(this, params)
-        .then(
-          (v: T) => {
-            promises.forEach((p) => {
-              p.resolve(v)
-            })
-          },
-          (e: any) => {
-            promises.forEach((p) => {
-              p.reject(e)
-            })
-          }
-        )
-        .then(() => {
-          promises.splice(0)
-          waiting = false
-        })
+    if (!promise) {
+      promise = fn.apply(this, params).finally(() => {
+        promise = undefined
+      })
     }
-    return new Promise<T>((resolve, reject) => {
-      promises.push({ resolve, reject })
-    })
+    return promise
   }
 }
 

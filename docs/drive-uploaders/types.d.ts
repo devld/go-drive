@@ -1,4 +1,4 @@
-declare interface UploadProgress {
+declare interface HttpUploadProgress {
   loaded: number;
   total: number;
 }
@@ -12,10 +12,13 @@ declare type HttpRequestMethod =
   | "put"
   | "patch";
 
-declare type HttpDataTransformer = (
-  data: any,
-  headers?: Record<string, string>
-) => any;
+export type HttpRequestTransformer = (
+  config: HttpRequestConfig
+) => Promise<HttpRequestConfig> | HttpRequestConfig;
+export type HttpResponseTransformer<DT = any> = (
+  error: any,
+  resp: HttpResponse
+) => DT | Promise<DT>;
 
 declare interface HttpRequestConfig {
   url?: string;
@@ -23,11 +26,19 @@ declare interface HttpRequestConfig {
   data?: any;
   headers?: Record<string, any>;
   timeout?: number;
-  transformRequest?: HttpDataTransformer | HttpDataTransformer[];
-  transformResponse?: HttpDataTransformer | HttpDataTransformer[];
+  transformRequest?: HttpRequestTransformer | HttpRequestTransformer[];
+  transformResponse?: HttpResponseTransformer | HttpResponseTransformer[];
   params?: any;
 
-  onUploadProgress?: (p: UploadProgress) => void;
+  onUploadProgress?: (p: HttpUploadProgress) => void;
+}
+
+declare interface HttpResponse<DT = any> {
+  status: number;
+  headers: Record<string, any>;
+  data?: DT;
+
+  request: HttpRequestConfig;
 }
 
 declare interface Http<T = any> {
@@ -54,7 +65,7 @@ declare interface CustomUploader {
   upload(
     data: Blob,
     seq: number,
-    onProgress: (p: UploadProgress) => void
+    onProgress: (p: HttpUploadProgress) => void
   ): Promise<any>;
   complete?(): Promise<any>;
 

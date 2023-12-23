@@ -1,9 +1,23 @@
-import Axios, { AxiosResponse } from 'axios'
-import { wrapAxios } from './utils'
+import { createHttp } from './http'
+import {
+  transformBlobResponse,
+  transformErrorResponse,
+  transformJSONRequest,
+  transformJSONResponse,
+  transformTextResponse,
+} from './transformers'
 
 export * from './types'
 export * from './utils'
 
-const axios = Axios.create()
+const textContentTypes = ['text/', 'application/json', 'application/xml']
 
-export default wrapAxios<AxiosResponse<any>>(axios)
+export default createHttp({
+  transformRequest: [transformJSONRequest],
+  transformResponse: [
+    transformBlobResponse(textContentTypes),
+    transformTextResponse(textContentTypes),
+    transformJSONResponse,
+    transformErrorResponse,
+  ],
+})

@@ -29,7 +29,7 @@ export default { name: 'EntryListView' }
 </script>
 <script setup lang="ts">
 import { listEntries } from '@/api'
-import { ApiError, RequestTask } from '@/utils/http'
+import { HttpError, RequestTask } from '@/utils/http'
 import { EntryEventData, GetLinkFn, ListViewMode } from '@/components/entry'
 import { Entry } from '@/types'
 import { ref, computed, watch } from 'vue'
@@ -84,7 +84,7 @@ const emit = defineEmits<{
 const currentPath = ref<string | null>(null)
 const loadedPath = ref('')
 const entries = ref<Entry[]>([])
-const error = ref<ApiError | null>(null)
+const error = ref<HttpError | null>(null)
 const entryListEl = ref<InstanceType<EntryListType> | null>(null)
 let task: RequestTask<Entry[]>
 let lastEntry: string | undefined

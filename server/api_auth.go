@@ -71,5 +71,7 @@ func (a *authRoute) getUser(c *gin.Context) {
 		u.Password = ""
 		u.RootPath = ""
 		SetResult(c, u)
+	} else {
+		SetResult(c, nil)
 	}
 }

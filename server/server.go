@@ -17,7 +17,6 @@ import (
 	"go-drive/storage"
 	"net/http"
 	"os"
-	"reflect"
 	"runtime"
 	"time"
 
@@ -149,12 +148,7 @@ func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v interface{}) {
 		return
 	}
 	result := TranslateV(c, ms, v)
-	rv := reflect.ValueOf(v)
-	if (rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface) && rv.IsNil() {
-		c.Status(code)
-	} else {
-		c.JSON(code, result)
-	}
+	c.JSON(code, result)
 }
 
 func Logger() gin.HandlerFunc {
