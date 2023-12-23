@@ -2,7 +2,7 @@
 import { arrayRemove } from '@/utils'
 import defaultHttp from '@/utils/http'
 import { Http, HttpRequestConfig } from '@/utils/http/types'
-import { ApiError, RequestTask } from '@/utils/http/utils'
+import { RequestTask } from '@/utils/http'
 import http from '../http'
 import UploadTask, {
   STATUS_COMPLETED,
@@ -115,7 +115,7 @@ export default abstract class ChunkUploadTask extends UploadTask {
     }
     this._onChange(STATUS_STOPPED)
     if (e) {
-      this._onChange(STATUS_ERROR, ApiError.from(e))
+      this._onChange(STATUS_ERROR, e)
     }
   }
 

@@ -1,7 +1,18 @@
 import { getLang } from '@/i18n'
 import { waitPromise } from '@/utils'
-import { ApiError, wrapAxios } from '@/utils/http/utils'
-import Axios, { AxiosHeaders, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios'
+import http, {
+  Http,
+  HttpError,
+  HttpRequestBaseConfig,
+  HttpRequestConfig,
+  HttpResponse,
+} from '@/utils/http'
+import { createHttp } from '@/utils/http/http'
+import {
+  transformErrorResponse,
+  transformJSONRequest,
+  transformJSONResponse,
+} from '@/utils/http/transformers'
 
 export const AUTH_PARAM = 'token'
 
@@ -15,7 +26,7 @@ if (!/^https?:\/\//.test(apiPath)) {
 }
 export const API_PATH = apiPath
 
-const BASE_CONFIG: AxiosRequestConfig = {
+const BASE_CONFIG: HttpRequestBaseConfig = {
   baseURL: API_PATH,
   timeout: 60000,
 }
@@ -29,51 +40,58 @@ export function getToken() {
 }
 
 const doAuth = waitPromise(async () => {
-  const data = (await Axios.post('/auth/init', null, BASE_CONFIG)).data
+  const data = (await http.post('/auth/init', null, BASE_CONFIG)).data
   const token = data.token
   setToken(token)
   return token
 })
 
-const axios = Axios.create(BASE_CONFIG)
+async function processConfig(config: HttpRequestConfig) {
+  if (!config.context) config.context = {}
+  if (config.context._t === undefined) config.context._t = -1
+  config.context._t++
+  if (config.context._t > MAX_RETRY)
+    throw new HttpError(-1, 'max retry reached')
 
-async function processConfig(config: InternalAxiosRequestConfig) {
-  if (config._t === undefined) config._t = -1
-  config._t++
-  if (config._t > MAX_RETRY) throw new ApiError(-1, 'max retry reached')
-
-  if (!config.headers) config.headers = new AxiosHeaders()
+  if (!config.headers) config.headers = {}
 
   const token = getToken() ?? (await doAuth())
-  config.headers.set(AUTH_HEADER, token)
-  config._tokenUsing = token
+  config.headers[AUTH_HEADER] = token
+  config.context._tokenUsing = token
 
-  config.headers.set('Accept-Language', getLang())
+  config.headers['Accept-Language'] = getLang()
 
   return config
 }
 
 async function handlerError(e: any) {
-  if (Axios.isCancel(e)) {
-    throw new ApiError(-1, e.message || 'canceled', null, true)
-  }
+  const response = e.response as HttpResponse
+  if (!response) throw e
+  const status = response.status
 
-  if (!e.response) throw e
-  const status = e.response.status
-
-  const config = e.config
+  const config = response.request
   if (status === 401) {
-    if (getToken() === config._tokenUsing) {
+    if (getToken() === config.context?._tokenUsing) {
       // if expired token was not replaced with a new one
       await doAuth()
     }
-    return (config._axios || axios)(config)
+    const originalHttp = config.context?.__initiator as Http | undefined
+    if (!originalHttp) throw e
+    return originalHttp(config)
   }
 
-  throw ApiError.from(e)
+  throw e
 }
 
-axios.interceptors.request.use(processConfig)
-axios.interceptors.response.use((resp) => resp.data, handlerError)
-
-export default wrapAxios(axios)
+export default createHttp({
+  ...BASE_CONFIG,
+  transformRequest: [processConfig, transformJSONRequest],
+  transformResponse: [
+    transformJSONResponse,
+    transformErrorResponse,
+    (error, resp) => {
+      if (error) return handlerError(error)
+      return resp.data
+    },
+  ],
+})

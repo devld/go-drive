@@ -4,7 +4,7 @@ import { deleteTask } from '@/api'
 import http from '@/api/http'
 import { Task } from '@/types'
 import { taskDone } from '@/utils'
-import { ApiError, RequestTask } from '@/utils/http/utils'
+import { RequestTask } from '@/utils/http'
 import UploadTask, {
   STATUS_COMPLETED,
   STATUS_ERROR,
@@ -22,7 +22,7 @@ export default class LocalUploadTask extends UploadTask {
   override async start() {
     if ((await super.start()) === false) return false
 
-    const task = http.put(`/content/${this.task.path}`, this.task.file, {
+    const task = http.put<Task>(`/content/${this.task.path}`, this.task.file, {
       params: { override: this.task.override ? '1' : '' },
       transformRequest: (d) => d,
       onUploadProgress: ({ loaded, total }) => {
@@ -48,7 +48,7 @@ export default class LocalUploadTask extends UploadTask {
         },
         (e) => {
           if (this.status === STATUS_STOPPED) return
-          this._onChange(STATUS_ERROR, ApiError.from(e))
+          this._onChange(STATUS_ERROR, e)
         }
       )
       .then(() => {

@@ -38,7 +38,7 @@ const readmeEntry = computed<Entry | undefined>(() => {
   return readmeFound
 })
 
-let readmeTask: RequestTask | undefined
+let readmeTask: RequestTask<any> | undefined
 
 const readmeContent = ref('')
 

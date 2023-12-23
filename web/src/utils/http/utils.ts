@@ -1,23 +1,10 @@
-import Axios, {
-  AxiosError,
-  AxiosInstance,
-  CancelTokenSource,
-  InternalAxiosRequestConfig,
-} from 'axios'
-import { Http, HttpRequestConfig } from './types'
+import { RequestTask } from './types'
 
-export class ApiError extends Error {
-  static from(e: AxiosError<any>) {
-    if (!e.response) return e
-    const status = e.response.status
-    const res = e.response.data
-    return new ApiError(status, res.message, res.data)
-  }
-
+export class HttpError extends Error {
   constructor(
     readonly status: number,
     readonly message: string,
-    readonly data?: any,
+    readonly response?: any,
     readonly _isCancel?: boolean
   ) {
     super(message)
@@ -28,25 +15,19 @@ export class ApiError extends Error {
   }
 }
 
-export class RequestTask<T = any> {
-  static from<T>(v: PromiseValue<T>, source: CancelTokenSource) {
-    const t = new RequestTask<T>(source)
+export class RequestTaskImpl<T = any> {
+  static from<T>(v: PromiseValue<T>, aborter: AbortController) {
+    const t = new RequestTaskImpl<T>(aborter)
     t._setPromise(v)
     return t
   }
 
-  static wrap<T>(fn: (t: RequestTask<T>) => PromiseValue<T>) {
-    const task = new RequestTask<T>()
-    task._setPromise(fn(task))
-    return task
-  }
+  private _promise?: Promise<T>
+  private _aborter: AbortController
 
-  private _promise?: PromiseValue<T>
-  private _axiosSource: CancelTokenSource
-
-  constructor(axiosSource?: CancelTokenSource) {
+  constructor(aborter?: AbortController) {
     this._promise = undefined
-    this._axiosSource = axiosSource || Axios.CancelToken.source()
+    this._aborter = aborter || new AbortController()
     this.then = this.then.bind(this)
     this.catch = this.catch.bind(this)
     this.finally = this.finally.bind(this)
@@ -61,10 +42,6 @@ export class RequestTask<T = any> {
     return this._promise
   }
 
-  get token() {
-    return this._axiosSource.token
-  }
-
   then<TResult1 = T, TResult2 = never>(
     onfulfilled?:
       | ((value: T) => TResult1 | PromiseLike<TResult1>)
@@ -75,9 +52,9 @@ export class RequestTask<T = any> {
       | undefined
       | null
   ): RequestTask<TResult1 | TResult2> & Promise<TResult1 | TResult2> {
-    return RequestTask.from<TResult1 | TResult2>(
+    return RequestTaskImpl.from<TResult1 | TResult2>(
       Promise.resolve(this._promise!).then(onfulfilled, onrejected),
-      this._axiosSource
+      this._aborter
     )
   }
 
@@ -87,23 +64,23 @@ export class RequestTask<T = any> {
       | undefined
       | null
   ): RequestTask<T | TResult> & Promise<T | TResult> {
-    return RequestTask.from<T | TResult>(
+    return RequestTaskImpl.from<T | TResult>(
       Promise.resolve(this._promise!).catch(onrejected),
-      this._axiosSource
+      this._aborter
     )
   }
 
   finally(
     onfinally?: (() => void) | undefined | null
   ): RequestTask<T> & Promise<T> {
-    return RequestTask.from<T>(
+    return RequestTaskImpl.from<T>(
       Promise.resolve(this._promise!).finally(onfinally),
-      this._axiosSource
+      this._aborter
     )
   }
 
   cancel(message?: string) {
-    this._axiosSource.cancel(message)
+    this._aborter.abort(message)
   }
 
   get [Symbol.toStringTag]() {
@@ -111,58 +88,31 @@ export class RequestTask<T = any> {
   }
 }
 
-function wrapConfig<T>(
-  task: RequestTask<T>,
-  config: HttpRequestConfig | undefined,
-  axios: any
-) {
-  const config_ = { ...config } as InternalAxiosRequestConfig
-
-  config_.cancelToken = task.token
-  config_._axios = axios
-  return config_
+export const normalizeHttpHeader = (headers: Headers) => {
+  const result: O = {}
+  headers.forEach((value, key) => {
+    if (typeof result[key] === 'undefined') {
+      result[key] = value
+    } else {
+      if (!Array.isArray(result[key])) result[key] = [result[key]]
+      result[key].push(value)
+    }
+  })
+  return result
 }
 
-export function wrapAxios<T = any>(axios: AxiosInstance): Http<T> {
-  const wrapper = function <DT = T>(config: HttpRequestConfig) {
-    return RequestTask.wrap<DT>((t) =>
-      axios.request<any, DT>(wrapConfig(t, config, wrapper))
-    )
-  }
-  wrapper.head = function <DT = T>(url: string, config?: HttpRequestConfig) {
-    return RequestTask.wrap<DT>((t) =>
-      axios.head(url, wrapConfig(t, config, wrapper))
-    )
-  }
-  wrapper.get = function <DT = T>(url: string, config?: HttpRequestConfig) {
-    return RequestTask.wrap<DT>((t) =>
-      axios.get(url, wrapConfig(t, config, wrapper))
-    )
-  }
-  wrapper.post = function <DT = T>(
-    url: string,
-    data?: any,
-    config?: HttpRequestConfig
-  ) {
-    return RequestTask.wrap<DT>((t) =>
-      axios.post(url, data, wrapConfig(t, config, wrapper))
-    )
-  }
-
-  wrapper.put = function <DT = T>(
-    url: string,
-    data: any,
-    config?: HttpRequestConfig
-  ) {
-    return RequestTask.wrap<DT>((t) =>
-      axios.put(url, data, wrapConfig(t, config, wrapper))
-    )
-  }
-  wrapper.delete = function <DT = T>(url: string, config?: HttpRequestConfig) {
-    return RequestTask.wrap<DT>((t) =>
-      axios.delete(url, wrapConfig(t, config, wrapper))
-    )
-  }
-
-  return wrapper
+export const normalizeXHRHttpHeader = (headers: string) => {
+  const result: O = {}
+  headers
+    .split('\r\n')
+    .map((line) => line.split(': '))
+    .forEach(([key, value]) => {
+      if (typeof result[key] === 'undefined') {
+        result[key] = value
+      } else {
+        if (!Array.isArray(result[key])) result[key] = [result[key]]
+        result[key].push(value)
+      }
+    })
+  return result
 }

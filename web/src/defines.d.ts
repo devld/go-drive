@@ -83,13 +83,4 @@ declare module 'vue-router' {
   }
 }
 
-declare module 'axios' {
-  interface InternalAxiosRequestConfig {
-    _axios?: AxiosInstance
-    /** retries times */
-    _t?: number
-    _tokenUsing?: string
-  }
-}
-
 export default global

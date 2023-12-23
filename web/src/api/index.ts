@@ -9,7 +9,11 @@ import {
 } from '@/types'
 import { buildURL } from '@/utils'
 import http, { API_PATH } from './http'
-import defaultHttp from '@/utils/http'
+import { createHttp } from '@/utils/http/http'
+import {
+  transformErrorResponse,
+  transformTextResponse,
+} from '@/utils/http/transformers'
 
 const ACCESS_KEY = '_k'
 const PROXY_KEY = 'proxy'
@@ -77,18 +81,21 @@ export function fileThumbnail(path: string, meta: EntryMeta) {
   return buildURL(`${API_PATH}/thumbnail/${path}`, query)!
 }
 
+const textHttp = createHttp({
+  transformResponse: [transformTextResponse([]), transformErrorResponse],
+})
+
 export function getContent(
   path: string,
   meta: EntryMeta,
   params?: FileURLParams
 ) {
-  return defaultHttp
-    .get(
+  return textHttp
+    .get<any>(
       fileUrl(path, meta, {
         ...params,
         useProxy: 'cors',
-      })!,
-      { transformResponse: [] }
+      })
     )
     .then((res) => res.data)
 }
