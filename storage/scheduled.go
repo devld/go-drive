@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"errors"
+	err "go-drive/common/errors"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 
@@ -24,6 +26,15 @@ func (s *ScheduledDAO) GetJobs(includeDisabled bool) ([]types.Job, error) {
 		tx = tx.Where("`enabled` = ?", true)
 	}
 	return jobs, tx.Find(&jobs).Error
+}
+
+func (s *ScheduledDAO) GetJob(id uint) (types.Job, error) {
+	job := types.Job{}
+	e := s.db.C().Where("`id` = ?", id).First(&job).Error
+	if errors.Is(e, gorm.ErrRecordNotFound) {
+		return job, err.NewNotFoundError()
+	}
+	return job, e
 }
 
 func (s *ScheduledDAO) AddJob(j types.Job) (types.Job, error) {

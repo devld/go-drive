@@ -30,6 +30,7 @@ const (
 	HeaderAuth        = "Authorization"
 	ParamAuth         = "token"
 	SignatureQueryKey = "_k"
+	ResponseHeaderKey = "X-Response"
 )
 
 const (

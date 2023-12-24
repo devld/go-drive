@@ -59,7 +59,7 @@ const routes: RouteRecordRaw[] = [
           {
             name: 'JobsManager',
             path: '/admin/jobs',
-            component: () => import('@/views/Admin/Jobs.vue'),
+            component: () => import('@/views/Admin/Jobs/index.vue'),
             meta: { title: T('routes.title.jobs') },
           },
           {

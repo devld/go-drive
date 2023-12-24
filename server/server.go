@@ -79,7 +79,7 @@ func InitServer(config common.Config,
 		return nil, e
 	}
 
-	if e := InitJobsRoutes(router, ch, tokenStore, jobExecutor, scheduledDAO); e != nil {
+	if e := InitJobsRoutes(router, ch, runner, tokenStore, jobExecutor, scheduledDAO); e != nil {
 		return nil, e
 	}
 
@@ -106,11 +106,12 @@ func InitServer(config common.Config,
 
 func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {
 	return func(c *gin.Context) {
+		SetMessageSource(c, ms)
 		c.Next()
 		if len(c.Errors) == 0 {
 			result, exists := GetResult(c)
 			if exists {
-				writeJSON(c, ms, 200, result)
+				writeJSON(c, ms, http.StatusOK, result)
 			}
 			return
 		}

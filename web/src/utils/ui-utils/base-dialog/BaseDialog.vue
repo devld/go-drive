@@ -7,7 +7,7 @@
     :transition="transition"
     :esc-close="escClose"
     :overlay-close="overlayClose"
-    :closeable="!loading"
+    :closeable="!loading && closeable"
     tabindex="-1"
     @update:show="emit('close')"
     @closed="emit('closed')"
@@ -24,7 +24,7 @@
           class="base-dialog__button-cancel"
           :loading="loading === 'cancel'"
           :type="cancelType"
-          :disabled="!!loading"
+          :disabled="!!loading" 
           @click="emit('cancel')"
           >{{ cancelText }}</SimpleButton
         >
@@ -76,6 +76,10 @@ defineProps({
   },
   transition: {
     type: String,
+  },
+  closeable: {
+    type: Boolean,
+    default: true,
   },
   escClose: {
     type: Boolean,

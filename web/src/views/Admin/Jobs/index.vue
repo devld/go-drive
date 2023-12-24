@@ -14,7 +14,7 @@
             <col style="min-width: 100px" />
             <col style="width: 100px" />
             <col style="width: 120px" />
-            <col style="width: 112px" />
+            <col style="width: 142px" />
           </colgroup>
           <thead>
             <tr>
@@ -39,6 +39,13 @@
                   small
                   icon="#icon-list"
                   @click="showJobExecutions(j)"
+                />
+                <SimpleButton
+                  v-if="!jobEdit"
+                  :title="$t('p.admin.jobs.execute')"
+                  small
+                  icon="#icon-play"
+                  @click="executeJob(j)"
                 />
                 <SimpleButton
                   :title="$t('p.admin.jobs.edit')"
@@ -70,7 +77,17 @@
         :key="jobEdit.job"
         v-model="jobParams"
         :form="jobParamsForm"
-      />
+      >
+        <template #code-eval>
+          <a
+            class="job-form-code-eval"
+            :title="$t('p.admin.jobs.eval_code')"
+            @click="evalJobCode"
+          >
+            <Icon svg="#icon-play" />
+          </a>
+        </template>
+      </SimpleForm>
       <div class="save-button">
         <SimpleButton small :loading="saving" @click="saveJob">
           {{ $t('p.admin.jobs.save') }}
@@ -167,6 +184,8 @@ import {
   getJobExecutions,
   cancelJobExecution,
   deleteJobExecutions,
+  executeJobSync,
+  jobScriptEvalSync,
 } from '@/api/admin'
 import SimpleForm from '@/components/Form'
 import {
@@ -180,6 +199,7 @@ import { formatTime, mapOf } from '@/utils'
 import { alert, confirm, loading } from '@/utils/ui-utils'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { showExecutionDialog } from './execution-log-dialog'
 
 const { t } = useI18n()
 
@@ -258,6 +278,24 @@ const cancelEdit = () => {
   jobEdit.value = undefined
   jobParams.value = undefined
   edit.value = false
+}
+
+const executeJob = (job: Job) => {
+  showExecutionDialog({
+    title: t('p.admin.jobs.execute_of', { name: job.description }),
+    execute: () => executeJobSync(job.id),
+  }).catch(() => {
+    /* ignored */
+  })
+}
+
+const evalJobCode = () => {
+  showExecutionDialog({
+    title: t('p.admin.jobs.eval_code_log'),
+    execute: () => jobScriptEvalSync(jobParams.value?.code || ''),
+  }).catch(() => {
+    /* ignored */
+  })
 }
 
 const deleteJob = (job: Job) => {
@@ -405,6 +443,9 @@ const loadJobDefinitions = async () => {
         if (e.type === 'form' || e.type === 'code') {
           e.width = '100%'
         }
+        if (e.type === 'code') {
+          e.labelSuffixSlot = 'code-eval'
+        }
       })
     })
     jobDefinitions.value = data
@@ -480,6 +521,11 @@ loadJobDefinitions()
     overflow: auto;
     font-size: 10px;
     font-family: monospace;
+  }
+
+  .job-form-code-eval {
+    margin-left: 20px;
+    cursor: pointer;
   }
 }
 </style>

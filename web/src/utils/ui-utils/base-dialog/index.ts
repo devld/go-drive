@@ -12,12 +12,35 @@ export interface BaseDialogOptions {
   cancelText?: I18nText
   cancelType?: SimpleButtonType
   transition?: string
+  closeable?: boolean
   escClose?: boolean
   overlayClose?: boolean
 
   onOk?: (v?: any) => PromiseValue<any>
   onCancel?: (v?: any) => PromiseValue<any>
 }
+
+export interface BaseDialogOptionsData {
+  title: I18nText
+  confirmText: I18nText
+  confirmType: SimpleButtonType
+  confirmDisabled: boolean
+  cancelText: I18nText
+  cancelType: SimpleButtonType
+  escClose: boolean
+  overlayClose: boolean
+}
+
+const ON_OPTIONS_KEYS = [
+  'title',
+  'confirmText',
+  'confirmType',
+  'confirmDisabled',
+  'cancelText',
+  'cancelType',
+  'escClose',
+  'overlayClose',
+]
 
 export function createDialog(name: string, component: any) {
   return defineComponent({
@@ -36,6 +59,7 @@ export function createDialog(name: string, component: any) {
         showing: false,
 
         transition: '',
+        closeable: true,
         escClose: false,
         overlayClose: false,
 
@@ -53,11 +77,12 @@ export function createDialog(name: string, component: any) {
         this.opts = opts
 
         this.title = opts.title || ''
-        this.confirmText = opts.confirmText || T('dialog.base.ok')
+        this.confirmText = opts.confirmText
         this.confirmType = opts.confirmType
         this.cancelText = opts.cancelText
         this.cancelType = opts.cancelType || 'info'
         this.transition = opts.transition || 'bottom-fade'
+        this.closeable = opts.closeable ?? true
         this.escClose = !!opts.escClose
         this.overlayClose = !!opts.overlayClose
 
@@ -134,6 +159,14 @@ export function createDialog(name: string, component: any) {
         }
         this.loading = loading ? 'confirm' : 'cancel'
       },
+      onOptionsChange(opts: Partial<BaseDialogOptionsData>) {
+        Object.keys(opts).forEach((key) => {
+          if (!ON_OPTIONS_KEYS.includes(key)) return
+          ;(this.$data as any)[key] = opts[
+            key as keyof BaseDialogOptionsData
+          ] as any
+        })
+      },
       close() {
         this.toggleLoading()
         this.callback_ && this.callback_.onCancel && this.callback_.onCancel()
@@ -156,13 +189,14 @@ export function createDialog(name: string, component: any) {
           showing: this.showing,
           loading: this.loading,
           title: this.title,
-          confirmText: this.confirmText,
+          confirmText: this.confirmText || T('dialog.base.ok'),
           confirmType: this.confirmType,
           confirmDisabled: this.confirmDisabled,
           cancelText: this.cancelText,
           cancelType: this.cancelType,
           transition: this.transition,
           escClose: this.escClose,
+          closeable: this.closeable,
           overlayClose: this.overlayClose,
           onClose: () => this.close(),
           onClosed: () => this.onClose_?.(),
@@ -175,11 +209,10 @@ export function createDialog(name: string, component: any) {
               ref: 'inner',
               loading: this.loading,
               opts: this.opts,
-              onLoading: (v: string | boolean) => this.toggleLoading(v),
+              onLoading: this.toggleLoading,
               onConfirm: () => this.onConfirmOrCancel(true),
               onCancel: () => this.onConfirmOrCancel(false),
-              onConfirmDisabled: (disabled: any) =>
-                (this.confirmDisabled = !!disabled),
+              onOptions: this.onOptionsChange,
             }),
         }
       )

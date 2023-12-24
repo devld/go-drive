@@ -17,6 +17,10 @@
       >
         <Icon svg="#icon-help" />
       </a>
+
+      <span v-if="slots['label-suffix']" class="form-item-suffix" @click.stop>
+        <slot name="label-suffix" />
+      </span>
     </Component>
     <span
       v-if="item.description && (!item.label || helpShowing)"
