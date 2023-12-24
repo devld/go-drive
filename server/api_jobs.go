@@ -3,11 +3,14 @@ package server
 import (
 	err "go-drive/common/errors"
 	"go-drive/common/registry"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/server/scheduled"
 	"go-drive/storage"
 	"io"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +19,7 @@ import (
 func InitJobsRoutes(
 	r gin.IRouter,
 	ch *registry.ComponentsHolder,
+	runner task.Runner,
 	tokenStore types.TokenStore,
 	jobExecutor *scheduled.JobExecutor,
 	scheduledDAO *storage.ScheduledDAO) error {
@@ -121,7 +125,7 @@ func InitJobsRoutes(
 	})
 
 	// get all executions
-	r.GET("/execution", func(c *gin.Context) {
+	r.GET("/executions", func(c *gin.Context) {
 		jobId := utils.ToInt(c.Query("jobId"), -1)
 		if jobId < 0 {
 			_ = c.Error(err.NewBadRequestError(""))
@@ -133,6 +137,40 @@ func InitJobsRoutes(
 			return
 		}
 		SetResult(c, result)
+	})
+
+	// execute a job
+	r.POST("/execution", func(c *gin.Context) {
+		jobId := utils.ToInt(c.Query("jobId"), -1)
+		if jobId < 0 {
+			_ = c.Error(err.NewBadRequestError(""))
+			return
+		}
+		job, e := scheduledDAO.GetJob(uint(jobId))
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
+
+		w := c.Writer
+		e = ExecuteTaskStreaming(c, runner,
+			func(ctx types.TaskCtx) (interface{}, error) {
+				e := jobExecutor.TriggerExecution(ctx, job, func(s string) {
+					_, _ = w.Write([]byte(s + "\n"))
+					w.Flush()
+				})
+				if e != nil {
+					w.Write([]byte(e.Error()))
+				}
+				return nil, e
+			},
+			task.WithNameGroup(job.Description, "scheduled/execution"),
+		)
+
+		if e != nil {
+			_ = c.Error(e)
+			return
+		}
 	})
 
 	// cancel job execution
@@ -192,12 +230,26 @@ func InitJobsRoutes(
 			return
 		}
 		w := c.Writer
-		e = scheduled.ExecuteJobCode(c.Request.Context(), code, ch, func(s string) {
-			_, _ = w.Write([]byte(s + "\n"))
-			w.Flush()
-		})
+		taskName := regexp.MustCompile(`\s+`).ReplaceAllString(strings.TrimSpace(string(code)), " ")
+		if len(taskName) > 20 {
+			taskName = taskName[:20]
+		}
+		e = ExecuteTaskStreaming(c, runner,
+			func(ctx types.TaskCtx) (interface{}, error) {
+				e := scheduled.ExecuteJobCode(c.Request.Context(), code, ch, func(s string) {
+					_, _ = w.Write([]byte(s + "\n"))
+					w.Flush()
+				})
+				if e != nil {
+					w.Write([]byte("ERROR: " + e.Error()))
+				}
+				return nil, e
+			},
+			task.WithNameGroup(taskName, "scheduled/script-eval"),
+		)
 		if e != nil {
-			w.Write([]byte("ERROR: " + e.Error()))
+			_ = c.Error(e)
+			return
 		}
 	})
 

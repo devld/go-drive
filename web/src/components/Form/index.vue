@@ -25,8 +25,11 @@
         }"
         @update:model-value="emitInput"
       >
-        <template v-if="item.slot" #value>
-          <slot :name="item.slot" />
+        <template v-if="item.slot" #value="values">
+          <slot :name="item.slot" v-bind="values" />
+        </template>
+        <template v-if="item.labelSuffixSlot" #label-suffix="values">
+          <slot :name="item.labelSuffixSlot" v-bind="values" />
         </template>
       </FormItem>
     </template>

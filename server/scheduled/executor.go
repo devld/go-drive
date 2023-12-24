@@ -37,6 +37,7 @@ func NewJobExecutor(scheduledDAO *storage.ScheduledDAO, ch *registry.ComponentsH
 		executions:   make(map[uint]*jobExecutionItem),
 	}
 	executor.s.TagsUnique()
+	executor.s.WaitForScheduleAll()
 
 	e := executor.ReloadJobs()
 	if e != nil {
@@ -77,20 +78,28 @@ func (je *JobExecutor) ReloadJobs() error {
 	return nil
 }
 
-func (je *JobExecutor) jobExecutor(job types.Job) {
-	jobExecution := &types.JobExecution{
-		JobId:     job.ID,
-		StartedAt: uint64(time.Now().UnixMilli()),
-		Status:    types.JobExecutionRunning,
+// TriggerExecution runs the job **synchronously**
+func (je *JobExecutor) TriggerExecution(ctx context.Context, job types.Job, onLog func(string)) (e error) {
+	jobExecution, e := je.newJobExecution(job)
+	if e != nil {
+		return e
 	}
-	e := je.scheduledDAO.AddJobExecution(jobExecution)
+	logger := newJobExecutionLogger(jobExecution.ID, onLog)
+	return je.executeJob(ctx, job, jobExecution, logger)
+}
+
+func (je *JobExecutor) jobExecutor(job types.Job) {
+	jobExecution, e := je.newJobExecution(job)
 	if e != nil {
 		log.Printf("failed to save job execution: %v", e)
 		return
 	}
+	logger := newJobExecutionLogger(jobExecution.ID, nil)
+	je.executeJob(context.Background(), job, jobExecution, logger)
+}
 
-	executionCtx, cancel := context.WithCancel(context.Background())
-	logger := newJobExecutionLogger((jobExecution.ID))
+func (je *JobExecutor) executeJob(ctx context.Context, job types.Job, jobExecution *types.JobExecution, logger *jobExecutionLogger) (e error) {
+	executionCtx, cancel := context.WithCancel(ctx)
 	item := &jobExecutionItem{JobExecution: jobExecution, cancel: cancel, logger: logger}
 	je.addJobExecution(item)
 
@@ -112,6 +121,17 @@ func (je *JobExecutor) jobExecutor(job types.Job) {
 	}
 
 	e = jobDefinition.Do(executionCtx, params, je.ch, item.logger.Log)
+	return
+}
+
+func (je *JobExecutor) newJobExecution(job types.Job) (*types.JobExecution, error) {
+	jobExecution := &types.JobExecution{
+		JobId:     job.ID,
+		StartedAt: uint64(time.Now().UnixMilli()),
+		Status:    types.JobExecutionRunning,
+	}
+	e := je.scheduledDAO.AddJobExecution(jobExecution)
+	return jobExecution, e
 }
 
 func (je *JobExecutor) updateJobExecutionResult(item *jobExecutionItem, e error) {
@@ -192,18 +212,22 @@ type jobExecutionItem struct {
 	logger *jobExecutionLogger
 }
 
-func newJobExecutionLogger(jid uint) *jobExecutionLogger {
-	return &jobExecutionLogger{jid: jid}
+func newJobExecutionLogger(jid uint, onLog func(string)) *jobExecutionLogger {
+	return &jobExecutionLogger{jid: jid, onLog: onLog}
 }
 
 type jobExecutionLogger struct {
-	jid  uint
-	logs strings.Builder
-	mu   sync.RWMutex
+	jid   uint
+	onLog func(string)
+	logs  strings.Builder
+	mu    sync.RWMutex
 }
 
 func (jel *jobExecutionLogger) Log(s string) {
 	log.Printf("[JobExecutor] [%d] %s\n", jel.jid, s)
+	if jel.onLog != nil {
+		jel.onLog(s)
+	}
 	jel.mu.Lock()
 	defer jel.mu.Unlock()
 	jel.logs.WriteString(s)

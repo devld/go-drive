@@ -26,6 +26,7 @@ import { ref, unref, watch } from 'vue'
 import { Entry } from '@/types'
 import { EntryEventData } from '@/components/entry'
 import type { OpenDialogOptions } from '.'
+import type { BaseDialogOptionsData } from '../base-dialog'
 
 /// file,dir,<1024,.js,write
 function createFilter(filter?: string) {
@@ -73,7 +74,9 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits<{ (e: 'confirm-disabled', v: boolean): void }>()
+const emit = defineEmits<{
+  (e: 'options', v: Pick<BaseDialogOptionsData, 'confirmDisabled'>): void
+}>()
 
 const dirMode = ref(false)
 const path = ref('')
@@ -130,8 +133,8 @@ const clearSelection = () => {
   selection.value.splice(0)
 }
 
-const confirmDisabled = (disabled: boolean) => {
-  emit('confirm-disabled', disabled)
+const confirmDisabled = (confirmDisabled: boolean) => {
+  emit('options', { confirmDisabled })
 }
 
 watch(

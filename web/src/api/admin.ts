@@ -15,7 +15,7 @@ import {
   Task,
   User,
 } from '@/types'
-import http from './http'
+import http, { StreamHttpResponse, streamHttp } from './http'
 
 export function getUsers() {
   return http.get<User[]>('/admin/users')
@@ -147,10 +147,26 @@ export function deleteJob(id: number) {
   return http.delete<void>(`/admin/jobs/${id}`)
 }
 
-export function getJobExecutions(jobId?: number) {
-  return http.get<JobExecution[]>('/admin/jobs/execution', {
+export function getJobExecutions(jobId: number) {
+  return http.get<JobExecution[]>('/admin/jobs/executions', {
     params: { jobId },
   })
+}
+
+export function executeJobSync(jobId: number) {
+  return streamHttp.post<StreamHttpResponse<Task>>(
+    '/admin/jobs/execution',
+    null,
+    { params: { jobId } }
+  )
+}
+
+export function jobScriptEvalSync(code: string) {
+  return streamHttp.post<StreamHttpResponse<Task>>(
+    '/admin/jobs/script-eval',
+    code,
+    { headers: { 'content-type': 'text/plain' } }
+  )
 }
 
 export function cancelJobExecution(id: number) {

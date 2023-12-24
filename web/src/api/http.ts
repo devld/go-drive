@@ -18,6 +18,8 @@ export const AUTH_PARAM = 'token'
 
 const AUTH_HEADER = 'Authorization'
 const TOKEN_KEY = 'token'
+const RESPONSE_HEADER_KEY = 'x-response'
+
 const MAX_RETRY = 1
 
 let apiPath = window.___config___.api
@@ -82,6 +84,33 @@ async function handlerError(e: any) {
 
   throw e
 }
+
+export interface StreamHttpResponse<T = any> {
+  status: number
+  data: T
+  stream: ReadableStream
+}
+
+export const streamHttp = createHttp<StreamHttpResponse>({
+  ...BASE_CONFIG,
+  transformRequest: [
+    processConfig,
+    transformJSONRequest,
+    (config) => ({ ...config, onUploadProgress: undefined }),
+  ],
+  transformResponse: [
+    async (error, resp): Promise<StreamHttpResponse> => {
+      if (error) throw error
+      let responseData = resp.headers[RESPONSE_HEADER_KEY]
+      if (responseData) responseData = JSON.parse(responseData)
+      return {
+        status: resp.status,
+        data: responseData,
+        stream: resp.data,
+      }
+    },
+  ],
+})
 
 export default createHttp({
   ...BASE_CONFIG,

@@ -60,6 +60,7 @@ export interface FormItem extends BaseFormItem {
   class?: string
   width?: string | number
   slot?: string
+  labelSuffixSlot?: string
   placeholder?: I18nText
   validate?: (v: any) => PromiseValue<true | I18nText | undefined>
 }

@@ -1,10 +1,12 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/storage"
@@ -30,9 +32,10 @@ func init() {
 }
 
 const (
-	keyToken   = "token"
-	keySession = "session"
-	keyResult  = "apiResult"
+	keyToken         = "token"
+	keySession       = "session"
+	keyResult        = "apiResult"
+	keyMessageSource = "messageSource"
 )
 
 func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, skipOnEmptySignature bool) gin.HandlerFunc {
@@ -176,6 +179,35 @@ func AdminGroupRequired() gin.HandlerFunc {
 	return UserGroupRequired(types.AdminUserGroup)
 }
 
+func ExecuteTaskStreaming(c *gin.Context, runner task.Runner, runnable task.Runnable, options ...task.Option) error {
+	completeChan := make(chan struct{})
+	streamReady := make(chan struct{})
+	task, e := runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
+		<-streamReady
+		defer close(completeChan)
+		return runnable(ctx)
+	}, options...)
+	if e != nil {
+		return e
+	}
+	ms := GetMessageSource(c)
+	taskJson, e := json.Marshal(TranslateV(c, ms, task))
+	if e != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, e)
+		return nil
+	}
+	c.Header("X-Accel-Buffering", "no") // for nginx to not buffer the response
+	c.Header(common.ResponseHeaderKey, string(taskJson))
+	streamReady <- struct{}{}
+
+	select {
+	case <-c.Request.Context().Done():
+		runner.StopTask(task.Id)
+	case <-completeChan:
+	}
+	return nil
+}
+
 func SetResult(c *gin.Context, result interface{}) {
 	c.Set(keyResult, result)
 }
@@ -195,6 +227,17 @@ func SetToken(c *gin.Context, token string) {
 func IsAuthenticated(c *gin.Context) bool {
 	_, exists := c.Get(keySession)
 	return exists
+}
+
+func SetMessageSource(c *gin.Context, messageSource i18n.MessageSource) {
+	c.Set(keyMessageSource, messageSource)
+}
+
+func GetMessageSource(c *gin.Context) i18n.MessageSource {
+	if ms, exists := c.Get(keyMessageSource); exists {
+		return ms.(i18n.MessageSource)
+	}
+	return nil
 }
 
 func GetSession(c *gin.Context) types.Session {
