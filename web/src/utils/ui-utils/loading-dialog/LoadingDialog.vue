@@ -1,7 +1,7 @@
 <template>
   <DialogView v-model:show="showing" class="loading-dialog" transition="none">
     <div class="loading-dialog__content">
-      <Icon class="loading-dialog__icon" svg="#icon-loading" />
+      <Icon class="loading-dialog__icon loading-icon" svg="#icon-loading" />
       <span class="loading-dialog__text">{{ text }}</span>
       <SimpleButton
         v-if="cancelText"
@@ -91,9 +91,8 @@ defineExpose({ show, hide })
 }
 
 .icon.loading-dialog__icon {
-  width: 10vw;
-  height: 10vw;
-  animation: spinning 1s linear infinite;
+  width: 5vw;
+  height: 5vw;
   color: var(--secondary-text-color);
 }
 </style>
