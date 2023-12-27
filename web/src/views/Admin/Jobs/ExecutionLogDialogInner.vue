@@ -4,7 +4,10 @@
       {{ logContent }}
     </div>
     <div v-if="executing" class="execution-log-dialog__executing">
-      <Icon class="execution-log-dialog__executing-icon" svg="#icon-loading" />
+      <Icon
+        class="execution-log-dialog__executing-icon loading-icon"
+        svg="#icon-loading"
+      />
     </div>
   </div>
 </template>
@@ -131,7 +134,6 @@ watch(logContent, scrollToBottom)
   &__executing-icon {
     width: 1em;
     height: 1em;
-    animation: spinning 1s linear infinite;
     color: var(--secondary-text-color);
   }
 }

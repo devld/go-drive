@@ -6,7 +6,7 @@
     :type="nativeType"
     @click="emit('click', $event)"
   >
-    <Icon v-if="loading" svg="#icon-loading" />
+    <Icon v-if="loading" class="loading-icon" svg="#icon-loading" />
     <template v-else>
       <Icon v-if="icon" :svg="icon" />
       <slot />
@@ -81,10 +81,6 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
         color: var(--btn-color-disabled-#{$type});
       }
     }
-  }
-
-  &.loading .icon {
-    animation: spinning 1s linear infinite;
   }
 }
 </style>

@@ -109,10 +109,4 @@ const emit = defineEmits<{
     margin-right: 10px;
   }
 }
-
-.base-dialog__button-ok {
-  &.loading .icon {
-    animation: spinning 1s linear infinite;
-  }
-}
 </style>
