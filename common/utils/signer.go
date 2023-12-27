@@ -1,7 +1,8 @@
 package utils
 
 import (
-	"crypto"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/binary"
 	"math/rand"
 	"time"
@@ -11,10 +12,10 @@ type Signer struct {
 	secret []byte
 }
 
-func sha256(v []byte) []byte {
-	sha256 := crypto.SHA256.New()
-	sha256.Write(v)
-	return sha256.Sum(nil)
+func sha256mac(key, data []byte) []byte {
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(data))
+	return h.Sum(nil)
 }
 
 func NewSigner() *Signer {
@@ -23,12 +24,11 @@ func NewSigner() *Signer {
 
 func (s *Signer) sign(v string, notAfter int64, r uint32) string {
 	vByte := []byte(v)
-	buf := make([]byte, 4+8+len(vByte)+len(s.secret))
+	buf := make([]byte, 4+8+len(vByte))
 	binary.LittleEndian.PutUint32(buf, r)
 	binary.LittleEndian.PutUint64(buf[4:], uint64(notAfter))
 	copy(buf[4+8:], vByte)
-	copy(buf[4+8+len(vByte):], s.secret)
-	signature := sha256(buf)
+	signature := sha256mac(s.secret, buf)
 
 	result := make([]byte, 4+8+32)
 	copy(result[:], buf[:12])
