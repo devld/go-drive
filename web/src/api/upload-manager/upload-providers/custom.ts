@@ -28,7 +28,7 @@ export default class CustomUploadTask extends ChunkUploadTask {
     const resp = await http.get(API_PATH + `/drive-uploader/${uploaderName}.js`)
     let scriptContent: string = resp.data
     if (!scriptContent) throw new Error('invalid uploader code')
-    scriptContent = scriptContent.replace(/;+$/, '')
+    scriptContent = scriptContent.replace(/};+$/, '}')
 
     const scriptThis = Object.defineProperties(
       {},
@@ -45,7 +45,10 @@ export default class CustomUploadTask extends ChunkUploadTask {
       }
     )
 
-    this.uploader = eval(`(${scriptContent})`).call(undefined, scriptThis)
+    this.uploader = new Function(`return (${scriptContent})`)().call(
+      undefined,
+      scriptThis
+    )
 
     if (this.uploader!.prepare) {
       return this.uploader!.prepare()
