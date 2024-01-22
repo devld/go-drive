@@ -33,7 +33,8 @@ func InitAdminRoutes(
 	permissionDAO *storage.PathPermissionDAO,
 	pathMountDAO *storage.PathMountDAO,
 	pathMetaDAO *storage.PathMetaDAO,
-	scheduledDAO *storage.ScheduledDAO) error {
+	scheduledDAO *storage.ScheduledDAO,
+	fileBucketDAO *storage.FileBucketDAO) error {
 
 	r = r.Group("/admin", TokenAuth(tokenStore), AdminGroupRequired())
 
@@ -151,6 +152,16 @@ func InitAdminRoutes(
 	jobsRoutesGroup.DELETE("/execution", jr.deleteJobExecutionsByJobId)
 	// execute job script code
 	jobsRoutesGroup.POST("/script-eval", jr.scriptEval)
+
+	fbr := &fileBucketConfigRoute{fileBucketDAO}
+	// get all file buckets
+	r.GET("/file-buckets", fbr.getAllBuckets)
+	// create file bucket
+	r.POST("/file-bucket", fbr.createBucket)
+	// update file bucket
+	r.PUT("/file-bucket/:name", fbr.updateBucket)
+	// delete file bucket
+	r.DELETE("/file-bucket/:name", fbr.deleteBucket)
 
 	return nil
 }

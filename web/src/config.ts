@@ -20,3 +20,5 @@ pdf pdf.js/web/viewer.html?file={URL} PDF Viewer
 #docx,doc,xlsx,xls,pptx,ppt https://view.officeapps.live.com/op/embed.aspx?src={URL} Microsoft
 #docx,doc,xlsx,xls,pptx,ppt https://docs.google.com/gview?embedded=true&url={URL} Google
 `.trim()
+
+export const FILE_BUCKET_SECRET_KEY = 't'

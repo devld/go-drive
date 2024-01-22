@@ -69,6 +69,12 @@ const routes: RouteRecordRaw[] = [
             meta: { title: T('routes.title.path_meta') },
           },
           {
+            name: 'FileBucketsManager',
+            path: '/admin/file-buckets',
+            component: () => import('@/views/Admin/FileBuckets.vue'),
+            meta: { title: T('routes.title.file_buckets') },
+          },
+          {
             name: 'MiscSettings',
             path: '/admin/misc',
             component: () => import('@/views/Admin/Misc/index.vue'),

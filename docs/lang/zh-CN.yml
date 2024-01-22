@@ -13,6 +13,7 @@ api:
   admin:
     unknown_drive_type: 未知的 Drive 类型 '{{ 1 }}'
     invalid_drive_name: 无效的 Drive 名称 '{{ 1 }}'
+    invalid_file_bucket_name: 无效的名称 '{{ 1 }}'
   auth:
     invalid_username_or_password: 用户名或密码错误
     group_permission_required: 需要 '{{ 1 }}' 用户组权限
@@ -48,6 +49,8 @@ storage:
   users:
     user_not_exists: 用户 '{{ 1 }}' 不存在
     user_exists: 用户 '{{ 1 }}' 已存在
+  file_bucket:
+    bucket_exists: "'{{ 1 }}' 已存在"
 drive:
   not_configured: Drive 还未配置完成
   copy_type_mismatch1: 目的路径 '{{ 2 }}' 是一个文件, 但源路径 '{{ 1 }}' 是一个文件夹

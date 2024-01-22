@@ -121,6 +121,7 @@ svg {
     td {
       border-bottom: solid 1px;
       border-color: var(--border-color);
+      overflow-wrap: break-word;
     }
   }
 

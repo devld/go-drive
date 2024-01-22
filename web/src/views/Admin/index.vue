@@ -40,6 +40,7 @@ const menus = [
   { name: t('p.admin.t_extra_drives'), path: '/admin/extra-drives' },
   { name: t('p.admin.t_jobs'), path: '/admin/jobs' },
   { name: t('p.admin.t_path_meta'), path: '/admin/path-meta' },
+  { name: t('p.admin.t_file_buckets'), path: '/admin/file-buckets' },
   { name: t('p.admin.t_misc'), path: '/admin/misc' },
   { name: t('p.admin.t_statistics'), path: '/admin/stats' },
 ]

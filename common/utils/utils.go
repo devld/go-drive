@@ -118,7 +118,7 @@ func PathDepth(path string) int {
 	return len(slashPattern.FindAll([]byte(path), -1)) + 1
 }
 
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 func RandString(n int) string {
 	b := make([]rune, n)

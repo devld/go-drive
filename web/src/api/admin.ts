@@ -4,6 +4,7 @@ import {
   DriveFactoryConfig,
   DriveInitConfig,
   DriveScriptContent,
+  FileBucket,
   Group,
   InstalledDriveScript,
   Job,
@@ -227,4 +228,20 @@ export function saveDriveScriptContent(
   content: Partial<DriveScriptContent>
 ) {
   return http.put(`/admin/scripts/content/${encodeURIComponent(name)}`, content)
+}
+
+export function getAllFileBuckets() {
+  return http.get<FileBucket[]>('/admin/file-buckets')
+}
+
+export function createFileBucket(bucket: Partial<FileBucket>) {
+  return http.post<FileBucket>('/admin/file-bucket', bucket)
+}
+
+export function updateFileBucket(name: string, bucket: Partial<FileBucket>) {
+  return http.put<void>(`/admin/file-bucket/${name}`, bucket)
+}
+
+export function deleteFileBucket(name: string) {
+  return http.delete<void>(`/admin/file-bucket/${name}`)
 }

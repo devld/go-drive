@@ -71,6 +71,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	userDAO := storage.NewUserDAO(db, ch)
 	groupDAO := storage.NewGroupDAO(db, ch)
 	scheduledDAO := storage.NewScheduledDAO(db, ch)
+	fileBucketDAO := storage.NewFileBucketDAO(db, ch)
 	jobExecutor, err := scheduled.NewJobExecutor(scheduledDAO, ch)
 	if err != nil {
 		return nil, err
@@ -79,7 +80,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, pathMetaDAO, scheduledDAO, jobExecutor, fileMessageSource)
+	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, pathMetaDAO, scheduledDAO, fileBucketDAO, jobExecutor, fileMessageSource)
 	if err != nil {
 		return nil, err
 	}

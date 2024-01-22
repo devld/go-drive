@@ -118,3 +118,14 @@ export interface DriveScriptContent {
   drive: string
   uploader?: string
 }
+
+export interface FileBucket {
+  name: string
+  targetPath: string
+  keyTemplate?: string
+  customKey?: boolean
+  secretToken: string
+  urlTemplate?: string
+  allowedTypes?: string
+  maxSize?: string
+}

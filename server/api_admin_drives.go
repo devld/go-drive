@@ -14,7 +14,6 @@ import (
 	"go-drive/storage"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"sync"
 
@@ -56,7 +55,7 @@ func (dr *drivesRoute) createDrive(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	if e := checkDriveName(d.Name); e != nil {
+	if e := CheckPathSegment(d.Name, "api.admin.invalid_drive_name"); e != nil {
 		_ = c.Error(e)
 		return
 	}
@@ -70,10 +69,6 @@ func (dr *drivesRoute) createDrive(c *gin.Context) {
 
 func (dr *drivesRoute) updateDrive(c *gin.Context) {
 	name := c.Param("name")
-	if e := checkDriveName(name); e != nil {
-		_ = c.Error(e)
-		return
-	}
 	d := types.Drive{}
 	if e := c.Bind(&d); e != nil {
 		_ = c.Error(e)
@@ -243,15 +238,6 @@ func (sdr *scriptDrivesRoute) saveDriveScriptContent(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-}
-
-var driveNamePattern = regexp.MustCompile("^[^/\\\x00:*\"<>|]+$")
-
-func checkDriveName(name string) error {
-	if name == "" || name == "." || name == ".." || !driveNamePattern.MatchString(name) {
-		return err.NewBadRequestError(i18n.T("api.admin.invalid_drive_name", name))
-	}
-	return nil
 }
 
 const escapedPassword = "YOU CAN'T SEE ME"

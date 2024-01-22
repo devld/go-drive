@@ -7,6 +7,7 @@ const loadedLanguages = [DEFAULT_LANG]
 
 const i18n = createI18n({
   legacy: false,
+  warnHtmlMessage: false,
   globalInjection: true,
   locale: DEFAULT_LANG,
   fallbackLocale: DEFAULT_LANG,

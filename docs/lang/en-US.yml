@@ -13,6 +13,7 @@ api:
   admin:
     unknown_drive_type: Unknown drive type '{{ 1 }}'
     invalid_drive_name: Invalid drive name '{{ 1 }}'
+    invalid_file_bucket_name: Invalid name '{{ 1 }}'
   auth:
     invalid_username_or_password: Invalid username or password
     group_permission_required: Permission of group '{{ 1 }}' required
@@ -48,6 +49,8 @@ storage:
   users:
     user_not_exists: User '{{ 1 }}' not exists
     user_exists: User '{{ 1 }}' exists
+  file_bucket:
+    bucket_exists: Bucket '{{ 1 }}' exists
 drive:
   not_configured: Drive not configured
   copy_type_mismatch1: Dest '{{ 2 }}' is a file, but src '{{ 1 }}' is a dir

@@ -54,6 +54,7 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		&types.Job{},
 		&types.JobExecution{},
 		&types.PathMeta{},
+		&types.FileBucket{},
 	); e != nil {
 		closeDb(db)
 		return nil, e
