@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go-drive/common"
+	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
@@ -12,6 +13,8 @@ import (
 	"go-drive/storage"
 	"mime"
 	"net/http"
+	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -208,6 +211,43 @@ func ExecuteTaskStreaming(c *gin.Context, runner task.Runner, runnable task.Runn
 	return nil
 }
 
+func ReadRequestBodyToTempFile(c *gin.Context, tempDir string) (*utils.TempFile, int64, error) {
+	size := utils.ToInt64(c.GetHeader("Content-Length"), -1)
+	file, e := drive_util.CopyReaderToTempFile(task.NewTaskContext(c.Request.Context()), c.Request.Body, tempDir)
+	if e != nil {
+		return nil, -1, e
+	}
+	stat, e := file.Stat()
+	if e != nil {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+		return nil, -1, e
+	}
+	if size != stat.Size() {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+		return nil, -1, err.NewBadRequestError(i18n.T("api.drive.invalid_file_size"))
+	}
+	return utils.NewTempFile(file), size, nil
+}
+
+func GetRequestOrigin(c *gin.Context) string {
+	host := c.GetHeader("X-Forwarded-Host")
+	if host == "" {
+		host = c.Request.Host
+	}
+	protocol := c.GetHeader("X-Forwarded-Proto")
+	if protocol == "" {
+		if c.Request.TLS != nil {
+			protocol = "https"
+		}
+	}
+	if protocol != "https" {
+		protocol = "http"
+	}
+	return protocol + "://" + host
+}
+
 func SetResult(c *gin.Context, result interface{}) {
 	c.Set(keyResult, result)
 }
@@ -271,4 +311,13 @@ func TranslateV(c *gin.Context, ms i18n.MessageSource, v interface{}) interface{
 		lang = lang[:i]
 	}
 	return i18n.TranslateV(lang, ms, v)
+}
+
+var pathSegmentPattern = regexp.MustCompile("^[^/\\\x00:*\"<>|]+$")
+
+func CheckPathSegment(name string, errI18nKey string) error {
+	if name == "" || name == "." || name == ".." || !pathSegmentPattern.MatchString(name) {
+		return err.NewBadRequestError(i18n.T(errI18nKey, name))
+	}
+	return nil
 }

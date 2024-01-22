@@ -142,6 +142,58 @@ func (cr *configRoute) getOptions(c *gin.Context) {
 	SetResult(c, value)
 }
 
+type fileBucketConfigRoute struct {
+	fileBucketDAO *storage.FileBucketDAO
+}
+
+func (fbr *fileBucketConfigRoute) getAllBuckets(c *gin.Context) {
+	buckets, e := fbr.fileBucketDAO.GetBuckets()
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	SetResult(c, buckets)
+}
+
+func (fbr *fileBucketConfigRoute) createBucket(c *gin.Context) {
+	bucket := types.FileBucket{}
+	var e error
+	if e = c.Bind(&bucket); e != nil {
+		_ = c.Error(e)
+		return
+	}
+	if e := CheckPathSegment(bucket.Name, "api.admin.invalid_file_bucket_name"); e != nil {
+		_ = c.Error(e)
+		return
+	}
+	if bucket, e = fbr.fileBucketDAO.AddBucket(bucket); e != nil {
+		_ = c.Error(e)
+		return
+	}
+	SetResult(c, bucket)
+}
+
+func (fbr *fileBucketConfigRoute) updateBucket(c *gin.Context) {
+	name := c.Param("name")
+	bucket := types.FileBucket{}
+	if e := c.Bind(&bucket); e != nil {
+		_ = c.Error(e)
+		return
+	}
+	if e := fbr.fileBucketDAO.UpdateBucket(name, bucket); e != nil {
+		_ = c.Error(e)
+		return
+	}
+}
+
+func (fbr *fileBucketConfigRoute) deleteBucket(c *gin.Context) {
+	name := c.Param("name")
+	if e := fbr.fileBucketDAO.DeleteBucket(name); e != nil {
+		_ = c.Error(e)
+		return
+	}
+}
+
 type mountSource struct {
 	Path string `json:"path" binding:"required"`
 	Name string `json:"name" binding:"required"`

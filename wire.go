@@ -5,8 +5,6 @@ package main
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
-	"github.com/google/wire"
 	"go-drive/common"
 	"go-drive/common/event"
 	"go-drive/common/i18n"
@@ -20,6 +18,9 @@ import (
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/wire"
 )
 
 func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine, error) {
@@ -37,6 +38,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 		storage.NewOptionsDAO,
 		storage.NewScheduledDAO,
 		storage.NewPathMetaDAO,
+		storage.NewFileBucketDAO,
 		wire.Bind(new(task.Runner), new(*task.TunnyRunner)),
 		task.NewTunnyRunner,
 		utils.NewSigner,

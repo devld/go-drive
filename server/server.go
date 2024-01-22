@@ -43,6 +43,7 @@ func InitServer(config common.Config,
 	pathMountDAO *storage.PathMountDAO,
 	pathMetaDAO *storage.PathMetaDAO,
 	scheduledDAO *storage.ScheduledDAO,
+	fileBucketDAO *storage.FileBucketDAO,
 	jobExecutor *scheduled.JobExecutor,
 	messageSource i18n.MessageSource) (*gin.Engine, error) {
 
@@ -76,12 +77,16 @@ func InitServer(config common.Config,
 		return nil, e
 	}
 	if e := InitAdminRoutes(router, ch, config, bus, runner, jobExecutor, driveAccess, rootDrive, searcher, tokenStore, optionsDAO,
-		userDAO, groupDAO, driveDAO, driveDataDAO, permissionDAO, pathMountDAO, pathMetaDAO, scheduledDAO); e != nil {
+		userDAO, groupDAO, driveDAO, driveDataDAO, permissionDAO, pathMountDAO, pathMetaDAO, scheduledDAO, fileBucketDAO); e != nil {
 		return nil, e
 	}
 
 	if e := InitDriveRoutes(router, driveAccess, searcher, config, thumbnail,
 		signer, chunkUploader, runner, tokenStore, userDAO, optionsDAO, pathMetaDAO); e != nil {
+		return nil, e
+	}
+
+	if e := InitFileBucketRoutes(router, config, driveAccess, fileBucketDAO); e != nil {
 		return nil, e
 	}
 

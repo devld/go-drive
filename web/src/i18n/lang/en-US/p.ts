@@ -9,6 +9,7 @@ export default {
     t_extra_drives: 'Extra Drives',
     t_jobs: 'Jobs',
     t_path_meta: 'Path Attrs',
+    t_file_buckets: 'File Buckets',
     t_misc: 'Misc',
     t_statistics: 'Statistics',
     save: 'Save',
@@ -154,6 +155,73 @@ export default {
       f_hidden_pattern_r: 'Apply to subpath',
       fo_mode_list: 'List',
       fo_mode_thumbnail: 'Thumbnail',
+    },
+    file_bucket: {
+      edit: 'Edit',
+      add: 'Add',
+      delete: 'Delete',
+      save: 'Save',
+      cancel: 'Cancel',
+      name: 'Name',
+      target_path: 'Target path',
+      operation: 'Operation',
+      f_name: 'Name',
+      f_name_desc:
+        'Name is the unique identifier of the file bucket, also the part of the URL when uploading or accessing files',
+      f_target_path: 'Target path',
+      f_target_path_desc:
+        'The target path of the file bucket, not starting with /',
+      f_key_template: 'File path template',
+      f_key_template_desc: (
+        'The file path template when uploading files to this bucket. Supports the following variables:\n' +
+        '{year}: Year\n{month}: Month\n{date}: Date\n{hour}: Hour\n{minute}: Minute\n{second}: Second\n{millisecond}: Millisecond\n' +
+        '{timestamp}: Millisecond timestamp\n{rand}: Random text\n{name}: File name (without extension)\n{ext}: File extension(e.g. .jpg)\n\n' +
+        "Example: '{year}/{month}/{date}/{hour}/{minute}/{second}/{name}.{ext}' will generate '2024/01/28/12/34/56/test.jpg'\n\n" +
+        'If leave blank will use default: {year}{month}{date}/{name}-{rand}{ext}'
+      ).replace(/([{}])/g, "{'$1'}"),
+      f_secret_token: 'Upload secret key',
+      f_secret_token_desc: 'Key required when uploading files to this bucket',
+      f_url_template: 'Download URL Template',
+      f_url_template_desc: (
+        'URL template used when returning the file download link during upload. Supports the following variables:\n' +
+        '{origin}: Current server api prefix, such as https://example.com/api\n{bucket}: File bucket name\n{key}: File path\n\n' +
+        'If leave blank will use default: {origin}/f/{bucket}/{key}'
+      ).replace(/([{}])/g, "{'$1'}"),
+      f_custom_key: 'Allow custom file path on upload',
+      f_custom_key_desc:
+        'When enabled, supports custom file paths when uploading files',
+      f_allowed_types: 'Allowed file types for upload',
+      f_allowed_types_desc:
+        'Supports mime-type or file extensions, multiple types separated by commas, e.g. image/*,video/mp4,.pdf',
+      f_max_size: 'Maximum upload file size',
+      f_max_size_desc:
+        'Limits the file size for uploads, can use units such as b, k, m, g, t',
+      delete_item: 'Delete',
+      confirm_delete: 'Confirm deletion?',
+      upload_api_p_path: '<UPLOAD PATH>',
+      upload_api_p_secret_token: '<SECRET TOKEN>',
+      upload_help_doc_md: `Upload file using the following API：
+\`\`\`
+POST {api}
+\`\`\`
+
+If **Allow custom file path on upload** is enabled, you can also upload file using the following API:
+
+\`\`\`
+POST {api_with_path}
+\`\`\`
+
+> Supports two types of upload formats: direct file stream or form upload. When using form upload, the file's \`key\` is \`file\`.
+
+<details>
+<summary>Upload file using cURL</summary>
+
+\`\`\`bash
+curl -F 'file={'@'}FILE_PATH' {api} # Form upload
+curl -X POST --data-binary {'@'}FILE_PATH {api} # Direct file stream upload
+\`\`\`
+</details>
+`,
     },
     jobs: {
       job: 'Jobs',

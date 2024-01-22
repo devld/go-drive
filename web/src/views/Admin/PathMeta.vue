@@ -24,46 +24,56 @@
           @click="addPathMeta"
         />
       </div>
-      <table class="simple-table">
-        <thead>
-          <tr>
-            <th>{{ $t('p.admin.path_meta.path') }}</th>
-            <th>{{ $t('p.admin.path_meta.password') }}</th>
-            <th>{{ $t('p.admin.path_meta.def_sort') }}</th>
-            <th>{{ $t('p.admin.path_meta.def_mode') }}</th>
-            <th>{{ $t('p.admin.path_meta.hidden_pattern') }}</th>
-            <th>{{ $t('p.admin.path_meta.operation') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="u in pathMetaList" :key="u.path">
-            <td class="center">{{ u.path }}</td>
-            <td class="center">{{ u.password ? '✅' : '' }}</td>
-            <td class="center">
-              {{ u.defaultSort ? $t(sortingNamesMap[u.defaultSort]) : '' }}
-            </td>
-            <td class="center">
-              {{ u.defaultMode ? $t(listModesMap[u.defaultMode]) : '' }}
-            </td>
-            <td class="center">{{ u.hiddenPattern ? '✅' : '' }}</td>
-            <td class="center line">
-              <SimpleButton
-                :title="$t('p.admin.path_meta.edit')"
-                small
-                icon="#icon-edit"
-                @click="editPathMeta(u)"
-              />
-              <SimpleButton
-                :title="$t('p.admin.path_meta.delete')"
-                type="danger"
-                small
-                icon="#icon-delete"
-                @click="deletePathMeta(u)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="simple-table-wrapper">
+        <table class="simple-table">
+          <colgroup>
+            <col style="min-width: 100px" />
+            <col style="width: 100px" />
+            <col style="width: 100px" />
+            <col style="width: 100px" />
+            <col style="width: 100px" />
+            <col style="width: 80px" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>{{ $t('p.admin.path_meta.path') }}</th>
+              <th>{{ $t('p.admin.path_meta.password') }}</th>
+              <th>{{ $t('p.admin.path_meta.def_sort') }}</th>
+              <th>{{ $t('p.admin.path_meta.def_mode') }}</th>
+              <th>{{ $t('p.admin.path_meta.hidden_pattern') }}</th>
+              <th>{{ $t('p.admin.path_meta.operation') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in pathMetaList" :key="u.path">
+              <td class="center">{{ u.path }}</td>
+              <td class="center">{{ u.password ? '✅' : '' }}</td>
+              <td class="center">
+                {{ u.defaultSort ? $t(sortingNamesMap[u.defaultSort]) : '' }}
+              </td>
+              <td class="center">
+                {{ u.defaultMode ? $t(listModesMap[u.defaultMode]) : '' }}
+              </td>
+              <td class="center">{{ u.hiddenPattern ? '✅' : '' }}</td>
+              <td class="center line">
+                <SimpleButton
+                  :title="$t('p.admin.path_meta.edit')"
+                  small
+                  icon="#icon-edit"
+                  @click="editPathMeta(u)"
+                />
+                <SimpleButton
+                  :title="$t('p.admin.path_meta.delete')"
+                  type="danger"
+                  small
+                  icon="#icon-delete"
+                  @click="deletePathMeta(u)"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

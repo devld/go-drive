@@ -113,6 +113,20 @@ type PathMeta struct {
 	Recursive uint32 `gorm:"column:recursive;not null" json:"recursive"`
 }
 
+type FileBucket struct {
+	Name        string `gorm:"column:name;primaryKey;not null;type:string;size:255" json:"name" binding:"required"`
+	TargetPath  string `gorm:"column:target_path;not null;type:string;size:4096" json:"targetPath" binding:"required"`
+	KeyTemplate string `gorm:"column:key_template;type:string;size:4096" json:"keyTemplate"`
+	CustomKey   bool   `gorm:"column:custom_key;not null;type:bool" json:"customKey"`
+	// SecretToken is the auto-generated upload token for this bucket
+	SecretToken string `gorm:"column:secret_token;type:string;size:32" json:"secretToken" binding:"required"`
+	URLTemplate string `gorm:"column:url_template;not null;type:string;size:4096" json:"urlTemplate"`
+	// AllowedTypes is a comma separated list of allowed mime types or file extensions, e.g. "image/png,image/jpeg,.png,.jpg"
+	AllowedTypes string `gorm:"column:allowed_types;type:string;size:4096" json:"allowedTypes"`
+	// MaxSize is the maximum allowed size with unit, 0 for unlimited
+	MaxSize string `gorm:"column:max_size;not null;type:string" json:"maxSize"`
+}
+
 type Job struct {
 	ID          uint   `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	Description string `gorm:"column:description;not null;type:text" json:"description"`

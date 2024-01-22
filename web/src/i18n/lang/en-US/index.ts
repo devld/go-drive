@@ -15,6 +15,7 @@ export default {
       extra_drives: 'Extra Drives',
       jobs: 'Jobs',
       path_meta: 'Path Attrs',
+      file_buckets: 'File Buckets',
       misc: 'Misc',
       statistics: 'Statistics',
     },

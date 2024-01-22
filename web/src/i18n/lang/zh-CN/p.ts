@@ -9,6 +9,7 @@ export default {
     t_extra_drives: '其他盘',
     t_jobs: '任务',
     t_path_meta: '路径属性',
+    t_file_buckets: '文件桶',
     t_misc: '其他',
     t_statistics: '状态',
     save: '保存',
@@ -151,6 +152,70 @@ export default {
       f_hidden_pattern_r: '应用到子路径',
       fo_mode_list: '列表',
       fo_mode_thumbnail: '缩略图',
+    },
+    file_bucket: {
+      edit: '编辑',
+      add: '添加',
+      delete: '删除',
+      save: '保存',
+      cancel: '取消',
+      name: '名称',
+      target_path: '目标路径',
+      operation: '操作',
+      f_name: '名称',
+      f_name_desc:
+        '名称是这个文件桶的唯一标识，也时上传或访问文件时 URL 中的一部分',
+      f_target_path: '目标路径',
+      f_target_path_desc: '文件将上传至这个目录下，目标路径不以 / 开头',
+      f_key_template: '文件路径模板',
+      f_key_template_desc: (
+        '文件上传时的路径模板。支持以下变量:\n' +
+        '{year}: 年\n{month}: 月\n{date}: 日\n{hour}: 时\n{minute}: 分\n{second}: 秒\n{millisecond}: 毫秒\n' +
+        '{timestamp}: 毫秒时间戳\n{rand}: 随机文本\n{name}: 文件名（不包括后缀名）\n{ext}: 文件后缀名（如 .jpg）\n\n' +
+        '例如：{year}/{month}/{date}/{hour}/{minute}/{second}/{name}.{ext} 将生成 2024/01/28/12/34/56/test.jpg\n\n' +
+        '留空默认为：{year}{month}{date}/{name}-{rand}{ext}'
+      ).replace(/([{}])/g, "{'$1'}"),
+      f_secret_token: '上传密钥',
+      f_secret_token_desc: '向此文件桶中上传文件时需附带的密钥',
+      f_url_template: '下载URL模板',
+      f_url_template_desc: (
+        '上传时返回文件下载链接时使用的 URL 模板。支持以下变量:\n' +
+        '{origin}: 当前服务器前缀，如 https://example.com/api\n{bucket}: 文件桶名称\n{key}: 文件路径\n\n' +
+        '留空默认为：{origin}/f/{bucket}/{key}'
+      ).replace(/([{}])/g, "{'$1'}"),
+      f_custom_key: '允许上传时自定义文件路径',
+      f_custom_key_desc: '当开启后，上传文件时支持自定义文件路径',
+      f_allowed_types: '允许上传的文件类型',
+      f_allowed_types_desc:
+        '支持 mime-type 或文件后缀名，多个使用英文逗号分隔，如 image/*,video/mp4,.pdf',
+      f_max_size: '最大上传文件大小',
+      f_max_size_desc: '限制上传时的文件大小，可使用 b, k, m, g, t 单位',
+      delete_item: '删除',
+      confirm_delete: '确认删除？',
+      upload_api_p_path: '<上传路径>',
+      upload_api_p_secret_token: '<上传密钥>',
+      upload_help_doc_md: `通过如下的 API 上传文件：
+\`\`\`
+POST {api}
+\`\`\`
+
+如果开启了 **允许上传时自定义文件路径**，同时可通过如下的 API 上传文件：
+
+\`\`\`
+POST {api_with_path}
+\`\`\`
+
+> 支持两种上传格式：文件流直传或 Form 上传。当使用 Form 上传时，文件的 \`key\` 为 \`file\`
+
+<details>
+<summary>通过 cURL 上传</summary>
+
+\`\`\`bash
+curl -F 'file={'@'}文件路径' {api} # Form 上传方式
+curl -X POST --data-binary {'@'}文件路径 {api} # 文件流上传方式
+\`\`\`
+</details>
+`,
     },
     jobs: {
       job: '操作',

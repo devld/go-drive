@@ -448,28 +448,13 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 
 	session := GetSession(c)
 	override := utils.ToBool(c.Query("override"))
-	size := utils.ToInt64(c.GetHeader("Content-Length"), -1)
 	defer func() { _ = c.Request.Body.Close() }()
-	file, e := drive_util.CopyReaderToTempFile(task.DummyContext(), c.Request.Body, dr.config.TempDir)
+	tempFile, size, e := ReadRequestBodyToTempFile(c, dr.config.TempDir)
 	if e != nil {
 		_ = c.Error(e)
-		return
-	}
-	stat, e := file.Stat()
-	if e != nil {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
-		_ = c.Error(e)
-		return
-	}
-	if size != stat.Size() {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
-		_ = c.Error(err.NewBadRequestError(i18n.T("api.drive.invalid_file_size")))
 		return
 	}
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
-		tempFile := utils.NewTempFile(file)
 		defer func() {
 			_ = tempFile.Close()
 			_ = os.Remove(tempFile.Name())
