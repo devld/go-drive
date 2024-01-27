@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,23 +15,9 @@
         version: JSON.parse('{{ .Json (.Config.Version) }}'),
       }
     </script>
-    <script id="appStyles" type="text/plain">{{ (.Options.Get "app.styles") }}</script>
-    <script id="appScripts" type="text/plain">{{ (.Options.Get "app.scripts") }}</script>
-    <script id="appInitScripts">
-      (function() {
-        function a(id, type) {
-          var t = document.getElementById(id)
-          var n = document.createElement(type)
-          n.innerHTML = t.innerHTML
-          document.head.appendChild(n)
-          t.parentElement.removeChild(t)
-        }
-        a('appStyles', 'style')
-        a('appScripts', 'script')
-        var initScripts = document.getElementById('appInitScripts')
-        initScripts.parentElement.removeChild(initScripts)
-      })()
-    </script>
+    <script id="app-style" type="text/plain">{{ (.Options.Get "app.styles") }}</script>
+    <script id="app-script" type="text/plain">{{ (.Options.Get "app.scripts") }}</script>
+    <script id="app-init-script">(function (d,z,y,x,v,s){function a(i,t,n){t=d[x]("app-"+i);n=d.createElement(i);n[z]=t[z];d.head.appendChild(n);t[v][y](t)}a("style");a("script");s=d[x]("app-init-script");s[v][y](s)})(document,"innerHTML","removeChild","getElementById","parentElement")</script>
     <% } else { %>
     <script>
       var ___config___ = {
