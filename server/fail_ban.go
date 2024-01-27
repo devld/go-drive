@@ -8,18 +8,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
-func NewFailBanGroup(cleanInterval time.Duration) *FailBanGroup {
-	f := &FailBanGroup{cache: make(map[string]cmap.ConcurrentMap[string, failBanRecord])}
-	f.timerStop = utils.TimeTick(f.evict, cleanInterval)
+func NewFailBanGroup(clearInterval time.Duration) *FailBanGroup {
+	f := &FailBanGroup{cache: make(map[string]*utils.KVCache[failBanRecord])}
+	f.clearInterval = clearInterval
 	return f
 }
 
 type FailBanGroup struct {
-	cache     map[string]cmap.ConcurrentMap[string, failBanRecord]
-	timerStop func()
+	cache         map[string]*utils.KVCache[failBanRecord]
+	clearInterval time.Duration
 }
 
 func (f *FailBanGroup) LimiterByIP(path string, duration time.Duration, maxFailure uint32) gin.HandlerFunc {
@@ -33,14 +32,14 @@ func (f *FailBanGroup) LimiterByIP(path string, duration time.Duration, maxFailu
 }
 
 func (f *FailBanGroup) Limiter(path string, duration time.Duration, maxFailure uint32, keyFn func(ctx *gin.Context) string) gin.HandlerFunc {
-	m := cmap.New[failBanRecord]()
+	m := utils.NewKVCache[failBanRecord](f.clearInterval)
 	f.cache[path] = m
 
 	return func(c *gin.Context) {
 		key := keyFn(c)
 
 		record, exists := m.Get(key)
-		if exists && !record.isExpired() && record.n >= maxFailure {
+		if exists && record.n >= maxFailure {
 			_ = c.Error(errFailBan)
 			c.Abort()
 			return
@@ -55,41 +54,24 @@ func (f *FailBanGroup) Limiter(path string, duration time.Duration, maxFailure u
 			m.Remove(key)
 		} else {
 			record, ok = m.Get(key)
-			if !ok || record.isExpired() {
-				record = failBanRecord{e: time.Now().Add(duration)}
+			if !ok {
+				record = failBanRecord{}
 			}
 			record.n++
-			m.Set(key, record)
-		}
-	}
-}
-
-func (f *FailBanGroup) evict() {
-	for _, m := range f.cache {
-		evictKeys := make([]string, 0)
-		m.IterCb(func(key string, v failBanRecord) {
-			if v.isExpired() {
-				evictKeys = append(evictKeys, key)
-			}
-		})
-		for _, k := range evictKeys {
-			m.Remove(k)
+			m.Set(key, record, duration)
 		}
 	}
 }
 
 func (f *FailBanGroup) Dispose() error {
-	f.timerStop()
+	for _, m := range f.cache {
+		m.Dispose()
+	}
 	return nil
 }
 
 type failBanRecord struct {
 	n uint32
-	e time.Time
-}
-
-func (f failBanRecord) isExpired() bool {
-	return f.e.Before(time.Now())
 }
 
 var errFailBan err.Error = failBanError{}
