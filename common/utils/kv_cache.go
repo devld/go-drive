@@ -9,7 +9,9 @@ import (
 
 func NewKVCache[T any](clearInterval time.Duration) *KVCache[T] {
 	kv := &KVCache[T]{cache: cmap.New[*kvCacheItem[T]]()}
-	kv.timerStop = TimeTick(kv.evict, clearInterval)
+	if clearInterval > 0 {
+		kv.timerStop = TimeTick(kv.evict, clearInterval)
+	}
 	return kv
 }
 
@@ -62,7 +64,9 @@ func (kv *KVCache[T]) evict() {
 }
 
 func (kv *KVCache[T]) Dispose() error {
-	kv.timerStop()
+	if kv.timerStop != nil {
+		kv.timerStop()
+	}
 	return nil
 }
 

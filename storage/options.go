@@ -4,18 +4,18 @@ import (
 	"errors"
 	"go-drive/common/registry"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 
-	cmap "github.com/orcaman/concurrent-map/v2"
 	"gorm.io/gorm"
 )
 
 type OptionsDAO struct {
 	db    *DB
-	cache cmap.ConcurrentMap[string, types.Option]
+	cache *utils.KVCache[types.Option]
 }
 
 func NewOptionsDAO(db *DB, ch *registry.ComponentsHolder) *OptionsDAO {
-	dao := &OptionsDAO{db: db, cache: cmap.New[types.Option]()}
+	dao := &OptionsDAO{db: db, cache: utils.NewKVCache[types.Option](0)}
 	ch.Add("optionsDAO", dao)
 	return dao
 }
@@ -103,7 +103,7 @@ func (d *OptionsDAO) get(key string, getCache bool) (types.Option, error) {
 		e = nil
 	}
 	if e == nil {
-		d.cache.Set(key, option)
+		d.cache.Set(key, option, 0)
 	}
 	return option, e
 }
@@ -114,4 +114,8 @@ func (d *OptionsDAO) Delete(key string) error {
 		d.cache.Remove(key)
 	}
 	return e
+}
+
+func (d *OptionsDAO) Dispose() error {
+	return d.cache.Dispose()
 }
