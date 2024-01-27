@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
     port: 9803,
     proxy: {
       '/api': {
-        target: 'http://localhost:18089',
+        target: 'http://localhost:8089',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
@@ -43,6 +43,17 @@ export default defineConfig(({ mode }) => ({
     cssCodeSplit: false,
     rollupOptions: {
       plugins: [visualizer()],
+      output: {
+        chunkFileNames(chunkInfo) {
+          if (chunkInfo.facadeModuleId && chunkInfo.name === 'index') {
+            const dir = path.dirname(chunkInfo.facadeModuleId)
+            return `${path.basename(path.dirname(dir))}-${path.basename(
+              dir
+            )}-[hash].js`.replace('dist-', '')
+          }
+          return '[name]-[hash].js'
+        },
+      },
     },
   },
 }))
