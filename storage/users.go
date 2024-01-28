@@ -121,6 +121,14 @@ func (u *UserDAO) ListUser() ([]types.User, error) {
 	return users, e
 }
 
+func (u *UserDAO) EvictCache(username string) {
+	if username == "" {
+		u.cache.Clear()
+	} else {
+		u.cache.Remove(username)
+	}
+}
+
 func (u *UserDAO) Dispose() error {
 	return u.cache.Dispose()
 }

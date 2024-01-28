@@ -135,9 +135,6 @@ func (d *DispatcherDrive) resolve(path string) (string, types.IDrive, string, er
 	entryPath := paths[3]
 	drive, ok := d.drives()[driveName]
 	if !ok {
-		if utils.IsRootPath(utils.PathParent(path)) {
-			return "", nil, "", err.NewNotFoundMessageError(i18n.T("error.root_not_writable"))
-		}
 		return "", nil, "", err.NewNotFoundError()
 	}
 	return driveName, drive, entryPath, nil

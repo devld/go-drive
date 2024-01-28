@@ -44,18 +44,7 @@ func InitDriveRoutes(
 	optionsDAO *storage.OptionsDAO,
 	pathMetaDAO *storage.PathMetaDAO) error {
 
-	dr := driveRoute{
-		config:        config,
-		access:        access,
-		searcher:      searcher,
-		tokenStore:    tokenStore,
-		chunkUploader: chunkUploader,
-		thumbnail:     thumbnail,
-		runner:        runner,
-		signer:        signer,
-		options:       optionsDAO,
-		pathMeta:      pathMetaDAO,
-	}
+	dr := driveRoute{config, access, searcher, tokenStore, chunkUploader, thumbnail, runner, signer, optionsDAO, pathMetaDAO}
 
 	scriptsDir, _ := config.GetDir(config.DriveUploadersDir, false)
 	router.Group("/", func(c *gin.Context) {
@@ -66,41 +55,41 @@ func InitDriveRoutes(
 	signatureAuthRoute := router.Group("/", SignatureAuth(signer, userDAO, false))
 
 	// get file content
-	signatureAuthRoute.HEAD("/content/*path", dr.getContent)
-	signatureAuthRoute.GET("/content/*path", dr.getContent)
-	signatureAuthRoute.GET("/thumbnail/*path", dr.getThumbnail)
+	signatureAuthRoute.HEAD("/content/*path", dr._getDrive, dr.getContent)
+	signatureAuthRoute.GET("/content/*path", dr._getDrive, dr.getContent)
+	signatureAuthRoute.GET("/thumbnail/*path", dr._getDrive, dr.getThumbnail)
 
 	tokenAuth := TokenAuth(tokenStore)
 	r := router.Group("/", tokenAuth)
 
-	router.POST("/zip", TokenAuthWithPostParams(tokenStore), dr.zipDownload)
+	router.POST("/zip", TokenAuthWithPostParams(tokenStore), dr._getDrive, dr.zipDownload)
 
 	// list entries/drives
-	router.GET("/entries/*path", SignatureAuth(signer, userDAO, true), tokenAuth, dr.list)
+	router.GET("/entries/*path", SignatureAuth(signer, userDAO, true), tokenAuth, dr._getDrive, dr.list)
 
 	// set path password
 	r.POST("/password/*path", dr.setPathPassword)
 
 	// get entry info
-	r.GET("/entry/*path", dr.get)
+	r.GET("/entry/*path", dr._getDrive, dr.get)
 	// mkdir
-	r.POST("/mkdir/*path", dr.makeDir)
+	r.POST("/mkdir/*path", dr._getDrive, dr.makeDir)
 	// copy file
-	r.POST("/copy", dr.copyEntry)
+	r.POST("/copy", dr._getDrive, dr.copyEntry)
 	// move file
-	r.POST("/move", dr.move)
+	r.POST("/move", dr._getDrive, dr.move)
 	// deleteEntry entry
-	r.DELETE("/entry/*path", dr.deleteEntry)
+	r.DELETE("/entry/*path", dr._getDrive, dr.deleteEntry)
 	// get upload config
-	r.POST("/upload/*path", dr.upload)
+	r.POST("/upload/*path", dr._getDrive, dr.upload)
 	// write file
-	r.PUT("/content/*path", dr.writeContent)
+	r.PUT("/content/*path", dr._getDrive, dr.writeContent)
 	// chunk upload request
 	r.POST("/chunk", dr.chunkUploadRequest)
 	// chunk upload
 	r.PUT("/chunk/:id/:seq", dr.chunkUpload)
 	// chunk upload complete
-	r.POST("/chunk-content/*path", dr.chunkUploadComplete)
+	r.POST("/chunk-content/*path", dr._getDrive, dr.chunkUploadComplete)
 	// delete chunk upload
 	r.DELETE("/chunk/:id", dr.deleteChunkUpload)
 	// search
@@ -125,9 +114,16 @@ type driveRoute struct {
 	pathMeta *storage.PathMetaDAO
 }
 
-func (dr *driveRoute) getDrive(c *gin.Context) (types.IDrive, error) {
+func (dr *driveRoute) _getDrive(c *gin.Context) {
 	session := GetSession(c)
-	return dr.access.GetDrive(session)
+	drive, e := dr.access.GetDrive(session)
+	if e != nil {
+		_ = c.Error(e)
+		c.Abort()
+		return
+	}
+	c.Set("drive", drive)
+	c.Next()
 }
 
 func (dr *driveRoute) setPathPassword(c *gin.Context) {
@@ -160,11 +156,7 @@ func (dr *driveRoute) _setPassword(c *gin.Context, path, password string) error 
 
 func (dr *driveRoute) list(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	d, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	d := c.MustGet("drive").(types.IDrive)
 
 	if e := dr._setPassword(c, path, c.Query("password")); e != nil {
 		_ = c.Error(e)
@@ -192,11 +184,8 @@ func (dr *driveRoute) list(c *gin.Context) {
 
 func (dr *driveRoute) get(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	d, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	d := c.MustGet("drive").(types.IDrive)
+
 	entry, e := d.Get(c.Request.Context(), path)
 	if e != nil {
 		_ = c.Error(e)
@@ -207,11 +196,8 @@ func (dr *driveRoute) get(c *gin.Context) {
 
 func (dr *driveRoute) makeDir(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	d, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	d := c.MustGet("drive").(types.IDrive)
+
 	entry, e := d.MakeDir(c.Request.Context(), path)
 	if e != nil {
 		_ = c.Error(e)
@@ -221,11 +207,8 @@ func (dr *driveRoute) makeDir(c *gin.Context) {
 }
 
 func (dr *driveRoute) copyEntry(c *gin.Context) {
-	drive_, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	drive_ := c.MustGet("drive").(types.IDrive)
+
 	from := utils.CleanPath(c.Query("from"))
 	fromEntry, e := drive_.Get(c.Request.Context(), from)
 	if e != nil {
@@ -255,11 +238,8 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 }
 
 func (dr *driveRoute) move(c *gin.Context) {
-	drive_, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	drive_ := c.MustGet("drive").(types.IDrive)
+
 	from := utils.CleanPath(c.Query("from"))
 	fromEntry, e := drive_.Get(c.Request.Context(), from)
 	if e != nil {
@@ -300,11 +280,8 @@ func checkCopyOrMove(from, to string) error {
 
 func (dr *driveRoute) deleteEntry(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	d, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	d := c.MustGet("drive").(types.IDrive)
+
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
 		return nil, d.Delete(ctx, path)
 	}, 2*time.Second, task.WithNameGroup(path, "drive/delete"))
@@ -324,11 +301,7 @@ func (dr *driveRoute) upload(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	d, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	d := c.MustGet("drive").(types.IDrive)
 	config, e := d.Upload(c.Request.Context(), path, size, override, request)
 	if e != nil {
 		_ = c.Error(e)
@@ -341,11 +314,7 @@ func (dr *driveRoute) upload(c *gin.Context) {
 
 func (dr *driveRoute) getContent(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	d, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	d := c.MustGet("drive").(types.IDrive)
 	file, e := d.Get(c.Request.Context(), path)
 	if e != nil {
 		_ = c.Error(e)
@@ -370,12 +339,7 @@ func (dr *driveRoute) zipDownload(c *gin.Context) {
 		return
 	}
 	prefix := c.PostForm("prefix")
-
-	drive, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	drive := c.MustGet("drive").(types.IDrive)
 
 	entries := make([]types.IEntry, 0, len(files))
 	for _, f := range files {
@@ -452,11 +416,8 @@ func (dr *driveRoute) zipDownload(c *gin.Context) {
 
 func (dr *driveRoute) getThumbnail(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	d, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	d := c.MustGet("drive").(types.IDrive)
+
 	entry, e := d.Get(c.Request.Context(), path)
 	if e != nil {
 		_ = c.Error(e)
@@ -483,11 +444,8 @@ func (dr *driveRoute) getThumbnail(c *gin.Context) {
 
 func (dr *driveRoute) writeContent(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
-	d, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	d := c.MustGet("drive").(types.IDrive)
+
 	session := GetSession(c)
 	override := utils.ToBool(c.Query("override"))
 	size := utils.ToInt64(c.GetHeader("Content-Length"), -1)
@@ -557,11 +515,8 @@ func (dr *driveRoute) chunkUpload(c *gin.Context) {
 }
 
 func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
-	d, e := dr.getDrive(c)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
+	d := c.MustGet("drive").(types.IDrive)
+
 	session := GetSession(c)
 	override := utils.ToBool(c.Query("override"))
 	path := utils.CleanPath(c.Param("path"))
