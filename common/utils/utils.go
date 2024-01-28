@@ -294,7 +294,7 @@ func FormatBytes(bytes uint64, decimals int) string {
 	if int(i) >= len(bytesSizes) {
 		i = float64(len(bytesSizes) - 1)
 	}
-	return fmt.Sprintf("%.2f %s", float64(bytes)/math.Pow(1024, i), bytesSizes[int(i)])
+	return fmt.Sprintf("%.*f %s", decimals, float64(bytes)/math.Pow(1024, i), bytesSizes[int(i)])
 }
 
 func BuildURL(pattern string, variables ...string) string {
