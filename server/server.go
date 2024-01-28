@@ -75,12 +75,8 @@ func InitServer(config common.Config,
 	if e := InitAuthRoutes(router, userAuth, tokenStore, failBanGroup); e != nil {
 		return nil, e
 	}
-	if e := InitAdminRoutes(router, ch, config, bus, driveAccess, rootDrive, searcher, tokenStore, optionsDAO,
-		userDAO, groupDAO, driveDAO, driveDataDAO, permissionDAO, pathMountDAO, pathMetaDAO); e != nil {
-		return nil, e
-	}
-
-	if e := InitJobsRoutes(router, ch, runner, tokenStore, jobExecutor, scheduledDAO); e != nil {
+	if e := InitAdminRoutes(router, ch, config, bus, runner, jobExecutor, driveAccess, rootDrive, searcher, tokenStore, optionsDAO,
+		userDAO, groupDAO, driveDAO, driveDataDAO, permissionDAO, pathMountDAO, pathMetaDAO, scheduledDAO); e != nil {
 		return nil, e
 	}
 

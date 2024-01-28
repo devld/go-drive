@@ -2,7 +2,6 @@ error:
   not_found: Not found
   not_allowed: Operation not allowed
   permission_denied: Resource not found or permission denied
-  root_not_writable: Root path is readonly
   fail_ban_message: Too many failures, please try again later
 util:
   request_failed: "[{{ 1 }}] Request failed"

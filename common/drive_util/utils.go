@@ -210,8 +210,6 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 	return e
 }
 
-// region copy all
-
 type EntryTreeNode struct {
 	Entry    types.IEntry
 	Children []EntryTreeNode
@@ -446,8 +444,6 @@ func CopyEntry(ctx types.TaskCtx, from types.IEntry, driveTo types.IDrive, to st
 	_, e = driveTo.Save(ctx, to, from.Size(), override, file)
 	return e
 }
-
-// endregion
 
 type progressReader struct {
 	r   io.Reader

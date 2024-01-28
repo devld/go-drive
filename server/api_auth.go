@@ -10,7 +10,7 @@ import (
 func InitAuthRoutes(r gin.IRouter, ua *UserAuth,
 	tokenStore types.TokenStore, failBan *FailBanGroup) error {
 
-	ar := authRoute{userAuth: ua, tokenStore: tokenStore}
+	ar := authRoute{ua, tokenStore}
 
 	r.POST("/auth/init", ar.init)
 
