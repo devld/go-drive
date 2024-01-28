@@ -168,15 +168,13 @@ func (r runtimeStat) Status() (string, types.SM, error) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	return "Runtime", types.SM{
-		"GoRoutines":   fmt.Sprintf("%d", runtime.NumGoroutine()),
-		"TotalAlloc":   fmt.Sprintf("%d", m.TotalAlloc),
-		"Alloc":        fmt.Sprintf("%d", m.Alloc),
-		"HeapObjects":  fmt.Sprintf("%d", m.HeapObjects),
+		"Alloc":        utils.FormatBytes(m.Alloc, 2),
 		"Sys":          utils.FormatBytes(m.Sys, 2),
-		"HeapSys":      utils.FormatBytes(m.HeapSys, 2),
-		"HeapInUse":    utils.FormatBytes(m.HeapInuse, 2),
-		"LastGC":       time.Unix(0, int64(m.LastGC)).Format(time.RubyDate),
+		"TotalAlloc":   utils.FormatBytes(m.TotalAlloc, 2),
+		"HeapObjects":  fmt.Sprintf("%d", m.HeapObjects),
+		"LastGC":       time.Unix(0, int64(m.LastGC)).Format(time.RFC3339),
 		"StopTheWorld": fmt.Sprintf("%d ms", m.PauseTotalNs/uint64(time.Millisecond)),
 		"NumGC":        fmt.Sprintf("%d", m.NumGC),
+		"GoRoutines":   fmt.Sprintf("%d", runtime.NumGoroutine()),
 	}, nil
 }

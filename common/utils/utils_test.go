@@ -64,6 +64,12 @@ func TestTimeTick(t *testing.T) {
 }
 
 func TestFormatBytes(t *testing.T) {
+	if v := FormatBytes(12318263771, 0); v != "11 G" {
+		t.Errorf("expect %s, but it's %s", "11 G", v)
+	}
+	if v := FormatBytes(12318263771, 1); v != "11.5 G" {
+		t.Errorf("expect %s, but it's %s", "11.5 G", v)
+	}
 	if v := FormatBytes(12318263771, 2); v != "11.47 G" {
 		t.Errorf("expect %s, but it's %s", "11.47 G", v)
 	}
