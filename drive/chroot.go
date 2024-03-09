@@ -32,7 +32,7 @@ func NewChroot(root string, entries []string) *Chroot {
 	return &Chroot{Root: root, NameFilter: em}
 }
 
-// WrapPath converts path to jailed path
+// WrapPath add root prefix to path
 func (c *Chroot) WrapPath(path string) (string, error) {
 	if c.NameFilter != nil && !utils.IsRootPath(path) {
 		firstNode := path
@@ -47,7 +47,7 @@ func (c *Chroot) WrapPath(path string) (string, error) {
 	return path2.Join(c.Root, path), nil
 }
 
-// UnwrapPath converts jailed path to normal path
+// UnwrapPath remove root prefix from path
 func (c *Chroot) UnwrapPath(path string) string {
 	if !strings.HasPrefix(path, c.Root) {
 		return path
