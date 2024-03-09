@@ -142,6 +142,16 @@ func (dr *driveRoute) _setPassword(c *gin.Context, path, password string) error 
 	if len(password) > 32 {
 		password = password[:32]
 	}
+	chroot, e := dr.access.GetChroot(GetSession(c))
+	if e != nil {
+		return e
+	}
+	if chroot != nil {
+		path, e = chroot.WrapPath(path)
+		if e != nil {
+			return e
+		}
+	}
 	meta, e := dr.pathMeta.GetMerged(path)
 	if e != nil {
 		return e
