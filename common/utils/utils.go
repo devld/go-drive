@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"go-drive/common/types"
+	"log"
 	"math"
 	"math/rand"
 	"net/url"
@@ -18,8 +19,11 @@ import (
 var IsDebugOn bool
 
 func init() {
-	debugOn, _ := os.LookupEnv("DEBUG")
+	debugOn, _ := os.LookupEnv("GO_DRIVE_DEBUG")
 	IsDebugOn = debugOn != ""
+	if IsDebugOn {
+		log.Println("debug mode is on")
+	}
 }
 
 func FileExists(path string) (bool, error) {
@@ -264,6 +268,7 @@ func MapValues[K comparable, V any](m map[K]V) []V {
 func TimeTick(fn func(), d time.Duration) func() {
 	ticker := time.NewTicker(d)
 	stopped := make(chan bool)
+	alreadyClosed := false
 	go func() {
 	out:
 		for {
@@ -276,8 +281,12 @@ func TimeTick(fn func(), d time.Duration) func() {
 		}
 	}()
 	return func() {
+		if alreadyClosed {
+			return
+		}
+		alreadyClosed = true
 		ticker.Stop()
-		stopped <- true
+		close(stopped)
 	}
 }
 
