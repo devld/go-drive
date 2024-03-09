@@ -2,6 +2,10 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release"
+        required: true
   push:
     tags:
       - v*
@@ -12,6 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     container: debian:10
     steps:
+      - name: Set build version
+        run: |
+          set -e
+          INPUT_VERSION=${{ github.event.inputs.version }}
+          version=${INPUT_VERSION:-${GITHUB_REF##*/}}
+          echo "GO_DRIVE_VERSION=${version}" >> $GITHUB_ENV
+
       - name: Install tools
         run: | 
           apt-get update -y && apt-get install -y git curl tar zip build-essential gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-mingw-w64-x86-64
@@ -23,7 +34,7 @@ jobs:
 
       - name: Cache downloaded cross-build environment
         id: cache-cross-build-env
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/cross-build-env
           key: aarch64_arm_amd64
@@ -59,7 +70,7 @@ jobs:
           done
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "^1.21.4"
 
@@ -90,7 +101,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          export BUILD_VERSION=${GITHUB_REF##*/}
+          export BUILD_VERSION=${GO_DRIVE_VERSION}
           BUILDS=(  linux_amd64 windows_amd64          linux_arm64           linux_arm               linux_musl_amd64      linux_musl_arm64       linux_musl_arm)
           CGO_ARGS=(gcc         x86_64-w64-mingw32-gcc aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc x86_64-linux-musl-gcc aarch64-linux-musl-gcc arm-linux-musleabihf-gcc)
           make clean
@@ -121,4 +132,4 @@ jobs:
             echo "adding artifact: ${i}"
             assets="${assets} -a ${i}"
           done
-          hub release create -d -p ${assets} -m "Release ${GITHUB_REF##*/}" ${GITHUB_REF##*/}
+          hub release create -d -p ${assets} -m "Release ${GO_DRIVE_VERSION}" ${GO_DRIVE_VERSION}
