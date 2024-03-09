@@ -28,10 +28,20 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		dbConfig.Logger = logger.New(
 			log.New(os.Stdout, "\n", log.LstdFlags),
 			logger.Config{
-				SlowThreshold:             time.Second,
+				SlowThreshold:             200 * time.Millisecond,
 				LogLevel:                  logger.Info,
-				IgnoreRecordNotFoundError: true,
+				IgnoreRecordNotFoundError: false,
 				Colorful:                  true,
+			},
+		)
+	} else {
+		dbConfig.Logger = logger.New(
+			log.New(os.Stdout, "\n", log.LstdFlags),
+			logger.Config{
+				SlowThreshold:             200 * time.Millisecond,
+				LogLevel:                  logger.Warn,
+				IgnoreRecordNotFoundError: true,
+				Colorful:                  false,
 			},
 		)
 	}
