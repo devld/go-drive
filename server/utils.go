@@ -41,10 +41,17 @@ const (
 	keyMessageSource = "messageSource"
 )
 
-func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, skipOnEmptySignature bool) gin.HandlerFunc {
+var errBadSignature = err.NewBadRequestError("bad signature")
+
+func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequired bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		signature := c.Query(common.SignatureQueryKey)
-		if signature == "" && skipOnEmptySignature {
+		if signature == "" {
+			if signatureRequired {
+				_ = c.Error(errBadSignature)
+				c.Abort()
+				return
+			}
 			c.Next()
 			return
 		}
@@ -60,14 +67,15 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, skipOnEmptySi
 			if len(parts) > 1 {
 				temp, e := utils.Base64URLDecode(parts[1])
 				if e != nil {
-					c.AbortWithError(http.StatusBadRequest, e)
+					_ = c.Error(errBadSignature)
+					c.Abort()
 					return
 				}
 				username = string(temp)
 			}
 
 			if !signer.Validate(path+username, signature) {
-				_ = c.Error(err.NewBadRequestError("bad signature"))
+				_ = c.Error(errBadSignature)
 				c.Abort()
 				return
 			}
@@ -76,7 +84,7 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, skipOnEmptySi
 		if username != "" {
 			user, e := userDAO.GetUser(username)
 			if e != nil {
-				_ = c.Error(err.NewBadRequestError("bad signature"))
+				_ = c.Error(errBadSignature)
 				c.Abort()
 				return
 			}
