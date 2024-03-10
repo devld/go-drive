@@ -176,7 +176,7 @@ export default {
         'The file path template when uploading files to this bucket. Supports the following variables:\n' +
         '{year}: Year\n{month}: Month\n{date}: Date\n{hour}: Hour\n{minute}: Minute\n{second}: Second\n{millisecond}: Millisecond\n' +
         '{timestamp}: Millisecond timestamp\n{rand}: Random text\n{name}: File name (without extension)\n{ext}: File extension(e.g. .jpg)\n\n' +
-        "Example: '{year}/{month}/{date}/{hour}/{minute}/{second}/{name}.{ext}' will generate '2024/01/28/12/34/56/test.jpg'\n\n" +
+        "Example: '{year}/{month}/{date}/{hour}/{minute}/{second}/{name}{ext}' will generate '2024/01/28/12/34/56/test.jpg'\n\n" +
         'If leave blank will use default: {year}{month}{date}/{name}-{rand}{ext}'
       ).replace(/([{}])/g, "{'$1'}"),
       f_secret_token: 'Upload secret key',

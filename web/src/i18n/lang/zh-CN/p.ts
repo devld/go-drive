@@ -172,7 +172,7 @@ export default {
         '文件上传时的路径模板。支持以下变量:\n' +
         '{year}: 年\n{month}: 月\n{date}: 日\n{hour}: 时\n{minute}: 分\n{second}: 秒\n{millisecond}: 毫秒\n' +
         '{timestamp}: 毫秒时间戳\n{rand}: 随机文本\n{name}: 文件名（不包括后缀名）\n{ext}: 文件后缀名（如 .jpg）\n\n' +
-        '例如：{year}/{month}/{date}/{hour}/{minute}/{second}/{name}.{ext} 将生成 2024/01/28/12/34/56/test.jpg\n\n' +
+        '例如：{year}/{month}/{date}/{hour}/{minute}/{second}/{name}{ext} 将生成 2024/01/28/12/34/56/test.jpg\n\n' +
         '留空默认为：{year}{month}{date}/{name}-{rand}{ext}'
       ).replace(/([{}])/g, "{'$1'}"),
       f_secret_token: '上传密钥',
