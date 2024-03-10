@@ -52,7 +52,7 @@ func InitDriveRoutes(
 		c.Next()
 	}).Static("/drive-uploader", scriptsDir)
 
-	signatureAuthRoute := router.Group("/", SignatureAuth(signer, userDAO, false))
+	signatureAuthRoute := router.Group("/", SignatureAuth(signer, userDAO, true))
 
 	// get file content
 	signatureAuthRoute.HEAD("/content/*path", dr._getDrive, dr.getContent)
@@ -65,7 +65,7 @@ func InitDriveRoutes(
 	router.POST("/zip", TokenAuthWithPostParams(tokenStore), dr._getDrive, dr.zipDownload)
 
 	// list entries/drives
-	router.GET("/entries/*path", SignatureAuth(signer, userDAO, true), tokenAuth, dr._getDrive, dr.list)
+	router.GET("/entries/*path", SignatureAuth(signer, userDAO, false), tokenAuth, dr._getDrive, dr.list)
 
 	// set path password
 	r.POST("/password/*path", dr.setPathPassword)
