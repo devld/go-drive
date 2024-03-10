@@ -1,6 +1,7 @@
 package utils
 
 import (
+	cryptoRand "crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"go-drive/common/types"
@@ -133,6 +134,15 @@ func RandString(n int) string {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 	return string(b)
+}
+
+func RandSecret(n int) []byte {
+	b := make([]byte, n)
+	_, e := cryptoRand.Read(b)
+	if e != nil {
+		panic(e)
+	}
+	return b
 }
 
 var lineEndRegexp = regexp.MustCompile("\r?\n")

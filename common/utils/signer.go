@@ -19,7 +19,7 @@ func sha256mac(key, data []byte) []byte {
 }
 
 func NewSigner() *Signer {
-	return &Signer{[]byte(RandString(16))}
+	return &Signer{RandSecret(64)}
 }
 
 func (s *Signer) sign(v string, notAfter int64, r uint32) string {
