@@ -46,7 +46,10 @@ func IsRootPath(path string) bool {
 	return path == ""
 }
 
+var unsafePathCharsRegexp = regexp.MustCompile(`[\x00-\x1f\x7f-\x9f]+`)
+
 func CleanPath(path string) string {
+	path = unsafePathCharsRegexp.ReplaceAllLiteralString(strings.TrimSpace(path), "")
 	path = path2.Clean(path)
 	path = strings.TrimPrefix(path, "/")
 	for strings.HasPrefix(path, "../") {
@@ -327,6 +330,10 @@ func BuildURL(pattern string, variables ...string) string {
 		j++
 	}
 	return pattern
+}
+
+func URLEncodePath(s string) string {
+	return strings.ReplaceAll(url.PathEscape(s), "%2F", "/")
 }
 
 func Base64URLEncode(v []byte) string {

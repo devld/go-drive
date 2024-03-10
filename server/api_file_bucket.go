@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	path2 "path"
 	"regexp"
@@ -165,10 +166,11 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 	}
 
 	bucketDrive := c.MustGet("drive").(types.IDrive)
-	path := utils.CleanPath(c.Param("path"))
+	path := c.Param("path")
 	if path == "" || !bucket.CustomKey {
 		path = fr.generateKey(bucket.KeyTemplate, keyTemplateValues{now: time.Now(), name: filename, ext: fileExt})
 	}
+	path = utils.CleanPath(path)
 
 	savedEntry, e := bucketDrive.Save(task.NewTaskContext(c.Request.Context()), path, fileSize, false, file)
 	if e != nil {
@@ -215,8 +217,8 @@ func (fr *fileBucketRoute) generateURL(template string, values urlTemplateValues
 		template = "{origin}/f/{bucket}/{key}"
 	}
 	template = strings.ReplaceAll(template, "{origin}", GetRequestOrigin(values.ctx)+fr.config.APIPath)
-	template = strings.ReplaceAll(template, "{bucket}", values.bucketName)
-	template = strings.ReplaceAll(template, "{key}", values.key)
+	template = strings.ReplaceAll(template, "{bucket}", url.PathEscape(values.bucketName))
+	template = strings.ReplaceAll(template, "{key}", utils.URLEncodePath(values.key))
 	template = anyVariableRegexp.ReplaceAllString(template, "")
 	return template
 }
