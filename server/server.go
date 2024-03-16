@@ -86,7 +86,7 @@ func InitServer(config common.Config,
 		return nil, e
 	}
 
-	if e := InitFileBucketRoutes(router, config, driveAccess, fileBucketDAO); e != nil {
+	if e := InitFileBucketRoutes(router, config, driveAccess, fileBucketDAO, messageSource); e != nil {
 		return nil, e
 	}
 

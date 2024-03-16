@@ -148,6 +148,13 @@ const pathMetaForm = computed<FormItem[]>(() => [
     width: '50%',
   },
   {
+    field: 'maxSize',
+    label: t('p.admin.file_bucket.f_max_size'),
+    description: t('p.admin.file_bucket.f_max_size_desc'),
+    type: 'text',
+    width: '50%',
+  },
+  {
     field: 'allowedTypes',
     label: t('p.admin.file_bucket.f_allowed_types'),
     description: t('p.admin.file_bucket.f_allowed_types_desc'),
@@ -155,11 +162,19 @@ const pathMetaForm = computed<FormItem[]>(() => [
     width: '100%',
   },
   {
-    field: 'maxSize',
-    label: t('p.admin.file_bucket.f_max_size'),
-    description: t('p.admin.file_bucket.f_max_size_desc'),
+    field: 'allowedReferrers',
+    label: t('p.admin.file_bucket.f_allowed_referrers'),
+    description: t('p.admin.file_bucket.f_allowed_referrers_desc'),
     type: 'text',
-    width: '50%',
+    width: '100%',
+  },
+  {
+    field: 'cacheMaxAge',
+    label: t('p.admin.file_bucket.f_cache_max_age'),
+    description: t('p.admin.file_bucket.f_cache_max_age_desc'),
+    placeholder: '1d',
+    type: 'text',
+    width: '100%',
   },
 ])
 

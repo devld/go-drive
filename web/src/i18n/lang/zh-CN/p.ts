@@ -190,6 +190,12 @@ export default {
         '支持 mime-type 或文件后缀名，多个使用英文逗号分隔，如 image/*,video/mp4,.pdf',
       f_max_size: '最大上传文件大小',
       f_max_size_desc: '限制上传时的文件大小，可使用 b, k, m, g, t 单位',
+      f_allowed_referrers: '防盗链白名单',
+      f_allowed_referrers_desc:
+        '允许的 Referer 列表，多个使用英文逗号分隔，留空默认关闭防盗链。可使用 * 来匹配子域名。\n例如：example.com,*.example.com',
+      f_cache_max_age: '下载缓存有效期',
+      f_cache_max_age_desc:
+        '文件访问缓存时间（Cache-Control），有效单位为 ms, s, m, h, d，默认为一天，0 表示禁用缓存',
       delete_item: '删除',
       confirm_delete: '确认删除？',
       upload_api_p_path: '<上传路径>',
@@ -211,8 +217,8 @@ POST {api_with_path}
 <summary>通过 cURL 上传</summary>
 
 \`\`\`bash
-curl -F 'file={'@'}文件路径' {api} # Form 上传方式
-curl -X POST --data-binary {'@'}文件路径 {api} # 文件流上传方式
+curl -f -F 'file={'@'}文件路径' '{api}' # Form 上传方式
+curl -f -X POST --data-binary {'@'}文件路径 '{api}' # 文件流上传方式
 \`\`\`
 </details>
 `,
