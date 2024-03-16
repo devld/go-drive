@@ -210,7 +210,7 @@ func (cf *cacheFile) readRequest(start, readLen int64) error {
 	return nil
 }
 
-func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, size int64) {
+func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
 	go func() {
 		defer func() { _ = reader.Close() }()
 		writer, e := os.OpenFile(cf.name, os.O_WRONLY, 0600)
