@@ -198,7 +198,7 @@ func (w *driveFSFile) getFile() error {
 			return ok
 		})
 		cacheKey := fmt.Sprintf("m:%d,s:%d,", w.e.ModTime(), w.e.Size())
-		if dispatcherEntry == nil {
+		if dispatcherEntry != nil {
 			cacheKey += "rp:" + dispatcherEntry.(types.IDispatcherEntry).GetRealPath()
 		} else {
 			cacheKey += "p:" + w.e.Path()
