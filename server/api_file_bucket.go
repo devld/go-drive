@@ -1,9 +1,11 @@
 package server
 
 import (
+	"fmt"
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -25,16 +27,18 @@ import (
 )
 
 const (
-	fileBucketSecretTokenKey = "t"
+	FileBucketSecretTokenKey     = "t"
+	FileBucketDefaultCacheMaxAge = "1d"
 )
 
 func InitFileBucketRoutes(
 	router gin.IRouter,
 	config common.Config,
 	access *drive.Access,
-	fileBucketDAO *storage.FileBucketDAO) error {
+	fileBucketDAO *storage.FileBucketDAO,
+	messageSource i18n.MessageSource) error {
 
-	fr := &fileBucketRoute{config, access, fileBucketDAO}
+	fr := &fileBucketRoute{config, access, fileBucketDAO, messageSource}
 
 	r := router.Group("/f/:name", fr._getBucketDrive)
 
@@ -53,6 +57,7 @@ type fileBucketRoute struct {
 	config        common.Config
 	access        *drive.Access
 	fileBucketDAO *storage.FileBucketDAO
+	messageSource i18n.MessageSource
 }
 
 func (fr *fileBucketRoute) _getBucketDrive(c *gin.Context) {
@@ -92,16 +97,15 @@ func (fr *fileBucketRoute) checkAllowedTypes(mimeType, fileExt, allowedTypes str
 
 func (fr *fileBucketRoute) upload(c *gin.Context) {
 	bucket := c.MustGet("bucket").(types.FileBucket)
-	if c.Query(fileBucketSecretTokenKey) != bucket.SecretToken {
-		c.AbortWithStatus(http.StatusUnauthorized)
+	if c.Query(FileBucketSecretTokenKey) != bucket.SecretToken {
+		fr.abortWithMessage(c, http.StatusUnauthorized, "invalid token")
 		return
 	}
 
 	var file io.ReadCloser
 	var fileSize int64
-	var fileType string
+	var fileMime *mimetype.MIME
 	var filename string
-	var fileExt string
 
 	if strings.HasPrefix(c.GetHeader("Content-Type"), "multipart/form-data") {
 		form, e := c.MultipartForm()
@@ -110,20 +114,31 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 			return
 		}
 		if len(form.File["file"]) != 1 {
-			c.AbortWithStatus(http.StatusBadRequest)
+			fr.abortWithMessage(c, http.StatusBadRequest, "bad request")
 			return
 		}
 		multipartFile := form.File["file"][0]
-		file, e = multipartFile.Open()
+		formFile, e := multipartFile.Open()
 		if e != nil {
 			fr.abortWithError(c, e)
 			return
 		}
 		defer func() { _ = file.Close() }()
+
+		fileMime, e = mimetype.DetectReader(formFile)
+		if e != nil {
+			fr.abortWithError(c, e)
+			return
+		}
+		_, e = formFile.Seek(0, io.SeekStart)
+		if e != nil {
+			fr.abortWithError(c, e)
+			return
+		}
+
+		file = formFile
 		fileSize = multipartFile.Size
-		fileType = multipartFile.Header.Get("Content-Type")
-		fileExt = path2.Ext(multipartFile.Filename)
-		filename = strings.TrimSuffix(multipartFile.Filename, fileExt)
+		filename = multipartFile.Filename
 	} else {
 		savedFile, size, e := ReadRequestBodyToTempFile(c, fr.config.TempDir)
 		if e != nil {
@@ -137,31 +152,27 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 		file = savedFile
 		fileSize = size
 
-		var fileMime *mimetype.MIME
-		fileType = c.GetHeader("Content-Type")
-		if fileType == "" {
-			detectedType, e := mimetype.DetectReader(savedFile)
-			if e != nil {
-				fr.abortWithError(c, e)
-				return
-			}
-			fileMime = detectedType
-			fileType = detectedType.String()
-		} else {
-			fileMime = mimetype.Lookup(fileType)
+		detectedType, e := mimetype.DetectReader(savedFile)
+		if e != nil {
+			fr.abortWithError(c, e)
+			return
 		}
-		if fileMime != nil {
-			fileExt = fileMime.Extension()
-		}
+		fileMime = detectedType
+	}
+
+	fileType := fileMime.String()
+	fileExt := fileMime.Extension()
+	if filename != "" && strings.HasSuffix(strings.ToLower(filename), fileExt) {
+		filename = strings.TrimSuffix(filename, fileExt)
 	}
 
 	maxSize := types.SV(bucket.MaxSize).DataSize(0)
 	if maxSize > 0 && fileSize > maxSize {
-		c.AbortWithStatus(http.StatusRequestEntityTooLarge)
+		fr.abortWithMessage(c, http.StatusRequestEntityTooLarge, "file too large")
 		return
 	}
 	if !fr.checkAllowedTypes(fileType, fileExt, bucket.AllowedTypes) {
-		c.AbortWithStatus(http.StatusNotAcceptable)
+		fr.abortWithMessage(c, http.StatusForbidden, "file type not allowed")
 		return
 	}
 
@@ -178,15 +189,46 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, map[string]any{
-		"url":      fr.generateURL(bucket.URLTemplate, urlTemplateValues{ctx: c, bucketName: bucket.Name, key: savedEntry.Path()}),
-		"size":     savedEntry.Size(),
-		"mimeType": fileType,
-	})
+	c.Header("X-File-Size", strconv.FormatInt(savedEntry.Size(), 10))
+	c.Header("X-File-Mime", fileMime.String())
+	c.Writer.WriteString(fr.generateURL(bucket.URLTemplate, urlTemplateValues{ctx: c, bucketName: bucket.Name, key: savedEntry.Path()}))
+}
+
+func (fr *fileBucketRoute) checkReferrers(referrer, allowedReferrers string) bool {
+	if allowedReferrers == "" {
+		return true
+	}
+	if referrer != "" {
+		parsedReferrer, e := url.Parse(referrer)
+		if e != nil {
+			return false
+		}
+		referrer = parsedReferrer.Host
+	}
+	allowed := strings.Split(allowedReferrers, ",")
+	for _, r := range allowed {
+		r = strings.TrimSpace(r)
+		if r == "" && referrer == "" {
+			// allow empty referrers
+			return true
+		}
+		if r == referrer || (strings.HasPrefix(r, "*.") && strings.HasSuffix(referrer, strings.TrimPrefix(r, "*"))) {
+			return true
+		}
+	}
+	return false
+
 }
 
 func (fr *fileBucketRoute) get(c *gin.Context) {
+	bucket := c.MustGet("bucket").(types.FileBucket)
 	bucketDrive := c.MustGet("drive").(types.IDrive)
+
+	if !fr.checkReferrers(c.Request.Referer(), bucket.AllowedReferrers) {
+		fr.abortWithMessage(c, http.StatusForbidden, "")
+		return
+	}
+
 	path := utils.CleanPath(c.Param("path"))
 	entry, e := bucketDrive.Get(c, path)
 	if e != nil {
@@ -194,8 +236,18 @@ func (fr *fileBucketRoute) get(c *gin.Context) {
 		return
 	}
 	if !entry.Type().IsFile() {
-		c.AbortWithStatus(http.StatusNotFound)
+		fr.abortWithMessage(c, http.StatusForbidden, "not found")
 		return
+	}
+	cacheMaxAge := bucket.CacheMaxAge
+	if cacheMaxAge == "" {
+		cacheMaxAge = FileBucketDefaultCacheMaxAge
+	}
+	cacheControlMaxAge := int64(types.SV(cacheMaxAge).Duration(0)) / int64(time.Second)
+	if cacheControlMaxAge > 0 {
+		c.Header("Cache-Control", fmt.Sprintf("public, max-age=%d", cacheControlMaxAge))
+	} else {
+		c.Header("Cache-Control", "no-cache")
 	}
 	if e := drive_util.DownloadIContent(c.Request.Context(), entry, c.Writer, c.Request, false); e != nil {
 		fr.abortWithError(c, e)
@@ -205,11 +257,16 @@ func (fr *fileBucketRoute) get(c *gin.Context) {
 
 func (fr *fileBucketRoute) abortWithError(c *gin.Context, e error) {
 	if ge, ok := e.(err.Error); ok {
-		c.AbortWithStatus(ge.Code())
+		fr.abortWithMessage(c, ge.Code(), TranslateV(c, fr.messageSource, ge.Error()).(string))
 		return
 	}
 	log.Println("unknown error", e)
-	c.AbortWithError(http.StatusInternalServerError, e)
+	fr.abortWithMessage(c, http.StatusInternalServerError, "internal server error")
+}
+
+func (fr *fileBucketRoute) abortWithMessage(c *gin.Context, status int, message string) {
+	c.AbortWithStatus(status)
+	c.Writer.WriteString(message)
 }
 
 func (fr *fileBucketRoute) generateURL(template string, values urlTemplateValues) string {

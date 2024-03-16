@@ -196,6 +196,12 @@ export default {
       f_max_size: 'Maximum upload file size',
       f_max_size_desc:
         'Limits the file size for uploads, can use units such as b, k, m, g, t',
+      f_allowed_referrers: 'Allowed Referer list',
+      f_allowed_referrers_desc:
+        'Allowed Referer list, multiple separated by commas, leave blank to turn off hotlink protection by default. * can be used to match subdomain names. \nFor example: example.com,*.example.com',
+      f_cache_max_age: 'Download cache TTL',
+      f_cache_max_age_desc:
+        'File access cache time (Cache-Control), valid units are ms, s, m, h, d, the default is one day.',
       delete_item: 'Delete',
       confirm_delete: 'Confirm deletion?',
       upload_api_p_path: '<UPLOAD PATH>',
@@ -217,8 +223,8 @@ POST {api_with_path}
 <summary>Upload file using cURL</summary>
 
 \`\`\`bash
-curl -F 'file={'@'}FILE_PATH' {api} # Form upload
-curl -X POST --data-binary {'@'}FILE_PATH {api} # Direct file stream upload
+curl -F 'file={'@'}FILE_PATH' '{api}' # Form upload
+curl -X POST --data-binary {'@'}FILE_PATH '{api}' # Direct file stream upload
 \`\`\`
 </details>
 `,

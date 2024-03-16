@@ -125,6 +125,11 @@ type FileBucket struct {
 	AllowedTypes string `gorm:"column:allowed_types;type:string;size:4096" json:"allowedTypes"`
 	// MaxSize is the maximum allowed size with unit, 0 for unlimited
 	MaxSize string `gorm:"column:max_size;not null;type:string" json:"maxSize"`
+
+	// AllowedReferrers is a comma separated list of allowed referrer hosts
+	AllowedReferrers string `gorm:"column:allowed_referrers;type:string;size:4096" json:"allowedReferrers"`
+	// CacheMaxAge is the maximum age in the Cache-Control header with unit
+	CacheMaxAge string `gorm:"column:cache_max_age;type:string" json:"cacheMaxAge"`
 }
 
 type Job struct {
