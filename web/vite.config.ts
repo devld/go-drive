@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, splitVendorChunkPlugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
 import { injectHtml, minifyHtml } from 'vite-plugin-html'
@@ -33,6 +33,7 @@ export default defineConfig(({ mode }) => ({
       include: path.resolve(__dirname, './src/i18n/lang/**'),
       runtimeOnly: false,
     }),
+    splitVendorChunkPlugin(),
   ],
   resolve: {
     alias: {
@@ -44,15 +45,9 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       plugins: [visualizer()],
       output: {
-        chunkFileNames(chunkInfo) {
-          if (chunkInfo.facadeModuleId && chunkInfo.name === 'index') {
-            const dir = path.dirname(chunkInfo.facadeModuleId)
-            return `${path.basename(path.dirname(dir))}-${path.basename(
-              dir
-            )}-[hash].js`.replace('dist-', '')
-          }
-          return '[name]-[hash].js'
-        },
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
       },
     },
   },
