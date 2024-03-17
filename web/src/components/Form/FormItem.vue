@@ -1,5 +1,8 @@
 <template>
-  <div class="form-item" :class="{ error: !!error, required: item.required }">
+  <div
+    class="form-item"
+    :class="{ error: !!error, required: item.required, disabled }"
+  >
     <Component
       :is="valueId ? 'label' : 'span'"
       v-if="item.label"
@@ -99,6 +102,27 @@
           {{ o.name }}
         </option>
       </select>
+      <div v-if="item.type === 'path'" class="full-width form-item--type-path">
+        <input
+          :id="valueId"
+          class="value full-width"
+          type="text"
+          :name="item.field"
+          :value="modelValue"
+          :placeholder="s(item.placeholder)"
+          :required="item.required"
+          :disabled="disabled || item.disabled"
+          @input="textInput"
+        />
+        <button
+          v-if="!disabled || item.disabled"
+          class="form-item--type-path-select"
+          :title="$t('form.select_path')"
+          @click="selectPath"
+        >
+          <Icon svg="#icon-folder" />
+        </button>
+      </div>
       <FormItemForm
         v-if="item.type === 'form'"
         ref="typeFormEl"
@@ -127,6 +151,7 @@ import { useI18n } from 'vue-i18n'
 import FormItemForm from './FormItemForm.vue'
 
 import CodeEditor from '../CodeEditor/index.vue'
+import { open } from '@/utils/ui-utils'
 
 const props = defineProps({
   id: {
@@ -194,6 +219,20 @@ const clearError = () => {
 
 defineExpose({ clearError, validate })
 
+const selectPath = async () => {
+  try {
+    const selected = await open({
+      type: 'dir',
+      filter: props.item.pathOptions?.filter,
+      title: t('form.select_path'),
+    })
+    emit('update:modelValue', selected.path)
+    clearError()
+  } catch {
+    // ignore
+  }
+}
+
 const stringInput = (e: string) => {
   emit('update:modelValue', e)
   clearError()
@@ -250,5 +289,32 @@ const selectInput = (e: Event) => {
   text-decoration: none;
   color: inherit;
   cursor: help;
+}
+
+.form-item--type-path {
+  position: relative;
+
+  input.value {
+    padding-right: 28px !important;
+  }
+
+  &-select {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    border: 0;
+    outline: none;
+    padding: 0 6px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: transparent;
+  }
+}
+
+.form-item.disabled .form-item--type-path {
+  input.value {
+    padding-right: 8px !important;
+  }
 }
 </style>

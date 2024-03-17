@@ -80,12 +80,13 @@ const emit = defineEmits<{
 
 const dirMode = ref(false)
 const path = ref('')
+const currentEntry = ref<Entry>()
 const selection = ref<Entry[]>([])
 const max = ref(0)
 let filter: (e: Entry) => boolean
 
 const beforeConfirm = () => {
-  if (dirMode.value) return path.value
+  if (dirMode.value) return currentEntry.value
   return [...selection.value] as Entry[]
 }
 
@@ -99,8 +100,8 @@ const isEntrySelectable = (entry: Entry) => {
 }
 
 const entriesLoaded = ({ entry }: { entry: Entry }) => {
-  if (!dirMode.value) return
-  confirmDisabled(!filter(entry))
+  currentEntry.value = entry
+  if (dirMode.value) confirmDisabled(!filter(entry))
 }
 
 const entryClicked = ({ entry, event }: EntryEventData) => {

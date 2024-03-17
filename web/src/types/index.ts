@@ -11,6 +11,7 @@ export type FormItemType =
   | 'password'
   | 'checkbox'
   | 'select'
+  | 'path'
   | 'form'
   | 'code'
 
@@ -19,6 +20,10 @@ export interface FormItemOption {
   title?: I18nText
   value: string
   disabled?: boolean
+}
+
+export interface FormItemPathOptions {
+  filter?: string
 }
 
 export interface FormItemForm {
@@ -48,6 +53,8 @@ export interface BaseFormItem extends O {
   disabled?: boolean
 
   options?: FormItemOption[]
+
+  pathOptions?: FormItemPathOptions
 
   forms?: FormItemForms
 

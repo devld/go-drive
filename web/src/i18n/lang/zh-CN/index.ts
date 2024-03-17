@@ -5,6 +5,7 @@ import handlers from './handlers'
 export default {
   form: {
     required_msg: '{f}是必填的',
+    select_path: '选择',
   },
   routes: {
     title: {

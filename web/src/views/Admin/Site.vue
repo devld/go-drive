@@ -95,7 +95,7 @@ const configForms: OptionsForm[] = [
       {
         field: 'anonymous.rootPath',
         description: t('p.admin.site.anonymous_root_path_desc'),
-        type: 'text',
+        type: 'path',
       },
     ],
   },

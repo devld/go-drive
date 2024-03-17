@@ -5,6 +5,7 @@ import handlers from './handlers'
 export default {
   form: {
     required_msg: '{f} is required',
+    select_path: 'Select',
   },
   routes: {
     title: {
