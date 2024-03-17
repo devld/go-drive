@@ -20,32 +20,43 @@ import (
 	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
-var templateAllowedExt = map[string]bool{
-	".html": true,
+func isAllowedTemplate(name string) bool {
+	ext := strings.ToLower(path2.Ext(name))
+	// currently only html is allowed
+	return ext == ".html"
 }
 
-func newWebFiles(webDir string, config common.Config, options *storage.OptionsDAO) http.Handler {
+func setFileCacheControl(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Path
+	if name == "/" {
+		name = "/index.html"
+	}
+	if !isAllowedTemplate(name) {
+		w.Header().Add("Cache-Control", " public, max-age=31536000")
+	}
+}
+
+func newWebFiles(webDir string, config common.Config, options *storage.OptionsDAO) http.HandlerFunc {
 	data := templateData{Options: options, Config: &config}
 
-	tp := newTemplateProcessor(func(stat fs.FileInfo) bool {
-		ok := templateAllowedExt[strings.ToLower(path2.Ext(stat.Name()))]
-		return ok
-	})
-	preprocess := func(name string, file http.File) (string, error) {
-		b, e := tp.Process(file, data)
-		if e != nil {
-			return "", e
-		}
-		return string(b), nil
+	tp := newTemplateProcessor(isAllowedTemplate)
+	fileProcess := func(path string, file http.File) ([]byte, error) { return tp.Process(path, file, data) }
+
+	handler := http.FileServer(&rootFs{root: http.Dir(webDir), fileProcess: fileProcess})
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		setFileCacheControl(w, r)
+		handler.ServeHTTP(w, r)
 	}
-	return http.FileServer(newRootFileSystem(webDir, preprocess))
 }
 
+// templateData is provided to the template
 type templateData struct {
 	Options *storage.OptionsDAO
 	Config  *common.Config
 }
 
+// Json is called by html template
 func (templateData) Json(o interface{}) (string, error) {
 	s, e := json.Marshal(o)
 	if e != nil {
@@ -56,22 +67,17 @@ func (templateData) Json(o interface{}) (string, error) {
 
 var ErrUnprocessed = errors.New("unprocessed")
 
-func newRootFileSystem(root string,
-	preprocess func(string, http.File) (string, error)) http.FileSystem {
-	return rootFs{root: http.Dir(root), preprocess: preprocess}
-}
-
 type rootFs struct {
-	root       http.FileSystem
-	preprocess func(string, http.File) (string, error)
+	root        http.FileSystem
+	fileProcess func(string, http.File) ([]byte, error)
 }
 
-func (r rootFs) Open(name string) (http.File, error) {
+func (r *rootFs) Open(name string) (http.File, error) {
 	file, e := r.root.Open(name)
 	if e != nil {
 		return nil, e
 	}
-	content, e := r.preprocess(name, file)
+	content, e := r.fileProcess(name, file)
 	if e == ErrUnprocessed {
 		return file, nil
 	}
@@ -80,10 +86,10 @@ func (r rootFs) Open(name string) (http.File, error) {
 		log.Println("error processing file", e)
 		return nil, e
 	}
-	return newProcessedFile(name, []byte(content)), nil
+	return newProcessedFile(name, content), nil
 }
 
-func newTemplateProcessor(filter func(stat fs.FileInfo) bool) *templateProcessor {
+func newTemplateProcessor(filter func(name string) bool) *templateProcessor {
 	return &templateProcessor{
 		filter: filter,
 		cache:  cmap.New[*templateCache](),
@@ -91,17 +97,17 @@ func newTemplateProcessor(filter func(stat fs.FileInfo) bool) *templateProcessor
 }
 
 type templateProcessor struct {
-	filter func(stat fs.FileInfo) bool
+	filter func(name string) bool
 	cache  cmap.ConcurrentMap[string, *templateCache]
 }
 
-func (tp *templateProcessor) Process(file http.File, data interface{}) ([]byte, error) {
+func (tp *templateProcessor) Process(path string, file http.File, data interface{}) ([]byte, error) {
 	stat, e := file.Stat()
 	if e != nil {
 		return nil, e
 	}
 
-	if tp.filter != nil && !tp.filter(stat) {
+	if stat.IsDir() || (tp.filter != nil && !tp.filter(path)) {
 		return nil, ErrUnprocessed
 	}
 
