@@ -29,8 +29,8 @@ const createHandler = (isMove: boolean): EntryHandler => {
           ),
           type: 'dir',
           filter: 'write',
-          async onOk(path) {
-            const executed = await copyOrMove(isMove, entries, path)
+          async onOk(destEntry) {
+            const executed = await copyOrMove(isMove, entries, destEntry.path)
             resolve({ update: executed.length > 0 })
           },
         })

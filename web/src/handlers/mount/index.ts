@@ -17,11 +17,11 @@ export default {
     open({
       title: T('handler.mount.open_title'),
       type: 'dir',
-      async onOk(path) {
+      async onOk(destEntry) {
         loading(true)
         try {
           await mountPaths(
-            path,
+            destEntry.path,
             entries.map((e) => ({ path: e.path, name: e.name }))
           )
         } catch (e: any) {

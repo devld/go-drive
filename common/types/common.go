@@ -42,6 +42,10 @@ type FormItemOption struct {
 	Disabled bool   `json:"disabled"`
 }
 
+type FormItemPathOptions struct {
+	Filter string `json:"filter" i18n:""`
+}
+
 type FormItemForm struct {
 	Key  string     `json:"key"`
 	Name string     `json:"name" i18n:""`
@@ -62,7 +66,7 @@ type FormItemCode struct {
 
 type FormItem struct {
 	Label string `json:"label" i18n:""`
-	// Type: md, textarea, text, password, checkbox, select, form, code
+	// Type: md, textarea, text, password, checkbox, select, path, form, code
 	Type     string `json:"type"`
 	Field    string `json:"field"`
 	Required bool   `json:"required,omitempty"`
@@ -73,6 +77,9 @@ type FormItem struct {
 
 	// Options is for type select
 	Options *[]FormItemOption `json:"options,omitempty"`
+
+	// PathOptions is for type path
+	PathOptions FormItemPathOptions `json:"pathOptions,omitempty"`
 
 	// Forms is for type form
 	Forms *FormItemForms `json:"forms,omitempty"`

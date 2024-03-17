@@ -117,7 +117,7 @@ const indexOptionsForm = computed<FormItem[]>(() => [
   },
   {
     field: 'path',
-    type: 'text',
+    type: 'path',
     label: t('p.admin.misc.search_form_path'),
     description: t('p.admin.misc.search_form_path_desc'),
   },

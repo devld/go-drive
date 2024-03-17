@@ -1,12 +1,8 @@
-import {
-  showAlertDialog,
-  showConfirmDialog,
-  TextDialogOptions,
-} from './text-dialog'
-import showInputDialog, { InputDialogOptions } from './input-dialog'
-import toggleLoadingDialog, { LoadingOptions } from './loading-dialog'
-import showOpenDialog, { OpenDialogOptions } from './open-dialog'
 import showBaseDialog, { BaseDialogOptions } from './base-dialog'
+import showInputDialog from './input-dialog'
+import toggleLoadingDialog from './loading-dialog'
+import showOpenDialog from './open-dialog'
+import { showAlertDialog, showConfirmDialog } from './text-dialog'
 
 export const dialog = <
   OT extends BaseDialogOptions = BaseDialogOptions,
@@ -16,14 +12,11 @@ export const dialog = <
   opts: OT
 ) => showBaseDialog<RT>(component, opts)
 
-export const alert = (opts: TextDialogOptions | I18nText) =>
-  showAlertDialog(opts)
-export const confirm = (opts: TextDialogOptions | I18nText) =>
-  showConfirmDialog(opts)
-export const input = (opts: InputDialogOptions) => showInputDialog(opts)
-export const loading = (opts?: LoadingOptions | boolean) =>
-  toggleLoadingDialog(opts)
-export const open = (opts: OpenDialogOptions) => showOpenDialog(opts)
+export const alert = showAlertDialog
+export const confirm = showConfirmDialog
+export const input = showInputDialog
+export const loading = toggleLoadingDialog
+export const open = showOpenDialog
 
 export interface UIUtils {
   dialog: typeof dialog

@@ -5,7 +5,7 @@ import { createApp, defineComponent, h } from 'vue'
 import dialogUse from '../dialog-use'
 import { SimpleButtonType } from '@/components/SimpleButton'
 
-export interface BaseDialogOptions {
+export interface BaseDialogOptions<OKV = any, CV = any> {
   title?: I18nText
   confirmText?: I18nText
   confirmType?: SimpleButtonType
@@ -16,8 +16,8 @@ export interface BaseDialogOptions {
   escClose?: boolean
   overlayClose?: boolean
 
-  onOk?: (v?: any) => PromiseValue<any>
-  onCancel?: (v?: any) => PromiseValue<any>
+  onOk?: (v: OKV) => PromiseValue<any>
+  onCancel?: (v: CV) => PromiseValue<any>
 }
 
 export interface BaseDialogOptionsData {
@@ -223,7 +223,7 @@ export function createDialog(name: string, component: any) {
 
 export default function showBaseDialog<T = any>(
   component: any,
-  opts: BaseDialogOptions
+  opts: BaseDialogOptions<T>
 ): Promise<T> {
   if (!component._base_dialog) throw new Error()
 

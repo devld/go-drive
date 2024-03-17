@@ -298,6 +298,10 @@ declare interface FormItemOption {
   Disabled?: boolean;
 }
 
+declare interface FormItemPathOptions {
+  Filter?: string;
+}
+
 declare interface FormItemForm {
   Key: string;
   /** Display name */
@@ -323,6 +327,9 @@ declare interface FormItem {
 
   /** for FormItemType select */
   Options?: FormItemOption[];
+
+  /** for FormItemType path */
+  PathOptions?: FormItemPathOptions;
 
   /** for FormItemType form */
   Forms?: FormItemForms;

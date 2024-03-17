@@ -114,7 +114,7 @@ const pathMetaForm = computed<FormItem[]>(() => [
     field: 'targetPath',
     label: t('p.admin.file_bucket.f_target_path'),
     description: t('p.admin.file_bucket.f_target_path_desc'),
-    type: 'text',
+    type: 'path',
     width: '100%',
     required: true,
   },

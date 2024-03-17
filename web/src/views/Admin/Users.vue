@@ -121,7 +121,7 @@ const userForm = computed<FormItem[]>(() => [
     field: 'rootPath',
     label: t('p.admin.user.f_rootPath'),
     description: t('p.admin.user.f_rootPath_desc'),
-    type: 'text',
+    type: 'path',
   },
 ])
 

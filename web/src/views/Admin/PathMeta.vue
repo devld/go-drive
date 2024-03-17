@@ -104,7 +104,7 @@ const pathMetaForm = computed<FormItem[]>(() => [
   {
     field: 'path',
     label: t('p.admin.path_meta.f_path'),
-    type: 'text',
+    type: 'path',
     width: '100%',
   },
   {
