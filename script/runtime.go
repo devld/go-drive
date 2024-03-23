@@ -128,7 +128,7 @@ func (v *VM) RemoveDisposable(o interface{}) {
 	delete(v.disposables, o)
 }
 
-func (v *VM) Dispose() error {
+func (v *VM) DisposeDisposables() {
 	for o := range v.disposables {
 		if d, ok := o.(ObjectDisposable); ok {
 			d.Dispose()
@@ -137,7 +137,11 @@ func (v *VM) Dispose() error {
 			c.Close()
 		}
 	}
-	v.disposables = nil
+	v.disposables = make(map[interface{}]struct{})
+}
+
+func (v *VM) Dispose() error {
+	v.DisposeDisposables()
 
 	v.vmsMu.Lock()
 	defer v.vmsMu.Unlock()
