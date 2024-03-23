@@ -7,6 +7,9 @@
 // 
 // > You must leave an empty line below indicate the description is ended
 
+
+/// <reference path="./scripts/env/drive.d.ts"/>
+
 /**
  * @returns {FormItem[]}
  */
