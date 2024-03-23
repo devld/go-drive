@@ -37,16 +37,16 @@ type VMPool struct {
 	pool *pool.ObjectPool
 }
 
-func (p *VMPool) Get() (*VM, error) {
-	vm, e := p.pool.BorrowObject(context.Background())
+func (p *VMPool) Get(ctx context.Context) (*VM, error) {
+	vm, e := p.pool.BorrowObject(ctx)
 	if e != nil {
 		return nil, e
 	}
 	return vm.(*VM), nil
 }
 
-func (p *VMPool) Return(vm *VM) error {
-	return p.pool.ReturnObject(context.Background(), vm)
+func (p *VMPool) Return(ctx context.Context, vm *VM) error {
+	return p.pool.ReturnObject(ctx, vm)
 }
 
 func (p *VMPool) Dispose() error {
@@ -72,6 +72,7 @@ func (pof *poolObjectFactory) ActivateObject(ctx context.Context, object *pool.P
 }
 
 func (pof *poolObjectFactory) PassivateObject(ctx context.Context, object *pool.PooledObject) error {
+	object.Object.(*VM).DisposeDisposables()
 	return nil
 }
 
