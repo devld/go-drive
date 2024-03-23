@@ -198,7 +198,8 @@ export default {
         'Limits the file size for uploads, can use units such as b, k, m, g, t',
       f_allowed_referrers: 'Allowed Referer list',
       f_allowed_referrers_desc:
-        'Allowed Referer list, multiple separated by commas, leave blank to turn off hotlink protection by default. * can be used to match subdomain names. \nFor example: example.com,*.example.com',
+        'Allowed Referer list, multiple separated by commas, leave blank to turn off hotlink protection by default. * can be used to match subdomain names. Use blank domain to allow empty Referer.\n' +
+        'For example: example.com,*.example.com will allow example.com and its subdomain names. example.com,,*.example.com will allow example.com and its subdomain names, and allow empty Referer',
       f_cache_max_age: 'Download cache TTL',
       f_cache_max_age_desc:
         'File access cache time (Cache-Control), valid units are ms, s, m, h, d, the default is one day.',

@@ -192,7 +192,8 @@ export default {
       f_max_size_desc: '限制上传时的文件大小，可使用 b, k, m, g, t 单位',
       f_allowed_referrers: '防盗链白名单',
       f_allowed_referrers_desc:
-        '允许的 Referer 列表，多个使用英文逗号分隔，留空默认关闭防盗链。可使用 * 来匹配子域名。\n例如：example.com,*.example.com',
+        '允许的 Referer 列表，多个使用英文逗号分隔，留空默认关闭防盗链。可使用 * 来匹配子域名，使用空域名来允许空 Referer。\n' +
+        '例如：\nexample.com,*.example.com 将允许 example.com 及其子域名；\nexample.com,,*.example.com 将允许 example.com 及其子域名，以及空 Referer',
       f_cache_max_age: '下载缓存有效期',
       f_cache_max_age_desc:
         '文件访问缓存时间（Cache-Control），有效单位为 ms, s, m, h, d，默认为一天，0 表示禁用缓存',
