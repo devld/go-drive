@@ -79,7 +79,7 @@ type FormItem struct {
 	Options *[]FormItemOption `json:"options,omitempty"`
 
 	// PathOptions is for type path
-	PathOptions FormItemPathOptions `json:"pathOptions,omitempty"`
+	PathOptions *FormItemPathOptions `json:"pathOptions,omitempty"`
 
 	// Forms is for type form
 	Forms *FormItemForms `json:"forms,omitempty"`

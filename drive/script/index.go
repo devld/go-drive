@@ -213,7 +213,9 @@ func (sd *ScriptDrive) valueToEntry(v *s.Value) *scriptDriveEntry {
 
 func (sd *ScriptDrive) Dispose() error {
 	_ = sd.baseVM.Dispose()
-	_ = sd.pool.Dispose()
+	if sd.pool != nil {
+		_ = sd.pool.Dispose()
+	}
 	return nil
 }
 
