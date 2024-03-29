@@ -205,7 +205,7 @@ func (v *Value) Call(thisValue interface{}, args ...interface{}) *Value {
 }
 
 func parseValue(ov *Value, v reflect.Value) {
-	if !v.IsValid() {
+	if ov == nil || !v.IsValid() {
 		return
 	}
 	vt := v.Type()
