@@ -124,7 +124,7 @@ func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
 func OAuthGet(o OAuthRequest, cred OAuthCredentials, ds DriveDataStore) (*OAuthResponse, error) {
 	t := loadToken(ds)
 	if t == nil {
-		return nil, err.NewNotAllowedMessageError("drive.not_configured")
+		return nil, err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
 	}
 	return newOAuthResponse(oAuthConfig(o, cred), ds, t), nil
 }
