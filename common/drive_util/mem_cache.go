@@ -35,9 +35,7 @@ func (m *MemDriveCacheManager) EvictCacheStore(ns string) error {
 	node.Data.EntryCacheItem = nil
 	node.L().Unlock()
 	if parent != nil {
-		parent.L().Lock()
 		parent.RemoveChild(node.Key())
-		parent.L().Unlock()
 	}
 	return nil
 }
