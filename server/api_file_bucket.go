@@ -102,9 +102,8 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 		return
 	}
 
-	var file io.ReadCloser
+	var file io.ReadSeeker
 	var fileSize int64
-	var fileMime *mimetype.MIME
 	var filename string
 
 	if strings.HasPrefix(c.GetHeader("Content-Type"), "multipart/form-data") {
@@ -123,18 +122,7 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 			fr.abortWithError(c, e)
 			return
 		}
-		defer func() { _ = file.Close() }()
-
-		fileMime, e = mimetype.DetectReader(formFile)
-		if e != nil {
-			fr.abortWithError(c, e)
-			return
-		}
-		_, e = formFile.Seek(0, io.SeekStart)
-		if e != nil {
-			fr.abortWithError(c, e)
-			return
-		}
+		defer func() { _ = formFile.Close() }()
 
 		file = formFile
 		fileSize = multipartFile.Size
@@ -149,15 +137,21 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 			_ = savedFile.Close()
 			_ = os.Remove(savedFile.Name())
 		}()
+
 		file = savedFile
 		fileSize = size
+	}
 
-		detectedType, e := mimetype.DetectReader(savedFile)
-		if e != nil {
-			fr.abortWithError(c, e)
-			return
-		}
-		fileMime = detectedType
+	fileMime, e := mimetype.DetectReader(file)
+	if e != nil {
+		fr.abortWithError(c, e)
+		return
+	}
+
+	_, e = file.Seek(0, io.SeekStart)
+	if e != nil {
+		fr.abortWithError(c, e)
+		return
 	}
 
 	fileType := fileMime.String()
