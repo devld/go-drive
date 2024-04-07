@@ -76,21 +76,42 @@ func GetSelfEntry(d types.IDrive, entry types.IEntry) types.IEntry {
 	return GetIEntry(entry, func(ee types.IEntry) bool { return ee.Drive() == d })
 }
 
+// errInvalidWrite means that a write returned an impossible count.
+var errInvalidWrite = errors.New("invalid write result")
+
 func Copy(ctx types.TaskCtx, dst io.Writer, src io.Reader) (written int64, err error) {
 	buf := make([]byte, 32*1024)
 	for {
 		if e := ctx.Err(); e != nil {
 			return written, e
 		}
-		w, ee := io.CopyBuffer(dst, src, buf)
-		if ee != nil {
+
+		nr, er := src.Read(buf)
+		if nr > 0 {
+			nw, ew := dst.Write(buf[0:nr])
+			if nw < 0 || nr < nw {
+				nw = 0
+				if ew == nil {
+					ew = errInvalidWrite
+				}
+			}
+			written += int64(nw)
+			ctx.Progress(int64(nw), false)
+			if ew != nil {
+				err = ew
+				break
+			}
+			if nr != nw {
+				err = io.ErrShortWrite
+				break
+			}
+		}
+		if er != nil {
+			if er != io.EOF {
+				err = er
+			}
 			break
 		}
-		if w == 0 {
-			break
-		}
-		written += w
-		ctx.Progress(w, false)
 	}
 	return
 }
@@ -433,10 +454,11 @@ func CopyAll(ctx types.TaskCtx, entry types.IEntry, driveTo types.IDrive, to str
 
 func CopyEntry(ctx types.TaskCtx, from types.IEntry, driveTo types.IDrive, to string,
 	override bool, tempDir string) error {
-	file, e := CopyIContentToTempFile(task.DummyContext(), from, tempDir)
+	file, e := CopyIContentToTempFile(ctx, from, tempDir)
 	if e != nil {
 		return e
 	}
+	ctx.Progress(0, true)
 	defer func() {
 		_ = file.Close()
 		_ = os.Remove(file.Name())

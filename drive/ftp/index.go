@@ -108,7 +108,7 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, rea
 			return nil, e
 		}
 	}
-	e := f.c.Store(path, reader)
+	e := f.c.Store(path, drive_util.ProgressReader(reader, ctx))
 	if e != nil {
 		return nil, mapError(e)
 	}
