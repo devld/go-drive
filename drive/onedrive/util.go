@@ -278,15 +278,14 @@ func (o *OneDrive) uploadSmallFile(ctx types.TaskCtx,
 	parentId, filename string, size int64, reader io.Reader) (*oneDriveEntry, error) {
 	ctx.Total(size, true)
 	resp, e := o.c.Request(ctx, "PUT", idURL(parentId)+":"+utils.BuildURL("/{}:/content", filename),
-		types.SM{"Content-Type": "application/octet-stream"}, req.NewReaderBody(reader, size))
+		types.SM{"Content-Type": "application/octet-stream"}, req.NewReaderBody(drive_util.ProgressReader(reader, ctx), size))
 	if e != nil {
 		return nil, e
 	}
-	ctx.Progress(size, false)
 	return o.toEntry(resp)
 }
 
-// uploadSmallFile uploads file that less than 4Mb, override if exists
+// uploadSmallFileOverride uploads file that less than 4Mb, override if exists
 func (o *OneDrive) uploadSmallFileOverride(ctx types.TaskCtx,
 	id string, size int64, reader io.Reader) (*oneDriveEntry, error) {
 	ctx.Total(size, true)

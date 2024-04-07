@@ -164,7 +164,7 @@ func (s *Drive) Save(ctx types.TaskCtx, path string, _ int64,
 	_, e := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
-		Body:   reader,
+		Body:   drive_util.ProgressReader(reader, ctx),
 	})
 	if e != nil {
 		return nil, e
@@ -175,7 +175,6 @@ func (s *Drive) Save(ctx types.TaskCtx, path string, _ int64,
 	if e != nil {
 		return nil, e
 	}
-	ctx.Progress(get.Size(), false)
 	return get, nil
 }
 
