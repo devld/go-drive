@@ -1,8 +1,7 @@
-import { defineConfig, loadEnv, splitVendorChunkPlugin } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
-import { injectHtml, minifyHtml } from 'vite-plugin-html'
-import vueI18n from '@intlify/vite-plugin-vue-i18n'
+import { createHtmlPlugin } from 'vite-plugin-html'
 import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vitejs.dev/config/
@@ -12,7 +11,7 @@ export default defineConfig(({ mode }) => ({
     port: 9803,
     proxy: {
       '/api': {
-        target: 'http://localhost:8089',
+        target: 'http://localhost:18089',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
@@ -22,24 +21,23 @@ export default defineConfig(({ mode }) => ({
 
   plugins: [
     vue(),
-    injectHtml({
-      data: {
-        ...loadEnv(mode, __dirname),
-        mode,
+
+    createHtmlPlugin({
+      minify: true,
+      inject: {
+        data: {
+          ...loadEnv(mode, __dirname),
+          mode,
+        },
       },
     }),
-    minifyHtml(),
-    vueI18n({
-      include: path.resolve(__dirname, './src/i18n/lang/**'),
-      runtimeOnly: false,
-    }),
-    splitVendorChunkPlugin(),
   ],
   resolve: {
     alias: {
       '@': path.join(__dirname, 'src'),
     },
   },
+  css: { preprocessorOptions: { scss: { api: 'modern-compiler' } } },
   build: {
     cssCodeSplit: false,
     rollupOptions: {
@@ -48,6 +46,11 @@ export default defineConfig(({ mode }) => ({
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('vue') || id.includes('pinia')) return 'vue'
+          }
+        },
       },
     },
   },

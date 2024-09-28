@@ -1,4 +1,3 @@
-import { Entry } from '@/types'
 import { createEntryExtMatcher } from '@/utils'
 
 export const languages = {

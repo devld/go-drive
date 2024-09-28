@@ -1,5 +1,5 @@
 import { Entry } from '@/types'
-import { createEntryExtMatcher, filenameExt } from '@/utils'
+import { createEntryExtMatcher } from '@/utils'
 
 const fileExts: O<string[]> = {
   log: [

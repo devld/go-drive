@@ -54,7 +54,7 @@ declare global {
   declare type EntryListType = typeof EntryList
 }
 
-declare module '@vue/runtime-core' {
+declare module 'vue' {
   export interface ComponentCustomProperties {
     s: typeof s
   }

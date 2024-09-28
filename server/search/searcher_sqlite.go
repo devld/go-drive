@@ -20,6 +20,7 @@ import (
 
 const (
 	sqliteDBFilename = "index.db"
+	timeFormat       = "2006-01-02 15:04:05Z07:00"
 )
 
 var (
@@ -74,7 +75,7 @@ func (s *SQLiteSearcher) Index(ctx types.TaskCtx, entries []types.EntrySearchIte
 	data := utils.ArrayMap(entries, func(t *types.EntrySearchItem) entry {
 		return entry{
 			Path: t.Path, Name: t.Name, Ext: &t.Ext,
-			Type: t.Type, Size: t.Size, ModTime: t.ModTime,
+			Type: t.Type, Size: t.Size, ModTime: t.ModTime.Format(timeFormat),
 		}
 	})
 	for i := 0; i < len(data); i += 500 {
@@ -98,10 +99,11 @@ func (s *SQLiteSearcher) Search(path string, query string, from int, size int) (
 		return nil, e
 	}
 	return utils.ArrayMap(entries, func(t *entry) types.EntrySearchResultItem {
+		parsedTime, _ := time.Parse(timeFormat, t.ModTime)
 		return types.EntrySearchResultItem{
 			Entry: types.EntrySearchItem{
 				Path: t.Path, Name: t.Name, Ext: *t.Ext,
-				Type: t.Type, Size: t.Size, ModTime: t.ModTime,
+				Type: t.Type, Size: t.Size, ModTime: parsedTime,
 			},
 		}
 	}), nil
@@ -218,7 +220,7 @@ type entry struct {
 	Ext     *string         `gorm:"column:ext;not null;type:string;size:255"`
 	Type    types.EntryType `gorm:"column:type;not null;type:string;size:16"`
 	Size    int64           `gorm:"column:size;not null;type:int"`
-	ModTime time.Time       `gorm:"column:mod_time;not null;type:time;index"`
+	ModTime string          `gorm:"column:mod_time;not null;type:time;index"`
 }
 
 func (entry) TableName() string {

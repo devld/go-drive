@@ -127,7 +127,7 @@ const onInputFocus = () => {
   setActive(true)
 }
 
-const onResultScroll = (e: UIEvent) => {
+const onResultScroll = (e: Event) => {
   const target = e.target as HTMLElement
   if (target.scrollHeight - target.scrollTop - target.clientHeight < 100) {
     loadNextPage()
