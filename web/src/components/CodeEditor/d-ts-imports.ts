@@ -2,14 +2,16 @@ import type { JavaScriptLibItem } from '../../../monaco-editor/src/types'
 
 import { filename, mapOf } from '@/utils'
 import serverGlobal from '../../../../docs/scripts/global.d.ts?raw'
-const serverLibs = import.meta.globEager(
-  '../../../../docs/scripts/libs/*.d.ts',
-  { as: 'raw' }
-)
-const serverEnvs = import.meta.globEager(
-  '../../../../docs/scripts/env/*.d.ts',
-  { as: 'raw' }
-)
+const serverLibs = import.meta.glob('../../../../docs/scripts/libs/*.d.ts', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+const serverEnvs = import.meta.glob('../../../../docs/scripts/env/*.d.ts', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
 
 const getName = (path: string) => filename(path).replace(/\.d\.ts$/, '')
 

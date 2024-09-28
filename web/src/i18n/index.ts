@@ -1,9 +1,8 @@
 import { Plugin } from 'vue'
 import { createI18n } from 'vue-i18n'
-import enUS from './lang/en-US'
 
 const DEFAULT_LANG = 'en-US'
-const loadedLanguages = [DEFAULT_LANG]
+const loadedLanguages: string[] = []
 
 const i18n = createI18n({
   legacy: false,
@@ -11,13 +10,13 @@ const i18n = createI18n({
   globalInjection: true,
   locale: DEFAULT_LANG,
   fallbackLocale: DEFAULT_LANG,
-  messages: { [DEFAULT_LANG]: enUS },
+  messages: {} as Record<string, any>,
 })
 
 function loadLanguage(lang: string) {
   if (i18n.global.locale.value === lang) return lang
   if (loadedLanguages.includes(lang)) return _setLang(lang)
-  return import(/* @vite-ignore */ `./lang/${lang}/index.ts`).then((msgs) => {
+  return import(`./lang/${lang}.json`).then((msgs) => {
     i18n.global.setLocaleMessage(lang, msgs.default)
     loadedLanguages.push(lang)
     return _setLang(lang)
@@ -43,7 +42,9 @@ export async function setLang(lang: string) {
 }
 
 function _tFn(this: I18nTextObject) {
-  return i18n.global.t(this.key, this.args ?? {})
+  return (
+    i18n.global as unknown as { t: (key: string, data: O<any>) => string }
+  ).t(this.key, this.args ?? {})
 }
 
 export function T(key: string, args?: O<any>): I18nTextObject {

@@ -8,8 +8,13 @@ import {
 } from './types'
 
 export const HANDLERS: Readonly<EntryHandler[]> = Object.freeze(
-  Object.values(import.meta.globEager('./*/index.ts'))
-    .flatMap((m) => Object.values(m) as EntryHandler[])
+  (
+    Object.values(import.meta.glob('./*/index.ts', { eager: true })) as Record<
+      string,
+      EntryHandler
+    >[]
+  )
+    .flatMap((m) => Object.values(m))
     .map((e) => ({
       handler: e,
       typeOrder: e.view ? -1 : 1,

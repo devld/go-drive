@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     port: 9804,
   },
+  css: { preprocessorOptions: { scss: { api: 'modern-compiler' } } },
   build: {
     outDir: '../public/code-editor',
     emptyOutDir: true,
