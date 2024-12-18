@@ -498,6 +498,7 @@ onBeforeMount(() => {
   to {
     right: 50vw;
     bottom: 50vh;
+    bottom: 50dvh;
     transform: translate(50%, 50%) scale(1);
     opacity: 1;
   }

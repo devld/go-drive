@@ -1,8 +1,9 @@
 import { Plugin } from 'vue'
 import { createI18n } from 'vue-i18n'
+import enUS from './lang/en-US.json'
 
 const DEFAULT_LANG = 'en-US'
-const loadedLanguages: string[] = []
+const loadedLanguages: string[] = [DEFAULT_LANG]
 
 const i18n = createI18n({
   legacy: false,
@@ -10,7 +11,7 @@ const i18n = createI18n({
   globalInjection: true,
   locale: DEFAULT_LANG,
   fallbackLocale: DEFAULT_LANG,
-  messages: {} as Record<string, any>,
+  messages: { [DEFAULT_LANG]: enUS } as Record<string, any>,
 })
 
 function loadLanguage(lang: string) {
