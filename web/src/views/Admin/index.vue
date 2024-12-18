@@ -96,7 +96,7 @@ const currentMenu = computed(() => router.currentRoute.value.path)
 
   // pc
   .menu-list {
-    width: 100px;
+    width: 120px;
     padding: 16px 0 42px;
     border-right: solid 1px;
     border-color: var(--border-color);
