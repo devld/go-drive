@@ -13,7 +13,9 @@ export default {
     icon: '#icon-delete',
   },
   supports: ({ entry, parent }) =>
-    entry.every((e) => e.meta.writable) && parent?.meta.writable,
+    entry.every((e) =>
+      e.meta.mountAt ? true : e.meta.writable && parent?.meta.writable
+    ),
   multiple: true,
   handler: async ({ entry: entries }, { confirm, alert, loading }) => {
     try {
