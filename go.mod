@@ -22,7 +22,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/secsy/goftp v0.0.0-20200609142545-aa2de14babf4
 	golang.org/x/crypto v0.31.0
-	golang.org/x/net v0.29.0
+	golang.org/x/net v0.33.0
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/text v0.21.0
 	google.golang.org/api v0.199.0
