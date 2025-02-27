@@ -153,7 +153,7 @@ func BasicAuth(userAuth *UserAuth, realm string, allowAnonymous bool) gin.Handle
 		if ok {
 			user, e := userAuth.AuthByUsernamePassword(username, password)
 			if e != nil {
-				if !err.IsUnauthorizedError(e) {
+				if !err.IsNotAllowedError(e) {
 					_ = c.Error(e)
 					c.Abort()
 					return
@@ -164,7 +164,7 @@ func BasicAuth(userAuth *UserAuth, realm string, allowAnonymous bool) gin.Handle
 
 		if session.IsAnonymous() && !allowAnonymous {
 			c.Status(http.StatusUnauthorized)
-			c.Header("WWW-Authenticate", fmt.Sprintf("Basic realm=\""+realm+"\""))
+			c.Header("WWW-Authenticate", fmt.Sprintf("Basic realm=\"%s\"", realm))
 			c.Abort()
 			return
 		}

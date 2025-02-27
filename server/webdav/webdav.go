@@ -232,6 +232,7 @@ func (h *Handler) handleGetHeadPost(w http.ResponseWriter, r *http.Request) (sta
 		return http.StatusInternalServerError, err
 	}
 	w.Header().Set("ETag", etag)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", url.QueryEscape(path.Base(reqPath))))
 	// Let ServeContent determine the Content-Type header.
 	http.ServeContent(w, r, reqPath, fi.ModTime(), f)
 	return 0, nil

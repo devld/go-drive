@@ -2,6 +2,8 @@ package drive_util
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go-drive/common"
@@ -21,6 +23,16 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 )
+
+//go:embed inline_file_exts.json
+var inlineFileEztsBytes []byte
+var inlineContentDispositionExtMimeTypesMap = make(map[string]string)
+
+func init() {
+	if err := json.Unmarshal(inlineFileEztsBytes, &inlineContentDispositionExtMimeTypesMap); err != nil {
+		panic(err)
+	}
+}
 
 type metaEntryWrapper struct {
 	types.IEntry
@@ -167,6 +179,16 @@ func CopyIContentToTempFile(ctx types.TaskCtx, content types.IContentReader, tem
 	return CopyReaderToTempFile(ctx, reader, tempDir)
 }
 
+func setContentDispositionHeaderIfNeeded(respHeader http.Header, filename string) {
+	fileMimeType := inlineContentDispositionExtMimeTypesMap[utils.PathExt(filename)]
+	if fileMimeType == "" {
+		respHeader.Set("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", url2.QueryEscape(filename)))
+	} else {
+		respHeader.Set("Content-Type", fileMimeType)
+		respHeader.Del("Content-Disposition")
+	}
+}
+
 func DownloadIContent(ctx context.Context, content types.IContent,
 	w http.ResponseWriter, req *http.Request, forceProxy bool) error {
 	u, e := content.GetURL(ctx)
@@ -176,20 +198,25 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 			if e != nil {
 				return e
 			}
-			proxy := httputil.ReverseProxy{Director: func(r *http.Request) {
-				r.URL = dest
-				r.Host = dest.Host
-				r.Header.Del("Origin")
-				r.Header.Del("Referer")
-				r.Header.Del("Authorization")
-				r.Header.Del(common.HeaderAuth)
-				r.Header.Del("Cookie")
-				if u.Header != nil {
-					for k, v := range u.Header {
-						r.Header.Set(k, v)
+			proxy := httputil.ReverseProxy{
+				Rewrite: func(pr *httputil.ProxyRequest) {
+					pr.Out.URL = dest
+					pr.Out.Host = dest.Host
+					pr.Out.Header.Del("Origin")
+					pr.Out.Header.Del("Referer")
+					pr.Out.Header.Del("Authorization")
+					pr.Out.Header.Del(common.HeaderAuth)
+					pr.Out.Header.Del("Cookie")
+					if u.Header != nil {
+						for k, v := range u.Header {
+							pr.Out.Header.Set(k, v)
+						}
 					}
-				}
-			}}
+				},
+				ModifyResponse: func(r *http.Response) error {
+					setContentDispositionHeaderIfNeeded(r.Header, content.Name())
+					return nil
+				}}
 
 			defer func() {
 				if i := recover(); i != nil && i != http.ErrAbortHandler {
@@ -214,6 +241,8 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 	}
 	defer func() { _ = reader.Close() }()
 	readSeeker, ok := reader.(io.ReadSeeker)
+
+	setContentDispositionHeaderIfNeeded(w.Header(), content.Name())
 	if ok {
 		http.ServeContent(
 			w, req, content.Name(),
