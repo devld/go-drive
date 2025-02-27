@@ -1,0 +1,23 @@
+{
+  "jpg": "image/jpeg",
+  "jpeg": "image/jpeg",
+  "png": "image/png",
+  "gif": "image/gif",
+  "webp": "image/webp",
+  "mp4": "video/mp4",
+  "avi": "video/x-msvideo",
+  "mov": "video/quicktime",
+  "mkv": "video/x-matroska",
+  "3gp": "video/3gpp",
+  "wmv": "video/x-ms-wmv",
+  "txt": "text/plain",
+  "xml": "application/xml",
+  "mp3": "audio/mpeg",
+  "wav": "audio/wav",
+  "ogg": "audio/ogg",
+  "aac": "audio/aac",
+  "flac": "audio/x-flac",
+  "m4a": "audio/mp4",
+  "webm": "audio/webm",
+  "wma": "audio/x-ms-wma"
+}
