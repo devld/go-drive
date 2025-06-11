@@ -44,10 +44,11 @@ func (d *OptionsDAO) set(db *gorm.DB, key, value string) error {
 		return e
 	}
 	if o.Key == "" {
-		return db.Create(&types.Option{Key: key, Value: value}).Error
+		e = db.Create(&types.Option{Key: key, Value: value}).Error
+	} else {
+		e = db.Model(&types.Option{}).Where("`key` = ?", key).
+			Update("value", value).Error
 	}
-	e = db.Model(&types.Option{}).Where("`key` = ?", key).
-		Update("value", value).Error
 	if e == nil {
 		d.cache.Remove(key)
 	}
