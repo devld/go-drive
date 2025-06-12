@@ -217,8 +217,9 @@ func generateDrivesForm(ctx context.Context, reqClient *req.Client,
 			used = fmt.Sprintf("%.1f%%", float64(d.Quota.Used)/float64(d.Quota.Total)*100)
 		}
 		opts[i] = types.FormItemOption{
-			Name: fmt.Sprintf("%s %d", d.DriveType, i+1),
-			Title: i18n.T("drive.onedrive.drive_used",
+			Name: d.Name,
+			Title: i18n.T("drive.onedrive.drive_desc",
+				d.Description,
 				utils.FormatBytes(uint64(d.Quota.Used), 1),
 				utils.FormatBytes(uint64(d.Quota.Total), 1),
 				used),

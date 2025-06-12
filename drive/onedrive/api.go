@@ -29,9 +29,11 @@ type userProfile struct {
 }
 
 type driveInfo struct {
-	Id        string `json:"id"`
-	DriveType string `json:"driveType"`
-	Quota     struct {
+	Id          string `json:"id"`
+	DriveType   string `json:"driveType"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Quota       struct {
 		Total int64 `json:"total"`
 		Used  int64 `json:"used"`
 	} `json:"quota"`

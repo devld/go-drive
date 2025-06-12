@@ -122,7 +122,7 @@ drive:
     drive_not_selected: Drive not yet selected or failed to get SharePoint site info
     oauth_text: Connect to OneDrive
     drive_select: Select drive
-    drive_used: "{{ 1 }} / {{ 2 }} | {{ 3 }} used"
+    drive_desc: "{{ 1 }} ({{ 2 }} / {{ 3 }} | {{ 4 }} used)"
     unexpected_status: Unexpected status code {{ 1 }}
     unknown_action_status: "Unknown action status: {{ 1 }}"
   fs:
