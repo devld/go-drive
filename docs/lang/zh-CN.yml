@@ -122,7 +122,7 @@ drive:
     drive_not_selected: OneDrive 尚未配置完成或者获取 SharePoint 站点失败
     oauth_text: 连接到 OneDrive
     drive_select: 选择 Drive
-    drive_used: "{{ 1 }} / {{ 2 }} | {{ 3 }} 已使用"
+    drive_desc: "{{ 1 }} ({{ 2 }} / {{ 3 }} | {{ 4 }} 已使用)"
     unexpected_status: 未预期的状态码 {{ 1 }}
     unknown_action_status: "未知的状态: {{ 1 }}"
   fs:
