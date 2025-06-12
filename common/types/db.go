@@ -3,15 +3,14 @@ package types
 import "strings"
 
 type Option struct {
-	ID    uint   `gorm:"column:id;primaryKey;autoIncrement"`
-	Key   string `gorm:"column:key;type:string;size:64;not null;unique;uniqueIndex"`
+	Key   string `gorm:"column:key;primaryKey;type:string;size:64"`
 	Value string `gorm:"column:value;type:string;size:4096"`
 }
 
 type User struct {
 	Username string  `gorm:"column:username;primaryKey;not null;type:string;size:32" json:"username" binding:"required"`
 	Password string  `gorm:"column:password;not null;type:string;size:64" json:"password,omitempty"`
-	RootPath string  `gorm:"column:root_path;type:string;size:4096" json:"rootPath,omitempty"`
+	RootPath string  `gorm:"column:root_path;type:string;size:512" json:"rootPath,omitempty"`
 	Groups   []Group `gorm:"many2many:user_groups;joinForeignKey:username;foreignKey:username" json:"groups"`
 }
 
@@ -33,9 +32,9 @@ type Drive struct {
 
 type PathMount struct {
 	ID      uint    `gorm:"column:id;primaryKey;autoIncrement"`
-	Path    *string `gorm:"column:path;not null;type:string;size:4096" json:"path"`
+	Path    *string `gorm:"column:path;not null;type:string;size:512" json:"path"`
 	Name    string  `gorm:"column:name;not null;type:string;size:255" json:"name"`
-	MountAt string  `gorm:"column:mount_at;not null;type:string;size:4096" json:"mountAt"`
+	MountAt string  `gorm:"column:mount_at;not null;type:string;size:512" json:"mountAt"`
 }
 
 func (PathMount) TableName() string {
@@ -94,7 +93,7 @@ const (
 
 type PathPermission struct {
 	ID      uint    `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
-	Path    *string `gorm:"column:path;not null;type:string;size:4096" json:"path"`
+	Path    *string `gorm:"column:path;not null;type:string;size:512" json:"path"`
 	Subject string  `gorm:"column:subject;not null;type:string;size:34" json:"subject"`
 	// Permission bits for the path which subject accessed: 1: read, 2: write
 	Permission Permission `gorm:"column:permission;not null" json:"permission"`
@@ -103,11 +102,11 @@ type PathPermission struct {
 }
 
 type PathMeta struct {
-	Path          *string `gorm:"column:path;primaryKey;not null;type:string;size:4096" json:"path"`
+	Path          *string `gorm:"column:path;primaryKey;not null;type:string;size:512" json:"path"`
 	Password      string  `gorm:"column:password;type:string;size:64" json:"password"`
 	DefaultSort   string  `gorm:"column:default_sort;type:string;size:32" json:"defaultSort"`
 	DefaultMode   string  `gorm:"column:default_mode;type:string;size:32" json:"defaultMode"`
-	HiddenPattern string  `gorm:"column:hidden_pattern;type:string;size:4096" json:"hiddenPattern"`
+	HiddenPattern string  `gorm:"column:hidden_pattern;type:string;size:512" json:"hiddenPattern"`
 
 	// Recursive Password|DefaultSort|DefaultMode|HiddenPattern
 	Recursive uint32 `gorm:"column:recursive;not null" json:"recursive"`
@@ -115,19 +114,19 @@ type PathMeta struct {
 
 type FileBucket struct {
 	Name        string `gorm:"column:name;primaryKey;not null;type:string;size:255" json:"name" binding:"required"`
-	TargetPath  string `gorm:"column:target_path;not null;type:string;size:4096" json:"targetPath" binding:"required"`
-	KeyTemplate string `gorm:"column:key_template;type:string;size:4096" json:"keyTemplate"`
+	TargetPath  string `gorm:"column:target_path;not null;type:string;size:512" json:"targetPath" binding:"required"`
+	KeyTemplate string `gorm:"column:key_template;type:string;size:512" json:"keyTemplate"`
 	CustomKey   bool   `gorm:"column:custom_key;not null;type:bool" json:"customKey"`
 	// SecretToken is the auto-generated upload token for this bucket
 	SecretToken string `gorm:"column:secret_token;type:string;size:32" json:"secretToken" binding:"required"`
-	URLTemplate string `gorm:"column:url_template;not null;type:string;size:4096" json:"urlTemplate"`
+	URLTemplate string `gorm:"column:url_template;not null;type:string;size:512" json:"urlTemplate"`
 	// AllowedTypes is a comma separated list of allowed mime types or file extensions, e.g. "image/png,image/jpeg,.png,.jpg"
-	AllowedTypes string `gorm:"column:allowed_types;type:string;size:4096" json:"allowedTypes"`
+	AllowedTypes string `gorm:"column:allowed_types;type:string;size:512" json:"allowedTypes"`
 	// MaxSize is the maximum allowed size with unit, 0 for unlimited
 	MaxSize string `gorm:"column:max_size;not null;type:string" json:"maxSize"`
 
 	// AllowedReferrers is a comma separated list of allowed referrer hosts
-	AllowedReferrers string `gorm:"column:allowed_referrers;type:string;size:4096" json:"allowedReferrers"`
+	AllowedReferrers string `gorm:"column:allowed_referrers;type:string;size:512" json:"allowedReferrers"`
 	// CacheMaxAge is the maximum age in the Cache-Control header with unit
 	CacheMaxAge string `gorm:"column:cache_max_age;type:string" json:"cacheMaxAge"`
 }
