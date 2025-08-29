@@ -1,0 +1,162 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 3.0\n"
+
+msgid "Go-Drive"
+msgstr "Go-Drive"
+
+msgid "Go-Drive is a powerful cloud drive service that supports multiple storage backends."
+msgstr "Go-Drive 是一个强大的云盘服务，支持多种存储后端。"
+
+msgid "Service Status"
+msgstr "服务状态"
+
+msgid "RUNNING"
+msgstr "运行中"
+
+msgid "NOT RUNNING"
+msgstr "未运行"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "Basic Settings"
+msgstr "基本设置"
+
+msgid "Listen Address"
+msgstr "监听地址"
+
+msgid "Data Directory"
+msgstr "数据目录"
+
+msgid "Web Directory"
+msgstr "Web目录"
+
+msgid "Language Directory"
+msgstr "语言目录"
+
+msgid "Default Language"
+msgstr "默认语言"
+
+msgid "English (US)"
+msgstr "英语（美国）"
+
+msgid "Simplified Chinese"
+msgstr "简体中文"
+
+msgid "Traditional Chinese"
+msgstr "繁体中文"
+
+msgid "Temporary Directory"
+msgstr "临时目录"
+
+msgid "Max Concurrent Tasks"
+msgstr "最大并发任务数"
+
+msgid "Free Filesystem"
+msgstr "自由文件系统"
+
+msgid "Allow absolute paths for Local Drive. WARNING: Admin users can access all system files!"
+msgstr "允许本地驱动器使用绝对路径。警告：管理员用户可以访问所有系统文件！"
+
+msgid "API Path"
+msgstr "API路径"
+
+msgid "API path for reverse proxy setups"
+msgstr "反向代理设置的API路径"
+
+msgid "Web Path"
+msgstr "Web路径"
+
+msgid "Web path for reverse proxy setups"
+msgstr "反向代理设置的Web路径"
+
+msgid "Database Settings"
+msgstr "数据库设置"
+
+msgid "Database Type"
+msgstr "数据库类型"
+
+msgid "Database Name"
+msgstr "数据库名称"
+
+msgid "Database Host"
+msgstr "数据库主机"
+
+msgid "Database Port"
+msgstr "数据库端口"
+
+msgid "Database User"
+msgstr "数据库用户"
+
+msgid "Database Password"
+msgstr "数据库密码"
+
+msgid "Thumbnail Settings"
+msgstr "缩略图设置"
+
+msgid "Cache TTL"
+msgstr "缓存有效期"
+
+msgid "Thumbnail cache validity period"
+msgstr "缩略图缓存有效期"
+
+msgid "Concurrent Tasks"
+msgstr "并发任务数"
+
+msgid "Concurrent thumbnail generation tasks"
+msgstr "并发缩略图生成任务数"
+
+msgid "Authentication Settings"
+msgstr "认证设置"
+
+msgid "Session Validity"
+msgstr "会话有效期"
+
+msgid "User session validity period"
+msgstr "用户会话有效期"
+
+msgid "Auto Refresh"
+msgstr "自动刷新"
+
+msgid "Auto refresh token when user is active"
+msgstr "用户活动时自动刷新令牌"
+
+msgid "Search Settings"
+msgstr "搜索设置"
+
+msgid "Enable Search"
+msgstr "启用搜索"
+
+msgid "Search Type"
+msgstr "搜索类型"
+
+msgid "WebDAV Settings"
+msgstr "WebDAV设置"
+
+msgid "Enable WebDAV"
+msgstr "启用WebDAV"
+
+msgid "WebDAV Prefix"
+msgstr "WebDAV前缀"
+
+msgid "Allow Anonymous"
+msgstr "允许匿名访问"
+
+msgid "Allow anonymous WebDAV access"
+msgstr "允许匿名WebDAV访问"
+
+msgid "Max Cache Items"
+msgstr "最大缓存项目数"

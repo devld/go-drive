@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Create data directory if it doesn't exist
+mkdir -p /opt/go-drive
+
+# Create config file if it doesn't exist
+if [ ! -f /opt/go-drive/config.yml ]; then
+	cp /etc/go-drive/config.yml.example /opt/go-drive/config.yml
+	
+	# Update paths in config file for OpenWrt
+	sed -i 's|data-dir: \./|data-dir: /opt/go-drive|g' /opt/go-drive/config.yml
+	sed -i 's|web-dir: \./web|web-dir: /usr/share/go-drive/web|g' /opt/go-drive/config.yml
+	sed -i 's|lang-dir: \./lang|lang-dir: /usr/share/go-drive/lang|g' /opt/go-drive/config.yml
+	sed -i 's|temp-dir: ""|temp-dir: /tmp/go-drive|g' /opt/go-drive/config.yml
+fi
+
+# Set proper permissions
+chown -R root:root /opt/go-drive
+chmod -R 755 /opt/go-drive
+
+# Create temp directory
+mkdir -p /tmp/go-drive
+
+exit 0

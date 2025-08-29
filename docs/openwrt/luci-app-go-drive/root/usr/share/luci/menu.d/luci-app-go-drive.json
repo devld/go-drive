@@ -1,0 +1,13 @@
+{
+	"admin/services/go-drive": {
+		"title": "Go-Drive",
+		"order": 60,
+		"action": {
+			"type": "view",
+			"path": "go-drive"
+		},
+		"depends": {
+			"acl": [ "luci-app-go-drive" ]
+		}
+	}
+}

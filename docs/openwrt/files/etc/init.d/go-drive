@@ -1,0 +1,195 @@
+#!/bin/sh /etc/rc.common
+
+START=90
+STOP=10
+
+USE_PROCD=1
+
+PROG=/usr/bin/go-drive
+CONFFILE=/opt/go-drive/config.yml
+
+validate_go_drive_section() {
+	uci_load_validate go-drive go-drive "$1" "$2" \
+		'enabled:bool:0' \
+		'listen:string::8089' \
+		'data_dir:string:/opt/go-drive' \
+		'web_dir:string:/usr/share/go-drive/web' \
+		'lang_dir:string:/usr/share/go-drive/lang' \
+		'default_lang:string:en-US' \
+		'temp_dir:string:' \
+		'max_concurrent_task:uinteger:100' \
+		'free_fs:bool:0' \
+		'api_path:string:' \
+		'web_path:string:'
+}
+
+validate_db_section() {
+	uci_load_validate go-drive db "$1" "$2" \
+		'type:string:sqlite' \
+		'name:string:data.db' \
+		'host:string:' \
+		'port:string:' \
+		'user:string:' \
+		'password:string:'
+}
+
+validate_thumbnail_section() {
+	uci_load_validate go-drive thumbnail "$1" "$2" \
+		'ttl:string:720h' \
+		'concurrent:uinteger:4'
+}
+
+validate_auth_section() {
+	uci_load_validate go-drive auth "$1" "$2" \
+		'validity:string:2h' \
+		'auto_refresh:bool:1'
+}
+
+validate_search_section() {
+	uci_load_validate go-drive search "$1" "$2" \
+		'enabled:bool:0' \
+		'type:string:sqlite'
+}
+
+validate_webdav_section() {
+	uci_load_validate go-drive webdav "$1" "$2" \
+		'enabled:bool:0' \
+		'prefix:string:/dav' \
+		'allow_anonymous:bool:0' \
+		'max_cache_items:uinteger:1000'
+}
+
+generate_config() {
+	local enabled listen data_dir web_dir lang_dir default_lang temp_dir
+	local max_concurrent_task free_fs api_path web_path
+	local db_type db_name db_host db_port db_user db_password
+	local thumb_ttl thumb_concurrent
+	local auth_validity auth_auto_refresh
+	local search_enabled search_type
+	local webdav_enabled webdav_prefix webdav_allow_anonymous webdav_max_cache_items
+
+	validate_go_drive_section config || return 1
+	validate_db_section db || return 1
+	validate_thumbnail_section thumbnail || return 1
+	validate_auth_section auth || return 1
+	validate_search_section search || return 1
+	validate_webdav_section webdav || return 1
+
+	mkdir -p $(dirname $CONFFILE)
+	mkdir -p $data_dir
+	[ -n "$temp_dir" ] && mkdir -p $temp_dir
+
+	cat > $CONFFILE <<-EOF
+# The application will listen at this address
+listen: $listen
+
+db:
+  # database type: currently supports sqlite, mysql
+  type: $db_type
+  # database name
+  name: $db_name
+EOF
+
+	if [ "$db_type" = "mysql" ]; then
+		cat >> $CONFFILE <<-EOF
+  # database host
+  host: $db_host
+  # database port
+  port: $db_port
+  # database username
+  user: $db_user
+  # database password
+  password: $db_password
+EOF
+	fi
+
+	cat >> $CONFFILE <<-EOF
+
+# Data dir. All application data will be stored in this dir
+data-dir: $data_dir
+
+# Temp dir. Default is data-dir/temp
+temp-dir: $temp_dir
+
+# Web static files dir.
+web-dir: $web_dir
+
+# i18n languages
+lang-dir: $lang_dir
+# If the client's language is not supported, then this language will be used
+default-lang: $default_lang
+
+# Concurrent task. eg. copy, move, delete
+max-concurrent-task: $max_concurrent_task
+
+# Disable 'Local Drive' file path limitation.
+free-fs: $([ "$free_fs" = "1" ] && echo "true" || echo "false")
+
+thumbnail:
+  # Thumbnails cache validity period
+  ttl: $thumb_ttl
+  # Concurrent task for generating thumbnails
+  concurrent: $thumb_concurrent
+  
+  handlers:
+    - type: image
+      tags:
+      file-types: jpg,jpeg,png,gif
+    - type: text
+      tags:
+      file-types: txt,md,xml,html,css,scss,js,json,jsx,properties,yml,yaml,ini,c,h,cpp,go,java,kt,gradle,ps1
+
+auth:
+  # User session validity
+  validity: $auth_validity
+  # Auto refresh the token when the user is active
+  auto-refresh: $([ "$auth_auto_refresh" = "1" ] && echo "true" || echo "false")
+
+search:
+  enabled: $([ "$search_enabled" = "1" ] && echo "true" || echo "false")
+  type: $search_type
+
+# API path. 
+api-path: $api_path
+
+# Static files will be served here
+web-path: $web_path
+EOF
+
+	if [ "$webdav_enabled" = "1" ]; then
+		cat >> $CONFFILE <<-EOF
+
+# WebDAV access configuration
+web-dav:
+  enabled: true
+  prefix: $webdav_prefix
+  allow-anonymous: $([ "$webdav_allow_anonymous" = "1" ] && echo "true" || echo "false")
+  max-cache-items: $webdav_max_cache_items
+EOF
+	fi
+}
+
+start_service() {
+	local enabled
+	
+	validate_go_drive_section config || {
+		echo "validation failed"
+		return 1
+	}
+	
+	[ "$enabled" = "1" ] || return 1
+	
+	generate_config || return 1
+	
+	procd_open_instance
+	procd_set_param command $PROG -c $CONFFILE
+	procd_set_param file $CONFFILE
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_set_param respawn
+	procd_close_instance
+}
+
+service_triggers() {
+	procd_add_reload_trigger "go-drive"
+}

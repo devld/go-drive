@@ -1,0 +1,242 @@
+name: Build OpenWrt Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      openwrt_version:
+        description: "OpenWrt version"
+        required: true
+        default: "23.05.4"
+        type: choice
+        options:
+          - "23.05.4"
+          - "23.05.3"
+          - "22.03.7"
+      target:
+        description: "Target architecture"
+        required: true
+        default: "x86_64"
+        type: choice
+        options:
+          - "x86_64"
+          - "aarch64_generic"
+          - "arm_cortex-a9"
+          - "mips_24kc"
+          - "mipsel_24kc"
+  push:
+    paths:
+      - 'docs/openwrt/**'
+    branches:
+      - main
+      - master
+  pull_request:
+    paths:
+      - 'docs/openwrt/**'
+
+env:
+  OPENWRT_VERSION: ${{ github.event.inputs.openwrt_version || '23.05.4' }}
+  TARGET_ARCH: ${{ github.event.inputs.target || 'x86_64' }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64
+          - aarch64_generic
+          - arm_cortex-a9
+          - mips_24kc
+          - mipsel_24kc
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git libncurses5-dev \
+            libssl-dev python3-distutils rsync unzip zlib1g-dev \
+            file wget curl
+
+      - name: Setup variables
+        run: |
+          echo "OPENWRT_VERSION=${OPENWRT_VERSION}" >> $GITHUB_ENV
+          echo "TARGET_ARCH=${{ matrix.target }}" >> $GITHUB_ENV
+          echo "WORK_DIR=${{ github.workspace }}/openwrt" >> $GITHUB_ENV
+          echo "PACKAGE_DIR=${{ github.workspace }}/openwrt/bin/packages" >> $GITHUB_ENV
+          
+          case "${{ matrix.target }}" in
+            x86_64)
+              echo "SDK_URL_PATH=releases/${OPENWRT_VERSION}/targets/x86/64" >> $GITHUB_ENV
+              echo "SDK_NAME=openwrt-sdk-${OPENWRT_VERSION}-x86-64_gcc-11.2.0_musl.Linux-x86_64" >> $GITHUB_ENV
+              ;;
+            aarch64_generic)
+              echo "SDK_URL_PATH=releases/${OPENWRT_VERSION}/targets/armvirt/64" >> $GITHUB_ENV
+              echo "SDK_NAME=openwrt-sdk-${OPENWRT_VERSION}-armvirt-64_gcc-11.2.0_musl.Linux-x86_64" >> $GITHUB_ENV
+              ;;
+            arm_cortex-a9)
+              echo "SDK_URL_PATH=releases/${OPENWRT_VERSION}/targets/bcm53xx/generic" >> $GITHUB_ENV
+              echo "SDK_NAME=openwrt-sdk-${OPENWRT_VERSION}-bcm53xx-generic_gcc-11.2.0_musl_eabi.Linux-x86_64" >> $GITHUB_ENV
+              ;;
+            mips_24kc)
+              echo "SDK_URL_PATH=releases/${OPENWRT_VERSION}/targets/ath79/generic" >> $GITHUB_ENV
+              echo "SDK_NAME=openwrt-sdk-${OPENWRT_VERSION}-ath79-generic_gcc-11.2.0_musl.Linux-x86_64" >> $GITHUB_ENV
+              ;;
+            mipsel_24kc)
+              echo "SDK_URL_PATH=releases/${OPENWRT_VERSION}/targets/ramips/mt7621" >> $GITHUB_ENV
+              echo "SDK_NAME=openwrt-sdk-${OPENWRT_VERSION}-ramips-mt7621_gcc-11.2.0_musl.Linux-x86_64" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Cache OpenWrt SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.WORK_DIR }}
+          key: ${{ runner.os }}-openwrt-sdk-${{ env.OPENWRT_VERSION }}-${{ matrix.target }}
+
+      - name: Download and extract OpenWrt SDK
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ${{ env.WORK_DIR }}
+          cd ${{ env.WORK_DIR }}
+          wget -q https://downloads.openwrt.org/${{ env.SDK_URL_PATH }}/${{ env.SDK_NAME }}.tar.xz
+          tar -xf ${{ env.SDK_NAME }}.tar.xz --strip-components=1
+          rm ${{ env.SDK_NAME }}.tar.xz
+
+      - name: Update and install feeds
+        run: |
+          cd ${{ env.WORK_DIR }}
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Setup Go build environment
+        run: |
+          cd ${{ env.WORK_DIR }}
+          
+          # Add golang feed if not exists
+          if ! grep -q "src-git golang" feeds.conf.default; then
+            echo "src-git golang https://github.com/openwrt/packages.git;master" >> feeds.conf.default
+            ./scripts/feeds update golang
+            ./scripts/feeds install -a -p golang
+          fi
+
+      - name: Copy go-drive package
+        run: |
+          mkdir -p ${{ env.WORK_DIR }}/package/go-drive
+          cp -r docs/openwrt/* ${{ env.WORK_DIR }}/package/go-drive/
+          
+          # Create symbolic link for easier access
+          ln -sf ${{ github.workspace }} ${{ env.WORK_DIR }}/package/go-drive/go-drive-src
+
+      - name: Configure package
+        run: |
+          cd ${{ env.WORK_DIR }}
+          
+          # Enable go-drive packages
+          echo "CONFIG_PACKAGE_go-drive=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-go-drive=m" >> .config
+          
+          # Enable required dependencies
+          echo "CONFIG_PACKAGE_golang=y" >> .config
+          echo "CONFIG_PACKAGE_node=y" >> .config
+          echo "CONFIG_PACKAGE_npm=y" >> .config
+          
+          make defconfig
+
+      - name: Build package
+        run: |
+          cd ${{ env.WORK_DIR }}
+          make package/go-drive/compile V=s
+
+      - name: Organize build artifacts
+        run: |
+          mkdir -p ${{ github.workspace }}/artifacts/${{ matrix.target }}
+          find ${{ env.PACKAGE_DIR }} -name "*go-drive*.ipk" -exec cp {} ${{ github.workspace }}/artifacts/${{ matrix.target }}/ \;
+          
+          # Create build info
+          echo "Build Information" > ${{ github.workspace }}/artifacts/${{ matrix.target }}/build-info.txt
+          echo "===================" >> ${{ github.workspace }}/artifacts/${{ matrix.target }}/build-info.txt
+          echo "Target: ${{ matrix.target }}" >> ${{ github.workspace }}/artifacts/${{ matrix.target }}/build-info.txt
+          echo "OpenWrt Version: ${{ env.OPENWRT_VERSION }}" >> ${{ github.workspace }}/artifacts/${{ matrix.target }}/build-info.txt
+          echo "Build Date: $(date)" >> ${{ github.workspace }}/artifacts/${{ matrix.target }}/build-info.txt
+          echo "Commit: ${{ github.sha }}" >> ${{ github.workspace }}/artifacts/${{ matrix.target }}/build-info.txt
+          
+          ls -la ${{ github.workspace }}/artifacts/${{ matrix.target }}/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-drive-openwrt-${{ matrix.target }}
+          path: ${{ github.workspace }}/artifacts/${{ matrix.target }}/*
+          retention-days: 30
+
+  release:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.ref, 'refs/tags/'))
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release assets
+        run: |
+          mkdir -p release
+          for target in x86_64 aarch64_generic arm_cortex-a9 mips_24kc mipsel_24kc; do
+            if [ -d "artifacts/go-drive-openwrt-${target}" ]; then
+              cd "artifacts/go-drive-openwrt-${target}"
+              tar -czf "../../release/go-drive-openwrt-${target}.tar.gz" *.ipk build-info.txt
+              cd ../..
+            fi
+          done
+          
+          ls -la release/
+
+      - name: Generate release notes
+        run: |
+          echo "# Go-Drive OpenWrt Packages" > release-notes.md
+          echo "" >> release-notes.md
+          echo "Auto-generated OpenWrt packages for Go-Drive." >> release-notes.md
+          echo "" >> release-notes.md
+          echo "## Supported Architectures" >> release-notes.md
+          echo "" >> release-notes.md
+          for target in x86_64 aarch64_generic arm_cortex-a9 mips_24kc mipsel_24kc; do
+            if [ -f "release/go-drive-openwrt-${target}.tar.gz" ]; then
+              echo "- ${target}" >> release-notes.md
+            fi
+          done
+          echo "" >> release-notes.md
+          echo "## Installation" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "1. Download the appropriate package for your router architecture" >> release-notes.md
+          echo "2. Extract the tar.gz file to get the .ipk files" >> release-notes.md
+          echo "3. Upload and install the .ipk files via LuCI or opkg" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "## Build Information" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "- OpenWrt Version: ${{ env.OPENWRT_VERSION }}" >> release-notes.md
+          echo "- Build Date: $(date)" >> release-notes.md
+          echo "- Commit: ${{ github.sha }}" >> release-notes.md
+
+      - name: Create Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: openwrt-${{ github.run_number }}
+          name: OpenWrt Packages - Build ${{ github.run_number }}
+          body_path: release-notes.md
+          files: release/*.tar.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
