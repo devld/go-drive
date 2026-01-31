@@ -197,7 +197,13 @@ export function getRouteQuery(q: LocationQuery, key: string) {
 export function encodeQuery(q: O) {
   if (!q || typeof q !== 'object') return
   return Object.keys(q)
-    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(q[k]) ?? ''}`)
+    .filter((k) => q[k] !== undefined)
+    .map(
+      (k) =>
+        `${encodeURIComponent(k)}=${
+          q[k] === null ? '' : encodeURIComponent(q[k]) ?? ''
+        }`
+    )
     .join('&')
 }
 

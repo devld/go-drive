@@ -1,4 +1,4 @@
-FROM golang:1.24.4-alpine AS golang
+FROM golang:1.25.6-alpine AS golang
 
 FROM alpine AS builder
 

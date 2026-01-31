@@ -15,16 +15,7 @@ export default class S3UploadTask extends ChunkUploadTask {
   override async _prepare() {
     if (!this._config!.multipart) return 1 // PutObject directly
 
-    // CreateMultipartUpload
-    const r = await this._request({
-      method: 'post',
-      url: this._config!.url,
-      headers: { ...UNSIGNED_PAYLOAD },
-    })
-    const matched = /<UploadId>(.+)<\/UploadId>/.exec(r.data)
-    if (!matched) throw new Error('invalid response from aws s3')
-    // multipart upload
-    this._uploadId = matched[1]
+    this._uploadId = this._config!.uploadId
     const parts = Math.ceil(this.task.size! / this._partSize)
 
     this._uploadedParts = []
