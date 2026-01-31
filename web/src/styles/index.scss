@@ -1,11 +1,12 @@
+@use 'sass:meta';
+@use 'highlight.js/scss/github.scss';
+@use './themes/default.scss' as default-theme;
+@use './themes/dark.scss' as dark-theme;
 @import 'github-markdown-css/github-markdown.css';
-@import 'highlight.js/scss/github.scss';
-@import './themes/default.scss';
-@import './themes/dark.scss';
 
 // theme
 :root {
-  @each $prop, $val in $theme-default {
+  @each $prop, $val in default-theme.$theme-default {
     --#{$prop}: #{$val};
   }
 }
@@ -13,13 +14,13 @@
 // theme dark
 @media (prefers-color-scheme: dark) {
   :root {
-    @each $prop, $val in $theme-dark {
+    @each $prop, $val in dark-theme.$theme-dark {
       --#{$prop}: #{$val};
     }
   }
 
-  @import './markdown-dark.scss';
-  @import 'highlight.js/scss/agate.scss';
+  @include meta.load-css('./markdown-dark.scss');
+  @include meta.load-css('highlight.js/scss/agate.scss');
 }
 
 .full-width {

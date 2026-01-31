@@ -48,7 +48,7 @@ export const transformBlobResponse: (
 
     if (resp.data instanceof ReadableStream) {
       const reader = resp.data.getReader()
-      const chunks: Uint8Array[] = []
+      const chunks: Uint8Array<ArrayBuffer>[] = []
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const { done, value } = await reader.read()

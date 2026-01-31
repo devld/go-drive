@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
@@ -15,12 +16,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	signer "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	awsCfg "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	awsType "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 var s3T = i18n.TPrefix("drive.s3.")
@@ -46,8 +48,7 @@ func init() {
 }
 
 type Drive struct {
-	s             *session.Session
-	c             *s3.S3
+	c             *s3.Client
 	bucket        *string
 	uploadProxy   bool
 	downloadProxy bool
@@ -68,18 +69,17 @@ func NewDrive(ctx context.Context, config types.SM,
 	endpoint := config["endpoint"]
 	cacheTtl := config.GetDuration("cache_ttl", -1)
 
-	sess, e := session.NewSession(&aws.Config{
-		Credentials:      credentials.NewStaticCredentials(id, secret, ""),
-		S3ForcePathStyle: aws.Bool(pathStyle != ""),
-		Endpoint:         aws.String(endpoint),
-		Region:           aws.String(region),
-	})
+	s3Cfg, e := awsCfg.LoadDefaultConfig(ctx,
+		awsCfg.WithRegion(region),
+		awsCfg.WithBaseEndpoint(endpoint),
+		awsCfg.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(id, secret, "")),
+	)
 	if e != nil {
 		return nil, e
 	}
-	client := s3.New(sess)
+	client := s3.NewFromConfig(s3Cfg, func(o *s3.Options) { o.UsePathStyle = pathStyle != "" })
+
 	d := &Drive{
-		s:             sess,
 		c:             client,
 		bucket:        aws.String(bucket),
 		uploadProxy:   config.GetBool("proxy_upload"),
@@ -96,15 +96,13 @@ func NewDrive(ctx context.Context, config types.SM,
 }
 
 func (s *Drive) check(ctx context.Context) error {
-	_, e := s.c.HeadBucketWithContext(ctx, &s3.HeadBucketInput{
+	_, e := s.c.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: s.bucket,
 	})
 	if e != nil {
-		if ae, ok := e.(awserr.Error); ok {
-			switch ae.Code() {
-			case s3.ErrCodeNoSuchBucket:
-				return err.NewNotFoundMessageError(s3T("bucket_not_exists", *s.bucket))
-			}
+		var noSuchBucket *awsType.NoSuchBucket
+		if errors.As(e, &noSuchBucket) {
+			return err.NewNotFoundMessageError(s3T("bucket_not_exists", *s.bucket))
 		}
 	}
 	return e
@@ -119,13 +117,21 @@ func (s *Drive) Meta(context.Context) (types.DriveMeta, error) {
 }
 
 func (s *Drive) get(path string, ctx context.Context) (*s3Entry, error) {
-	obj, e := s.c.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+	obj, e := s.c.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
 	})
 	if e != nil {
-		if errCodeMatches(e, "NotFound") {
-			if strings.HasSuffix(path, "/") {
+		var notFound *awsType.NotFound
+		if errors.As(e, &notFound) {
+			if before, ok := strings.CutSuffix(path, "/"); ok {
+				dirEntries, e := s.List(ctx, before)
+				if e != nil {
+					return nil, e
+				}
+				if len(dirEntries) > 0 {
+					return s.newS3DirEntry(path, nil), nil
+				}
 				return nil, err.NewNotFoundError()
 			}
 			return s.get(path+"/", ctx)
@@ -160,8 +166,8 @@ func (s *Drive) Save(ctx types.TaskCtx, path string, _ int64,
 			return nil, e
 		}
 	}
-	uploader := s3manager.NewUploader(s.s)
-	_, e := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
+	uploader := s3manager.NewUploader(s.c)
+	_, e := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
 		Body:   drive_util.ProgressReader(reader, ctx),
@@ -186,7 +192,7 @@ func (s *Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) 
 		}
 		return dir, nil
 	}
-	_, e := s.c.PutObjectWithContext(ctx, &s3.PutObjectInput{
+	_, e := s.c.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
 	})
@@ -219,7 +225,7 @@ func (s *Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCtx)
 		}
 	}
 	ctx.Total(from.size, false)
-	obj, e := s.c.CopyObjectWithContext(ctx, &s3.CopyObjectInput{
+	obj, e := s.c.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:     s.bucket,
 		Key:        aws.String(to),
 		CopySource: aws.String(url.QueryEscape(*s.bucket + "/" + from.key)),
@@ -259,7 +265,7 @@ func (s *Drive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	if !utils.IsRootPath(s3Path) {
 		s3Path = s3Path + "/"
 	}
-	objs, e := s.c.ListObjectsWithContext(ctx, &s3.ListObjectsInput{
+	objs, e := s.c.ListObjects(ctx, &s3.ListObjectsInput{
 		Bucket:    s.bucket,
 		Prefix:    aws.String(s3Path),
 		Delimiter: aws.String("/"),
@@ -301,27 +307,25 @@ func (s *Drive) delete(path string, ctx types.TaskCtx) error {
 	n := int(math.Ceil(float64(len(entries)) / 1000))
 	for i := 0; i < n; i += 1 {
 		batches := entries[i*1000 : int(math.Min(float64((i+1)*1000), float64(len(entries))))]
-		deletes := make([]*s3.ObjectIdentifier, len(batches))
+		deletes := make([]awsType.ObjectIdentifier, len(batches))
 		for i, o := range batches {
 			key := o.Entry.Path()
 			if o.Entry.Type().IsDir() {
 				key += "/"
 			}
-			deletes[i] = &s3.ObjectIdentifier{
-				Key: aws.String(key),
-			}
+			deletes[i] = awsType.ObjectIdentifier{Key: aws.String(key)}
 		}
-		r, e := s.c.DeleteObjectsWithContext(ctx, &s3.DeleteObjectsInput{
+		r, e := s.c.DeleteObjects(ctx, &s3.DeleteObjectsInput{
 			Bucket: s.bucket,
-			Delete: &s3.Delete{
+			Delete: &awsType.Delete{
 				Objects: deletes,
 				Quiet:   aws.Bool(true),
 			},
-		})
+		}, withContentMD5)
 		if e != nil {
 			return e
 		}
-		if r.Errors != nil && len(r.Errors) > 0 {
+		if len(r.Errors) > 0 {
 			return fmt.Errorf("%s: %s", *r.Errors[0].Key, *r.Errors[0].Code)
 		}
 		ctx.Progress(int64(len(batches)), false)
@@ -341,38 +345,35 @@ func (s *Drive) Upload(ctx context.Context, path string, size int64,
 	action := config["action"]
 	uploadId := config["uploadId"]
 	partsEtag := config["parts"]
-	seq := config.GetInt64("seq", -1)
+	seq := config.GetInt("seq", -1)
 
 	r := types.DriveUploadConfig{
 		Provider: types.S3Provider,
 		Config:   types.SM{},
 	}
-	preSigned := ""
-
+	var preSigned *signer.PresignedHTTPRequest
 	var e error
+
 	switch action {
 	case "UploadPart":
-		req, _ := s.c.UploadPartRequest(&s3.UploadPartInput{
+		preSigned, e = s.newPresign().PresignUploadPart(ctx, &s3.UploadPartInput{
 			Bucket:     s.bucket,
 			Key:        aws.String(path),
-			PartNumber: aws.Int64(seq + 1),
+			PartNumber: aws.Int32(int32(seq + 1)),
 			UploadId:   aws.String(uploadId),
 		})
-		preSigned, e = req.Presign(2 * time.Hour)
 	case "CompleteMultipartUpload":
-		_, e := s.c.CompleteMultipartUploadWithContext(ctx, &s3.CompleteMultipartUploadInput{
-			Bucket:   s.bucket,
-			Key:      aws.String(path),
-			UploadId: aws.String(uploadId),
-			MultipartUpload: &s3.CompletedMultipartUpload{
-				Parts: buildCompleteUploadBody(partsEtag),
-			},
+		_, e := s.c.CompleteMultipartUpload(ctx, &s3.CompleteMultipartUploadInput{
+			Bucket:          s.bucket,
+			Key:             aws.String(path),
+			UploadId:        aws.String(uploadId),
+			MultipartUpload: &awsType.CompletedMultipartUpload{Parts: buildCompleteUploadBody(partsEtag)},
 		})
 		_ = s.cache.Evict(path, false)
 		_ = s.cache.Evict(utils.PathParent(path), false)
 		return nil, e
 	case "AbortMultipartUpload":
-		_, e := s.c.AbortMultipartUploadWithContext(ctx, &s3.AbortMultipartUploadInput{
+		_, e := s.c.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
 			Bucket:   s.bucket,
 			Key:      aws.String(path),
 			UploadId: aws.String(uploadId),
@@ -392,35 +393,42 @@ func (s *Drive) Upload(ctx context.Context, path string, size int64,
 			return types.UseLocalProvider(size), nil
 		}
 		if size <= 5*1024*1024 {
-			req, _ := s.c.PutObjectRequest(&s3.PutObjectInput{
+			preSigned, e = s.newPresign().PresignPutObject(ctx, &s3.PutObjectInput{
 				Bucket: s.bucket,
 				Key:    aws.String(path),
 			})
-			preSigned, e = req.Presign(2 * time.Hour)
 		} else {
-			req, _ := s.c.CreateMultipartUploadRequest(&s3.CreateMultipartUploadInput{
+			output, e := s.c.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
 				Bucket: s.bucket,
 				Key:    aws.String(path),
 			})
-			preSigned, e = req.Presign(2 * time.Hour)
+			if e != nil {
+				return nil, e
+			}
+
 			r.Config["multipart"] = "1"
+			r.Config["uploadId"] = *output.UploadId
 		}
 	}
 	if e != nil {
 		return nil, e
 	}
-	if preSigned != "" {
-		r.Config["url"] = preSigned
+	if preSigned != nil {
+		r.Config["url"] = preSigned.URL
 	}
 	return &r, e
 }
 
-func buildCompleteUploadBody(etag string) []*s3.CompletedPart {
+func (s *Drive) newPresign() *s3.PresignClient {
+	return s3.NewPresignClient(s.c, s3.WithPresignExpires(2*time.Hour))
+}
+
+func buildCompleteUploadBody(etag string) []awsType.CompletedPart {
 	temp := strings.Split(etag, ";")
-	r := make([]*s3.CompletedPart, len(temp))
+	r := make([]awsType.CompletedPart, len(temp))
 	for i, e := range temp {
-		r[i] = &s3.CompletedPart{
-			PartNumber: aws.Int64(int64(i + 1)),
+		r[i] = awsType.CompletedPart{
+			PartNumber: aws.Int32(int32(i + 1)),
 			ETag:       aws.String(e),
 		}
 	}
@@ -510,7 +518,7 @@ func (s *s3Entry) GetReader(ctx context.Context, start, size int64) (io.ReadClos
 	if rangeStr != "" {
 		awsRange = aws.String(rangeStr)
 	}
-	obj, e := s.c.c.GetObjectWithContext(ctx, &s3.GetObjectInput{
+	obj, e := s.c.c.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: s.c.bucket,
 		Key:    aws.String(s.key),
 		Range:  awsRange,
@@ -521,21 +529,13 @@ func (s *s3Entry) GetReader(ctx context.Context, start, size int64) (io.ReadClos
 	return obj.Body, nil
 }
 
-func (s *s3Entry) GetURL(context.Context) (*types.ContentURL, error) {
-	req, _ := s.c.c.GetObjectRequest(&s3.GetObjectInput{
+func (s *s3Entry) GetURL(ctx context.Context) (*types.ContentURL, error) {
+	preSigned, e := s.c.newPresign().PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: s.c.bucket,
 		Key:    aws.String(s.key),
 	})
-	downloadUrl, e := req.Presign(8 * time.Hour)
 	if e != nil {
 		return nil, e
 	}
-	return &types.ContentURL{URL: downloadUrl, Proxy: s.c.downloadProxy}, nil
-}
-
-func errCodeMatches(e error, code string) bool {
-	if ae, ok := e.(awserr.Error); ok {
-		return ae.Code() == code
-	}
-	return false
+	return &types.ContentURL{URL: preSigned.URL, Proxy: s.c.downloadProxy}, nil
 }
