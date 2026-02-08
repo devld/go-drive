@@ -1,4 +1,4 @@
-package scheduled
+package job
 
 import (
 	"context"
@@ -18,21 +18,21 @@ func init() {
 		{Field: "_ignoreErr", Label: t("ignore_err"), Description: t("ignore_err_desc"), Type: "checkbox"},
 	}
 
-	jobs := GetJobs()
-	flowForms := make([]types.FormItemForm, 0, len(jobs))
-	for _, job := range jobs {
-		form := make([]types.FormItem, len(job.ParamsForm)+len(commonFormItem))
-		copy(form, job.ParamsForm)
-		copy(form[len(job.ParamsForm):], commonFormItem)
+	actionDefs := GetActionDefs()
+	flowForms := make([]types.FormItemForm, 0, len(actionDefs))
+	for _, def := range actionDefs {
+		form := make([]types.FormItem, len(def.ParamsForm)+len(commonFormItem))
+		copy(form, def.ParamsForm)
+		copy(form[len(def.ParamsForm):], commonFormItem)
 
 		flowForms = append(flowForms, types.FormItemForm{
-			Key:  job.Name,
-			Name: job.DisplayName,
+			Key:  def.Name,
+			Name: def.DisplayName,
 			Form: form,
 		})
 	}
 
-	RegisterJob(JobDefinition{
+	RegisterActionDef(JobActionDef{
 		Name:        "flow",
 		DisplayName: t("name"),
 		Description: t("desc"),
@@ -48,12 +48,12 @@ func init() {
 				return errors.New("empty ops")
 			}
 			for i, op := range ops {
-				jobKey := op["$key"]
+				actionKey := op["$key"]
 				ignoreError := op.GetBool("_ignoreErr")
-				job := GetJob(jobKey)
+				actionDef := GetActionDef(actionKey)
 				delete(op, "$key")
 				delete(op, "_ignoreErr")
-				e := job.Do(ctx, op, ch, logFn)
+				e := actionDef.Do(ctx, op, ch, logFn)
 				if e != nil && !ignoreError {
 					return fmt.Errorf("flow execution error at step %d: %s", i+1, e.Error())
 				}

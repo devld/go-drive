@@ -14,7 +14,7 @@ import (
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server"
-	"go-drive/server/scheduled"
+	"go-drive/server/job"
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
@@ -36,7 +36,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 		storage.NewDriveDAO,
 		storage.NewDriveDataDAO,
 		storage.NewOptionsDAO,
-		storage.NewScheduledDAO,
+		storage.NewJobDAO,
 		storage.NewPathMetaDAO,
 		storage.NewFileBucketDAO,
 		wire.Bind(new(task.Runner), new(*task.TunnyRunner)),
@@ -51,7 +51,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 		search.NewService,
 		wire.Bind(new(i18n.MessageSource), new(*i18n.FileMessageSource)),
 		i18n.NewFileMessageSource,
-		scheduled.NewJobExecutor,
+		job.NewJobExecutor,
 		server.InitServer,
 	)
 	return &gin.Engine{}, nil

@@ -66,7 +66,7 @@ type FormItemCode struct {
 
 type FormItem struct {
 	Label string `json:"label" i18n:""`
-	// Type: md, textarea, text, password, checkbox, select, path, form, code
+	// Type: md, textarea, text, password, checkbox, checkboxes, select, path, form, code
 	Type     string `json:"type"`
 	Field    string `json:"field"`
 	Required bool   `json:"required,omitempty"`
@@ -85,7 +85,7 @@ type FormItem struct {
 	Forms *FormItemForms `json:"forms,omitempty"`
 
 	// Code is for type code
-	Code *FormItemCode `json:"code"`
+	Code *FormItemCode `json:"code,omitempty"`
 
 	DefaultValue string `json:"defaultValue,omitempty"`
 	// Secret is the replacement text when sending the value to client.

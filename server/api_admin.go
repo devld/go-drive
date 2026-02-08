@@ -7,7 +7,7 @@ import (
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/drive"
-	"go-drive/server/scheduled"
+	"go-drive/server/job"
 	"go-drive/server/search"
 	"go-drive/storage"
 
@@ -20,7 +20,7 @@ func InitAdminRoutes(
 	config common.Config,
 	bus event.Bus,
 	runner task.Runner,
-	jobExecutor *scheduled.JobExecutor,
+	jobExecutor *job.JobExecutor,
 	access *drive.Access,
 	rootDrive *drive.RootDrive,
 	search *search.Service,
@@ -33,7 +33,7 @@ func InitAdminRoutes(
 	permissionDAO *storage.PathPermissionDAO,
 	pathMountDAO *storage.PathMountDAO,
 	pathMetaDAO *storage.PathMetaDAO,
-	scheduledDAO *storage.ScheduledDAO,
+	jobDAO *storage.JobDAO,
 	fileBucketDAO *storage.FileBucketDAO) error {
 
 	r = r.Group("/admin", TokenAuth(tokenStore), AdminGroupRequired())
@@ -129,7 +129,7 @@ func InitAdminRoutes(
 	scriptDriveRoutesGroup.PUT("/content/:name", sdr.saveDriveScriptContent)
 
 	jobsRoutesGroup := r.Group("/jobs")
-	jr := &jobsRoute{ch, runner, jobExecutor, scheduledDAO}
+	jr := &jobsRoute{ch, runner, jobExecutor, jobDAO}
 	// get all job definitions
 	jobsRoutesGroup.GET("/definitions", jr.getJobsDefinitions)
 	// get all created jobs

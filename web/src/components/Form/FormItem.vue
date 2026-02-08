@@ -82,6 +82,24 @@
         :disabled="disabled || item.disabled"
         @input="checkboxInput"
       />
+      <div v-if="item.type === 'checkboxes'" class="value full-width form-item--checkboxes">
+        <label
+          v-for="o in item.options"
+          :key="o.value"
+          class="form-item--checkbox-option"
+          :class="{ disabled: disabled || item.disabled || o.disabled }"
+        >
+          <input
+            type="checkbox"
+            :name="item.field"
+            :value="o.value"
+            :checked="checkboxesSelectedSet.has(o.value)"
+            :disabled="disabled || item.disabled || o.disabled"
+            @input="checkboxesInput(o.value, ($event.target as HTMLInputElement).checked)"
+          />
+          <span>{{ o.name }}</span>
+        </label>
+      </div>
       <select
         v-if="item.type === 'select'"
         :id="valueId"
@@ -177,8 +195,15 @@ const emit = defineEmits<{
 
 const error = ref<I18nText | null>(null)
 const valueId = computed(() => {
-  if (props.item.type === 'form' || props.item.type === 'code') return
+  if (props.item.type === 'form' || props.item.type === 'code' || props.item.type === 'checkboxes') return
   return props.id
+})
+
+const checkboxesSelectedSet = computed(() => {
+  if (props.item.type !== 'checkboxes') return new Set<string>()
+  const raw = (props.modelValue || '').trim()
+  if (!raw) return new Set<string>()
+  return new Set(raw.split(',').map((v) => v.trim()).filter(Boolean))
 })
 
 const { t } = useI18n()
@@ -252,6 +277,14 @@ const selectInput = (e: Event) => {
   emit('update:modelValue', (e.target as HTMLSelectElement).value)
   clearError()
 }
+
+const checkboxesInput = (optionValue: string, checked: boolean) => {
+  const set = new Set(checkboxesSelectedSet.value)
+  if (checked) set.add(optionValue)
+  else set.delete(optionValue)
+  emit('update:modelValue', [...set].join(','))
+  clearError()
+}
 </script>
 <style lang="scss">
 .form-item.error {
@@ -315,6 +348,29 @@ const selectInput = (e: Event) => {
 .form-item.disabled .form-item--type-path {
   input.value {
     padding-right: 8px !important;
+  }
+}
+
+.form-item--checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+
+  .form-item--checkbox-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+
+    &.disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    input {
+      margin: 0;
+    }
   }
 }
 </style>

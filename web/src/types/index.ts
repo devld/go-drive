@@ -10,6 +10,7 @@ export type FormItemType =
   | 'text'
   | 'password'
   | 'checkbox'
+  | 'checkboxes'
   | 'select'
   | 'path'
   | 'form'
@@ -36,6 +37,9 @@ export interface FormItemForms {
   addText?: I18nText
   maxItems?: number
   forms: FormItemForm[]
+
+  keyField?: string
+  valueField?: string
 }
 
 export interface FormItemCode {

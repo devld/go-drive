@@ -288,3 +288,17 @@ jobs:
     desc: Execute JavaScript
     code: Code
     code_desc: JavaScript Code
+  trigger:
+    cron:
+      name: Cron
+      desc: Run on a cron schedule
+      schedule: Schedule
+      schedule_desc: "Cron expression (see https://crontab.cronhub.io/)"
+    entry:
+      name: Entry
+      desc: Run when a file or folder is created, updated or deleted
+      path_pattern: Path Pattern
+      path_pattern_desc: "Glob pattern to match paths, path does not start with /\n** matches zero or more directories;\n* matches any number of non-directory separator characters;\n? matches a single non-directory separator character."
+      event_types: Event Types
+      event_entry_updated: Updated
+      event_entry_deleted: Deleted

@@ -9,17 +9,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type ScheduledDAO struct {
+type JobDAO struct {
 	db *DB
 }
 
-func NewScheduledDAO(db *DB, ch *registry.ComponentsHolder) *ScheduledDAO {
-	dao := &ScheduledDAO{db}
-	ch.Add("scheduledDAO", dao)
+func NewJobDAO(db *DB, ch *registry.ComponentsHolder) *JobDAO {
+	dao := &JobDAO{db}
+	ch.Add("jobDAO", dao)
 	return dao
 }
 
-func (s *ScheduledDAO) GetJobs(includeDisabled bool) ([]types.Job, error) {
+func (s *JobDAO) GetJobs(includeDisabled bool) ([]types.Job, error) {
 	jobs := make([]types.Job, 0)
 	tx := s.db.C()
 	if !includeDisabled {
@@ -28,7 +28,7 @@ func (s *ScheduledDAO) GetJobs(includeDisabled bool) ([]types.Job, error) {
 	return jobs, tx.Find(&jobs).Error
 }
 
-func (s *ScheduledDAO) GetJob(id uint) (types.Job, error) {
+func (s *JobDAO) GetJob(id uint) (types.Job, error) {
 	job := types.Job{}
 	e := s.db.C().Where("`id` = ?", id).First(&job).Error
 	if errors.Is(e, gorm.ErrRecordNotFound) {
@@ -37,16 +37,16 @@ func (s *ScheduledDAO) GetJob(id uint) (types.Job, error) {
 	return job, e
 }
 
-func (s *ScheduledDAO) AddJob(j types.Job) (types.Job, error) {
+func (s *JobDAO) AddJob(j types.Job) (types.Job, error) {
 	return j, s.db.C().Create(&j).Error
 }
 
-func (s *ScheduledDAO) UpdateJob(id uint, j types.Job) error {
+func (s *JobDAO) UpdateJob(id uint, j types.Job) error {
 	j.ID = id
 	return s.db.C().Save(j).Error
 }
 
-func (s *ScheduledDAO) DeleteJob(id uint) error {
+func (s *JobDAO) DeleteJob(id uint) error {
 	return s.db.C().Transaction(func(tx *gorm.DB) error {
 		if e := tx.Delete(&types.Job{}, "`id` = ?", id).Error; e != nil {
 			return e
@@ -58,7 +58,7 @@ func (s *ScheduledDAO) DeleteJob(id uint) error {
 	})
 }
 
-func (s *ScheduledDAO) GetJobExecutions(jobId uint) ([]types.JobExecution, error) {
+func (s *JobDAO) GetJobExecutions(jobId uint) ([]types.JobExecution, error) {
 	jes := make([]types.JobExecution, 0)
 	tx := s.db.C().Order("`started_at` DESC")
 	if jobId != 0 {
@@ -67,29 +67,29 @@ func (s *ScheduledDAO) GetJobExecutions(jobId uint) ([]types.JobExecution, error
 	return jes, tx.Find(&jes).Error
 }
 
-func (s *ScheduledDAO) AddJobExecution(je *types.JobExecution) error {
+func (s *JobDAO) AddJobExecution(je *types.JobExecution) error {
 	return s.db.C().Create(je).Error
 }
 
-func (s *ScheduledDAO) UpdateJobExecution(je *types.JobExecution) error {
+func (s *JobDAO) UpdateJobExecution(je *types.JobExecution) error {
 	if je.ID == 0 {
 		panic("JobExecution update without ID")
 	}
 	return s.db.C().Save(je).Error
 }
 
-func (s *ScheduledDAO) DeleteJobExecution(id uint) error {
+func (s *JobDAO) DeleteJobExecution(id uint) error {
 	return s.db.C().Delete(&types.JobExecution{}, "`id` = ?", id).Error
 }
 
-func (s *ScheduledDAO) DeleteJobExecutions(jobId uint) error {
+func (s *JobDAO) DeleteJobExecutions(jobId uint) error {
 	return s.db.C().Delete(&types.JobExecution{},
 		"`job_id` = ? and ( `status` = ? or `status` = ? )",
 		jobId, types.JobExecutionSuccess, types.JobExecutionFailed,
 	).Error
 }
 
-func (s *ScheduledDAO) UpdateAllRunningJobExecutionsToFailed() error {
+func (s *JobDAO) UpdateAllRunningJobExecutionsToFailed() error {
 	return s.db.C().Model(&types.JobExecution{}).
 		Where("`status` = ?", types.JobExecutionRunning).
 		Update("status", types.JobExecutionFailed).Error

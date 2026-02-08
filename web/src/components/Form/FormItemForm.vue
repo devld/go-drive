@@ -23,8 +23,10 @@
       </template>
     </div>
     <div v-if="!disabled && addable" class="form-item__form-add">
-      <SimpleDropdown v-model="addDropdownShowing">
-        <SimpleButton icon="#icon-add">{{ forms.addText }}</SimpleButton>
+      <SimpleDropdown v-model="addDropdownShowing" position="bottom-right">
+        <SimpleButton icon="#icon-add" native-type="button">{{
+          forms.addText
+        }}</SimpleButton>
         <template #dropdown>
           <ul class="form-item__form-types">
             <li
@@ -81,6 +83,8 @@ const value = ref<ValueItem[]>([])
 
 const forms = computed(() => props.item.forms || { forms: [] })
 const maxItems = computed(() => forms.value.maxItems ?? 0)
+const keyField = computed(() => forms.value.keyField ?? '$key')
+const valueField = computed(() => forms.value.valueField)
 
 const addable = computed(
   () => maxItems.value === 0 || value.value.length < maxItems.value
@@ -120,11 +124,13 @@ watch(
       }
       if (maxItems.value === 1) obj.splice(1)
       value.value = obj
-        .filter((e: O) => e && !!e.$key && typeof e === 'object')
-        .map((e: O) => {
-          const { $key, ...others } = e
-          return { typeKey: $key, value: others }
-        })
+        .filter((e: O) => e && typeof e === 'object' && !!e[keyField.value])
+        .map((e: O) => ({
+          typeKey: e[keyField.value],
+          value: valueField.value
+            ? e[valueField.value]
+            : { ...e, [keyField.value]: undefined },
+        }))
     } catch (e) {
       console.error(e)
     }
@@ -133,7 +139,12 @@ watch(
 )
 
 const emitValue = debounce(() => {
-  const v = value.value.map((e) => ({ $key: e.typeKey, ...e.value }))
+  const v = value.value.map((e) => {
+    return {
+      [keyField.value]: e.typeKey,
+      ...(valueField.value ? { [valueField.value]: e.value } : e.value),
+    }
+  })
   lastValue = JSON.stringify(maxItems.value === 1 ? v[0] : v)
   emit('update:modelValue', lastValue)
 }, 100)
