@@ -6,43 +6,45 @@ import (
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"go-drive/server/scheduled"
+	"go-drive/server/job"
 	"go-drive/storage"
 	"io"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 type jobsRoute struct {
-	ch           *registry.ComponentsHolder
-	runner       task.Runner
-	jobExecutor  *scheduled.JobExecutor
-	scheduledDAO *storage.ScheduledDAO
+	ch          *registry.ComponentsHolder
+	runner      task.Runner
+	jobExecutor *job.JobExecutor
+	jobDAO      *storage.JobDAO
 }
 
 func (jr *jobsRoute) getJobsDefinitions(c *gin.Context) {
-	SetResult(c, scheduled.GetJobs())
+	SetResult(c, types.M{
+		"triggers": job.GetTriggerDefs(),
+		"actions":  job.GetActionDefs(),
+	})
 }
 
 func (jr *jobsRoute) getJobs(c *gin.Context) {
-	jobs, e := jr.scheduledDAO.GetJobs(true)
+	jobs, e := jr.jobDAO.GetJobs(true)
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
 	items := make([]jobItem, 0, len(jobs))
 	for _, job := range jobs {
-		var nextRun *time.Time
-		if j := jr.jobExecutor.GetJob(job.ID); j != nil {
-			t := j.NextRun()
-			nextRun = &t
+		triggersInfo, e := jr.jobExecutor.GetJobTriggersInfo(job.ID)
+		if e != nil {
+			_ = c.Error(e)
+			return
 		}
 		items = append(items, jobItem{
-			Job:     job,
-			NextRun: nextRun,
+			Job:          job,
+			TriggersInfo: triggersInfo,
 		})
 	}
 	SetResult(c, items)
@@ -54,11 +56,12 @@ func (jr *jobsRoute) createJob(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	if e := jr.jobExecutor.ValidateSchedule(job.Schedule); e != nil {
+
+	if e := jr.jobExecutor.ValidateTriggers(job.Triggers); e != nil {
 		_ = c.Error(e)
 		return
 	}
-	addJob, e := jr.scheduledDAO.AddJob(job)
+	addJob, e := jr.jobDAO.AddJob(job)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -82,11 +85,12 @@ func (jr *jobsRoute) updateJob(c *gin.Context) {
 		_ = c.Error(err.NewBadRequestError(""))
 		return
 	}
-	if e := jr.jobExecutor.ValidateSchedule(job.Schedule); e != nil {
+
+	if e := jr.jobExecutor.ValidateTriggers(job.Triggers); e != nil {
 		_ = c.Error(e)
 		return
 	}
-	e := jr.scheduledDAO.UpdateJob(id, job)
+	e := jr.jobDAO.UpdateJob(id, job)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -104,7 +108,7 @@ func (jr *jobsRoute) deleteJob(c *gin.Context) {
 		_ = c.Error(err.NewBadRequestError(""))
 		return
 	}
-	e := jr.scheduledDAO.DeleteJob(id)
+	e := jr.jobDAO.DeleteJob(id)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -122,7 +126,7 @@ func (jr *jobsRoute) getAllExecutions(c *gin.Context) {
 		_ = c.Error(err.NewBadRequestError(""))
 		return
 	}
-	result, e := jr.scheduledDAO.GetJobExecutions(uint(jobId))
+	result, e := jr.jobDAO.GetJobExecutions(uint(jobId))
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -136,7 +140,7 @@ func (jr *jobsRoute) executeJob(c *gin.Context) {
 		_ = c.Error(err.NewBadRequestError(""))
 		return
 	}
-	job, e := jr.scheduledDAO.GetJob(uint(jobId))
+	jobObj, e := jr.jobDAO.GetJob(uint(jobId))
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -144,8 +148,8 @@ func (jr *jobsRoute) executeJob(c *gin.Context) {
 
 	w := c.Writer
 	e = ExecuteTaskStreaming(c, jr.runner,
-		func(ctx types.TaskCtx) (interface{}, error) {
-			e := jr.jobExecutor.TriggerExecution(ctx, job, func(s string) {
+		func(ctx types.TaskCtx) (any, error) {
+			e := jr.jobExecutor.ExecuteJobSync(ctx, jobObj, job.TriggerEvent{}, func(s string) {
 				_, _ = w.Write([]byte(s + "\n"))
 				w.Flush()
 			})
@@ -154,7 +158,7 @@ func (jr *jobsRoute) executeJob(c *gin.Context) {
 			}
 			return nil, e
 		},
-		task.WithNameGroup(job.Description, "scheduled/execution"),
+		task.WithNameGroup(jobObj.Description, "job/execution"),
 	)
 
 	if e != nil {
@@ -186,7 +190,7 @@ func (jr *jobsRoute) deleteJobExecution(c *gin.Context) {
 		_ = c.Error(err.NewNotAllowedError())
 		return
 	}
-	e := jr.scheduledDAO.DeleteJobExecution(id)
+	e := jr.jobDAO.DeleteJobExecution(id)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -203,7 +207,7 @@ func (jr *jobsRoute) deleteJobExecutionsByJobId(c *gin.Context) {
 		_ = c.Error(err.NewNotAllowedError())
 		return
 	}
-	e := jr.scheduledDAO.DeleteJobExecutions(id)
+	e := jr.jobDAO.DeleteJobExecutions(id)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -223,7 +227,7 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 	}
 	e = ExecuteTaskStreaming(c, jr.runner,
 		func(ctx types.TaskCtx) (interface{}, error) {
-			e := scheduled.ExecuteJobCode(c.Request.Context(), code, jr.ch, func(s string) {
+			e := job.ExecuteJobCode(c.Request.Context(), code, nil, jr.ch, func(s string) {
 				_, _ = w.Write([]byte(s + "\n"))
 				w.Flush()
 			})
@@ -232,7 +236,7 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 			}
 			return nil, e
 		},
-		task.WithNameGroup(taskName, "scheduled/script-eval"),
+		task.WithNameGroup(taskName, "job/script-eval"),
 	)
 	if e != nil {
 		_ = c.Error(e)
@@ -242,5 +246,5 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 
 type jobItem struct {
 	types.Job
-	NextRun *time.Time `json:"nextRun"`
+	TriggersInfo map[job.JobTriggerType][]types.SM `json:"triggersInfo"`
 }

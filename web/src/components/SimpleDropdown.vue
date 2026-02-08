@@ -8,14 +8,18 @@
       <slot />
     </span>
     <Transition :name="transition">
-      <div v-show="active" class="simple-dropdown__dropdown">
+      <div
+        v-show="active"
+        class="simple-dropdown__dropdown"
+        :class="`simple-dropdown__dropdown--${position}`"
+      >
         <slot name="dropdown" />
       </div>
     </Transition>
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue'
+import { ref, watchEffect, PropType } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -24,6 +28,10 @@ const props = defineProps({
   transition: {
     type: String,
     default: 'top-fade',
+  },
+  position: {
+    type: String as PropType<'bottom-left' | 'bottom-right'>,
+    default: 'bottom-left',
   },
 })
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
@@ -60,10 +68,19 @@ const onBlur = () => {
 
 .simple-dropdown__dropdown {
   position: absolute;
-  right: 0;
   margin-top: 10px;
   z-index: 999;
   background-color: var(--secondary-bg-color);
   box-shadow: var(--dialog-content-shadow);
+}
+
+.simple-dropdown__dropdown--bottom-left {
+  right: 0;
+  left: unset;
+}
+
+.simple-dropdown__dropdown--bottom-right {
+  right: unset;
+  left: 0;
 }
 </style>

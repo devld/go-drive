@@ -68,7 +68,19 @@ export interface ServiceStatsItem {
   data: O<string>
 }
 
-export interface JobDefinition {
+export interface JobDefinitions {
+  triggers: JobTrigger[]
+  actions: JobAction[]
+}
+
+export interface JobAction {
+  name: string
+  displayName: string
+  description?: string
+  paramsForm: FormItem[]
+}
+
+export interface JobTrigger {
   name: string
   displayName: string
   description?: string
@@ -78,13 +90,26 @@ export interface JobDefinition {
 export interface Job {
   id: number
   description: string
-  job: string
-  params: string
-  schedule: string
-  enabled: boolean
 
-  nextRun?: string
+  triggers: string
+  action: string
+  actionParams: string
+
+  enabled: boolean
+  triggersInfo: {
+    cron?: { nextRun: string }[]
+  }
 }
+
+export type ParsedJobTrigger =
+  | {
+      type: 'cron'
+      config: { schedule: string }
+    }
+  | {
+      type: 'entry'
+      config: { pathPattern: string; eventTypes: string }
+    }
 
 export enum JobExecutionStatus {
   Running = 'running',

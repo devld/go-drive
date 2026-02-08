@@ -1,4 +1,4 @@
-package scheduled
+package job
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 
 func init() {
 	t := i18n.TPrefix("jobs.copy.")
-	RegisterJob(JobDefinition{
+	RegisterActionDef(JobActionDef{
 		Name:        "copy",
 		DisplayName: t("name"),
 		Description: t("desc"),
@@ -71,7 +71,7 @@ func init() {
 	})
 
 	t = i18n.TPrefix("jobs.delete.")
-	RegisterJob(JobDefinition{
+	RegisterActionDef(JobActionDef{
 		Name:        "delete",
 		DisplayName: t("name"),
 		Description: t("desc"),

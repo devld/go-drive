@@ -1,8 +1,10 @@
-package scheduled
+package job
 
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
+	"fmt"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
 	"go-drive/common/types"
@@ -11,7 +13,7 @@ import (
 	"strings"
 )
 
-//go:embed jobs_script-helper.js
+//go:embed script-helper.js
 var helperScript []byte
 var baseVM *s.VM
 
@@ -32,7 +34,7 @@ func init() {
 func init() {
 	t := i18n.TPrefix("jobs.script.")
 
-	RegisterJob(JobDefinition{
+	RegisterActionDef(JobActionDef{
 		Name:        "script",
 		DisplayName: t("name"),
 		Description: t("desc"),
@@ -44,18 +46,28 @@ func init() {
 			},
 		},
 		Do: func(ctx context.Context, params types.SM, ch *registry.ComponentsHolder, onLog func(s string)) error {
-			return ExecuteJobCode(ctx, params["code"], ch, onLog)
+			code := params["code"]
+			eventJson := params["$event"]
+			event := make(types.M, 2)
+			e := json.Unmarshal([]byte(eventJson), &event)
+			if e != nil {
+				return fmt.Errorf("failed to parse event: %s", e.Error())
+			}
+			return ExecuteJobCode(ctx, code, types.M{"$event": event}, ch, onLog)
 		},
 	})
 }
 
 // ExecuteJobCode executes the code, and return the log and error
-func ExecuteJobCode(ctx context.Context, code interface{}, ch *registry.ComponentsHolder, onLog func(string)) error {
+func ExecuteJobCode(ctx context.Context, code interface{}, globals types.M, ch *registry.ComponentsHolder, onLog func(string)) error {
 	vm := baseVM.Fork()
 	defer func() { _ = vm.Dispose() }()
 
 	vm.Set("drive", s.NewDrive(vm, ch.Get("driveAccess").(*drive.Access).GetRootDrive(nil)))
 	vm.Set("log", onLog)
+	for k, v := range globals {
+		vm.Set(k, v)
+	}
 
 	_, e := vm.Run(ctx, code)
 	return e
@@ -68,6 +80,7 @@ var defaultCodeValue = strings.TrimLeft(`
 // - rm: delete files/directories
 // - ls: list directory
 // - mkdir: create a directory
+// - http: send a http request
 //
 // Or you can use 'drive' to do anything.
 
@@ -75,7 +88,7 @@ var defaultCodeValue = strings.TrimLeft(`
 // See https://github.com/devld/go-drive/blob/master/docs/scripts/env/jobs.d.ts
 // See https://github.com/devld/go-drive/tree/master/docs/scripts/libs
 
-log('started...')
+log('triggered by event: ' + JSON.stringify($event))
 
 // do something
 
@@ -93,5 +106,8 @@ log('started...')
 
 // - Do something
 // drive.
+
+// or send a http request
+// log(http(newContext(), 'GET', 'https://example.com').Text())
 
 `, "\t\n\r ")

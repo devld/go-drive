@@ -288,3 +288,17 @@ jobs:
     desc: 执行 JavaScript 脚本
     code: 代码
     code_desc: JavaScript 代码
+  trigger:
+    cron:
+      name: 定时
+      desc: 按 Cron 表达式定时执行
+      schedule: 表达式
+      schedule_desc: "Cron 表达式（参考 https://crontab.cronhub.io/）"
+    entry:
+      name: 文件/目录
+      desc: 当文件或目录被创建、更新或删除时执行
+      path_pattern: 路径匹配
+      path_pattern_desc: "Glob 路径匹配，路径不以 / 开头\n** 匹配零个或多个目录；\n* 匹配任意个数的非目录分隔符字符；\n? 匹配单个非目录分隔符字符。"
+      event_types: 事件类型
+      event_entry_updated: 更新时
+      event_entry_deleted: 删除时

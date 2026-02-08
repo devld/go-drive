@@ -12,15 +12,15 @@
         <table class="simple-table">
           <colgroup>
             <col style="min-width: 100px" />
-            <col style="width: 100px" />
-            <col style="width: 120px" />
+            <col style="width: 150px" />
+            <col style="width: 150px" />
             <col style="width: 142px" />
           </colgroup>
           <thead>
             <tr>
               <th>{{ $t('p.admin.jobs.desc') }}</th>
-              <th>{{ $t('p.admin.jobs.schedule') }}</th>
-              <th>{{ $t('p.admin.jobs.next_run') }}</th>
+              <th>{{ $t('p.admin.jobs.triggers') }}</th>
+              <th>{{ $t('p.admin.jobs.stats') }}</th>
               <th>{{ $t('p.admin.jobs.operation') }}</th>
             </tr>
           </thead>
@@ -31,8 +31,12 @@
               :class="{ 'job-disabled': !j.enabled }"
             >
               <td class="center">{{ j.description }}</td>
-              <td class="center">{{ j.schedule }}</td>
-              <td class="center">{{ j.nextRun && formatTime(j.nextRun) }}</td>
+              <td class="center job-triggers">
+                {{ formatTriggers(j.triggers) }}
+              </td>
+              <td class="center job-triggers-info">
+                {{ formatTriggersInfo(j.triggersInfo) }}
+              </td>
               <td class="center">
                 <SimpleButton
                   :title="$t('p.admin.jobs.view_log')"
@@ -74,8 +78,8 @@
       <SimpleForm ref="jobFormEl" v-model="jobEdit" :form="jobForm" />
       <SimpleForm
         ref="jobParamsFormEl"
-        :key="jobEdit.job"
-        v-model="jobParams"
+        :key="jobEdit.action"
+        v-model="jobActionParams"
         :form="jobParamsForm"
       >
         <template #code-eval>
@@ -191,9 +195,10 @@ import SimpleForm from '@/components/Form'
 import {
   FormItem,
   Job,
-  JobDefinition,
+  JobDefinitions,
   JobExecution,
   JobExecutionStatus,
+  ParsedJobTrigger,
 } from '@/types'
 import { formatTime, mapOf } from '@/utils'
 import { alert, confirm, loading } from '@/utils/ui-utils'
@@ -224,14 +229,14 @@ const saving = ref(false)
 const jobFormEl = ref<InstanceType<typeof SimpleForm>>()
 const jobParamsFormEl = ref<InstanceType<typeof SimpleForm>>()
 const jobEdit = ref<O>()
-const jobParams = ref<O>()
+const jobActionParams = ref<O>()
 const jobExecutionsShowing = ref<Job>()
 const jobExecutions = ref<JobExecution[]>([])
 
 const addJob = () => {
   hideJobExecutions()
-  jobEdit.value = {}
-  jobParams.value = {}
+  jobEdit.value = { triggers: '[]' }
+  jobActionParams.value = {}
   edit.value = false
 }
 
@@ -239,7 +244,7 @@ const editJob = (job: Job) => {
   hideJobExecutions()
   let params: O
   try {
-    params = JSON.parse(job.params)
+    params = JSON.parse(job.actionParams)
   } catch {
     alert('invalid params')
     return
@@ -248,11 +253,11 @@ const editJob = (job: Job) => {
     id: job.id,
     description: job.description,
     enabled: job.enabled ? '1' : '',
-    schedule: job.schedule,
-    job: job.job,
+    triggers: job.triggers,
+    action: job.action,
   }
   nextTick(() => {
-    jobParams.value = params
+    jobActionParams.value = params
   })
   edit.value = true
 }
@@ -276,7 +281,7 @@ const hideJobExecutions = () => {
 
 const cancelEdit = () => {
   jobEdit.value = undefined
-  jobParams.value = undefined
+  jobActionParams.value = undefined
   edit.value = false
 }
 
@@ -292,7 +297,7 @@ const executeJob = (job: Job) => {
 const evalJobCode = () => {
   showExecutionDialog({
     title: t('p.admin.jobs.eval_code_log'),
-    execute: () => jobScriptEvalSync(jobParams.value?.code || ''),
+    execute: () => jobScriptEvalSync(jobActionParams.value?.code || ''),
   }).catch(() => {
     /* ignored */
   })
@@ -367,7 +372,7 @@ const saveJob = async () => {
   const data: Partial<Job> = {
     ...jobEdit.value,
     enabled: !!jobEdit.value!.enabled,
-    params: JSON.stringify(jobParams.value!),
+    actionParams: JSON.stringify(jobActionParams.value!),
   }
   saving.value = true
   try {
@@ -385,9 +390,9 @@ const saveJob = async () => {
   }
 }
 
-const jobDefinitions = ref<JobDefinition[]>([])
+const jobDefinitions = ref<JobDefinitions>({ triggers: [], actions: [] })
 const jobDefinitionsMap = computed(() =>
-  mapOf(jobDefinitions.value, (e) => e.name)
+  mapOf(jobDefinitions.value.actions, (e) => e.name)
 )
 
 const jobForm = computed<FormItem[]>(() => [
@@ -404,17 +409,27 @@ const jobForm = computed<FormItem[]>(() => [
     width: '100px',
   },
   {
-    field: 'schedule',
-    type: 'text',
-    label: t('p.admin.jobs.schedule'),
-    description: t('p.admin.jobs.schedule_desc'),
+    field: 'triggers',
+    type: 'form',
+    label: t('p.admin.jobs.triggers'),
+    description: t('p.admin.jobs.triggers_desc'),
     required: true,
+    width: '100%',
+    forms: {
+      keyField: 'type',
+      valueField: 'config',
+      forms: jobDefinitions.value.triggers.map((def) => ({
+        key: def.name,
+        name: def.displayName,
+        form: def.paramsForm,
+      })),
+    },
   },
   {
-    field: 'job',
+    field: 'action',
     label: t('p.admin.jobs.job'),
     type: 'select',
-    options: jobDefinitions.value.map((e) => ({
+    options: jobDefinitions.value.actions.map((e) => ({
       name: e.displayName,
       title: e.description,
       value: e.name,
@@ -424,27 +439,72 @@ const jobForm = computed<FormItem[]>(() => [
 ])
 
 const jobParamsForm = computed(() => {
-  const job = jobEdit.value?.job
-  return jobDefinitionsMap.value[job]?.paramsForm ?? []
+  const action = jobEdit.value?.action
+  return jobDefinitionsMap.value[action]?.paramsForm ?? []
 })
 
 watch(
-  () => jobEdit.value?.job,
+  () => jobEdit.value?.action,
   () => {
-    jobParams.value = undefined
+    jobActionParams.value = undefined
   }
 )
+
+const formatTriggers = (triggersStr?: string) => {
+  if (!triggersStr) return '-'
+
+  const triggers: ParsedJobTrigger[] = JSON.parse(triggersStr)
+  if (!Array.isArray(triggers) || triggers.length === 0) return '-'
+  return triggers
+    .map((trigger) => {
+      if (trigger.type === 'cron') {
+        return `${t('p.admin.jobs.trigger_cron')}: ${
+          trigger.config.schedule || ''
+        }`
+      } else if (trigger.type === 'entry') {
+        return (
+          trigger.config.eventTypes
+            .split(',')
+            .map((e) => t(`p.admin.jobs.trigger_entry_event_${e.trim()}`))
+            .join('/') +
+          ': ' +
+          trigger.config.pathPattern
+        )
+      }
+      return ''
+    })
+    .join('\n')
+}
+
+const formatTriggersInfo = (
+  triggersInfo: Record<string, Record<string, string>[]>
+) => {
+  return Object.entries(triggersInfo)
+    .map((e) => {
+      return `${t('p.admin.jobs.stats_nextRun')}: ${e[1]
+        .map((e) => e.nextRun && formatTime(e.nextRun))
+        .join(', ')}`
+    })
+    .join('\n')
+}
 
 const loadJobDefinitions = async () => {
   try {
     const data = await getJobDefinitions()
-    data.forEach((e) => {
+    data.actions.forEach((e) => {
       e.paramsForm.forEach((e) => {
         if (e.type === 'form' || e.type === 'code') {
           e.width = '100%'
         }
         if (e.type === 'code') {
           e.labelSuffixSlot = 'code-eval'
+        }
+      })
+    })
+    data.triggers.forEach((t) => {
+      t.paramsForm?.forEach((f) => {
+        if (f.type === 'form' || f.type === 'code') {
+          f.width = '100%'
         }
       })
     })
@@ -496,6 +556,11 @@ loadJobDefinitions()
     color: #999;
   }
 
+  .job-triggers,
+  .job-triggers-info {
+    white-space: pre-wrap;
+  }
+
   .save-button {
     margin-top: 32px;
   }
@@ -507,9 +572,11 @@ loadJobDefinitions()
   .status-success {
     color: var(--btn-bg-color-success);
   }
+
   .status-failed {
     color: var(--btn-bg-color-danger);
   }
+
   .status-running {
     color: var(--btn-bg-color-warning);
   }

@@ -8,7 +8,7 @@ import {
   Group,
   InstalledDriveScript,
   Job,
-  JobDefinition,
+  JobDefinitions,
   JobExecution,
   PathMeta,
   PathMountSource,
@@ -142,7 +142,7 @@ export function getOptions(...keys: string[]) {
 }
 
 export function getJobDefinitions() {
-  return http.get<JobDefinition[]>('/admin/jobs/definitions')
+  return http.get<JobDefinitions>('/admin/jobs/definitions')
 }
 
 export function getJobs() {

@@ -14,3 +14,17 @@ declare function rm(path: string): void;
 declare function ls(path: string): DriveEntry[];
 /** create directory */
 declare function mkdir(path: string): DriveEntry;
+
+declare const $event:
+  | {
+      type: "entry";
+      data?: {
+        eventType: "updated" | "deleted";
+        includeDescendants: boolean;
+        path: string;
+      };
+    }
+  | {
+      type: "cron";
+    }
+  | undefined;
