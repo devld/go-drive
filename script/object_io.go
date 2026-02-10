@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func NewBytes(vm *VM, s interface{}) Bytes {
+func NewBytes(vm *VM, s any) Bytes {
 	switch s := s.(type) {
 	case string:
 		return Bytes{vm, []byte(s)}
@@ -40,7 +40,7 @@ func NewTempFile(vm *VM) TempFile {
 	return tf
 }
 
-func GetReader(v interface{}) io.Reader {
+func GetReader(v any) io.Reader {
 	switch v := v.(type) {
 	case Reader:
 		return v.r
@@ -52,7 +52,7 @@ func GetReader(v interface{}) io.Reader {
 	return nil
 }
 
-func GetReadCloser(v interface{}) io.ReadCloser {
+func GetReadCloser(v any) io.ReadCloser {
 	switch v := v.(type) {
 	case ReadCloser:
 		return v.r
@@ -62,7 +62,7 @@ func GetReadCloser(v interface{}) io.ReadCloser {
 	return nil
 }
 
-func GetBytes(v interface{}) []byte {
+func GetBytes(v any) []byte {
 	switch v := v.(type) {
 	case Bytes:
 		return v.b
@@ -118,7 +118,7 @@ func (r Reader) LimitReader(n int64) Reader {
 	return NewReader(r.vm, io.LimitReader(r.r, n))
 }
 
-func (r Reader) ProgressReader(ctx interface{}) Reader {
+func (r Reader) ProgressReader(ctx any) Reader {
 	return NewReader(r.vm, drive_util.ProgressReader(r.r, GetTaskCtx(ctx)))
 }
 
@@ -146,7 +146,7 @@ func (tf TempFile) Write(b Bytes) {
 	}
 }
 
-func (tf TempFile) CopyFrom(r interface{}) {
+func (tf TempFile) CopyFrom(r any) {
 	reader := GetReader(r)
 	if reader == nil {
 		tf.vm.ThrowTypeError("CopyFrom required a Reader")

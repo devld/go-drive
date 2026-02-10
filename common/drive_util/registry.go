@@ -4,7 +4,7 @@ import "go-drive/common"
 
 type DriveDynamicRegistration func(common.Config) *DriveFactoryConfig
 
-var registry = make(map[string]interface{})
+var registry = make(map[string]any)
 
 func RegisterDrive(factory DriveFactoryConfig) {
 	if _, exists := registry[factory.Type]; exists {
@@ -20,7 +20,7 @@ func RegisterDynamicDrive(typeName string, factory DriveDynamicRegistration) {
 	registry[typeName] = factory
 }
 
-func toDriveFactory(typeName string, v interface{}, config common.Config) *DriveFactoryConfig {
+func toDriveFactory(typeName string, v any, config common.Config) *DriveFactoryConfig {
 	if f, ok := v.(DriveFactoryConfig); ok {
 		return &f
 	}

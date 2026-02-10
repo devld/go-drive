@@ -47,7 +47,7 @@ type ScriptDrive struct {
 	mu   sync.RWMutex
 }
 
-func (sd *ScriptDrive) setData(vm *s.VM, args s.Values) interface{} {
+func (sd *ScriptDrive) setData(vm *s.VM, args s.Values) any {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 	data := args.Get(0)
@@ -58,7 +58,7 @@ func (sd *ScriptDrive) setData(vm *s.VM, args s.Values) interface{} {
 	return nil
 }
 
-func (sd *ScriptDrive) getData(vm *s.VM, args s.Values) interface{} {
+func (sd *ScriptDrive) getData(vm *s.VM, args s.Values) any {
 	sd.mu.RLock()
 	defer sd.mu.RUnlock()
 	key := args.Get(0).String()
@@ -69,7 +69,7 @@ func (sd *ScriptDrive) getData(vm *s.VM, args s.Values) interface{} {
 	return v.InternalValue()
 }
 
-func (sd *ScriptDrive) call(vm *s.VM, fn string, args ...interface{}) (*s.Value, error) {
+func (sd *ScriptDrive) call(vm *s.VM, fn string, args ...any) (*s.Value, error) {
 	fn = "__drive_" + fn
 	gotValue, e := vm.GetValue(fn)
 	if e != nil {

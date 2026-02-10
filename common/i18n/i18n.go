@@ -12,7 +12,7 @@ type MessageSource interface {
 	Translate(lang, key string, args ...string) string
 }
 
-func TranslateV(lang string, ms MessageSource, v interface{}) interface{} {
+func TranslateV(lang string, ms MessageSource, v any) any {
 	return utils.VisitValueTree(v, func(v reflect.Value, sf *reflect.StructField) {
 		if v.Kind() != reflect.String {
 			return

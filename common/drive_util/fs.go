@@ -428,7 +428,7 @@ func (e entryFileInfo) IsDir() bool {
 	return e.e.Type().IsDir()
 }
 
-func (e entryFileInfo) Sys() interface{} {
+func (e entryFileInfo) Sys() any {
 	return e.e
 }
 

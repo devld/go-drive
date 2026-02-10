@@ -17,13 +17,13 @@ func initVarsForVm(v *VM) {
 	v.o.Set("newTaskCtx", WrapVmCall(v, vm_newTaskCtx))
 	v.o.Set("newLocker", WrapVmCall(v, vm_newLocker))
 
-	v.o.Set("newBytes", WrapVmCall(v, func(vm *VM, args Values) interface{} {
+	v.o.Set("newBytes", WrapVmCall(v, func(vm *VM, args Values) any {
 		return NewBytes(vm, args.Get(0).Raw())
 	}))
-	v.o.Set("newEmptyBytes", WrapVmCall(v, func(vm *VM, args Values) interface{} {
+	v.o.Set("newEmptyBytes", WrapVmCall(v, func(vm *VM, args Values) any {
 		return NewEmptyBytes(vm, args.Get(0).Integer())
 	}))
-	v.o.Set("newTempFile", WrapVmCall(v, func(vm *VM, args Values) interface{} {
+	v.o.Set("newTempFile", WrapVmCall(v, func(vm *VM, args Values) any {
 		return NewTempFile(vm)
 	}))
 

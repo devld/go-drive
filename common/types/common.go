@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type M map[string]interface{}
+type M map[string]any
 type SM map[string]string
 
 type SV string

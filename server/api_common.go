@@ -48,7 +48,7 @@ type commonRoute struct {
 }
 
 func (cr *commonRoute) getConfig(c *gin.Context) {
-	cs := cr.ch.Gets(func(c interface{}) bool {
+	cs := cr.ch.Gets(func(c any) bool {
 		_, ok := c.(types.ISysConfig)
 		return ok
 	})

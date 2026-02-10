@@ -297,7 +297,7 @@ func (m *Maker) doMake(ctx context.Context, entry ThumbnailEntry, path string) (
 	return m.openFile(path, nil, nil, 0)
 }
 
-func (m *Maker) executeTask(v interface{}) interface{} {
+func (m *Maker) executeTask(v any) any {
 	task := v.(*taskWrapper)
 	exists, e := utils.FileExists(task.dest)
 	if e != nil {

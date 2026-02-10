@@ -90,7 +90,7 @@ func (mr *miscRoute) cleanupInvalidPathPermissionsAndMounts(c *gin.Context) {
 }
 
 func (mr *miscRoute) getSystemStats(c *gin.Context) {
-	stats := mr.ch.Gets(func(c interface{}) bool {
+	stats := mr.ch.Gets(func(c any) bool {
 		_, ok := c.(types.IStatistics)
 		return ok
 	})

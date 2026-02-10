@@ -13,12 +13,12 @@ import (
 )
 
 // vm_base64Encode: (b Bytes) string
-func vm_base64Encode(vm *VM, args Values) interface{} {
+func vm_base64Encode(vm *VM, args Values) any {
 	return base64.StdEncoding.EncodeToString(GetBytes(args.Get(0).Raw()))
 }
 
 // vm_base64Decode: (s string) Bytes
-func vm_base64Decode(vm *VM, args Values) interface{} {
+func vm_base64Decode(vm *VM, args Values) any {
 	r, e := base64.StdEncoding.DecodeString(args.Get(0).String())
 	if e != nil {
 		vm.ThrowError(e)
@@ -27,12 +27,12 @@ func vm_base64Decode(vm *VM, args Values) interface{} {
 }
 
 // vm_urlBase64Encode: (s Bytes) string
-func vm_urlBase64Encode(vm *VM, args Values) interface{} {
+func vm_urlBase64Encode(vm *VM, args Values) any {
 	return base64.URLEncoding.EncodeToString(GetBytes(args.Get(0).Raw()))
 }
 
 // vm_urlBase64Decode: (s string) Bytes
-func vm_urlBase64Decode(vm *VM, args Values) interface{} {
+func vm_urlBase64Decode(vm *VM, args Values) any {
 	r, e := base64.URLEncoding.DecodeString(args.Get(0).String())
 	if e != nil {
 		vm.ThrowError(e)
@@ -41,12 +41,12 @@ func vm_urlBase64Decode(vm *VM, args Values) interface{} {
 }
 
 // vm_urlBase64Encode: (s Bytes) string
-func vm_toHex(vm *VM, args Values) interface{} {
+func vm_toHex(vm *VM, args Values) any {
 	return hex.EncodeToString(GetBytes(args.Get(0).Raw()))
 }
 
 // vm_urlBase64Decode: (s string) Bytes
-func vm_fromHex(vm *VM, args Values) interface{} {
+func vm_fromHex(vm *VM, args Values) any {
 	b, e := hex.DecodeString(args.Get(0).String())
 	if e != nil {
 		vm.ThrowError(e)
@@ -84,12 +84,12 @@ func (h hasher) Sum() Bytes {
 	return NewBytes(h.vm, r)
 }
 
-func vm_newHash(vm *VM, args Values) interface{} {
+func vm_newHash(vm *VM, args Values) any {
 	return hasher{vm, hashFn(vm, int(args.Get(0).Integer()))()}
 }
 
 // vm_hmac: (typ int, payload, key Bytes) Bytes
-func vm_hmac(vm *VM, args Values) interface{} {
+func vm_hmac(vm *VM, args Values) any {
 	mac := hmac.New(hashFn(vm, int(args.Get(0).Integer())), GetBytes(args.Get(2).Raw()))
 	_, _ = mac.Write(GetBytes(args.Get(1).Raw()))
 	return NewBytes(vm, mac.Sum(nil))

@@ -62,7 +62,7 @@ func (u *UserDAO) AddUser(user types.User) (types.User, error) {
 }
 
 func (u *UserDAO) UpdateUser(username string, user types.User) error {
-	data := map[string]interface{}{
+	data := map[string]any{
 		"root_path": user.RootPath,
 	}
 	if user.Password != "" {

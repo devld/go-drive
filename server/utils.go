@@ -193,7 +193,7 @@ func AdminGroupRequired() gin.HandlerFunc {
 func ExecuteTaskStreaming(c *gin.Context, runner task.Runner, runnable task.Runnable, options ...task.Option) error {
 	completeChan := make(chan struct{})
 	streamReady := make(chan struct{})
-	task, e := runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
+	task, e := runner.Execute(func(ctx types.TaskCtx) (any, error) {
 		<-streamReady
 		defer close(completeChan)
 		return runnable(ctx)
@@ -256,11 +256,11 @@ func GetRequestOrigin(c *gin.Context) string {
 	return protocol + "://" + host
 }
 
-func SetResult(c *gin.Context, result interface{}) {
+func SetResult(c *gin.Context, result any) {
 	c.Set(keyResult, result)
 }
 
-func GetResult(c *gin.Context) (interface{}, bool) {
+func GetResult(c *gin.Context) (any, bool) {
 	return c.Get(keyResult)
 }
 
@@ -312,7 +312,7 @@ func UpdateSession(c *gin.Context, tokenStore types.TokenStore, update func(sess
 	return nil
 }
 
-func TranslateV(c *gin.Context, ms i18n.MessageSource, v interface{}) interface{} {
+func TranslateV(c *gin.Context, ms i18n.MessageSource, v any) any {
 	lang := c.GetHeader("accept-language")
 	i := strings.IndexByte(lang, ',')
 	if i >= 0 {

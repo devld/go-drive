@@ -4,7 +4,7 @@ import "reflect"
 
 type VisitNode func(reflect.Value, *reflect.StructField)
 
-func VisitValueTree(v interface{}, fn VisitNode) interface{} {
+func VisitValueTree(v any, fn VisitNode) any {
 	val := reflect.Indirect(reflect.ValueOf(v))
 	r := visitValueTree(val, nil, fn)
 	if r.IsValid() {

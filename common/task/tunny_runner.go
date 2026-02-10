@@ -229,7 +229,7 @@ func (w *tunnyTaskCtx) cancel() {
 	w.task.Status = Canceled
 }
 
-func executor(arg interface{}) interface{} {
+func executor(arg any) any {
 	w := arg.(*tunnyTaskCtx)
 	if w.Err() != nil {
 		return nil

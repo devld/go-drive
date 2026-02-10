@@ -37,7 +37,7 @@ func flattenEntriesTree(root entryTreeNode, result []entryTreeNode, deepFirst bo
 }
 
 // vm_buildEntriesTree: (ctx TaskCtx, entry Entry, byteProgress bool) entryTreeNode
-func vm_buildEntriesTree(vm *VM, args Values) interface{} {
+func vm_buildEntriesTree(vm *VM, args Values) any {
 	ctx := GetTaskCtx(args.Get(0).Raw())
 	entry := GetEntry(args.Get(1).Raw())
 	byteProgress := args.Get(2).Bool()
@@ -49,7 +49,7 @@ func vm_buildEntriesTree(vm *VM, args Values) interface{} {
 }
 
 // vm_buildEntriesTreeWithPattern: (ctx TaskCtx, root Drive, pattern string, bytesProgress bool) []Entry
-func vm_findEntries(vm *VM, args Values) interface{} {
+func vm_findEntries(vm *VM, args Values) any {
 	ctx := GetTaskCtx(args.Get(0).Raw())
 	drive := GetDrive(args.Get(1).Raw())
 	pattern := args.Get(2).String()
@@ -62,7 +62,7 @@ func vm_findEntries(vm *VM, args Values) interface{} {
 }
 
 // vm_flattenEntriesTree: (root entryTreeNode, deepFirst bool) []entryTreeNode
-func vm_flattenEntriesTree(vm *VM, args Values) interface{} {
+func vm_flattenEntriesTree(vm *VM, args Values) any {
 	entry, ok := args.Get(0).Raw().(entryTreeNode)
 	if !ok {
 		vm.ThrowTypeError("not a EntryTreeNode")

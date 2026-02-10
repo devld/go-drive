@@ -232,7 +232,7 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 	}
 	session := GetSession(c)
 	override := utils.ToBool(c.Query("override"))
-	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (any, error) {
 		r, e := drive_.Copy(ctx, fromEntry, to, override)
 		if e != nil {
 			return nil, e
@@ -263,7 +263,7 @@ func (dr *driveRoute) move(c *gin.Context) {
 	}
 	session := GetSession(c)
 	override := utils.ToBool(c.Query("override"))
-	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (any, error) {
 		r, e := drive_.Move(ctx, fromEntry, to, override)
 		if e != nil {
 			return nil, e
@@ -292,7 +292,7 @@ func (dr *driveRoute) deleteEntry(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
 	d := c.MustGet("drive").(types.IDrive)
 
-	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (any, error) {
 		return nil, d.Delete(ctx, path)
 	}, 2*time.Second, task.WithNameGroup(path, "drive/delete"))
 	if e != nil {
@@ -464,7 +464,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (any, error) {
 		defer func() {
 			_ = tempFile.Close()
 			_ = os.Remove(tempFile.Name())
@@ -516,7 +516,7 @@ func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 	override := utils.ToBool(c.Query("override"))
 	path := utils.CleanPath(c.Param("path"))
 	id := c.Query("id")
-	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (interface{}, error) {
+	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (any, error) {
 		file, e := dr.chunkUploader.CompleteUpload(id, ctx)
 		if e != nil {
 			return nil, e
@@ -636,7 +636,7 @@ type entryJson struct {
 }
 
 type uploadConfig struct {
-	Provider string      `json:"provider"`
-	Path     string      `json:"path,omitempty"`
-	Config   interface{} `json:"config"`
+	Provider string `json:"provider"`
+	Path     string `json:"path,omitempty"`
+	Config   any    `json:"config"`
 }

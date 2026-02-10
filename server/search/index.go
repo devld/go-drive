@@ -1,6 +1,7 @@
 package search
 
 import (
+	"context"
 	"errors"
 	"go-drive/common"
 	err "go-drive/common/errors"
@@ -16,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"golang.org/x/net/context"
 )
 
 type IndexFilter = func(entry types.IEntry) bool
@@ -125,7 +125,7 @@ func (s *Service) TriggerIndexAll(path string, ignoreError bool) (task.Task, err
 	if e := s.checkEnabled(); e != nil {
 		return task.Task{}, e
 	}
-	return s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
+	return s.runner.Execute(func(ctx types.TaskCtx) (any, error) {
 		e := s.indexAll(ctx, path, ignoreError)
 		if e != nil {
 			log.Printf("Error indexing %s: %s", utils.LogSanitize(path), e)
@@ -313,7 +313,7 @@ func (s *Service) onUpdated(dc types.DriveListenerContext, path string, includeD
 	if includeDescendants {
 		_, _ = s.TriggerIndexAll(path, true)
 	} else {
-		_, _ = s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
+		_, _ = s.runner.Execute(func(ctx types.TaskCtx) (any, error) {
 			entry, e := dc.Drive.Get(ctx, path)
 			if e != nil {
 				return nil, e
@@ -331,7 +331,7 @@ func (s *Service) onDeleted(dc types.DriveListenerContext, path string) {
 	if s.checkEnabled() != nil {
 		return
 	}
-	_, _ = s.runner.Execute(func(ctx types.TaskCtx) (interface{}, error) {
+	_, _ = s.runner.Execute(func(ctx types.TaskCtx) (any, error) {
 		e := s.s.Delete(ctx, path)
 		if e != nil {
 			log.Printf("Error deleting index %s: %s", utils.LogSanitize(path), e)
