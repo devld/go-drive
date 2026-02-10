@@ -76,6 +76,8 @@ func NewDrive(ctx context.Context, config types.SM,
 	return w, nil
 }
 
+var _ types.IDrive = (*Drive)(nil)
+
 type Drive struct {
 	pathPrefix string
 	username   string
@@ -285,6 +287,8 @@ func (w *Drive) newEntry(res propfindResponse) *webDavEntry {
 		d:       w,
 	}
 }
+
+var _ types.IEntry = (*webDavEntry)(nil)
 
 type webDavEntry struct {
 	path    string

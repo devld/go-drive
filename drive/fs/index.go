@@ -28,9 +28,13 @@ func init() {
 	})
 }
 
+var _ types.IDrive = (*Drive)(nil)
+
 type Drive struct {
 	path string
 }
+
+var _ types.IEntry = (*fsFile)(nil)
 
 type fsFile struct {
 	drive *Drive

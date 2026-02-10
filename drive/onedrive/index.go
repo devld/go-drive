@@ -50,6 +50,8 @@ func init() {
 	})
 }
 
+var _ types.IDrive = (*OneDrive)(nil)
+
 type OneDrive struct {
 	c         *req.Client
 	reqPrefix string
@@ -348,6 +350,8 @@ func (o *OneDrive) newEntry(item driveItem) *oneDriveEntry {
 		downloadUrlExpiresAt: time.Now().Add(downloadUrlTTL).Unix(),
 	}
 }
+
+var _ types.IEntry = (*oneDriveEntry)(nil)
 
 type oneDriveEntry struct {
 	id      string

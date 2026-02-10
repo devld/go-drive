@@ -69,6 +69,8 @@ func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils
 	return g, nil
 }
 
+var _ types.IDrive = (*GDrive)(nil)
+
 type GDrive struct {
 	s *drive.Service
 
@@ -387,6 +389,8 @@ func (g *GDrive) newEntry(parentPath string, file *drive.File) *gdriveEntry {
 		targetId: targetId, targetMime: targetMime, thumbnail: thumbnail,
 	}
 }
+
+var _ types.IEntry = (*gdriveEntry)(nil)
 
 type gdriveEntry struct {
 	id   string

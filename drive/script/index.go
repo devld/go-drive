@@ -36,6 +36,8 @@ func init() {
 	})
 }
 
+var _ types.IDrive = (*ScriptDrive)(nil)
+
 type ScriptDrive struct {
 	baseVM *s.VM
 	pool   *s.VMPool
@@ -245,6 +247,8 @@ type scriptEntryStruct struct {
 	IsDir   bool
 	Data    types.SM
 }
+
+var _ types.IEntry = (*scriptDriveEntry)(nil)
 
 type scriptDriveEntry struct {
 	d *ScriptDrive

@@ -58,6 +58,8 @@ type Drive struct {
 	tempDir string
 }
 
+var _ types.IDrive = (*Drive)(nil)
+
 // NewDrive creates a S3 compatible storage
 func NewDrive(ctx context.Context, config types.SM,
 	utils drive_util.DriveUtils) (types.IDrive, error) {
@@ -471,6 +473,8 @@ type s3Entry struct {
 	modTime int64
 	isDir   bool
 }
+
+var _ types.IEntry = (*s3Entry)(nil)
 
 func (s *s3Entry) Path() string {
 	return s.key

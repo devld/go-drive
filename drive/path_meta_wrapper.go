@@ -9,6 +9,8 @@ import (
 	"go-drive/storage"
 )
 
+var _ types.IDrive = (*PathMetaWrapper)(nil)
+
 type PathMetaWrapper struct {
 	types.IDrive
 	pathMeta *storage.PathMetaDAO

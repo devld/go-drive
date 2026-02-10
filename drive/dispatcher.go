@@ -24,6 +24,9 @@ var pathRegexp = regexp.MustCompile(`^/?([^/]+)(/(.*))?$`)
 
 const maxMountDepth = 10
 
+var _ types.IDrive = (*DispatcherDrive)(nil)
+var _ types.IDispatcherDrive = (*DispatcherDrive)(nil)
+
 // DispatcherDrive splits drive name and key from the raw key.
 // Then dispatch request to the specified drive.
 type DispatcherDrive struct {
@@ -552,6 +555,9 @@ func (d *DispatcherDrive) mapDriveEntries(dir string, driveName string, entries 
 	return mappedEntries
 }
 
+var _ types.IEntryWrapper = (*entryWrapper)(nil)
+var _ types.IDispatcherEntry = (*entryWrapper)(nil)
+
 type entryWrapper struct {
 	types.IEntry
 	d         *DispatcherDrive
@@ -588,6 +594,8 @@ func (d *entryWrapper) GetDispatchedDrive() (string, types.IDrive) {
 func (d *entryWrapper) GetRealPath() string {
 	return path2.Join(d.driveName, d.IEntry.Path())
 }
+
+var _ types.IEntry = (*driveEntry)(nil)
 
 type driveEntry struct {
 	d    *DispatcherDrive

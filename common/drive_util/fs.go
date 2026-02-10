@@ -450,6 +450,8 @@ func mapError(e error) error {
 	return e
 }
 
+var _ types.IEntry = (*createdEntry)(nil)
+
 type createdEntry struct {
 	path    string
 	drive   types.IDrive

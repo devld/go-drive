@@ -7,6 +7,8 @@ import (
 	"io"
 )
 
+var _ types.IDrive = (*ListenerWrapper)(nil)
+
 type ListenerWrapper struct {
 	types.IDrive
 

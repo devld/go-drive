@@ -139,6 +139,8 @@ func (f *Drive) getClient() (*sftp.Client, error) {
 	return f.client, nil
 }
 
+var _ types.IDrive = (*Drive)(nil)
+
 type Drive struct {
 	cache    drive_util.DriveCache
 	cacheTTL time.Duration
@@ -357,6 +359,8 @@ func (f *Drive) Dispose() error {
 	}
 	return nil
 }
+
+var _ types.IEntry = (*sftpEntry)(nil)
 
 type sftpEntry struct {
 	d       *Drive
