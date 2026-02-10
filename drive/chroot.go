@@ -68,6 +68,8 @@ func (c *Chroot) FilterEntries(unwrappedPath string, entries []types.IEntry) []t
 	return filtered
 }
 
+var _ types.IDrive = (*ChrootWrapper)(nil)
+
 type ChrootWrapper struct {
 	d types.IDrive
 	*Chroot
@@ -187,6 +189,8 @@ func (c *ChrootWrapper) wrapEntries(es []types.IEntry) []types.IEntry {
 	}
 	return result
 }
+
+var _ types.IEntryWrapper = (*chrootEntry)(nil)
 
 type chrootEntry struct {
 	types.IEntry

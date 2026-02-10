@@ -9,6 +9,8 @@ import (
 	"io"
 )
 
+var _ types.IDrive = (*PermissionWrapperDrive)(nil)
+
 // PermissionWrapperDrive intercept the request
 // based on the permission information in the database.
 // The permissions of a child path inherit from the parent path,
@@ -181,6 +183,8 @@ func (p *PermissionWrapperDrive) requireDescendantPermission(path string, requir
 	}
 	return nil
 }
+
+var _ types.IEntryWrapper = (*permissionWrapperEntry)(nil)
 
 type permissionWrapperEntry struct {
 	types.IEntry

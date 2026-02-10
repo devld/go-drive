@@ -95,6 +95,8 @@ type ThumbnailEntry interface {
 	GetExternalURL() string
 }
 
+var _ types.IEntryWrapper = (*thumbnailEntry)(nil)
+
 type thumbnailEntry struct {
 	types.IEntry
 	types.IDispatcherEntry

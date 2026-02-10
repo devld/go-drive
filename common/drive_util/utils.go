@@ -34,6 +34,8 @@ func init() {
 	}
 }
 
+var _ types.IEntryWrapper = (*metaEntryWrapper)(nil)
+
 type metaEntryWrapper struct {
 	types.IEntry
 	props types.M
@@ -563,6 +565,8 @@ func GetURL(ctx context.Context, u string, header types.SM, start, size int64) (
 func NewURLContentReader(url string, headers types.SM, proxy bool) types.IContentReader {
 	return &contentReaderImpl{url, headers, proxy}
 }
+
+var _ types.IContentReader = (*contentReaderImpl)(nil)
 
 type contentReaderImpl struct {
 	url     string

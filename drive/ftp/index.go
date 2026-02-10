@@ -70,6 +70,8 @@ func NewDrive(ctx context.Context, config types.SM,
 	return ftp, nil
 }
 
+var _ types.IDrive = (*Drive)(nil)
+
 type Drive struct {
 	c        *goftp.Client
 	cache    drive_util.DriveCache
@@ -241,6 +243,8 @@ func (f *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, er
 func (f *Drive) Dispose() error {
 	return f.c.Close()
 }
+
+var _ types.IEntry = (*ftpEntry)(nil)
 
 type ftpEntry struct {
 	d       *Drive
