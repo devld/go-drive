@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func vm_consoleWrite(vm *VM, args Values) interface{} {
+func vm_consoleWrite(vm *VM, args Values) any {
 	level := args.Get(0).String()
 	msg := make([]string, args.Len()-1)
 	for i := range msg {
@@ -21,12 +21,12 @@ func vm_consoleWrite(vm *VM, args Values) interface{} {
 }
 
 // vm_newContext: () Context
-func vm_newContext(vm *VM, args Values) interface{} {
+func vm_newContext(vm *VM, args Values) any {
 	return NewContext(vm, context.Background())
 }
 
 // vm_newContextWithTimeout: (parent Context, timeout time.Duration) contextWithTimeout
-func vm_newContextWithTimeout(vm *VM, args Values) interface{} {
+func vm_newContextWithTimeout(vm *VM, args Values) any {
 	parent := GetContext(args.Get(0).Raw())
 	timeout := time.Duration(args.Get(1).Integer())
 	ctx, cancel := context.WithTimeout(GetContext(parent), timeout)
@@ -36,7 +36,7 @@ func vm_newContextWithTimeout(vm *VM, args Values) interface{} {
 }
 
 // vm_newTaskCtx: (ctx Context, onUpdate func(int64, int64)) TaskCtx
-func vm_newTaskCtx(vm *VM, args Values) interface{} {
+func vm_newTaskCtx(vm *VM, args Values) any {
 	ctx := GetContext(args.Get(0).Raw())
 	onUpdate := args.Get(1)
 	if onUpdate.IsNil() {
@@ -46,7 +46,7 @@ func vm_newTaskCtx(vm *VM, args Values) interface{} {
 }
 
 // vm_sleep: (t time.Duration)
-func vm_sleep(vm *VM, args Values) interface{} {
+func vm_sleep(vm *VM, args Values) any {
 	time.Sleep(time.Duration(args.Get(0).Integer()))
 	return nil
 }
@@ -97,7 +97,7 @@ func (cwt contextWithTimeout) Dispose() {
 }
 
 // vm_newLocker: () *locker
-func vm_newLocker(vm *VM, args Values) interface{} {
+func vm_newLocker(vm *VM, args Values) any {
 	return &locker{&sync.Mutex{}}
 }
 

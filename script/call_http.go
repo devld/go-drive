@@ -13,8 +13,8 @@ var httpClient = &http.Client{CheckRedirect: func(*http.Request, []*http.Request
 	return http.ErrUseLastResponse
 }}
 
-// vm_http: (ctx Context, method, url string, headers types.SM, body interface{}) *httpResponse
-func vm_http(vm *VM, args Values) interface{} {
+// vm_http: (ctx Context, method, url string, headers types.SM, body any) *httpResponse
+func vm_http(vm *VM, args Values) any {
 	ctx := args.Get(0).Raw()
 	method := args.Get(1).String()
 	url := args.Get(2).String()
@@ -74,7 +74,7 @@ func vm_http(vm *VM, args Values) interface{} {
 }
 
 // vm_newFormData: () *formData
-func vm_newFormData(vm *VM, args Values) interface{} {
+func vm_newFormData(vm *VM, args Values) any {
 	return &formData{vm, make([]formDataField, 0), nil}
 }
 
@@ -87,10 +87,10 @@ type formData struct {
 type formDataField struct {
 	field    string
 	filename string
-	data     interface{}
+	data     any
 }
 
-func (fd *formData) AppendField(key string, v interface{}) {
+func (fd *formData) AppendField(key string, v any) {
 	var data []byte
 	if str, ok := v.(string); ok {
 		data = []byte((str))
@@ -102,7 +102,7 @@ func (fd *formData) AppendField(key string, v interface{}) {
 	fd.data = append(fd.data, formDataField{key, "", data})
 }
 
-func (fd *formData) AppendFile(key, filename string, reader interface{}) {
+func (fd *formData) AppendFile(key, filename string, reader any) {
 	var r io.Reader
 	if vr := GetReader(reader); vr != nil {
 		r = vr

@@ -51,8 +51,8 @@ func (sc *scriptDriveCache) GetEntry(path string) *drive_util.EntryCacheItem {
 	return r
 }
 
-func (sc *scriptDriveCache) GetChildren(path string) interface{} {
-	// return interface{}, because we need to return 'nil slice'
+func (sc *scriptDriveCache) GetChildren(path string) any {
+	// return any, because we need to return 'nil slice'
 	a, e := sc.c.GetChildrenRaw(path)
 	if e != nil {
 		sc.vm.ThrowError(e)

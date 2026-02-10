@@ -132,7 +132,7 @@ func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {
 	}
 }
 
-func handlePanic(c *gin.Context, err interface{}) {
+func handlePanic(c *gin.Context, err any) {
 	var msg string
 	if ee, ok := err.(error); ok {
 		msg = ee.Error()
@@ -146,7 +146,7 @@ func handlePanic(c *gin.Context, err interface{}) {
 	)
 }
 
-func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v interface{}) {
+func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v any) {
 	if c.Writer.Written() {
 		return
 	}

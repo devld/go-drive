@@ -122,7 +122,7 @@ func (s *SQLiteSearcher) Delete(ctx types.TaskCtx, dirPath string) error {
 		ctx.Total(int64(len(entries)), false)
 		if e := s.db.Where(
 			"`path` IN ("+strings.TrimSuffix(strings.Repeat("?, ", len(entries)), ", ")+")",
-			utils.ArrayMap(entries, func(t *entry) interface{} { return t.Path })...,
+			utils.ArrayMap(entries, func(t *entry) any { return t.Path })...,
 		).Delete(&entry{}).Error; e != nil {
 			return e
 		}
@@ -156,11 +156,11 @@ func (s *SQLiteSearcher) buildQuery(tx *gorm.DB, query string) *gorm.DB {
 	queries := spacesPattern.Split(query, -1)
 
 	where := make([]string, 0, len(queries))
-	values := make([]interface{}, 0, len(queries))
+	values := make([]any, 0, len(queries))
 
 	for _, query := range queries {
 		var where_ string
-		var values_ []interface{}
+		var values_ []any
 		if strings.HasPrefix(query, "path:") {
 			where_, values_ = buildWildcardQuery(query[5:], "path")
 		} else if strings.HasPrefix(query, "in:") {
@@ -170,17 +170,17 @@ func (s *SQLiteSearcher) buildQuery(tx *gorm.DB, query string) *gorm.DB {
 			}
 			modTime := time.Now().Add(-duration)
 			where_ = "`mod_time` > ?"
-			values_ = []interface{}{modTime}
+			values_ = []any{modTime}
 		} else if m := sizeQueryPattern.FindStringSubmatch(query); m != nil {
 			size := types.SV(m[2]).DataSize(-1)
 			if size < 0 {
 				continue
 			}
 			where_ = "`size` >= 0 AND `size` " + m[1] + " ?"
-			values_ = []interface{}{size}
+			values_ = []any{size}
 		} else if strings.HasPrefix(query, "type:") {
 			where_ = "`type` = ?"
-			values_ = []interface{}{query[5:]}
+			values_ = []any{query[5:]}
 		} else {
 			where_, values_ = buildWildcardQuery(query, "`name`")
 		}
@@ -206,9 +206,9 @@ func (s *SQLiteSearcher) Dispose() error {
 	return db.Close()
 }
 
-func buildWildcardQuery(query, column string) (string, []interface{}) {
+func buildWildcardQuery(query, column string) (string, []any) {
 	query = strings.Trim(query, "*")
-	values := utils.ArrayMap(strings.Split(query, "*"), func(t *string) interface{} { return t })
+	values := utils.ArrayMap(strings.Split(query, "*"), func(t *string) any { return t })
 	where := column + " LIKE ('%' || " +
 		strings.TrimSuffix(strings.Repeat("? || '%' || ", len(values)), " || '%' || ") + " || '%' )"
 	return where, values

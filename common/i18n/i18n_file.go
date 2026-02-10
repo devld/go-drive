@@ -98,7 +98,7 @@ func readAllLang(path string) (map[language.Tag]map[string]string, error) {
 		if e != nil {
 			return nil, e
 		}
-		items := make(map[string]interface{})
+		items := make(map[string]any)
 		if e := yaml.Unmarshal(bytes, items); e != nil {
 			return nil, fmt.Errorf("error parsing file '%s': %s", file.Name(), e.Error())
 		}

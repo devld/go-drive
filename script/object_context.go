@@ -13,7 +13,7 @@ func NewTaskCtx(vm *VM, c types.TaskCtx) TaskCtx {
 	return TaskCtx{NewContext(vm, c), c}
 }
 
-func GetContext(v interface{}) context.Context {
+func GetContext(v any) context.Context {
 	switch v := v.(type) {
 	case Context:
 		return v.v
@@ -23,7 +23,7 @@ func GetContext(v interface{}) context.Context {
 	return nil
 }
 
-func GetTaskCtx(v interface{}) types.TaskCtx {
+func GetTaskCtx(v any) types.TaskCtx {
 	switch v := v.(type) {
 	case TaskCtx:
 		return v.v

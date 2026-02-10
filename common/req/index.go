@@ -126,7 +126,7 @@ func (h *Client) request(req *http.Request) (Response, error) {
 	}
 	r, e := h.client().Do(req)
 	if utils.IsDebugOn {
-		var v interface{} = nil
+		var v any = nil
 		if e == nil {
 			v = r.StatusCode
 		} else {
@@ -194,7 +194,7 @@ func (r *httpResp) getBody() ([]byte, error) {
 	return r.body, nil
 }
 
-func (r *httpResp) Json(v interface{}) error {
+func (r *httpResp) Json(v any) error {
 	defer func() { _ = r.r.Body.Close() }()
 	dat, e := r.getBody()
 	if e != nil {
@@ -203,7 +203,7 @@ func (r *httpResp) Json(v interface{}) error {
 	return json.Unmarshal(dat, v)
 }
 
-func (r *httpResp) XML(v interface{}) error {
+func (r *httpResp) XML(v any) error {
 	defer func() { _ = r.r.Body.Close() }()
 	dat, e := r.getBody()
 	if e != nil {
@@ -228,7 +228,7 @@ func NewURLEncodedBody(v types.SM) RequestBody {
 	return &byteBody{b: []byte(q.Encode()), t: "application/x-www-form-urlencoded"}
 }
 
-func NewJsonBody(v interface{}) RequestBody {
+func NewJsonBody(v any) RequestBody {
 	b, _ := json.Marshal(v)
 	if b == nil {
 		b = make([]byte, 0)

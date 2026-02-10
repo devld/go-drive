@@ -59,7 +59,7 @@ func init() {
 }
 
 // ExecuteJobCode executes the code, and return the log and error
-func ExecuteJobCode(ctx context.Context, code interface{}, globals types.M, ch *registry.ComponentsHolder, onLog func(string)) error {
+func ExecuteJobCode(ctx context.Context, code any, globals types.M, ch *registry.ComponentsHolder, onLog func(string)) error {
 	vm := baseVM.Fork()
 	defer func() { _ = vm.Dispose() }()
 

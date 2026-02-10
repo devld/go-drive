@@ -170,7 +170,7 @@ func (v *Value) M() types.M {
 	return r
 }
 
-func (v *Value) ParseInto(dest interface{}) {
+func (v *Value) ParseInto(dest any) {
 	defer func() {
 		if er := recover(); er != nil {
 			if ee, ok := er.(error); ok {
@@ -183,16 +183,16 @@ func (v *Value) ParseInto(dest interface{}) {
 	parseValue(v, reflect.ValueOf(dest))
 }
 
-func (v *Value) Raw() interface{} {
+func (v *Value) Raw() any {
 	r, _ := v.v.Export()
 	return r
 }
 
-func (v *Value) InternalValue() interface{} {
+func (v *Value) InternalValue() any {
 	return v.v
 }
 
-func (v *Value) Call(thisValue interface{}, args ...interface{}) *Value {
+func (v *Value) Call(thisValue any, args ...any) *Value {
 	thisV, e := v.vm.o.ToValue(thisValue)
 	if e != nil {
 		v.vm.ThrowTypeError(e.Error())
@@ -305,7 +305,7 @@ func parseValue(ov *Value, v reflect.Value) {
 	}
 }
 
-func WrapVmCall(vm *VM, fn func(vm *VM, args Values) interface{}) interface{} {
+func WrapVmCall(vm *VM, fn func(vm *VM, args Values) any) any {
 	return func(c otto.FunctionCall) otto.Value {
 		vm = vm.vms[c.Otto]
 		if vm == nil {

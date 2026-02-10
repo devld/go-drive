@@ -28,14 +28,6 @@ func init() {
 	})
 }
 
-// cronJobInfo contains information about a scheduled cron job
-type cronJobInfo struct {
-	job      types.Job
-	schedule cron.Schedule
-	stop     func()
-	nextRun  time.Time
-}
-
 var _ IJobTriggerInstance = (*cronTrigger)(nil)
 
 // cronTrigger handles cron-based job scheduling (used by Trigger definition)

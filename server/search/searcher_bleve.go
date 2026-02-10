@@ -196,8 +196,8 @@ func mapSearchResultItem(hits search.DocumentMatchCollection) []types.EntrySearc
 	for _, hit := range hits {
 		modTime, _ := time.Parse(time.RFC3339, hit.Fields["modTime"].(string))
 		esi := types.EntrySearchItem{
-			Path:    hit.Fields["path"].([]interface{})[0].(string),
-			Name:    hit.Fields["name"].([]interface{})[0].(string),
+			Path:    hit.Fields["path"].([]any)[0].(string),
+			Name:    hit.Fields["name"].([]any)[0].(string),
 			Ext:     hit.Fields["ext"].(string),
 			Type:    types.EntryType(hit.Fields["type"].(string)),
 			Size:    int64(hit.Fields["size"].(float64)),

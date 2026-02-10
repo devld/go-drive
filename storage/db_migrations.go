@@ -42,7 +42,7 @@ func migrateJobScheduleToTriggers(db *gorm.DB) error {
 
 	migrated := 0
 	for _, job := range jobs {
-		updates := make(map[string]interface{})
+		updates := make(map[string]any)
 		needUpdate := false
 
 		// Schedule -> Triggers (cron)

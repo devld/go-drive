@@ -226,7 +226,7 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 		taskName = taskName[:20]
 	}
 	e = ExecuteTaskStreaming(c, jr.runner,
-		func(ctx types.TaskCtx) (interface{}, error) {
+		func(ctx types.TaskCtx) (any, error) {
 			e := job.ExecuteJobCode(c.Request.Context(), code, nil, jr.ch, func(s string) {
 				_, _ = w.Write([]byte(s + "\n"))
 				w.Flush()

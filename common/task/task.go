@@ -26,13 +26,13 @@ type Progress struct {
 }
 
 type Task struct {
-	Id        string      `json:"id"`
-	Status    Status      `json:"status"`
-	Progress  Progress    `json:"progress"`
-	Result    interface{} `json:"result"`
-	Error     interface{} `json:"error"`
-	CreatedAt time.Time   `json:"createdAt"`
-	UpdatedAt time.Time   `json:"updatedAt"`
+	Id        string    `json:"id"`
+	Status    Status    `json:"status"`
+	Progress  Progress  `json:"progress"`
+	Result    any       `json:"result"`
+	Error     any       `json:"error"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 
 	// meta data
 	Name  string `json:"name"`
@@ -43,7 +43,7 @@ func (t Task) Finished() bool {
 	return t.Status == Done || t.Status == Error || t.Status == Canceled
 }
 
-type Runnable = func(ctx types.TaskCtx) (interface{}, error)
+type Runnable = func(ctx types.TaskCtx) (any, error)
 
 type Runner interface {
 	Execute(runnable Runnable, options ...Option) (Task, error)

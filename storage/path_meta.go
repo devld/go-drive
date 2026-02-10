@@ -114,7 +114,7 @@ func (d *PathMetaDAO) GetMerged(path string) (*types.MergedPathMeta, error) {
 }
 
 func (d *PathMetaDAO) Set(data types.PathMeta) error {
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"password":       data.Password,
 		"default_sort":   data.DefaultSort,
 		"default_mode":   data.DefaultMode,

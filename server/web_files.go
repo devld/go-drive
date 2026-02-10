@@ -57,7 +57,7 @@ type templateData struct {
 }
 
 // Json is called by html template
-func (templateData) Json(o interface{}) (string, error) {
+func (templateData) Json(o any) (string, error) {
 	s, e := json.Marshal(o)
 	if e != nil {
 		return "", e
@@ -101,7 +101,7 @@ type templateProcessor struct {
 	cache  cmap.ConcurrentMap[string, *templateCache]
 }
 
-func (tp *templateProcessor) Process(path string, file http.File, data interface{}) ([]byte, error) {
+func (tp *templateProcessor) Process(path string, file http.File, data any) ([]byte, error) {
 	stat, e := file.Stat()
 	if e != nil {
 		return nil, e
@@ -153,7 +153,7 @@ type templateCache struct {
 	l    sync.Mutex
 }
 
-func (c *templateCache) Execute(w io.Writer, data interface{}) error {
+func (c *templateCache) Execute(w io.Writer, data any) error {
 	if c.t == nil {
 		panic("not initialized")
 	}
@@ -214,6 +214,6 @@ func (p processedFileStat) IsDir() bool {
 	return false
 }
 
-func (p processedFileStat) Sys() interface{} {
+func (p processedFileStat) Sys() any {
 	return nil
 }

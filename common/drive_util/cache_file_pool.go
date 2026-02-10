@@ -75,7 +75,7 @@ func (cfp *CacheFilePool) GetReader(key string, size int64, getReader ReaderGett
 	return cf.(*cacheFile).Reader()
 }
 
-func (cfp *CacheFilePool) onCacheEvicted(key_ lru.Key, value interface{}) {
+func (cfp *CacheFilePool) onCacheEvicted(key_ lru.Key, value any) {
 	cf := value.(*cacheFile)
 
 	cf.mu.Lock()

@@ -8,8 +8,8 @@ import (
 type Response interface {
 	Response() *http.Response
 	Status() int
-	Json(v interface{}) error
-	XML(v interface{}) error
+	Json(v any) error
+	XML(v any) error
 	Dispose() error
 }
 

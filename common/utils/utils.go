@@ -186,7 +186,7 @@ func BoolString(b bool) string {
 	return ""
 }
 
-func FlattenStringMap(m map[string]interface{}, separator string) map[string]string {
+func FlattenStringMap(m map[string]any, separator string) map[string]string {
 	r := make(map[string]string)
 	for k, v := range m {
 		flattenStringMap(k, v, separator, r)
@@ -194,15 +194,15 @@ func FlattenStringMap(m map[string]interface{}, separator string) map[string]str
 	return r
 }
 
-func flattenStringMap(prefix string, val interface{}, separator string, result map[string]string) {
-	m, isMap := val.(map[string]interface{})
+func flattenStringMap(prefix string, val any, separator string, result map[string]string) {
+	m, isMap := val.(map[string]any)
 	if isMap {
 		for k, v := range m {
 			flattenStringMap(prefix+separator+k, v, separator, result)
 		}
 		return
 	}
-	a, isArr := val.([]interface{})
+	a, isArr := val.([]any)
 	if isArr {
 		result[prefix+separator+"size"] = strconv.Itoa(len(a))
 		for i, v := range a {

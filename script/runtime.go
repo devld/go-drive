@@ -21,7 +21,7 @@ type VM struct {
 	vms   map[*otto.Otto]*VM
 	vmsMu *sync.Mutex
 
-	disposables map[interface{}]struct{}
+	disposables map[any]struct{}
 }
 
 func NewVM() (*VM, error) {
@@ -31,7 +31,7 @@ func NewVM() (*VM, error) {
 		o:           ovm,
 		vms:         make(map[*otto.Otto]*VM),
 		vmsMu:       &sync.Mutex{},
-		disposables: make(map[interface{}]struct{}),
+		disposables: make(map[any]struct{}),
 	}
 
 	if e := vm.init(); e != nil {
@@ -65,7 +65,7 @@ func (v *VM) init() error {
 	return nil
 }
 
-func (v *VM) Set(name string, value interface{}) {
+func (v *VM) Set(name string, value any) {
 	v.o.Set(name, value)
 }
 
@@ -76,7 +76,7 @@ func (v *VM) Fork() *VM {
 		o:           v.o.Copy(),
 		vms:         v.vms,
 		vmsMu:       v.vmsMu,
-		disposables: make(map[interface{}]struct{}),
+		disposables: make(map[any]struct{}),
 	}
 	newVM.o.Interrupt = make(chan func(), 1)
 	v.vms[newVM.o] = newVM
@@ -84,14 +84,14 @@ func (v *VM) Fork() *VM {
 }
 
 // Run runs code with this VM. Run can NOT be executed concurrency
-func (v *VM) Run(ctx context.Context, code interface{}) (*Value, error) {
+func (v *VM) Run(ctx context.Context, code any) (*Value, error) {
 	return wrapVmRun(ctx, v, func() (otto.Value, error) {
 		return v.o.Run(code)
 	})
 }
 
 // Call calls function with this VM. Call can NOT be executed concurrency
-func (v *VM) Call(ctx context.Context, fn string, args ...interface{}) (value *Value, e error) {
+func (v *VM) Call(ctx context.Context, fn string, args ...any) (value *Value, e error) {
 	return wrapVmRun(ctx, v, func() (otto.Value, error) {
 		a, b := v.o.Call(fn, nil, args...)
 		return a, b
@@ -103,7 +103,7 @@ func (v *VM) GetValue(prop string) (value *Value, e error) {
 	return newValue(v, vv), e
 }
 
-func (v *VM) ThrowError(e interface{}) {
+func (v *VM) ThrowError(e any) {
 	if oe, ok := e.(otto.Value); ok {
 		panic(oe)
 	}
@@ -120,11 +120,11 @@ func (v *VM) ThrowTypeError(message string) {
 	panic(v.o.MakeTypeError(message))
 }
 
-func (v *VM) PutDisposable(o interface{}) {
+func (v *VM) PutDisposable(o any) {
 	v.disposables[o] = struct{}{}
 }
 
-func (v *VM) RemoveDisposable(o interface{}) {
+func (v *VM) RemoveDisposable(o any) {
 	delete(v.disposables, o)
 }
 
@@ -137,7 +137,7 @@ func (v *VM) DisposeDisposables() {
 			c.Close()
 		}
 	}
-	v.disposables = make(map[interface{}]struct{})
+	v.disposables = make(map[any]struct{})
 }
 
 func (v *VM) Dispose() error {
