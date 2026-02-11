@@ -24,7 +24,12 @@ jobs:
           echo "GO_DRIVE_VERSION=${version}" >> $GITHUB_ENV
 
       - name: Install tools
-        run: | 
+        run: |
+          # debian 10 is end of life, so we need to use archive.debian.org
+          sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list
+          sed -i 's|security.debian.org|archive.debian.org|g' /etc/apt/sources.list
+          sed -i '/buster-updates/d' /etc/apt/sources.list
+
           apt-get update -y && apt-get install -y git curl tar zip build-essential gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-mingw-w64-x86-64
 
           curl -s -L https://github.com/mislav/hub/releases/download/v2.14.2/hub-linux-amd64-2.14.2.tgz -o /tmp/hub.tgz
