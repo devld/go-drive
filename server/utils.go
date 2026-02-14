@@ -39,6 +39,8 @@ const (
 	keySession       = "session"
 	keyResult        = "apiResult"
 	keyMessageSource = "messageSource"
+
+	signaturePathUserSep = "\x00"
 )
 
 var errBadSignature = err.NewBadRequestError("bad signature")
@@ -61,24 +63,22 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequ
 
 		path := utils.CleanPath(c.Param("path"))
 
-		if signature != "" {
-			parts := strings.Split(signature, ".")
-			signature = parts[0]
-			if len(parts) > 1 {
-				temp, e := utils.Base64URLDecode(parts[1])
-				if e != nil {
-					_ = c.Error(errBadSignature)
-					c.Abort()
-					return
-				}
-				username = string(temp)
-			}
-
-			if !signer.Validate(path+username, signature) {
+		parts := strings.Split(signature, ".")
+		signature = parts[0]
+		if len(parts) > 1 {
+			temp, e := utils.Base64URLDecode(parts[1])
+			if e != nil {
 				_ = c.Error(errBadSignature)
 				c.Abort()
 				return
 			}
+			username = string(temp)
+		}
+
+		if !signer.Validate(path+signaturePathUserSep+username, signature) {
+			_ = c.Error(errBadSignature)
+			c.Abort()
+			return
 		}
 
 		if username != "" {
@@ -97,7 +97,7 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequ
 }
 
 func MakeSignature(signer *utils.Signer, path, username string, ttl time.Duration) string {
-	signature := signer.Sign(path+username, time.Now().Add(ttl))
+	signature := signer.Sign(path+signaturePathUserSep+username, time.Now().Add(ttl))
 	return signature + "." + utils.Base64URLEncode([]byte(username))
 }
 
