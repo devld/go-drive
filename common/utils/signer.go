@@ -2,9 +2,10 @@ package utils
 
 import (
 	"crypto/hmac"
+	cryptoRand "crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/binary"
-	"math/rand"
 	"time"
 )
 
@@ -38,7 +39,9 @@ func (s *Signer) sign(v string, notAfter int64, r uint32) string {
 }
 
 func (s *Signer) Sign(v string, notAfter time.Time) string {
-	r := rand.Uint32()
+	var buf [4]byte
+	_, _ = cryptoRand.Read(buf[:])
+	r := binary.LittleEndian.Uint32(buf[:])
 	return s.sign(v, notAfter.Unix(), r)
 }
 
@@ -51,7 +54,7 @@ func (s *Signer) Validate(v string, signature string) bool {
 	notAfter := int64(binary.LittleEndian.Uint64(buf[4:]))
 
 	actualSignature := s.sign(v, notAfter, r)
-	if actualSignature != signature {
+	if subtle.ConstantTimeCompare([]byte(actualSignature), []byte(signature)) != 1 {
 		return false
 	}
 
