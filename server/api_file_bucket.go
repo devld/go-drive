@@ -157,7 +157,7 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 	fileType := fileMime.String()
 	fileExt := fileMime.Extension()
 	if filename != "" && strings.HasSuffix(strings.ToLower(filename), fileExt) {
-		filename = strings.TrimSuffix(filename, fileExt)
+		filename = filename[:len(filename)-len(fileExt)]
 	}
 
 	maxSize := types.SV(bucket.MaxSize).DataSize(0)
