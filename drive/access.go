@@ -45,7 +45,7 @@ func NewAccess(ch *registry.ComponentsHolder,
 		return nil, e
 	}
 
-	ch.Add("driveAccess", da)
+	ch.Add(registry.KeyDriveAccess, da)
 	return da, nil
 }
 

@@ -16,7 +16,7 @@ type DriveDAO struct {
 
 func NewDriveDAO(db *DB, ch *registry.ComponentsHolder) *DriveDAO {
 	dao := &DriveDAO{db: db}
-	ch.Add("drivesDAO", dao)
+	ch.Add(registry.KeyDrivesDAO, dao)
 	return dao
 }
 

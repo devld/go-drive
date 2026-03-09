@@ -263,8 +263,8 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		config.TempDir = tempDir
 	}
 
-	ch.Add("config", config)
-	ch.Add("versionSysConfig", versionSysConfig{})
+	ch.Add(registry.KeyConfig, config)
+	ch.Add(registry.KeyVersionSysConfig, versionSysConfig{})
 	return config, nil
 }
 

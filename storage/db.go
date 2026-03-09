@@ -75,7 +75,7 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 	}
 
 	d := &DB{db: db}
-	ch.Add("db", d)
+	ch.Add(registry.KeyDB, d)
 	return d, nil
 }
 

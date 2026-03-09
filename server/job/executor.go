@@ -28,7 +28,7 @@ type JobExecutor struct {
 }
 
 func NewJobExecutor(jobDAO *storage.JobDAO, ch *registry.ComponentsHolder) (*JobExecutor, error) {
-	runner := ch.Get("taskRunner").(task.Runner)
+	runner := ch.Get(registry.KeyTaskRunner).(task.Runner)
 
 	executor := &JobExecutor{
 		ch:         ch,
@@ -49,7 +49,7 @@ func NewJobExecutor(jobDAO *storage.JobDAO, ch *registry.ComponentsHolder) (*Job
 
 	_ = jobDAO.UpdateAllRunningJobExecutionsToFailed()
 
-	ch.Add("jobExecutor", executor)
+	ch.Add(registry.KeyJobExecutor, executor)
 	return executor, nil
 }
 

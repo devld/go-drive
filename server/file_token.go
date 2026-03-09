@@ -40,7 +40,7 @@ func NewFileTokenStore(config common.Config, ch *registry.ComponentsHolder) (*Fi
 		validity:    authConfig.Validity,
 	}
 	ft.stopCleaner = utils.TimeTick(ft.clean, 2*authConfig.Validity)
-	ch.Add("fileTokenStore", ft)
+	ch.Add(registry.KeyFileTokenStore, ft)
 	return ft, nil
 }
 

@@ -68,7 +68,7 @@ func InitServer(config common.Config,
 	router := engine.Group(config.APIPath)
 
 	failBanGroup := NewFailBanGroup(10 * time.Minute)
-	ch.Add("failBanGroup", failBanGroup)
+	ch.Add(registry.KeyFailBanGroup, failBanGroup)
 
 	if e := InitCommonRoutes(ch, router, optionsDAO, tokenStore, runner); e != nil {
 		return nil, e
@@ -102,7 +102,7 @@ func InitServer(config common.Config,
 		engine.NoRoute(func(c *gin.Context) { s.ServeHTTP(c.Writer, c.Request) })
 	}
 
-	ch.Add("runtimeStat", runtimeStat{})
+	ch.Add(registry.KeyRuntimeStat, runtimeStat{})
 	return engine, nil
 }
 

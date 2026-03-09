@@ -69,7 +69,7 @@ func NewService(ch *registry.ComponentsHolder, config common.Config, od *storage
 		s = &Service{}
 	}
 
-	ch.Add("searchService", s)
+	ch.Add(registry.KeySearchService, s)
 	return s, nil
 }
 

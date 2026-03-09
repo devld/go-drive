@@ -63,7 +63,7 @@ func ExecuteJobCode(ctx context.Context, code any, globals types.M, ch *registry
 	vm := baseVM.Fork()
 	defer func() { _ = vm.Dispose() }()
 
-	vm.Set("drive", s.NewDrive(vm, ch.Get("driveAccess").(*drive.Access).GetRootDrive(nil)))
+	vm.Set("drive", s.NewDrive(vm, ch.Get(registry.KeyDriveAccess).(*drive.Access).GetRootDrive(nil)))
 	vm.Set("log", onLog)
 	for k, v := range globals {
 		vm.Set(k, v)
