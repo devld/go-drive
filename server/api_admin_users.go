@@ -55,8 +55,7 @@ func (ar *usersRoute) updateUser(c *gin.Context) {
 		return
 	}
 	username := c.Param("username")
-	e := ar.userDAO.UpdateUser(username, user)
-	if e != nil {
+	if e := ar.userDAO.UpdateUser(username, user); e != nil {
 		_ = c.Error(e)
 		return
 	}

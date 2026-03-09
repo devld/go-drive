@@ -1,59 +1,71 @@
 package server
 
 import (
-	"go-drive/common/types"
 	"time"
+
+	"go-drive/common/types"
+	"go-drive/server/auth"
 
 	"github.com/gin-gonic/gin"
 )
 
-func InitAuthRoutes(r gin.IRouter, ua *UserAuth,
+func InitAuthRoutes(r gin.IRouter, ua *auth.UserAuth,
 	tokenStore types.TokenStore, failBan *FailBanGroup) error {
 
 	ar := authRoute{ua, tokenStore}
 
-	auth := r.Group("/auth", TokenAuth(tokenStore))
+	authGroup := r.Group("/auth", TokenAuth(tokenStore))
 	{
-		auth.POST(
-			"/login",
-			failBan.LimiterByIP("/login", 5*time.Minute, 5),
-			ar.login,
+		authGroup.POST("/:provider/start", ar.start)
+
+		authGroup.POST(
+			"/:provider/callback",
+			failBan.LimiterByIP("/auth/callback", 5*time.Minute, 5),
+			ar.callback,
 		)
 
-		auth.POST("/logout", ar.logout)
-		auth.GET("/user", ar.getUser)
+		authGroup.POST("/logout", ar.logout)
+		authGroup.GET("/user", ar.getUser)
 	}
 
 	return nil
 }
 
 type authRoute struct {
-	userAuth   *UserAuth
+	userAuth   *auth.UserAuth
 	tokenStore types.TokenStore
 }
 
-func (a *authRoute) login(c *gin.Context) {
-	user := types.User{}
-	if e := c.Bind(&user); e != nil {
-		_ = c.Error(e)
-		return
-	}
-	user, e := a.userAuth.AuthByUsernamePassword(user.Username, user.Password)
+func (a *authRoute) start(c *gin.Context) {
+	provider := c.Param("provider")
+	result, e := a.userAuth.Start(provider, c.Request, readAuthFormData(c))
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
-	// rotate: drop any token carried into this request before issuing a new one
-	if old := GetToken(c); old != "" {
-		_ = a.tokenStore.Revoke(old)
+	SetResult(c, result)
+}
+
+func (a *authRoute) callback(c *gin.Context) {
+	provider := c.Param("provider")
+	user, e := a.userAuth.AuthenticateCallback(provider, c.Request, readAuthFormData(c))
+	if e != nil {
+		_ = c.Error(e)
+		return
 	}
-	principal := types.Principal{User: user, AuthType: types.AuthTypeToken}
-	token, e := a.tokenStore.Create(principal)
+	token, e := a.tokenStore.Create(types.Principal{User: user, AuthType: types.AuthTypeToken})
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
 	SetResult(c, token)
+}
+
+// readAuthFormData reads the submitted credentials/parameters from the JSON body.
+func readAuthFormData(c *gin.Context) types.SM {
+	formData := types.SM{}
+	_ = c.ShouldBindJSON(&formData)
+	return formData
 }
 
 func (a *authRoute) logout(c *gin.Context) {

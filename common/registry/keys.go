@@ -14,6 +14,7 @@ var (
 	KeyDriveAccess = componentKey{k: "driveAccess"}
 	KeyRootDrive   = componentKey{k: "rootDrive"}
 
+	KeyUserAuth      = componentKey{k: "userAuth"}
 	KeyEventBus      = componentKey{k: "eventBus"}
 	KeyTaskRunner    = componentKey{k: "taskRunner"}
 	KeyJobExecutor   = componentKey{k: "jobExecutor"}
