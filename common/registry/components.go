@@ -6,25 +6,25 @@ import (
 )
 
 type ComponentsHolder struct {
-	c map[string]any
+	c map[componentKey]any
 }
 
 func NewComponentHolder() *ComponentsHolder {
-	return &ComponentsHolder{c: make(map[string]any)}
+	return &ComponentsHolder{c: make(map[componentKey]any)}
 }
 
-func (c *ComponentsHolder) Add(name string, component any) {
-	if _, ok := c.c[name]; ok {
-		panic(fmt.Sprintf("component with name '%s' already added", name))
+func (c *ComponentsHolder) Add(key componentKey, component any) {
+	if _, ok := c.c[key]; ok {
+		panic(fmt.Sprintf("component with key '%s' already added", key))
 	}
-	c.c[name] = component
+	c.c[key] = component
 }
 
-func (c *ComponentsHolder) Get(name string) any {
-	if v, ok := c.c[name]; ok {
+func (c *ComponentsHolder) Get(key componentKey) any {
+	if v, ok := c.c[key]; ok {
 		return v
 	}
-	panic(fmt.Sprintf("cannot find component '%s'", name))
+	panic(fmt.Sprintf("cannot find component '%s'", key))
 }
 
 func (c *ComponentsHolder) Gets(matches func(c any) bool) []any {

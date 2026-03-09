@@ -18,7 +18,7 @@ type Bus interface {
 
 func NewBus(ch *registry.ComponentsHolder) Bus {
 	b := &bus{eb.New()}
-	ch.Add("eventBus", b)
+	ch.Add(registry.KeyEventBus, b)
 	return b
 }
 

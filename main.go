@@ -22,7 +22,7 @@ func main() {
 
 	dispose := func() { _ = ch.Dispose() }
 
-	conf := ch.Get("config").(common.Config)
+	conf := ch.Get(registry.KeyConfig).(common.Config)
 	server := &http.Server{Addr: conf.Listen, Handler: engine}
 
 	go func() {

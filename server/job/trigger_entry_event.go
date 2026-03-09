@@ -31,7 +31,7 @@ func init() {
 		},
 		Validate: validateEntryTriggerConfig,
 		Factory: func(executor *JobExecutor, ch *registry.ComponentsHolder) IJobTriggerInstance {
-			return newEntryEventTrigger(executor, ch.Get("eventBus").(event.Bus))
+			return newEntryEventTrigger(executor, ch.Get(registry.KeyEventBus).(event.Bus))
 		},
 	})
 }

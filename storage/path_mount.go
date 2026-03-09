@@ -14,7 +14,7 @@ type PathMountDAO struct {
 
 func NewPathMountDAO(db *DB, ch *registry.ComponentsHolder) *PathMountDAO {
 	dao := &PathMountDAO{db}
-	ch.Add("pathMountDAO", dao)
+	ch.Add(registry.KeyPathMountDAO, dao)
 	return dao
 }
 

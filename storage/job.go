@@ -15,7 +15,7 @@ type JobDAO struct {
 
 func NewJobDAO(db *DB, ch *registry.ComponentsHolder) *JobDAO {
 	dao := &JobDAO{db}
-	ch.Add("jobDAO", dao)
+	ch.Add(registry.KeyJobDAO, dao)
 	return dao
 }
 

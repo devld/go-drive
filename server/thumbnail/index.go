@@ -81,7 +81,7 @@ func NewMaker(config common.Config, optionsDAO *storage.OptionsDAO,
 
 	m.stopCleaner = utils.TimeTick(m.clean, 12*time.Hour)
 	m.pool = tunny.NewFunc(config.Thumbnail.Concurrent, m.executeTask)
-	ch.Add("thumbnail", m)
+	ch.Add(registry.KeyThumbnail, m)
 	return m, nil
 }
 

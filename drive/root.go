@@ -59,7 +59,7 @@ func NewRootDrive(
 	if e := r.ReloadDrive(ctx, true); e != nil {
 		return nil, e
 	}
-	ch.Add("rootDrive", r)
+	ch.Add(registry.KeyRootDrive, r)
 	return r, nil
 }
 

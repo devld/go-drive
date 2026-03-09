@@ -20,7 +20,7 @@ type DriveCacheDAO struct {
 
 func NewDriveCacheDAO(db *DB, ch *registry.ComponentsHolder) *DriveCacheDAO {
 	c := &DriveCacheDAO{db: db}
-	ch.Add("driveCacheDAO", c)
+	ch.Add(registry.KeyDriveCacheDAO, c)
 	return c
 }
 

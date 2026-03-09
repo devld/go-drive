@@ -33,7 +33,7 @@ func NewTunnyRunner(config common.Config, ch *registry.ComponentsHolder) *TunnyR
 		store: cmap.New[*tunnyTaskCtx](),
 	}
 	tr.tickerStop = utils.TimeTick(tr.clean, 30*time.Second)
-	ch.Add("taskRunner", tr)
+	ch.Add(registry.KeyTaskRunner, tr)
 	return tr
 }
 

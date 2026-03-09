@@ -13,7 +13,7 @@ type PathPermissionDAO struct {
 
 func NewPathPermissionDAO(db *DB, ch *registry.ComponentsHolder) *PathPermissionDAO {
 	dao := &PathPermissionDAO{db}
-	ch.Add("pathPermissionDAO", dao)
+	ch.Add(registry.KeyPathPermissionDAO, dao)
 	return dao
 }
 

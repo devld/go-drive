@@ -21,7 +21,7 @@ type GroupWithUsers struct {
 
 func NewGroupDAO(db *DB, ch *registry.ComponentsHolder) *GroupDAO {
 	dao := &GroupDAO{db}
-	ch.Add("groupDAO", dao)
+	ch.Add(registry.KeyGroupDAO, dao)
 	return dao
 }
 

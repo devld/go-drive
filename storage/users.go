@@ -22,7 +22,7 @@ func NewUserDAO(db *DB, ch *registry.ComponentsHolder) *UserDAO {
 		db:    db,
 		cache: utils.NewKVCache[types.User](0),
 	}
-	ch.Add("userDAO", dao)
+	ch.Add(registry.KeyUserDAO, dao)
 	return dao
 }
 
