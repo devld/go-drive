@@ -141,8 +141,18 @@ type ThumbnailHandlerItem struct {
 }
 
 type AuthConfig struct {
-	Validity    time.Duration `yaml:"validity"`
-	AutoRefresh bool          `yaml:"auto-refresh"`
+	Validity    time.Duration        `yaml:"validity"`
+	AutoRefresh bool                 `yaml:"auto-refresh"`
+	Providers   []AuthProviderConfig `yaml:"providers"`
+}
+
+type AuthProviderConfig struct {
+	Type string `yaml:"type"`
+	// Config is the raw provider-specific configuration. It is a generic map so
+	// each provider can read its own keys, while still allowing nested
+	// structures (e.g. LDAP group-mapping objects, OAuth scopes lists) that a
+	// flat map[string]string could not represent.
+	Config types.M `yaml:"config"`
 }
 
 type WebDavConfig struct {

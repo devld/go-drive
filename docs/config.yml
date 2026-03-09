@@ -163,6 +163,39 @@ auth:
   # Auto refresh the token when the user is active
   auto-refresh: true
 
+  # Additional auth providers. Local password auth is always enabled.
+  # On login the local user table is consulted first (usernames are matched
+  # case-sensitively): existing external users authenticate against their
+  # provider first and fall back to local auth on failure, while unknown users
+  # fall through to the providers below (which may just-in-time create the user).
+  #providers:
+  #  - type: ldap
+  #    config:
+  #      url: ldap://ldap.example.com:389
+  #      start-tls: "false"
+  #      skip-tls-verify: false
+  #      bind-dn: cn=readonly,dc=example,dc=com
+  #      bind-password: secret
+  #      base-dn: ou=users,dc=example,dc=com
+  #      # %s is replaced with the (escaped) login username
+  #      user-filter: "(uid=%s)"
+  #      username-attr: uid
+  #      group-base-dn: ou=groups,dc=example,dc=com
+  #      # Group membership filter. Two placeholders are supported so it works
+  #      # across directory styles:
+  #      #   %s -> the user's username/uid attribute value (posixGroup memberUid)
+  #      #   %d -> the user's full DN (groupOfNames/AD member)
+  #      # posixGroup:    "(memberUid=%s)"
+  #      # groupOfNames:  "(member=%d)"
+  #      group-filter: "(memberUid=%s)"
+  #      group-name-attr: cn
+  #      # Maps a go-drive group (key) to one or more upstream LDAP groups
+  #      # (comma-separated value). Several upstream groups may map to the same
+  #      # go-drive group; unmapped upstream groups are ignored.
+  #      group-mapping:
+  #        admin: ldap-admins
+  #        user: ldap-users,ldap-staff
+
 # WebDAV access configuration
 #web-dav:
 #  enabled: true

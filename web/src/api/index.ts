@@ -153,7 +153,7 @@ export interface LoginResult {
 
 export function login(username: string, password: string) {
   return http
-    .post<LoginResult>('/auth/login', {
+    .post<LoginResult>('/auth/identity/callback', {
       username,
       password,
     })

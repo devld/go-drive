@@ -219,6 +219,14 @@ func (c SM) GetBool(key string) bool {
 	return SV(c[key]).Bool()
 }
 
+// GetStr returns c[key] when it is non-empty, otherwise defVal.
+func (c SM) GetStr(key, defVal string) string {
+	if v := c[key]; v != "" {
+		return v
+	}
+	return defVal
+}
+
 func (c SM) GetDataSize(key string, defVal int64) int64 {
 	return SV(c[key]).DataSize(defVal)
 }
@@ -239,6 +247,44 @@ func (c SM) GetMapList(key string) []SM {
 	e := json.Unmarshal([]byte(str), &r)
 	if e != nil {
 		return nil
+	}
+	return r
+}
+
+func (m M) GetStr(key string, defVal string) string {
+	v, ok := m[key]
+	if !ok || v == nil {
+		return defVal
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return defVal
+}
+
+func (m M) GetSV(key, defVal string) SV {
+	return SV(m.GetStr(key, defVal))
+}
+
+func (m M) getM(key string) M {
+	switch t := m[key].(type) {
+	case M:
+		return t
+	case map[string]any:
+		return M(t)
+	default:
+		return nil
+	}
+}
+
+func (m M) GetSM(key string) SM {
+	mm := m.getM(key)
+	if mm == nil {
+		return nil
+	}
+	r := make(SM, len(mm))
+	for k := range mm {
+		r[k] = string(mm.GetSV(k, ""))
 	}
 	return r
 }

@@ -5,6 +5,7 @@ import (
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	"go-drive/drive"
+	"go-drive/server/auth"
 	"go-drive/server/webdav"
 	"log"
 	"net/http"
@@ -19,7 +20,7 @@ var webdavHTTPMethods = []string{
 }
 
 func InitWebdavAccess(router gin.IRouter, config common.Config,
-	access *drive.Access, userAuth *UserAuth) error {
+	access *drive.Access, userAuth *auth.UserAuth) error {
 
 	cfp, e := drive_util.NewCacheFillPool(config.WebDav.MaxCacheItems, config.TempDir)
 	if e != nil {

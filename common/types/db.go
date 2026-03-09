@@ -18,10 +18,14 @@ type Session struct {
 }
 
 type User struct {
-	Username string  `gorm:"column:username;primaryKey;not null;type:string;size:32" json:"username" binding:"required"`
-	Password string  `gorm:"column:password;not null;type:string;size:64" json:"password,omitempty"`
-	RootPath string  `gorm:"column:root_path;type:string;size:512" json:"rootPath,omitempty"`
-	Groups   []Group `gorm:"many2many:user_groups;joinForeignKey:username;foreignKey:username" json:"groups"`
+	Username string `gorm:"column:username;primaryKey;not null;type:string;size:32" json:"username" binding:"required"`
+	Password string `gorm:"column:password;not null;type:string;size:64" json:"password,omitempty"`
+	RootPath string `gorm:"column:root_path;type:string;size:512" json:"rootPath,omitempty"`
+	// Source is the auth provider that owns this user.
+	// An empty source means a local user managed by the local user table;
+	// external providers (e.g. "ldap") store their provider name here.
+	Source string  `gorm:"column:source;type:string;size:32" json:"source,omitempty"`
+	Groups []Group `gorm:"many2many:user_groups;joinForeignKey:username;foreignKey:username" json:"groups"`
 }
 
 type Group struct {
