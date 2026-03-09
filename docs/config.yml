@@ -125,6 +125,24 @@ auth:
   # Auto refresh the token when the user is active
   auto-refresh: true
 
+  # Additional auth providers (local password auth is always enabled first).
+  # Providers are tried in order after local auth.
+  #providers:
+  #  - type: ldap
+  #    config:
+  #      url: ldap://ldap.example.com:389
+  #      start-tls: "false"
+  #      skip-tls-verify: false
+  #      bind-dn: cn=readonly,dc=example,dc=com
+  #      bind-password: secret
+  #      base-dn: ou=users,dc=example,dc=com
+  #      user-filter: "(uid=%s)"
+  #      username-attr: uid
+  #      group-base-dn: ou=groups,dc=example,dc=com
+  #      group-filter: "(memberUid=%s)"
+  #      group-name-attr: cn
+  #      group-mapping: '{"ldap-admins":"admin","ldap-users":"user"}'
+
 # WebDAV access configuration
 #web-dav:
 #  enabled: true

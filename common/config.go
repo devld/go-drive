@@ -143,8 +143,14 @@ type ThumbnailHandlerItem struct {
 }
 
 type AuthConfig struct {
-	Validity    time.Duration `yaml:"validity"`
-	AutoRefresh bool          `yaml:"auto-refresh"`
+	Validity    time.Duration        `yaml:"validity"`
+	AutoRefresh bool                 `yaml:"auto-refresh"`
+	Providers   []AuthProviderConfig `yaml:"providers"`
+}
+
+type AuthProviderConfig struct {
+	Type   string   `yaml:"type"`
+	Config types.SM `yaml:"config"`
 }
 
 type WebDavConfig struct {

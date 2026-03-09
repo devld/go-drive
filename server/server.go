@@ -11,6 +11,7 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
+	"go-drive/server/auth"
 	"go-drive/server/job"
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
@@ -63,7 +64,10 @@ func InitServer(config common.Config,
 
 	engine.Use(apiResultHandler(messageSource))
 
-	userAuth := NewUserAuth(userDAO)
+	userAuth, e := auth.NewUserAuth(config.Auth.Providers, ch)
+	if e != nil {
+		return nil, e
+	}
 
 	router := engine.Group(config.APIPath)
 

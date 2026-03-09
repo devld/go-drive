@@ -1,36 +1,43 @@
 package server
 
 import (
+	"net/http"
+
 	"go-drive/common/types"
+	"go-drive/server/auth"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-func InitAuthRoutes(r gin.IRouter, ua *UserAuth,
+func InitAuthRoutes(r gin.IRouter, ua *auth.UserAuth,
 	tokenStore types.TokenStore, failBan *FailBanGroup) error {
 
 	ar := authRoute{ua, tokenStore}
 
 	r.POST("/auth/init", ar.init)
 
-	auth := r.Group("/auth", TokenAuth(tokenStore))
+	r.GET("/auth/start", ar.getStart)
+
+	r.GET("/auth/callback/:provider", ar.callback)
+
+	authGroup := r.Group("/auth", TokenAuth(tokenStore))
 	{
-		auth.POST(
+		authGroup.POST(
 			"/login",
 			failBan.LimiterByIP("/login", 5*time.Minute, 5),
 			ar.login,
 		)
 
-		auth.POST("/logout", ar.logout)
-		auth.GET("/user", ar.getUser)
+		authGroup.POST("/logout", ar.logout)
+		authGroup.GET("/user", ar.getUser)
 	}
 
 	return nil
 }
 
 type authRoute struct {
-	userAuth   *UserAuth
+	userAuth   *auth.UserAuth
 	tokenStore types.TokenStore
 }
 
@@ -43,13 +50,41 @@ func (a *authRoute) init(c *gin.Context) {
 	SetResult(c, token)
 }
 
-func (a *authRoute) login(c *gin.Context) {
-	user := types.User{}
-	if e := c.Bind(&user); e != nil {
+func (a *authRoute) getStart(c *gin.Context) {
+	forms := a.userAuth.GetForms(c.Request)
+	SetResult(c, forms)
+}
+
+func (a *authRoute) callback(c *gin.Context) {
+	provider := c.Param("provider")
+	formData := types.SM{}
+	for k, v := range c.Request.URL.Query() {
+		if len(v) > 0 {
+			formData[k] = v[0]
+		}
+	}
+	user, e := a.userAuth.AuthenticateCallback(provider, c.Request, formData)
+	if e != nil {
 		_ = c.Error(e)
 		return
 	}
-	user, e := a.userAuth.AuthByUsernamePassword(user.Username, user.Password)
+	session := types.NewSession()
+	session.User = user
+	token, e := a.tokenStore.Create(session)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	c.Redirect(http.StatusFound, "/?token="+token.Token)
+}
+
+func (a *authRoute) login(c *gin.Context) {
+	var formData types.SM
+	if e := c.ShouldBindJSON(&formData); e != nil {
+		_ = c.Error(e)
+		return
+	}
+	user, e := a.userAuth.AuthenticateForm(c.Request, formData)
 	if e != nil {
 		_ = c.Error(e)
 		return

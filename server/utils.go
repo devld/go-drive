@@ -10,6 +10,7 @@ import (
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"go-drive/server/auth"
 	"go-drive/storage"
 	"mime"
 	"net/http"
@@ -141,7 +142,7 @@ func tokenAuth(tokenStore types.TokenStore, getToken func(*gin.Context) string) 
 	}
 }
 
-func BasicAuth(userAuth *UserAuth, realm string, allowAnonymous bool) gin.HandlerFunc {
+func BasicAuth(userAuth *auth.UserAuth, realm string, allowAnonymous bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if IsAuthenticated(c) {
 			c.Next()
