@@ -56,7 +56,9 @@ func InitServer(config common.Config,
 	engine := gin.New()
 
 	if len(config.TrustedProxies) > 0 {
-		engine.SetTrustedProxies(config.TrustedProxies)
+		if e := engine.SetTrustedProxies(config.TrustedProxies); e != nil {
+			return nil, e
+		}
 	} else {
 		engine.SetTrustedProxies(nil)
 	}
