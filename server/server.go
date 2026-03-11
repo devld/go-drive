@@ -55,6 +55,14 @@ func InitServer(config common.Config,
 
 	engine := gin.New()
 
+	if len(config.TrustedProxies) > 0 {
+		if e := engine.SetTrustedProxies(config.TrustedProxies); e != nil {
+			return nil, e
+		}
+	} else {
+		engine.SetTrustedProxies(nil)
+	}
+
 	engine.Use(gin.CustomRecovery(handlePanic))
 
 	if noLogRequest, _ := os.LookupEnv("NO_LOG_REQUEST"); noLogRequest == "" {

@@ -1,6 +1,21 @@
 # The application will listen at this address
 listen: :8089
 
+# Trusted proxy IPs or CIDRs.
+# When set, Gin will only trust X-Forwarded-For headers from these sources
+# to determine the client IP. This is important for IP-based rate limiting
+# and logging to work correctly.
+# When empty or not set (default), proxy headers are NOT trusted and
+# ClientIP() returns the direct remote address (most secure default).
+# If go-drive is running behind a reverse proxy (e.g. Nginx), you MUST
+# configure this to include the proxy's IP/CIDR, otherwise the real
+# client IP will not be recognized.
+#trusted-proxies:
+#  - 127.0.0.1
+#  - 10.0.0.0/8
+#  - 172.16.0.0/12
+#  - 192.168.0.0/16
+
 db:
   # database type: currently supports sqlite, mysql
   type: sqlite
