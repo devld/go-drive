@@ -70,6 +70,12 @@ const (
 type Config struct {
 	Listen string `yaml:"listen"`
 
+	// TrustedProxies is a list of trusted proxy IPs or CIDRs.
+	// When set, Gin will only trust X-Forwarded-For from these sources.
+	// When empty (default), proxy headers are not trusted and ClientIP()
+	// returns the direct remote address.
+	TrustedProxies []string `yaml:"trusted-proxies"`
+
 	Db DbConfig `yaml:"db"`
 
 	APIPath string `yaml:"api-path"`
