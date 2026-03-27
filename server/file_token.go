@@ -73,7 +73,13 @@ func (f *FileTokenStore) Revoke(token string) error {
 }
 
 func (f *FileTokenStore) getSessionFile(token string) string {
-	return filepath.Join(f.root, filepath.Clean(sessionPrefix+token))
+	// Sanitize token to prevent path traversal — only allow UUID characters
+	for _, c := range token {
+		if !((c >= 'a' && c <= 'f') || (c >= '0' && c <= '9') || c == '-') {
+			return filepath.Join(f.root, sessionPrefix+"invalid")
+		}
+	}
+	return filepath.Join(f.root, sessionPrefix+token)
 }
 
 func (f *FileTokenStore) readFile(token string, read bool) (*types.Token, error) {
