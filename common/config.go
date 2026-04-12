@@ -55,7 +55,7 @@ const (
 	DefaultSignatureTTL        = 12 * time.Hour
 	DefaultWebDavPrefix        = "/dav"
 	DefaultWebDavMaxCacheItems = 1000
-	DefaultSearcher            = "bleve"
+	DefaultSearcher            = "sqlite"
 
 	DefaultCacheType                      = "mem"
 	DefaultCacheCleanPeriod time.Duration = 10 * time.Minute
