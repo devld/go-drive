@@ -42,6 +42,9 @@ type ContentURL struct {
 	// If Proxy is true, URL will always be proxied by server,
 	// otherwise just a http.StatusFound redirection will be sent to client.
 	Proxy bool
+	// DownloadFileName is the filename to use in the Content-Disposition header.
+	// If empty, the original Name() will be used.
+	DownloadFileName string
 }
 
 type IContentReader interface {
