@@ -496,9 +496,20 @@ func (g *gdriveEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	if e != nil {
 		return nil, e
 	}
+
+	// Add extension for Google format files in download filename
+	downloadFilename := ""
+	if ext, ok := mimeTypeExtensionsMap[g.mimeType()]; ok {
+		name := g.Name()
+		if !strings.HasSuffix(name, "."+ext) {
+			downloadFilename = name + "." + ext
+		}
+	}
+
 	return &types.ContentURL{
 		Proxy: true, URL: downloadUrl,
 		Header: types.SM{"Authorization": t.TokenType + " " + t.AccessToken},
+		DownloadFileName: downloadFilename,
 	}, nil
 }
 

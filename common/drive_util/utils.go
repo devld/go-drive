@@ -194,6 +194,13 @@ func setContentDispositionHeaderIfNeeded(respHeader http.Header, filename string
 func DownloadIContent(ctx context.Context, content types.IContent,
 	w http.ResponseWriter, req *http.Request, forceProxy bool) error {
 	u, e := content.GetURL(ctx)
+
+	// Compute download filename once
+	downloadFilename := content.Name()
+	if e == nil && u.DownloadFileName != "" {
+		downloadFilename = u.DownloadFileName
+	}
+
 	if e == nil {
 		if u.Proxy || forceProxy || u.Header != nil {
 			dest, e := url2.Parse(u.URL)
@@ -216,7 +223,7 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 					}
 				},
 				ModifyResponse: func(r *http.Response) error {
-					setContentDispositionHeaderIfNeeded(r.Header, content.Name())
+					setContentDispositionHeaderIfNeeded(r.Header, downloadFilename)
 					return nil
 				}}
 
@@ -244,10 +251,10 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 	defer func() { _ = reader.Close() }()
 	readSeeker, ok := reader.(io.ReadSeeker)
 
-	setContentDispositionHeaderIfNeeded(w.Header(), content.Name())
+	setContentDispositionHeaderIfNeeded(w.Header(), downloadFilename)
 	if ok {
 		http.ServeContent(
-			w, req, content.Name(),
+			w, req, downloadFilename,
 			utils.Time(content.ModTime()),
 			readSeeker)
 		return nil
