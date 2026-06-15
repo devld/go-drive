@@ -420,7 +420,16 @@
     },
     "audio": {
       "name": "Play",
-      "desc": "Play music"
+      "desc": "Play music",
+      "play": "Play",
+      "pause": "Pause",
+      "prev": "Previous",
+      "next": "Next",
+      "shuffle": "Shuffle",
+      "volume": "Volume",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "playlist": "Playlist"
     },
     "video": {
       "name": "Play",
