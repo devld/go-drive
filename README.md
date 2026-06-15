@@ -12,7 +12,7 @@ Doc: [https://go-drive.top](https://go-drive.top)
 - 文件打包下载
 - 基于用户/组的权限控制
 - 图片浏览([PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe))
-- 音乐播放([APlayer](https://github.com/DIYgod/APlayer))
+- 音乐播放
 - 文本编辑([CodeMirror](https://github.com/codemirror/))
 - 代码编辑([Monaco Editor](https://github.com/microsoft/monaco-editor))
 - 展示缩略图
@@ -66,7 +66,7 @@ docker run -d --name go-drive -p 8089:8089 -v `pwd`/go-drive-data:/app/data devl
 - Zip package download
 - User/group-based permission control
 - Image gallery([PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe))
-- Music player([APlayer](https://github.com/DIYgod/APlayer))
+- Music player
 - Text Editor([CodeMirror](https://github.com/codemirror/))
 - Code Editor([Monaco Editor](https://github.com/microsoft/monaco-editor))
 - Thumbnails
