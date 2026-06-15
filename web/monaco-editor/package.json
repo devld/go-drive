@@ -10,7 +10,7 @@
     "lint": "vue-tsc --noEmit && eslint"
   },
   "dependencies": {
-    "monaco-editor": "^0.52.0"
+    "monaco-editor": "^0.55.1"
   },
   "devDependencies": {
     "eslint": "^8.56.0",

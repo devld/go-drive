@@ -30,27 +30,27 @@ export function createEditor(language: string) {
   return editor
 }
 
-const JsTargets: Record<string, monaco.languages.typescript.ScriptTarget> = {
-  es5: monaco.languages.typescript.ScriptTarget.ES5,
-  es6: monaco.languages.typescript.ScriptTarget.ES2015,
-  latest: monaco.languages.typescript.ScriptTarget.Latest,
+const JsTargets: Record<string, monaco.typescript.ScriptTarget> = {
+  es5: monaco.typescript.ScriptTarget.ES5,
+  es6: monaco.typescript.ScriptTarget.ES2015,
+  latest: monaco.typescript.ScriptTarget.Latest,
 }
 
 export function setupJavaScript(opt: JavaScriptSetupOptions) {
-  monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+  monaco.typescript.javascriptDefaults.setDiagnosticsOptions({
     noSemanticValidation: true,
     noSyntaxValidation: false,
   })
-  monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+  monaco.typescript.javascriptDefaults.setCompilerOptions({
     allowNonTsExtensions: true,
     allowJs: true,
     lib: opt.lib,
     target:
       JsTargets[opt.target ?? 'latest'] ||
-      monaco.languages.typescript.ScriptTarget.Latest,
+      monaco.typescript.ScriptTarget.Latest,
   })
   if (opt.extraLibs) {
-    monaco.languages.typescript.javascriptDefaults.setExtraLibs(
+    monaco.typescript.javascriptDefaults.setExtraLibs(
       opt.extraLibs.map((item) => ({
         content: item.content,
         filePath: `${item.name}.d.ts`,

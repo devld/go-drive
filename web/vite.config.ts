@@ -11,7 +11,8 @@ export default defineConfig(({ mode }) => ({
     port: 9803,
     proxy: {
       '/api': {
-        target: 'http://localhost:8089',
+        // target: 'http://localhost:8089',
+        target: 'https://d.omgz.cc',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
@@ -37,7 +38,6 @@ export default defineConfig(({ mode }) => ({
       '@': path.join(__dirname, 'src'),
     },
   },
-  css: { preprocessorOptions: { scss: { api: 'modern-compiler' } } },
   build: {
     cssCodeSplit: false,
     rollupOptions: {
