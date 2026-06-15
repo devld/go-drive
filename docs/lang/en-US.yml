@@ -38,6 +38,7 @@ api:
   thumbnail:
     file_too_large: File size is too large to create thumbnail
     image_too_large: Image is too large to create thumbnail
+    create_failed: Unable to create thumbnail
   zip:
     size_exceed: Exceeds the maximum allowed size {{ 1 }}
 storage:
