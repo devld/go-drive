@@ -37,7 +37,6 @@ export default defineConfig(({ mode }) => ({
       '@': path.join(__dirname, 'src'),
     },
   },
-  css: { preprocessorOptions: { scss: { api: 'modern-compiler' } } },
   build: {
     cssCodeSplit: false,
     rollupOptions: {

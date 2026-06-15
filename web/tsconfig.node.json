@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
     "composite": true,
+    "target": "esnext",
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
     "allowSyntheticDefaultImports": true
   },
   "include": [
