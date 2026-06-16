@@ -267,30 +267,50 @@ func (s *Drive) List(ctx context.Context, path string) ([]types.IEntry, error) {
 	if !utils.IsRootPath(s3Path) {
 		s3Path = s3Path + "/"
 	}
-	objs, e := s.c.ListObjects(ctx, &s3.ListObjectsInput{
-		Bucket:    s.bucket,
-		Prefix:    aws.String(s3Path),
-		Delimiter: aws.String("/"),
-	})
-	if e != nil {
-		return nil, e
-	}
 	entries := make([]types.IEntry, 0)
 	pathSet := make(map[string]bool, 0)
-	for _, o := range objs.Contents {
-		if *o.Key == s3Path {
-			// fake dir
-			continue
+	commonPrefixes := make([]string, 0)
+	var marker *string
+	for {
+		objs, e := s.c.ListObjects(ctx, &s3.ListObjectsInput{
+			Bucket:    s.bucket,
+			Prefix:    aws.String(s3Path),
+			Delimiter: aws.String("/"),
+			Marker:    marker,
+		})
+		if e != nil {
+			return nil, e
 		}
-		entries = append(entries, s.newS3ObjectEntry(*o.Key, o.Size, o.LastModified))
-		pathSet[*o.Key] = true
+		for _, o := range objs.Contents {
+			if *o.Key == s3Path {
+				// fake dir
+				continue
+			}
+			entries = append(entries, s.newS3ObjectEntry(*o.Key, o.Size, o.LastModified))
+			pathSet[*o.Key] = true
+		}
+		for _, p := range objs.CommonPrefixes {
+			commonPrefixes = append(commonPrefixes, *p.Prefix)
+		}
+		if objs.IsTruncated == nil || !*objs.IsTruncated {
+			break
+		}
+		// NextMarker is only populated when a Delimiter is set; otherwise
+		// fall back to the last returned key.
+		if objs.NextMarker != nil && *objs.NextMarker != "" {
+			marker = objs.NextMarker
+		} else if len(objs.Contents) > 0 {
+			marker = objs.Contents[len(objs.Contents)-1].Key
+		} else {
+			break
+		}
 	}
-	for _, p := range objs.CommonPrefixes {
-		if _, ok := pathSet[(*p.Prefix)[:len(*p.Prefix)-1]]; ok {
+	for _, prefix := range commonPrefixes {
+		if _, ok := pathSet[prefix[:len(prefix)-1]]; ok {
 			// skip dir with same name
 			continue
 		}
-		entries = append(entries, s.newS3DirEntry(*p.Prefix, nil))
+		entries = append(entries, s.newS3DirEntry(prefix, nil))
 	}
 	_ = s.cache.PutChildren(path, entries, s.cacheTTL)
 	return entries, nil

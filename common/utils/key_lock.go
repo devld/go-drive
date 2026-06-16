@@ -26,8 +26,8 @@ func (kl *KeyLock) Lock(key string) {
 	kl.getLock(key).Lock()
 }
 
-func (kl *KeyLock) TryLock(key string) {
-	kl.getLock(key).TryLock()
+func (kl *KeyLock) TryLock(key string) bool {
+	return kl.getLock(key).TryLock()
 }
 
 func (kl *KeyLock) UnLock(key string) {

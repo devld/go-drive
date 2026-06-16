@@ -296,7 +296,8 @@ func (f *ftpEntry) GetReader(ctx context.Context, start, size int64) (io.ReadClo
 		r, w := io.Pipe()
 		go func() {
 			if e := f.d.c.Retrieve(f.path, w); e != nil {
-				_ = r.CloseWithError(e)
+				_ = w.CloseWithError(e)
+				return
 			}
 			_ = w.Close()
 		}()

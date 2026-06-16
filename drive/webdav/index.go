@@ -107,6 +107,9 @@ func (w *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 		if e := resp.XML(&res); e != nil {
 			return nil, e
 		}
+		if len(res.Response) == 0 {
+			return nil, err.NewNotFoundError()
+		}
 		entry = w.newEntry(res.Response[0])
 	} else {
 		entries, e := w.List(ctx, utils.PathParent(path))
