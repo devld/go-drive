@@ -177,7 +177,7 @@ func (c ChunkUploader) generateUploadId(size, chunkSize int64) string {
 
 func (c *ChunkUploader) getUpload(id string) (*ChunkUpload, error) {
 	temp := strings.Split(id, "_")
-	if len(temp) != 3 {
+	if len(temp) != 3 || !isValidUploadIdPart(temp[0]) {
 		return nil, err.NewBadRequestError(i18n.T("api.chunk_uploader.invalid_upload_id"))
 	}
 	dir := c.getDir(id)
@@ -230,6 +230,24 @@ func (c *ChunkUploader) getDeleteMark(upload *ChunkUpload) string {
 
 func (c *ChunkUploader) getDir(id string) string {
 	return path2.Join(c.dir, filepath.Clean(id))
+}
+
+// isValidUploadIdPart reports whether s is a valid uuid-like id segment.
+// It only allows characters produced by uuid.New().String() to prevent
+// path traversal via a crafted upload id (which is used as a directory name).
+func isValidUploadIdPart(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, ch := range s {
+		if !((ch >= '0' && ch <= '9') ||
+			(ch >= 'a' && ch <= 'f') ||
+			(ch >= 'A' && ch <= 'F') ||
+			ch == '-') {
+			return false
+		}
+	}
+	return true
 }
 
 type ChunkUpload struct {

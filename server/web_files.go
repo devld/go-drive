@@ -116,26 +116,37 @@ func (tp *templateProcessor) Process(path string, file http.File, data any) ([]b
 
 	cached, ok := tp.cache.Get(name)
 	if !ok {
-		cached = newTemplateCache(stat.Name())
-		tp.cache.Set(name, cached)
+		nc := newTemplateCache(name)
+		// SetIfAbsent avoids two concurrent first-requests creating
+		// (and parsing into) two different templateCache instances.
+		if tp.cache.SetIfAbsent(name, nc) {
+			cached = nc
+		} else {
+			cached, _ = tp.cache.Get(name)
+		}
 	}
 
+	// Hold the lock while reading/(re)parsing the template and capturing the
+	// parsed template pointer, to avoid a data race between Parse (write) and
+	// Execute (read) when the underlying file changes.
+	cached.l.Lock()
 	if tag != cached.tag {
-		cached.l.Lock()
-		defer cached.l.Unlock()
 		content, e := io.ReadAll(file)
 		if e != nil {
+			cached.l.Unlock()
 			return nil, e
 		}
 		if e := cached.Parse(string(content)); e != nil {
+			cached.l.Unlock()
 			return nil, e
 		}
 		cached.tag = tag
 	}
+	t := cached.t
+	cached.l.Unlock()
 
 	buf := bytes.NewBuffer(nil)
-
-	if e := cached.Execute(buf, data); e != nil {
+	if e := t.Execute(buf, data); e != nil {
 		return nil, e
 	}
 	return buf.Bytes(), nil

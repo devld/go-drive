@@ -76,7 +76,8 @@ func OAuthInitConfig(o OAuthRequest, cred OAuthCredentials,
 	c := oAuthConfig(o, cred)
 	t := loadToken(ds)
 
-	state := utils.RandString(6)
+	// use a cryptographically-strong, non-guessable state to mitigate CSRF
+	state := utils.Base64URLEncode(utils.RandSecret(16))
 	if e := ds.Save(types.SM{DsKeyState: state}); e != nil {
 		return nil, nil, e
 	}

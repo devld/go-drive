@@ -1,16 +1,12 @@
 package drive_util
 
 import (
-	"crypto/md5"
 	"errors"
-	"fmt"
 	err "go-drive/common/errors"
-	"go-drive/common/utils"
 	"io"
 	"log"
 	"math"
 	"os"
-	"path/filepath"
 	"sort"
 	"sync"
 
@@ -39,27 +35,39 @@ func NewCacheFillPool(maxCache int, dir string) (*CacheFilePool, error) {
 type CacheFilePool struct {
 	dir     string
 	entries *lru.Cache
-	mu      sync.RWMutex
+	mu      sync.Mutex
 }
 
 func (cfp *CacheFilePool) GetReader(key string, size int64, getReader ReaderGetter) (io.ReadSeekCloser, error) {
-	cfp.mu.RLock()
+	// lru.Cache.Get mutates the internal list (MoveToFront), so it must be
+	// called under the write lock, not a read lock.
+	cfp.mu.Lock()
 	cf, ok := cfp.entries.Get(key)
-	cfp.mu.RUnlock()
+	cfp.mu.Unlock()
 	if ok {
 		return cf.(*cacheFile).Reader()
 	}
 	cfp.mu.Lock()
 	defer cfp.mu.Unlock()
 
-	name := filepath.Join(cfp.dir, fmt.Sprintf("%x", md5.Sum([]byte(key))))
-	file, e := os.OpenFile(name, os.O_CREATE|os.O_TRUNC, 0600)
+	// re-check after acquiring the write lock to avoid creating duplicated cacheFile
+	if cf, ok = cfp.entries.Get(key); ok {
+		return cf.(*cacheFile).Reader()
+	}
+
+	// Use a unique file per cacheFile instance instead of a deterministic name
+	// derived from the key. Otherwise, when an entry is evicted while it still
+	// has active readers, re-requesting the same key would create a new cacheFile
+	// that opens the SAME file with O_TRUNC, truncating the file the old readers
+	// are still reading from.
+	file, e := os.CreateTemp(cfp.dir, "cache-")
 	if e != nil {
 		return nil, e
 	}
+	name := file.Name()
 	_ = file.Close()
 
-	cf = &cacheFile{
+	newCf := &cacheFile{
 		name:      name,
 		size:      size,
 		getReader: getReader,
@@ -70,22 +78,28 @@ func (cfp *CacheFilePool) GetReader(key string, size int64, getReader ReaderGett
 		wl:      newRangeLock(size),
 		writers: make(map[io.WriteCloser]struct{}),
 	}
+	// evict removes this entry from the pool so that a later request for the
+	// same key creates a fresh cacheFile instead of reusing a poisoned one
+	// (e.g. after a download error). It is invoked from cacheFile.Close.
+	newCf.evict = func() {
+		cfp.mu.Lock()
+		defer cfp.mu.Unlock()
+		cfp.entries.Remove(key)
+	}
+	cf = newCf
 	cfp.entries.Add(key, cf)
 
 	return cf.(*cacheFile).Reader()
 }
 
-func (cfp *CacheFilePool) onCacheEvicted(key_ lru.Key, value any) {
+func (cfp *CacheFilePool) onCacheEvicted(_ lru.Key, value any) {
 	cf := value.(*cacheFile)
 
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
 
-	if len(cf.readers) > 0 || len(cf.writers) > 0 {
-		return
-	}
-
-	_ = os.Remove(cf.name)
+	cf.evicted = true
+	cf.removeFileIfIdleLocked()
 }
 
 type cacheFile struct {
@@ -98,6 +112,15 @@ type cacheFile struct {
 
 	wl      *rangeLock // for writing
 	writers map[io.WriteCloser]struct{}
+
+	// evicted indicates this cacheFile has been removed from the pool and its
+	// backing file should be removed once there are no active readers/writers.
+	evicted bool
+	// removed indicates the backing file has already been removed.
+	removed bool
+	// evict removes this cacheFile's entry from the owning pool. Set by the
+	// pool when the cacheFile is created.
+	evict func()
 
 	mu sync.Mutex
 }
@@ -124,21 +147,42 @@ func (cf *cacheFile) Reader() (*cacheFileReader, error) {
 
 func (cf *cacheFile) Close() error {
 	cf.mu.Lock()
-	defer cf.mu.Unlock()
-
 	for w := range cf.writers {
 		_ = w.Close()
 	}
 
-	readers := utils.MapKeys(cf.readers)
-	for _, r := range readers {
-		cf.releaseReader(r)
+	// Cancel the range locks so any waiting readers wake up and return.
+	// Readers remove themselves from cf.readers via their own Close().
+	cf.rl.release()
+	cf.wl.release()
+
+	// Mark as evicted so the backing file is removed once idle. Close is only
+	// called on error (download/IO failure), so this cacheFile must not be
+	// reused for new reads.
+	cf.evicted = true
+	cf.removeFileIfIdleLocked()
+	cf.mu.Unlock()
+
+	// Drop the entry from the pool (outside cf.mu to keep the pool->cacheFile
+	// lock ordering and avoid re-entering cf.mu via onCacheEvicted).
+	if cf.evict != nil {
+		cf.evict()
 	}
 
-	cf.rl.release(false, true)
-	cf.wl.release(false, true)
-
 	return nil
+}
+
+// removeFileIfIdleLocked removes the backing file if the cacheFile has been
+// evicted and there are no active readers/writers. cf.mu must be held.
+func (cf *cacheFile) removeFileIfIdleLocked() {
+	if cf.removed || !cf.evicted {
+		return
+	}
+	if len(cf.readers) > 0 || len(cf.writers) > 0 {
+		return
+	}
+	cf.removed = true
+	_ = os.Remove(cf.name)
 }
 
 func (cf *cacheFile) readRequest(start, readLen int64) error {
@@ -233,6 +277,7 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
 		defer func() {
 			cf.mu.Lock()
 			delete(cf.writers, writer)
+			cf.removeFileIfIdleLocked()
 			cf.mu.Unlock()
 		}()
 
@@ -243,7 +288,7 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
 			if nr > 0 {
 				nw, ew := writer.Write(buf[0:nr])
 				if ew != nil {
-					log.Printf("cache_file_pool write error: %v", er)
+					log.Printf("cache_file_pool write error: %v", ew)
 					_ = cf.Close()
 					return
 				}
@@ -266,6 +311,7 @@ func (cf *cacheFile) releaseReader(cfr *cacheFileReader) {
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
 	delete(cf.readers, cfr)
+	cf.removeFileIfIdleLocked()
 }
 
 type cacheFileReader struct {
@@ -318,7 +364,7 @@ func (cfr *cacheFileReader) Seek(offset int64, whence int) (int64, error) {
 	case io.SeekCurrent:
 		pos += offset
 	case io.SeekEnd:
-		pos += cfr.size + offset
+		pos = cfr.size + offset
 	default:
 		pos = -1
 	}
@@ -336,89 +382,83 @@ func (cfr *cacheFileReader) Close() error {
 }
 
 func newRangeLock(max int64) *rangeLock {
-	return &rangeLock{
-		mu:     sync.RWMutex{},
-		notify: make(chan bool),
+	rl := &rangeLock{
 		ranges: make([][]int64, 0),
 		max:    max,
 	}
+	rl.cond = sync.NewCond(&rl.mu)
+	return rl
 }
 
 type rangeLock struct {
-	mu     sync.RWMutex
-	notify chan bool
+	mu     sync.Mutex
+	cond   *sync.Cond
 	ranges [][]int64
 	max    int64
-	done   bool
-
-	waiting   int32
-	waitingMu sync.Mutex
+	// canceled indicates this lock has been released/closed; waiting acquirers
+	// will return os.ErrClosed.
+	canceled bool
 }
 
-func (rl *rangeLock) acquire(start, len int64) error {
+// acquire blocks until the [start, start+length) range is available, or the
+// lock is canceled (returns os.ErrClosed).
+func (rl *rangeLock) acquire(start, length int64) error {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 	for {
-		if rl.satisfy(start, len) {
+		if rl._satisfy(start, length) {
 			return nil
 		}
-		rl.waitingMu.Lock()
-		rl.waiting += 1
-		rl.waitingMu.Unlock()
-		ok, readOk := <-rl.notify
-		if readOk {
-			if !ok {
-				return os.ErrClosed
-			}
+		if rl.canceled {
+			return os.ErrClosed
 		}
+		rl.cond.Wait()
 	}
 }
 
-func (rl *rangeLock) satisfy(start, len int64) bool {
-	rl.mu.RLock()
-	defer rl.mu.RUnlock()
-	return rl._satisfy(start, len)
+func (rl *rangeLock) satisfy(start, length int64) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	return rl._satisfy(start, length)
 }
 
+// tryExclusiveFeed marks [start, start+l) as being handled if it is not already
+// satisfied. It returns true if the caller acquired the range (and is therefore
+// responsible for filling it), false otherwise.
 func (rl *rangeLock) tryExclusiveFeed(start, l int64) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 	if rl._satisfy(start, l) {
 		return false
 	}
-	rl._feed(start, l, false)
+	rl._feed(start, l)
 	return true
 }
 
 func (rl *rangeLock) feed(start, l int64) {
-	rl._feed(start, l, true)
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	rl._feed(start, l)
 }
 
-func (rl *rangeLock) release(v, lock bool) {
-	if lock {
-		rl.mu.Lock()
-		defer rl.mu.Unlock()
-	}
-	if rl.done {
+func (rl *rangeLock) release() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	if rl.canceled {
 		return
 	}
-	rl.waitingMu.Lock()
-	defer rl.waitingMu.Unlock()
-	for rl.waiting > 0 {
-		select {
-		case rl.notify <- v:
-		default:
-		}
-		rl.waiting--
-	}
+	rl.canceled = true
+	rl.cond.Broadcast()
 }
 
-func (rl *rangeLock) _satisfy(start, len int64) bool {
-	if len < 0 {
+func (rl *rangeLock) _satisfy(start, length int64) bool {
+	if length < 0 {
 		panic("invalid len")
 	}
-	if len == 0 {
+	if length == 0 {
 		return true
 	}
-	end := start + len
+	end := start + length
 	for _, ran := range rl.ranges {
 		if start >= ran[0] && end <= ran[1] {
 			return true
@@ -427,45 +467,36 @@ func (rl *rangeLock) _satisfy(start, len int64) bool {
 	return false
 }
 
-func (rl *rangeLock) _feed(start, l int64, lock bool) {
-	if lock {
-		rl.mu.Lock()
-	}
+// _feed records a newly available range and wakes any waiting acquirers.
+// rl.mu must be held.
+func (rl *rangeLock) _feed(start, l int64) {
 	rl.ranges = append(rl.ranges, []int64{start, start + l})
 	rl._merge()
-	if len(rl.ranges) == 1 && rl.ranges[0][0] == 0 && rl.ranges[0][1] == rl.max {
-		close(rl.notify)
-		rl.done = true
-	}
-	if lock {
-		rl.mu.Unlock()
-	}
-
-	rl.release(true, lock)
+	rl.cond.Broadcast()
 }
 
+// _merge sorts and merges overlapping/adjacent ranges. rl.mu must be held.
 func (rl *rangeLock) _merge() {
-	if len(rl.ranges) == 0 {
+	if len(rl.ranges) <= 1 {
 		return
 	}
 	sort.Slice(rl.ranges, func(i, j int) bool {
 		return rl.ranges[i][0] < rl.ranges[j][0]
 	})
 	newRanges := make([][]int64, 0, len(rl.ranges))
-	lastRange := rl.ranges[0]
+	last := rl.ranges[0]
 	for i := 1; i < len(rl.ranges); i++ {
 		ran := rl.ranges[i]
-		if lastRange[1] >= ran[0] {
-			lastRange[1] = ran[1]
-			newRanges = append(newRanges, lastRange)
+		if ran[0] <= last[1] {
+			// overlapping or adjacent: extend the current range, never shrink it
+			if ran[1] > last[1] {
+				last[1] = ran[1]
+			}
 		} else {
-			newRanges = append(newRanges, lastRange)
-			newRanges = append(newRanges, ran)
-			lastRange = ran
+			newRanges = append(newRanges, last)
+			last = ran
 		}
 	}
-	if len(newRanges) == 0 {
-		newRanges = append(newRanges, lastRange)
-	}
+	newRanges = append(newRanges, last)
 	rl.ranges = newRanges
 }

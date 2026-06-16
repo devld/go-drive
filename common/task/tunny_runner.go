@@ -72,7 +72,8 @@ func (t *TunnyRunner) ExecuteAndWait(runnable Runnable, timeout time.Duration, o
 	w := t.createTask(runnable, option...)
 
 	timer := time.NewTimer(timeout)
-	done := make(chan int)
+	// buffered so the goroutine never blocks on send after a timeout return
+	done := make(chan int, 1)
 	defer timer.Stop()
 
 	go func() {

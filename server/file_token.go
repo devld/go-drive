@@ -85,7 +85,7 @@ func (f *FileTokenStore) getSessionFile(token string) string {
 func (f *FileTokenStore) readFile(token string, read bool) (*types.Token, error) {
 	filePath := f.getSessionFile(token)
 	stat, e := os.Stat(filePath)
-	if os.IsNotExist(e) || f.isExpired(stat.ModTime()) {
+	if e != nil || f.isExpired(stat.ModTime()) {
 		return nil, err.NewUnauthorizedError(i18n.T("api.file_token.invalid_token"))
 	}
 	if !read {
