@@ -5,6 +5,7 @@ import (
 	"go-drive/common/utils"
 	"net/url"
 	path2 "path"
+	"strings"
 	"time"
 )
 
@@ -124,10 +125,15 @@ type driveItem struct {
 }
 
 func (d driveItem) Path() string {
-	// Remove parent prefix /drive/root:
-	parentPath, e := url.PathUnescape(d.Parent.Path[12:])
+	// Remove the parent prefix before "root:".
+	// The prefix is not fixed, it can be "/drive/root:" or "/drives/{drive-id}/root:".
+	rawPath := d.Parent.Path
+	if i := strings.Index(rawPath, "root:"); i >= 0 {
+		rawPath = rawPath[i+len("root:"):]
+	}
+	parentPath, e := url.PathUnescape(rawPath)
 	if e != nil {
-		parentPath = d.Parent.Path[12:]
+		parentPath = rawPath
 	}
 	return utils.CleanPath(path2.Join(parentPath, d.Name))
 }
