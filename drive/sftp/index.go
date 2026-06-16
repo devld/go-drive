@@ -287,9 +287,9 @@ func (f *Drive) Delete(ctx types.TaskCtx, path string) error {
 		return e
 	}
 	if entry.Type().IsDir() {
-		e = c.RemoveDirectory(path)
+		e = c.RemoveDirectory(f.toRemotePath(path))
 	} else {
-		e = c.Remove(path)
+		e = c.Remove(f.toRemotePath(path))
 	}
 	if e != nil {
 		return f.handleError(e)
@@ -326,11 +326,9 @@ var connectionLost = err.NewRemoteApiError(500, "Connection lost")
 
 func (f *Drive) handleError(e error) error {
 	switch e {
-	case sftp.ErrSSHFxEOF:
-	case io.EOF:
+	case sftp.ErrSSHFxEOF, io.EOF:
 		return err.NewRemoteApiError(500, "EOF")
-	case sftp.ErrSSHFxNoSuchFile:
-	case os.ErrNotExist:
+	case sftp.ErrSSHFxNoSuchFile, os.ErrNotExist:
 		return err.NewNotFoundError()
 	case sftp.ErrSSHFxPermissionDenied:
 		return err.NewPermissionDeniedError(e.Error())
@@ -410,19 +408,20 @@ func (f *sftpEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCl
 		go func() {
 			c, e := f.d.getClient()
 			if e != nil {
-				_ = r.CloseWithError(e)
+				_ = w.CloseWithError(e)
 				return
 			}
 			file, e := c.Open(f.d.toRemotePath(f.path))
 			if e != nil {
-				_ = r.CloseWithError(e)
+				_ = w.CloseWithError(e)
 				return
 			}
 			var readCloser io.ReadCloser = file
 			if start >= 0 {
 				_, e = file.Seek(start, io.SeekStart)
 				if e != nil {
-					_ = r.CloseWithError(e)
+					_ = file.Close()
+					_ = w.CloseWithError(e)
 					return
 				}
 				if size > 0 {
@@ -432,7 +431,7 @@ func (f *sftpEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCl
 			defer func() { _ = file.Close() }()
 			_, e = io.Copy(w, readCloser)
 			if e != nil {
-				_ = r.CloseWithError(e)
+				_ = w.CloseWithError(e)
 				return
 			}
 			_ = w.Close()

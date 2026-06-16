@@ -77,7 +77,9 @@ func (c *ChunkUploader) ChunkUpload(id string, seq int, reader io.Reader) error 
 	}
 	chunkSize := upload.ChunkSize
 	if seq == upload.Chunks-1 {
-		chunkSize = upload.Size % upload.ChunkSize
+		if rem := upload.Size % upload.ChunkSize; rem != 0 {
+			chunkSize = rem
+		}
 	}
 	chunk, e := os.OpenFile(c.getChunk(upload, seq), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if e != nil {
