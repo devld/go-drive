@@ -46,7 +46,7 @@ func (sc *scriptDriveCache) EvictAll() {
 func (sc *scriptDriveCache) GetEntry(path string) *drive_util.EntryCacheItem {
 	r, e := sc.c.GetEntryRaw(path)
 	if e != nil {
-		sc.vm.ThrowError(r)
+		sc.vm.ThrowError(e)
 	}
 	return r
 }

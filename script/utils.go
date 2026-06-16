@@ -135,17 +135,30 @@ func (v *Value) SM() types.SM {
 }
 
 func (v *Value) Array() []*Value {
-	v.object()
-	if v.obj == nil {
+	obj := v.object()
+	if obj == nil {
 		return nil
 	}
-	len := int(v.Get("length").Integer())
-	if len < 0 {
+	// Read elements directly from the underlying otto object to avoid the
+	// per-index *Value allocation and object re-resolution that v.Get would
+	// incur. otto has no indexed accessor, so string keys are unavoidable, but
+	// this keeps the hot path (listing large directories) as lean as possible.
+	lengthVal, e := obj.Get("length")
+	if e != nil {
 		v.vm.ThrowTypeError("not a valid array")
 	}
-	r := make([]*Value, len)
-	for i := 0; i < len; i++ {
-		r[i] = v.Get(strconv.FormatInt(int64(i), 10))
+	length, e := lengthVal.ToInteger()
+	if e != nil || length < 0 {
+		v.vm.ThrowTypeError("not a valid array")
+	}
+	n := int(length)
+	r := make([]*Value, n)
+	for i := range n {
+		ev, e := obj.Get(strconv.Itoa(i))
+		if e != nil {
+			v.vm.ThrowTypeError(e.Error())
+		}
+		r[i] = newValue(v.vm, ev)
 	}
 	return r
 }
@@ -340,16 +353,31 @@ func wrapVmRun(ctx context.Context, vm *VM, fn func() (otto.Value, error)) (valu
 		e = mapError(e)
 	}()
 
-	finished := make(chan struct{}, 1)
+	// Drain any interrupt left over from a previous run. The interrupt sender
+	// below can lose a race with fn() finishing, leaving a stale interrupt in
+	// the buffered channel. Since a VM is never run concurrently, it is safe to
+	// clear it here before running, preventing an unrelated request (this VM is
+	// reused from a pool) from being wrongly interrupted.
+	select {
+	case <-vm.o.Interrupt:
+	default:
+	}
+
+	finished := make(chan struct{})
 	go func() {
 		select {
 		case <-ctx.Done():
-			vm.o.Interrupt <- func() { panic(ctx.Err()) }
+			// If fn() already finished, prefer that branch so we don't leave a
+			// stale interrupt behind.
+			select {
+			case vm.o.Interrupt <- func() { panic(ctx.Err()) }:
+			case <-finished:
+			}
 		case <-finished:
 		}
 	}()
 	var ottoValue otto.Value
-	defer func() { finished <- struct{}{} }()
+	defer close(finished)
 	ottoValue, e = fn()
 	value = newValue(vm, ottoValue)
 	return
