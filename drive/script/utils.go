@@ -321,14 +321,13 @@ func createVm(config common.Config, script string) (*s.VM, error) {
 	return vm, e
 }
 
+// wrapReader adapts an io.Reader into an io.ReadCloser. If reader already is a
+// ReadCloser it is returned as-is, otherwise a no-op Close is added.
 func wrapReader(reader io.Reader) io.ReadCloser {
-	var r io.ReadCloser
 	if rc, ok := reader.(io.ReadCloser); ok {
-		r = rc
-	} else {
-		r = fakeCloseReader{reader}
+		return rc
 	}
-	return r
+	return fakeCloseReader{reader}
 }
 
 type fakeCloseReader struct {
@@ -339,21 +338,26 @@ func (fcr fakeCloseReader) Close() error {
 	return nil
 }
 
-func wrapContentURL(reader io.Reader) types.IContentReader {
-	return fakeContentReader{reader}
+// wrapContentReader adapts an io.ReadCloser (already detached from the VM, so
+// the caller owns closing it) into an IContentReader for thumbnail responses.
+func wrapContentReader(rc io.ReadCloser) types.IContentReader {
+	return readCloserContentReader{rc}
 }
 
-type fakeContentReader struct {
-	reader io.Reader
+type readCloserContentReader struct {
+	rc io.ReadCloser
 }
 
-func (fcr fakeContentReader) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
-	if start >= 0 || size > 0 {
+func (r readCloserContentReader) GetReader(_ context.Context, start, size int64) (io.ReadCloser, error) {
+	// The underlying value is a single-shot stream; range requests are not
+	// supported. start < 0 / size < 0 means "the whole content".
+	if start > 0 || size > 0 {
 		return nil, err.NewUnsupportedError()
 	}
-	return wrapReader(fcr.reader), nil
+	return r.rc, nil
 }
 
-func (fcr fakeContentReader) GetURL(_ context.Context) (*types.ContentURL, error) {
+func (r readCloserContentReader) GetURL(_ context.Context) (*types.ContentURL, error) {
 	return nil, err.NewUnsupportedError()
 }
+

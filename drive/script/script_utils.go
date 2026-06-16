@@ -54,7 +54,7 @@ func ListAvailableScriptsFromRepository(ctx context.Context, repoURL string) ([]
 		if !strings.HasSuffix(item.Name, ".js") || strings.HasSuffix(item.Name, "-uploader.js") {
 			continue
 		}
-		name := strings.TrimRight(item.Name, ".js")
+		name := strings.TrimSuffix(item.Name, ".js")
 		resultItem := AvailableDriveScript{
 			Name:     name,
 			DriveURL: item.DownloadURL,
@@ -245,7 +245,7 @@ func readDriveScriptMeta(file string, config common.Config) (DriveScript, error)
 	name := readMetaValue(r, true, file)
 	description := readMetaValue(r, false, "")
 	return DriveScript{
-		Name:        strings.TrimRight(file, ".js"),
+		Name:        strings.TrimSuffix(file, ".js"),
 		DisplayName: name,
 		Description: description,
 	}, nil

@@ -62,6 +62,24 @@ func GetReadCloser(v any) io.ReadCloser {
 	return nil
 }
 
+// DetachReadCloser returns the underlying io.ReadCloser of a script reader
+// value and detaches it from the VM's disposables. After detaching, the reader
+// will NOT be closed when the VM is passivated/returned to the pool, so the
+// returned reader stays valid even though the VM is reused. The caller takes
+// ownership and MUST Close it. Returns nil if v is not a closable reader
+// (ReadCloser or TempFile).
+func DetachReadCloser(vm *VM, v any) io.ReadCloser {
+	rc := GetReadCloser(v)
+	if rc == nil {
+		return nil
+	}
+	// v is the same ReadCloser/TempFile value that was registered via
+	// PutDisposable, so removing it here prevents DisposeDisposables from
+	// closing the resource out from under the caller.
+	vm.RemoveDisposable(v)
+	return rc
+}
+
 func GetBytes(v any) []byte {
 	switch v := v.(type) {
 	case Bytes:

@@ -86,7 +86,7 @@ func (sd *ScriptDrive) Meta(ctx context.Context) (types.DriveMeta, error) {
 	if e != nil {
 		return types.DriveMeta{}, e
 	}
-	defer func() { _ = sd.pool.Return(ctx, vm) }()
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
 	v, e := sd.call(vm, "meta", s.NewContext(vm, ctx))
 	r := types.DriveMeta{}
 	if e != nil {
@@ -101,7 +101,7 @@ func (sd *ScriptDrive) Get(ctx context.Context, path string) (types.IEntry, erro
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(ctx, vm) }()
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
 	v, e := sd.call(vm, "get", s.NewContext(vm, ctx), path)
 	if e != nil {
 		return nil, e
@@ -114,7 +114,7 @@ func (sd *ScriptDrive) Save(ctx types.TaskCtx, path string, size int64, override
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(ctx, vm) }()
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
 	v, e := sd.call(vm, "save", s.NewTaskCtx(vm, ctx), path, size, override, s.NewReader(vm, reader))
 	if e != nil {
 		return nil, e
@@ -127,7 +127,7 @@ func (sd *ScriptDrive) MakeDir(ctx context.Context, path string) (types.IEntry, 
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(ctx, vm) }()
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
 	v, e := sd.call(vm, "makeDir", s.NewContext(vm, ctx), path)
 	if e != nil {
 		return nil, e
@@ -140,7 +140,7 @@ func (sd *ScriptDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, ove
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(ctx, vm) }()
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
 	v, e := sd.call(vm, "copy", s.NewTaskCtx(vm, ctx), s.NewEntry(vm, from), to, override)
 	if e != nil {
 		return nil, e
@@ -153,7 +153,7 @@ func (sd *ScriptDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, ove
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(ctx, vm) }()
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
 	v, e := sd.call(vm, "move", s.NewTaskCtx(vm, ctx), s.NewEntry(vm, from), to, override)
 	if e != nil {
 		return nil, e
@@ -166,7 +166,7 @@ func (sd *ScriptDrive) List(ctx context.Context, path string) ([]types.IEntry, e
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(ctx, vm) }()
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
 	v, e := sd.call(vm, "list", s.NewContext(vm, ctx), path)
 	if e != nil {
 		return nil, e
@@ -183,7 +183,7 @@ func (sd *ScriptDrive) Delete(ctx types.TaskCtx, path string) error {
 	if e != nil {
 		return e
 	}
-	defer func() { _ = sd.pool.Return(ctx, vm) }()
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
 	_, e = sd.call(vm, "delete", s.NewTaskCtx(vm, ctx), path)
 	return e
 }
@@ -193,7 +193,7 @@ func (sd *ScriptDrive) Upload(ctx context.Context, path string, size int64, over
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(ctx, vm) }()
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
 	v, e := sd.call(vm, "upload", s.NewContext(vm, ctx), path, size, override, config)
 	if e != nil {
 		return nil, e
@@ -261,12 +261,19 @@ func (se *scriptDriveEntry) GetReader(ctx context.Context, start, size int64) (i
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = se.d.pool.Return(ctx, vm) }()
+	defer func() { _ = se.d.pool.Return(context.Background(), vm) }()
 	v, e := se.d.call(vm, "getReader", s.NewContext(vm, ctx), se.s, start, size)
 	if e != nil {
 		return nil, e
 	}
-	reader := s.GetReader(v.Raw())
+	raw := v.Raw()
+	// Detach the reader from the VM so it is not closed when the VM is returned
+	// to the pool below; the caller owns closing the returned ReadCloser.
+	if rc := s.DetachReadCloser(vm, raw); rc != nil {
+		return rc, nil
+	}
+	// Fallback for non-closable (e.g. in-memory) readers.
+	reader := s.GetReader(raw)
 	if reader == nil {
 		panic("invalid returned value from getReader")
 	}
@@ -278,7 +285,7 @@ func (se *scriptDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, erro
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = se.d.pool.Return(ctx, vm) }()
+	defer func() { _ = se.d.pool.Return(context.Background(), vm) }()
 	v, e := se.d.call(vm, "getURL", s.NewContext(vm, ctx), se.s)
 	if e != nil {
 		return nil, e
@@ -342,15 +349,21 @@ func (se *scriptDriveEntry) Thumbnail(ctx context.Context) (types.IContentReader
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = se.d.pool.Return(ctx, vm) }()
+	defer func() { _ = se.d.pool.Return(context.Background(), vm) }()
 	v, e := se.d.call(vm, "getThumbnail", s.NewContext(vm, ctx), se.s)
 	if e != nil {
 		return nil, e
 	}
-	if obj := s.GetReader(v.Raw()); obj != nil {
-		// reader returned
-		return wrapContentURL(obj), nil
+	raw := v.Raw()
+	// A reader was returned. Detach it so it survives the VM being returned to
+	// the pool; the caller owns closing it.
+	if rc := s.DetachReadCloser(vm, raw); rc != nil {
+		return wrapContentReader(rc), nil
 	}
+	if reader := s.GetReader(raw); reader != nil {
+		return wrapContentReader(wrapReader(reader)), nil
+	}
+	// Otherwise a ContentURL was returned.
 	r := types.ContentURL{}
 	v.ParseInto(&r)
 	return drive_util.NewURLContentReader(r.URL, r.Header, r.Proxy), nil
