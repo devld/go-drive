@@ -112,7 +112,8 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry T
 	cmd.Stdout = dest
 	cmd.Stderr = stdErr
 
-	c := make(chan error)
+	// buffered so the goroutine never blocks on send after a ctx cancellation
+	c := make(chan error, 1)
 	go func() {
 		c <- cmd.Run()
 	}()

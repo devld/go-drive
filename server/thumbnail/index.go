@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Jeffail/tunny"
@@ -271,7 +272,8 @@ func (m *Maker) doMake(ctx context.Context, entry ThumbnailEntry, path string) (
 	}
 	task := &taskWrapper{h: h, entry: entry, dest: path}
 
-	c := make(chan error)
+	// buffered so the goroutine never blocks on send after a ctx cancellation
+	c := make(chan error, 1)
 	go func() {
 		taskErr := m.pool.Process(task)
 		if taskErr == errMaking {
@@ -354,11 +356,12 @@ func (m *Maker) executeTask(v any) any {
 }
 
 func waitPendingTask(ctx context.Context, path string, lock string) error {
-	c := make(chan error)
-	canceled := false
+	// buffered so the goroutine never blocks on send after a ctx cancellation
+	c := make(chan error, 1)
+	var canceled atomic.Bool
 
 	go func() {
-		for !canceled {
+		for !canceled.Load() {
 			exists, e := utils.FileExists(lock)
 			if e != nil {
 				c <- e
@@ -375,7 +378,7 @@ func waitPendingTask(ctx context.Context, path string, lock string) error {
 	var e error
 	select {
 	case <-ctx.Done():
-		canceled = true
+		canceled.Store(true)
 		e = ctx.Err()
 	case e = <-c:
 	}
