@@ -34,6 +34,8 @@ func NewChroot(root string, entries []string) *Chroot {
 
 // WrapPath add root prefix to path
 func (c *Chroot) WrapPath(path string) (string, error) {
+	// chroot is a security boundary, never trust the input path
+	path = utils.CleanPath(path)
 	if c.NameFilter != nil && !utils.IsRootPath(path) {
 		firstNode := path
 		index := strings.Index(firstNode, "/")
@@ -49,7 +51,7 @@ func (c *Chroot) WrapPath(path string) (string, error) {
 
 // UnwrapPath remove root prefix from path
 func (c *Chroot) UnwrapPath(path string) string {
-	if !strings.HasPrefix(path, c.Root) {
+	if path != c.Root && !strings.HasPrefix(path, c.Root+"/") {
 		return path
 	}
 	return utils.CleanPath(path[len(c.Root):])
