@@ -246,6 +246,174 @@ func TestPermMap_ResolveDescendant(t *testing.T) {
 	})
 }
 
+func newPermItem(path, subject string, perm types.Permission, policy uint8) *pathPermItem {
+	p := path
+	return &pathPermItem{
+		PathPermission: types.PathPermission{
+			Path:       &p,
+			Subject:    subject,
+			Permission: perm,
+			Policy:     policy,
+		},
+		depth: int8(PathDepth(path)),
+	}
+}
+
+// TestResolveAcceptedPermissions covers the merge semantics directly:
+// items are processed from highest to lowest priority (depth desc, then
+// user > group > anonymous, then reject before accept), and for every
+// permission bit the highest-priority matching rule wins. A reject only
+// blocks lower-priority accepts; it never revokes a bit already granted by
+// a higher-priority accept.
+func TestResolveAcceptedPermissions(t *testing.T) {
+	grp := types.GroupSubject("g1")
+	usr := types.UserSubject("alice")
+	tests := []struct {
+		name      string
+		items     []*pathPermItem
+		wantRead  bool
+		wantWrite bool
+	}{
+		{
+			name:      "empty",
+			items:     nil,
+			wantRead:  false,
+			wantWrite: false,
+		},
+		{
+			name:      "single accept rw",
+			items:     []*pathPermItem{newPermItem("", types.AnySubject, types.PermissionReadWrite, types.PolicyAccept)},
+			wantRead:  true,
+			wantWrite: true,
+		},
+		{
+			name:      "single reject only grants nothing",
+			items:     []*pathPermItem{newPermItem("", types.AnySubject, types.PermissionReadWrite, types.PolicyReject)},
+			wantRead:  false,
+			wantWrite: false,
+		},
+		{
+			name: "same path same subject reject wins over accept (policy order)",
+			items: []*pathPermItem{
+				newPermItem("a", types.AnySubject, types.PermissionReadWrite, types.PolicyAccept),
+				newPermItem("a", types.AnySubject, types.PermissionWrite, types.PolicyReject),
+			},
+			wantRead:  true,
+			wantWrite: false,
+		},
+		{
+			name: "deeper reject blocks shallower accept",
+			items: []*pathPermItem{
+				newPermItem("", types.AnySubject, types.PermissionReadWrite, types.PolicyAccept),
+				newPermItem("a", types.AnySubject, types.PermissionWrite, types.PolicyReject),
+			},
+			wantRead:  true,
+			wantWrite: false,
+		},
+		{
+			name: "deeper accept is not revoked by shallower reject",
+			items: []*pathPermItem{
+				newPermItem("a", types.AnySubject, types.PermissionWrite, types.PolicyAccept),
+				newPermItem("", types.AnySubject, types.PermissionWrite, types.PolicyReject),
+			},
+			wantRead:  false,
+			wantWrite: true,
+		},
+		{
+			name: "user accept beats anonymous reject at same depth",
+			items: []*pathPermItem{
+				newPermItem("a", usr, types.PermissionWrite, types.PolicyAccept),
+				newPermItem("a", types.AnySubject, types.PermissionWrite, types.PolicyReject),
+			},
+			wantRead:  false,
+			wantWrite: true,
+		},
+		{
+			name: "user reject beats anonymous accept at same depth",
+			items: []*pathPermItem{
+				newPermItem("a", usr, types.PermissionWrite, types.PolicyReject),
+				newPermItem("a", types.AnySubject, types.PermissionWrite, types.PolicyAccept),
+			},
+			wantRead:  false,
+			wantWrite: false,
+		},
+		{
+			name: "group accept beats anonymous reject at same depth",
+			items: []*pathPermItem{
+				newPermItem("a", grp, types.PermissionWrite, types.PolicyAccept),
+				newPermItem("a", types.AnySubject, types.PermissionWrite, types.PolicyReject),
+			},
+			wantRead:  false,
+			wantWrite: true,
+		},
+		{
+			name: "user reject beats group accept at same depth",
+			items: []*pathPermItem{
+				newPermItem("a", usr, types.PermissionWrite, types.PolicyReject),
+				newPermItem("a", grp, types.PermissionWrite, types.PolicyAccept),
+			},
+			wantRead:  false,
+			wantWrite: false,
+		},
+		{
+			name: "bits accumulate from different rules",
+			items: []*pathPermItem{
+				newPermItem("a", types.AnySubject, types.PermissionRead, types.PolicyAccept),
+				newPermItem("", types.AnySubject, types.PermissionWrite, types.PolicyAccept),
+			},
+			wantRead:  true,
+			wantWrite: true,
+		},
+		{
+			name: "reject one bit keeps the other",
+			items: []*pathPermItem{
+				newPermItem("a", types.AnySubject, types.PermissionReadWrite, types.PolicyAccept),
+				newPermItem("a", types.AnySubject, types.PermissionRead, types.PolicyReject),
+			},
+			wantRead:  false,
+			wantWrite: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveAcceptedPermissions(tt.items)
+			if got.Readable() != tt.wantRead {
+				t.Errorf("Readable() = %v, want %v", got.Readable(), tt.wantRead)
+			}
+			if got.Writable() != tt.wantWrite {
+				t.Errorf("Writable() = %v, want %v", got.Writable(), tt.wantWrite)
+			}
+		})
+	}
+}
+
+// TestResolveAcceptedPermissions_OrderIndependent ensures the result does not
+// depend on the input order, because the function sorts items by priority.
+func TestResolveAcceptedPermissions_OrderIndependent(t *testing.T) {
+	build := func() []*pathPermItem {
+		return []*pathPermItem{
+			newPermItem("", types.AnySubject, types.PermissionReadWrite, types.PolicyAccept),
+			newPermItem("a", types.AnySubject, types.PermissionWrite, types.PolicyReject),
+			newPermItem("a", types.UserSubject("alice"), types.PermissionWrite, types.PolicyAccept),
+		}
+	}
+	forward := resolveAcceptedPermissions(build())
+
+	reversed := build()
+	for i, j := 0, len(reversed)-1; i < j; i, j = i+1, j-1 {
+		reversed[i], reversed[j] = reversed[j], reversed[i]
+	}
+	backward := resolveAcceptedPermissions(reversed)
+
+	if forward != backward {
+		t.Errorf("result depends on input order: forward=%v backward=%v", forward, backward)
+	}
+	// user accept at depth 1 wins over anonymous reject at depth 1 -> writable.
+	if !forward.Writable() || !forward.Readable() {
+		t.Errorf("want read+write, got %v", forward)
+	}
+}
+
 // Same usage as permission_wrapper: Filter(session) first to get current user's PermMap, then ResolvePath/ResolveDescendant.
 func TestPermMap_FilterThenResolve(t *testing.T) {
 	root := ""

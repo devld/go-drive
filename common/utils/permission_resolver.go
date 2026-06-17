@@ -117,13 +117,15 @@ func resolveAcceptedPermissions(items []*pathPermItem) types.Permission {
 	sort.Slice(items, func(i, j int) bool { return pathPermissionLess(items[i], items[j]) })
 	acceptedPermission := types.PermissionEmpty
 	rejectedPermission := types.PermissionEmpty
+	// items are sorted by priority (higher priority first), so the first
+	// matched policy of a permission bit wins: a reject only blocks accepts
+	// that are processed after it (lower priority), it never revokes a
+	// permission already granted by a higher-priority accept.
 	for _, item := range items {
 		if item.IsAccept() {
 			acceptedPermission |= item.Permission & ^rejectedPermission
 		}
 		if item.IsReject() {
-			// acceptedPermission - ( item.Permission(reject) - acceptedPermission )
-			acceptedPermission &= ^(item.Permission & (^acceptedPermission))
 			rejectedPermission |= item.Permission
 		}
 	}
