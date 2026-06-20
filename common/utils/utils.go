@@ -51,15 +51,9 @@ var unsafePathCharsRegexp = regexp.MustCompile(`[\x00-\x1f\x7f-\x9f]+`)
 
 func CleanPath(path string) string {
 	path = unsafePathCharsRegexp.ReplaceAllLiteralString(strings.TrimSpace(path), "")
-	path = path2.Clean(path)
-	path = strings.TrimPrefix(path, "/")
-	for strings.HasPrefix(path, "../") {
-		path = path[3:]
-	}
-	if path == "." {
-		path = ""
-	}
-	return path
+	// Clean the path as if it were rooted. This prevents leading parent
+	// components (including a final "..") from surviving the cleanup.
+	return strings.TrimPrefix(path2.Clean("/"+path), "/")
 }
 
 func PathExt(name string) string {

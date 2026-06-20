@@ -44,3 +44,11 @@ func TestIdPool(t *testing.T) {
 	t.Log(p.max, p.pool)
 
 }
+
+func TestIdPoolIgnoresUnallocatedID(t *testing.T) {
+	p := NewIdPool[uint]()
+	p.Release(100)
+	if got := p.Next(); got != 1 {
+		t.Fatalf("Next() = %d, want 1", got)
+	}
+}
