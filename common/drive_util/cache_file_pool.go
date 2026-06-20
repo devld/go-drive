@@ -10,7 +10,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/golang/groupcache/lru"
+	"github.com/hashicorp/golang-lru/v2"
 )
 
 type ReaderGetter = func(int64, int64) (io.ReadCloser, error)
@@ -26,33 +26,32 @@ func NewCacheFillPool(maxCache int, dir string) (*CacheFilePool, error) {
 	if !info.IsDir() {
 		return nil, errors.New(dir + " is not a directory")
 	}
-	pool := &CacheFilePool{dir: dir, entries: lru.New(maxCache)}
-	pool.entries.OnEvicted = pool.onCacheEvicted
+	pool := &CacheFilePool{dir: dir}
+	pool.entries, e = lru.NewWithEvict[string, *cacheFile](maxCache, pool.onCacheEvicted)
+	if e != nil {
+		return nil, e
+	}
 
 	return pool, nil
 }
 
 type CacheFilePool struct {
 	dir     string
-	entries *lru.Cache
+	entries *lru.Cache[string, *cacheFile]
 	mu      sync.Mutex
 }
 
 func (cfp *CacheFilePool) GetReader(key string, size int64, getReader ReaderGetter) (io.ReadSeekCloser, error) {
-	// lru.Cache.Get mutates the internal list (MoveToFront), so it must be
-	// called under the write lock, not a read lock.
-	cfp.mu.Lock()
 	cf, ok := cfp.entries.Get(key)
-	cfp.mu.Unlock()
 	if ok {
-		return cf.(*cacheFile).Reader()
+		return cf.Reader()
 	}
 	cfp.mu.Lock()
 	defer cfp.mu.Unlock()
 
 	// re-check after acquiring the write lock to avoid creating duplicated cacheFile
 	if cf, ok = cfp.entries.Get(key); ok {
-		return cf.(*cacheFile).Reader()
+		return cf.Reader()
 	}
 
 	// Use a unique file per cacheFile instance instead of a deterministic name
@@ -89,12 +88,10 @@ func (cfp *CacheFilePool) GetReader(key string, size int64, getReader ReaderGett
 	cf = newCf
 	cfp.entries.Add(key, cf)
 
-	return cf.(*cacheFile).Reader()
+	return cf.Reader()
 }
 
-func (cfp *CacheFilePool) onCacheEvicted(_ lru.Key, value any) {
-	cf := value.(*cacheFile)
-
+func (cfp *CacheFilePool) onCacheEvicted(_ string, cf *cacheFile) {
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
 

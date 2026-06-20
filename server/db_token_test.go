@@ -7,6 +7,9 @@ import (
 	"go-drive/testutil"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/hashicorp/golang-lru/v2"
 )
 
 func TestMain(m *testing.M) {
@@ -132,5 +135,105 @@ func TestDBTokenStore_DeletedUserInvalidatesToken(t *testing.T) {
 	}
 	if _, e := ts.Validate(tok.Token); e == nil {
 		t.Fatal("expected token to be invalid after the user is deleted")
+	}
+}
+
+func TestDBTokenStore_RefreshDoesNotRestoreRevokedSession(t *testing.T) {
+	ts, userDAO, cleanup := newTestDBTokenStore(t)
+	defer cleanup()
+	if _, e := userDAO.AddUser(types.User{Username: "erin", Password: "p"}); e != nil {
+		t.Fatalf("AddUser: %v", e)
+	}
+
+	tok, e := ts.Create(types.Principal{
+		User:     types.User{Username: "erin"},
+		AuthType: types.AuthTypeToken,
+	})
+	if e != nil {
+		t.Fatalf("Create: %v", e)
+	}
+	hash := hashToken(tok.Token)
+	item, ok := ts.getCached(hash)
+	if !ok {
+		t.Fatal("expected session in cache")
+	}
+	if e := ts.Revoke(tok.Token); e != nil {
+		t.Fatalf("Revoke: %v", e)
+	}
+
+	// Simulate a validation that loaded the cache immediately before another
+	// request revoked the database row and is now attempting a sliding refresh.
+	item.expiresAt = time.Now().Add(time.Second).Unix()
+	_, exists := ts.maybeRefresh(hash, item, time.Now())
+	if exists {
+		t.Fatal("refresh reported that the revoked session still exists")
+	}
+	if _, ok := ts.getCached(hash); ok {
+		t.Fatal("revoked session was restored to the cache")
+	}
+}
+
+func TestDBTokenStore_RefreshUsesValidityAsSlidingLifetime(t *testing.T) {
+	ts, userDAO, cleanup := newTestDBTokenStore(t)
+	defer cleanup()
+	if _, e := userDAO.AddUser(types.User{Username: "frank", Password: "p"}); e != nil {
+		t.Fatalf("AddUser: %v", e)
+	}
+
+	ts.validity = 10 * time.Minute
+	tok, e := ts.Create(types.Principal{
+		User:     types.User{Username: "frank"},
+		AuthType: types.AuthTypeToken,
+	})
+	if e != nil {
+		t.Fatalf("Create: %v", e)
+	}
+	hash := hashToken(tok.Token)
+	item, ok := ts.getCached(hash)
+	if !ok {
+		t.Fatal("expected session in cache")
+	}
+
+	now := time.Now()
+	item.expiresAt = now.Add(time.Minute).Unix()
+	expiresAt, exists := ts.maybeRefresh(hash, item, now)
+	if !exists {
+		t.Fatal("session unexpectedly disappeared during refresh")
+	}
+	want := now.Add(ts.validity).Unix()
+	if expiresAt != want {
+		t.Fatalf("refreshed expiry = %d, want %d", expiresAt, want)
+	}
+}
+
+func TestDBTokenStore_CacheEvictsLeastRecentlyUsedSession(t *testing.T) {
+	ts, _, cleanup := newTestDBTokenStore(t)
+	defer cleanup()
+	cache, e := lru.New[string, dbTokenCacheItem](2)
+	if e != nil {
+		t.Fatalf("New cache: %v", e)
+	}
+	ts.cache = cache
+
+	tokens := make([]types.Token, 3)
+	for i := range tokens {
+		var e error
+		tokens[i], e = ts.Create(types.Principal{})
+		if e != nil {
+			t.Fatalf("Create token %d: %v", i, e)
+		}
+	}
+
+	if _, ok := ts.getCached(hashToken(tokens[0].Token)); ok {
+		t.Fatal("least recently used session was not evicted")
+	}
+	for _, token := range tokens[1:] {
+		if _, ok := ts.getCached(hashToken(token.Token)); !ok {
+			t.Fatal("recent session was unexpectedly evicted")
+		}
+	}
+	cacheLen := ts.cache.Len()
+	if cacheLen != 2 {
+		t.Fatalf("cache length = %d, want 2", cacheLen)
 	}
 }

@@ -29,11 +29,13 @@ func (d *SessionDAO) GetByHash(tokenHash string) (types.Session, error) {
 	return session, e
 }
 
-// UpdateExpiresAt extends (or shortens) the expiry of a session.
-func (d *SessionDAO) UpdateExpiresAt(tokenHash string, expiresAt int64) error {
-	return d.db.C().Model(&types.Session{}).
+// UpdateExpiresAt extends (or shortens) the expiry of a session. The boolean is
+// false when the session was revoked before the update reached the database.
+func (d *SessionDAO) UpdateExpiresAt(tokenHash string, expiresAt int64) (bool, error) {
+	result := d.db.C().Model(&types.Session{}).
 		Where("token_hash = ?", tokenHash).
-		Update("expires_at", expiresAt).Error
+		Update("expires_at", expiresAt)
+	return result.RowsAffected == 1, result.Error
 }
 
 // DeleteByHash removes a single session.
