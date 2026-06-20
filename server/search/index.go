@@ -37,7 +37,8 @@ type Service struct {
 	runner  task.Runner
 	options *storage.OptionsDAO
 
-	bus event.Bus
+	bus         event.Bus
+	unsubscribe []event.Unsubscribe
 }
 
 func NewService(ch *registry.ComponentsHolder, config common.Config, od *storage.OptionsDAO,
@@ -63,8 +64,10 @@ func NewService(ch *registry.ComponentsHolder, config common.Config, od *storage
 			options: od,
 			bus:     bus,
 		}
-		s.bus.Subscribe(event.EntryUpdated, s.onUpdated)
-		s.bus.Subscribe(event.EntryDeleted, s.onDeleted)
+		s.unsubscribe = []event.Unsubscribe{
+			s.bus.SubscribeEntryUpdated(s.onUpdated),
+			s.bus.SubscribeEntryDeleted(s.onDeleted),
+		}
 	} else {
 		s = &Service{}
 	}
@@ -355,8 +358,9 @@ func (s *Service) Dispose() error {
 	if s.checkEnabled() != nil {
 		return nil
 	}
-	s.bus.Unsubscribe(event.EntryUpdated, s.onUpdated)
-	s.bus.Unsubscribe(event.EntryDeleted, s.onDeleted)
+	for _, unsubscribe := range s.unsubscribe {
+		unsubscribe()
+	}
 	return s.s.Dispose()
 }
 

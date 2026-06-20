@@ -42,7 +42,8 @@ type entryEventTrigger struct {
 	triggers []entryEventTriggerConfig
 	mu       sync.RWMutex
 
-	bus event.Bus
+	bus         event.Bus
+	unsubscribe []event.Unsubscribe
 }
 
 var _ IJobTriggerInstance = (*entryEventTrigger)(nil)
@@ -173,12 +174,15 @@ func (eet *entryEventTrigger) onEntryDeleted(dc types.DriveListenerContext, path
 }
 
 func (eet *entryEventTrigger) subscribeBusEvents() {
-	eet.bus.Subscribe(event.EntryUpdated, eet.onEntryUpdated)
-	eet.bus.Subscribe(event.EntryDeleted, eet.onEntryDeleted)
+	eet.unsubscribe = []event.Unsubscribe{
+		eet.bus.SubscribeEntryUpdated(eet.onEntryUpdated),
+		eet.bus.SubscribeEntryDeleted(eet.onEntryDeleted),
+	}
 }
 
 func (eet *entryEventTrigger) Dispose() error {
-	eet.bus.Unsubscribe(event.EntryUpdated, eet.onEntryUpdated)
-	eet.bus.Unsubscribe(event.EntryDeleted, eet.onEntryDeleted)
+	for _, unsubscribe := range eet.unsubscribe {
+		unsubscribe()
+	}
 	return nil
 }
