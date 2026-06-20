@@ -241,6 +241,69 @@ func TestEscapeXML(t *testing.T) {
 	}
 }
 
+type permissionFileSystem struct{}
+
+func (permissionFileSystem) Mkdir(context.Context, string, os.FileMode) error {
+	return os.ErrPermission
+}
+
+func (permissionFileSystem) OpenFile(context.Context, string, int, os.FileMode) (File, error) {
+	return nil, os.ErrPermission
+}
+
+func (permissionFileSystem) RemoveAll(context.Context, string) error {
+	return os.ErrPermission
+}
+
+func (permissionFileSystem) Rename(context.Context, string, string) error {
+	return os.ErrPermission
+}
+
+func (permissionFileSystem) Stat(context.Context, string) (os.FileInfo, error) {
+	return nil, os.ErrPermission
+}
+
+func TestPermissionErrorReturnsForbidden(t *testing.T) {
+	tests := []struct {
+		method      string
+		destination bool
+	}{
+		{method: "GET"},
+		{method: "DELETE"},
+		{method: "PUT"},
+		{method: "MKCOL"},
+		{method: "COPY", destination: true},
+		{method: "MOVE", destination: true},
+		{method: "PROPFIND"},
+		{method: "PROPPATCH"},
+	}
+
+	h := &Handler{FileSystem: permissionFileSystem{}, LockSystem: NewMemLS()}
+	for _, tt := range tests {
+		t.Run(tt.method, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, "http://example.com/file", nil)
+			if tt.destination {
+				req.Header.Set("Destination", "http://example.com/destination")
+			}
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, req)
+			if got := w.Code; got != http.StatusForbidden {
+				t.Fatalf("status = %d, want %d", got, http.StatusForbidden)
+			}
+		})
+	}
+}
+
+func TestPutWithoutParentReturnsConflict(t *testing.T) {
+	h := &Handler{FileSystem: NewMemFS(), LockSystem: NewMemLS()}
+	req := httptest.NewRequest("PUT", "http://example.com/missing/file", strings.NewReader("data"))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if got := w.Code; got != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", got, http.StatusConflict)
+	}
+}
+
 func TestFilenameEscape(t *testing.T) {
 	hrefRe := regexp.MustCompile(`<D:href>([^<]*)</D:href>`)
 	displayNameRe := regexp.MustCompile(`<D:displayname>([^<]*)</D:displayname>`)
