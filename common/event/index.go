@@ -2,46 +2,114 @@ package event
 
 import (
 	"go-drive/common/registry"
-
-	eb "github.com/asaskevich/EventBus"
+	"go-drive/common/types"
+	"sync"
 )
 
-// Bus is the event bus, all events are published on this bus
-// all event handlers must return as soon as possible
-// long-running event handlers should be run in task.Runner
+type Unsubscribe func()
+
+type EntryAccessedHandler func(types.DriveListenerContext, string)
+type EntryUpdatedHandler func(types.DriveListenerContext, string, bool)
+type EntryDeletedHandler func(types.DriveListenerContext, string)
+
+// Bus is a synchronous, strongly typed in-process event bus. Publish takes a
+// snapshot of subscribers before invoking them, so handlers may safely publish
+// another event or unsubscribe without deadlocking the bus.
 type Bus interface {
-	Publish(topic string, args ...any)
-	Subscribe(topic string, handler any)
-	SubscribeOnce(topic string, handler any)
-	Unsubscribe(topic string, handler any) bool
+	PublishEntryAccessed(types.DriveListenerContext, string)
+	PublishEntryUpdated(types.DriveListenerContext, string, bool)
+	PublishEntryDeleted(types.DriveListenerContext, string)
+	SubscribeEntryAccessed(EntryAccessedHandler) Unsubscribe
+	SubscribeEntryUpdated(EntryUpdatedHandler) Unsubscribe
+	SubscribeEntryDeleted(EntryDeletedHandler) Unsubscribe
 }
 
 func NewBus(ch *registry.ComponentsHolder) Bus {
-	b := &bus{eb.New()}
+	b := &bus{}
+	b.accessed.init()
+	b.updated.init()
+	b.deleted.init()
 	ch.Add(registry.KeyEventBus, b)
 	return b
 }
 
 type bus struct {
-	b eb.Bus
+	accessed subscriptions[EntryAccessedHandler]
+	updated  subscriptions[EntryUpdatedHandler]
+	deleted  subscriptions[EntryDeletedHandler]
 }
 
-func (b *bus) Publish(topic string, args ...any) {
-	b.b.Publish(topic, args...)
-}
-
-func (b *bus) Subscribe(topic string, handler any) {
-	if e := b.b.Subscribe(topic, handler); e != nil {
-		panic(e)
+func (b *bus) PublishEntryAccessed(ctx types.DriveListenerContext, path string) {
+	for _, handler := range b.accessed.snapshot() {
+		handler(ctx, path)
 	}
 }
 
-func (b *bus) SubscribeOnce(topic string, handler any) {
-	if e := b.b.SubscribeOnce(topic, handler); e != nil {
-		panic(e)
+func (b *bus) PublishEntryUpdated(ctx types.DriveListenerContext, path string, includeDescendants bool) {
+	for _, handler := range b.updated.snapshot() {
+		handler(ctx, path, includeDescendants)
 	}
 }
 
-func (b *bus) Unsubscribe(topic string, handler any) bool {
-	return b.b.Unsubscribe(topic, handler) == nil
+func (b *bus) PublishEntryDeleted(ctx types.DriveListenerContext, path string) {
+	for _, handler := range b.deleted.snapshot() {
+		handler(ctx, path)
+	}
+}
+
+func (b *bus) SubscribeEntryAccessed(handler EntryAccessedHandler) Unsubscribe {
+	return b.accessed.subscribe(handler)
+}
+
+func (b *bus) SubscribeEntryUpdated(handler EntryUpdatedHandler) Unsubscribe {
+	return b.updated.subscribe(handler)
+}
+
+func (b *bus) SubscribeEntryDeleted(handler EntryDeletedHandler) Unsubscribe {
+	return b.deleted.subscribe(handler)
+}
+
+type subscriptions[T any] struct {
+	mu       sync.RWMutex
+	nextID   uint64
+	handlers map[uint64]T
+	order    []uint64
+}
+
+func (s *subscriptions[T]) init() {
+	s.handlers = make(map[uint64]T)
+}
+
+func (s *subscriptions[T]) subscribe(handler T) Unsubscribe {
+	s.mu.Lock()
+	id := s.nextID
+	s.nextID++
+	s.handlers[id] = handler
+	s.order = append(s.order, id)
+	s.mu.Unlock()
+
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			s.mu.Lock()
+			delete(s.handlers, id)
+			for i, registeredID := range s.order {
+				if registeredID == id {
+					s.order = append(s.order[:i], s.order[i+1:]...)
+					break
+				}
+			}
+			s.mu.Unlock()
+		})
+	}
+}
+
+func (s *subscriptions[T]) snapshot() []T {
+	s.mu.RLock()
+	handlers := make([]T, 0, len(s.order))
+	for _, id := range s.order {
+		handlers = append(handlers, s.handlers[id])
+	}
+	s.mu.RUnlock()
+	return handlers
 }
