@@ -211,6 +211,18 @@ func parsePoolConfig(arg string) (*s.VMPoolConfig, error) {
 	if c.MaxIdle < c.MinIdle {
 		return nil, errors.New("MaxIdle must be greater than or equal to MinIdle")
 	}
+	if c.MaxTotal <= 0 {
+		return nil, errors.New("MaxTotal must be greater than zero")
+	}
+	if c.MaxIdle < 0 {
+		return nil, errors.New("MaxIdle must not be negative")
+	}
+	if c.MinIdle < 0 {
+		return nil, errors.New("MinIdle must not be negative")
+	}
+	if c.MaxTotal < c.MinIdle {
+		return nil, errors.New("MaxTotal must be greater than or equal to MinIdle")
+	}
 	return c, nil
 }
 
@@ -360,4 +372,3 @@ func (r readCloserContentReader) GetReader(_ context.Context, start, size int64)
 func (r readCloserContentReader) GetURL(_ context.Context) (*types.ContentURL, error) {
 	return nil, err.NewUnsupportedError()
 }
-
