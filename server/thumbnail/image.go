@@ -8,6 +8,7 @@ import (
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"image"
+	"image/draw"
 	_ "image/gif"
 	"image/jpeg"
 	_ "image/png"
@@ -15,7 +16,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/nfnt/resize"
+	xdraw "golang.org/x/image/draw"
 )
 
 func init() {
@@ -65,8 +66,30 @@ func (i *imageTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailE
 	if e != nil {
 		return e
 	}
-	resizedImg := resize.Thumbnail(i.imageSize, i.imageSize, img, resize.NearestNeighbor)
+	resizedImg := resizeThumbnail(img, int(i.imageSize), int(i.imageSize))
 	return jpeg.Encode(dest, resizedImg, &jpeg.Options{Quality: i.imageQuality})
+}
+
+func resizeThumbnail(src image.Image, maxWidth, maxHeight int) image.Image {
+	bounds := src.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
+	if width <= maxWidth && height <= maxHeight {
+		return src
+	}
+
+	newWidth, newHeight := width, height
+	if newWidth > maxWidth {
+		newHeight = max(1, newHeight*maxWidth/newWidth)
+		newWidth = maxWidth
+	}
+	if newHeight > maxHeight {
+		newWidth = max(1, newWidth*maxHeight/newHeight)
+		newHeight = maxHeight
+	}
+
+	dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
+	xdraw.NearestNeighbor.Scale(dst, dst.Bounds(), src, bounds, draw.Src, nil)
+	return dst
 }
 
 func (i *imageTypeHandler) MimeType() string {

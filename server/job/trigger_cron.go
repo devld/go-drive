@@ -1,6 +1,7 @@
 package job
 
 import (
+	"fmt"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
@@ -8,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-co-op/gocron"
+	"github.com/go-co-op/gocron/v2"
 	"github.com/robfig/cron/v3"
 )
 
@@ -33,16 +34,15 @@ var _ IJobTriggerInstance = (*cronTrigger)(nil)
 // cronTrigger handles cron-based job scheduling (used by Trigger definition)
 type cronTrigger struct {
 	executor *JobExecutor
-	s        *gocron.Scheduler
+	s        gocron.Scheduler
 }
 
 func newCronTrigger(executor *JobExecutor) *cronTrigger {
-	s := gocron.NewScheduler(time.Local)
-
-	s.TagsUnique()
-	s.WaitForScheduleAll()
-
-	s.StartAsync()
+	s, e := gocron.NewScheduler(gocron.WithLocation(time.Local))
+	if e != nil {
+		panic(e)
+	}
+	s.Start()
 
 	return &cronTrigger{executor: executor, s: s}
 }
@@ -77,27 +77,44 @@ func (ct *cronTrigger) Register(jobID uint, config types.SM) error {
 		return err.NewBadRequestError("cron schedule is required")
 	}
 
-	j, e := ct.s.Cron(schedule).Tag(strconv.FormatUint(uint64(jobID), 10)).Do(ct.triggerAction, jobID)
-
-	if e == nil {
-		j.SingletonMode()
+	tag := strconv.FormatUint(uint64(jobID), 10)
+	for _, scheduledJob := range ct.s.Jobs() {
+		for _, jobTag := range scheduledJob.Tags() {
+			if jobTag == tag {
+				return fmt.Errorf("cron job %d is already registered", jobID)
+			}
+		}
 	}
 
+	_, e := ct.s.NewJob(
+		gocron.CronJob(schedule, false),
+		gocron.NewTask(ct.triggerAction, jobID),
+		gocron.WithTags(tag),
+		gocron.WithSingletonMode(gocron.LimitModeReschedule),
+	)
 	return e
 }
 
 func (ct *cronTrigger) GetInfo(jobID uint) ([]types.SM, error) {
-	jobs, e := ct.s.FindJobsByTag(strconv.FormatUint(uint64(jobID), 10))
-	if e != nil {
-		return nil, nil
-	}
-	if len(jobs) == 0 {
-		return nil, nil
-	}
-	stats := make([]types.SM, 0, len(jobs))
-	for _, job := range jobs {
+	tag := strconv.FormatUint(uint64(jobID), 10)
+	stats := make([]types.SM, 0, 1)
+	for _, scheduledJob := range ct.s.Jobs() {
+		matched := false
+		for _, jobTag := range scheduledJob.Tags() {
+			if jobTag == tag {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			continue
+		}
+		nextRun, e := scheduledJob.NextRun()
+		if e != nil {
+			return nil, e
+		}
 		stats = append(stats, types.SM{
-			"nextRun": job.NextRun().Format(time.RFC3339),
+			"nextRun": nextRun.Format(time.RFC3339),
 		})
 	}
 	return stats, nil
@@ -108,11 +125,11 @@ func (ct *cronTrigger) triggerAction(jobID uint) {
 }
 
 func (ct *cronTrigger) Clear() {
-	ct.s.Clear()
+	for _, scheduledJob := range ct.s.Jobs() {
+		_ = ct.s.RemoveJob(scheduledJob.ID())
+	}
 }
 
 func (ct *cronTrigger) Dispose() error {
-	ct.s.Stop()
-	ct.Clear()
-	return nil
+	return ct.s.Shutdown()
 }
