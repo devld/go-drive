@@ -1,6 +1,5 @@
 import { getLang } from '@/i18n'
-import { waitPromise } from '@/utils'
-import http, {
+import {
   Http,
   HttpError,
   HttpRequestBaseConfig,
@@ -17,6 +16,7 @@ import {
 export const AUTH_PARAM = 'token'
 
 const AUTH_HEADER = 'Authorization'
+const PATH_PASSWORD_HEADER = 'X-Path-Password'
 const TOKEN_KEY = 'token'
 const RESPONSE_HEADER_KEY = 'x-response'
 
@@ -33,7 +33,7 @@ const BASE_CONFIG: HttpRequestBaseConfig = {
   timeout: 60000,
 }
 
-function setToken(token: string) {
+export function setToken(token: string) {
   return localStorage.setItem(TOKEN_KEY, token)
 }
 
@@ -41,12 +41,58 @@ export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-const doAuth = waitPromise(async () => {
-  const data = (await http.post('/auth/init', null, BASE_CONFIG)).data
-  const token = data.token
-  setToken(token)
-  return token
-})
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
+// Cache of path passwords keyed by the path the user unlocked, persisted in
+// localStorage. The password applies to the whole subtree, so it is attached
+// automatically when requesting that path or any of its descendants.
+const PATH_PASSWORDS_KEY = 'pathPasswords'
+
+type CachedPathPassword = { path: string; password: string }
+
+function loadCachedPathPasswords(): CachedPathPassword[] {
+  try {
+    const raw = localStorage.getItem(PATH_PASSWORDS_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+let pathPasswords: CachedPathPassword[] = loadCachedPathPasswords()
+
+function saveCachedPathPasswords() {
+  localStorage.setItem(PATH_PASSWORDS_KEY, JSON.stringify(pathPasswords))
+}
+
+export function setCachedPathPassword(path: string, password: string) {
+  const existing = pathPasswords.find((p) => p.path === path)
+  if (existing) existing.password = password
+  else pathPasswords.push({ path, password })
+  saveCachedPathPasswords()
+}
+
+export function clearCachedPathPasswords() {
+  pathPasswords = []
+  localStorage.removeItem(PATH_PASSWORDS_KEY)
+}
+
+function getCachedPathPassword(path: string): string | undefined {
+  let best: { path: string; password: string } | undefined
+  for (const p of pathPasswords) {
+    const match = path === p.path || path.startsWith(p.path ? p.path + '/' : '')
+    if (match && (!best || p.path.length > best.path.length)) best = p
+  }
+  return best?.password
+}
+
+export function pathPasswordHeaders(path: string): Record<string, string> {
+  const pw = getCachedPathPassword(path)
+  return pw ? { [PATH_PASSWORD_HEADER]: pw } : {}
+}
 
 async function processConfig(config: HttpRequestConfig) {
   if (!config.context) config.context = {}
@@ -57,9 +103,13 @@ async function processConfig(config: HttpRequestConfig) {
 
   if (!config.headers) config.headers = {}
 
-  const token = getToken() ?? (await doAuth())
-  config.headers[AUTH_HEADER] = token
-  config.context._tokenUsing = token
+  const token = getToken()
+  if (token) {
+    config.headers[AUTH_HEADER] = token
+    config.context._tokenUsing = token
+  } else {
+    delete config.headers[AUTH_HEADER]
+  }
 
   config.headers['Accept-Language'] = getLang()
 
@@ -73,9 +123,12 @@ async function handlerError(e: any) {
 
   const config = response.request
   if (status === 401) {
-    if (getToken() === config.context?._tokenUsing) {
-      // if expired token was not replaced with a new one
-      await doAuth()
+    // the token is invalid/expired: drop it and retry once as anonymous
+    if (getToken() && getToken() === config.context?._tokenUsing) {
+      clearToken()
+    } else {
+      // already anonymous (or token already changed); nothing to recover
+      throw e
     }
     const originalHttp = config.context?.__initiator as Http | undefined
     if (!originalHttp) throw e

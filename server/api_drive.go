@@ -67,9 +67,6 @@ func InitDriveRoutes(
 	// list entries/drives
 	router.GET("/entries/*path", SignatureAuth(signer, userDAO, false), tokenAuth, dr._getDrive, dr.list)
 
-	// set path password
-	r.POST("/password/*path", dr.setPathPassword)
-
 	// get entry info
 	r.GET("/entry/*path", dr._getDrive, dr.get)
 	// mkdir
@@ -115,8 +112,13 @@ type driveRoute struct {
 }
 
 func (dr *driveRoute) _getDrive(c *gin.Context) {
-	session := GetSession(c)
-	drive, e := dr.access.GetDrive(session)
+	principal := GetPrincipal(c)
+	// path password is provided per-request via a header and kept on this
+	// request's principal only (never persisted)
+	if pwd := c.GetHeader(common.HeaderPathPassword); pwd != "" {
+		principal.PathPassword = pwd
+	}
+	drive, e := dr.access.GetDrive(principal)
 	if e != nil {
 		_ = c.Error(e)
 		c.Abort()
@@ -126,52 +128,9 @@ func (dr *driveRoute) _getDrive(c *gin.Context) {
 	c.Next()
 }
 
-func (dr *driveRoute) setPathPassword(c *gin.Context) {
-	path := utils.CleanPath(c.Param("path"))
-	password := c.Query("password")
-	if e := dr._setPassword(c, path, password); e != nil {
-		_ = c.Error(e)
-		return
-	}
-}
-
-func (dr *driveRoute) _setPassword(c *gin.Context, path, password string) error {
-	if password == "" {
-		return nil
-	}
-	if len(password) > 32 {
-		password = password[:32]
-	}
-	chroot, e := dr.access.GetChroot(GetSession(c))
-	if e != nil {
-		return e
-	}
-	if chroot != nil {
-		path, e = chroot.WrapPath(path)
-		if e != nil {
-			return e
-		}
-	}
-	meta, e := dr.pathMeta.GetMerged(path)
-	if e != nil {
-		return e
-	}
-	if meta == nil || meta.Password.V == "" {
-		return nil
-	}
-	return UpdateSession(c, dr.tokenStore, func(session *types.Session) {
-		session.Props["password:"+meta.Password.Path] = password
-	})
-}
-
 func (dr *driveRoute) list(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
 	d := c.MustGet("drive").(types.IDrive)
-
-	if e := dr._setPassword(c, path, c.Query("password")); e != nil {
-		_ = c.Error(e)
-		return
-	}
 
 	entry, e := d.Get(c.Request.Context(), path)
 	if e != nil {
@@ -183,11 +142,11 @@ func (dr *driveRoute) list(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	session := GetSession(c)
+	principal := GetPrincipal(c)
 	res := make([]entryJson, 0, len(entries)+1)
-	res = append(res, *dr.newEntryJson(entry, session))
+	res = append(res, *dr.newEntryJson(entry, principal))
 	for _, v := range entries {
-		res = append(res, *dr.newEntryJson(v, session))
+		res = append(res, *dr.newEntryJson(v, principal))
 	}
 	SetResult(c, res)
 }
@@ -201,7 +160,7 @@ func (dr *driveRoute) get(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, dr.newEntryJson(entry, GetSession(c)))
+	SetResult(c, dr.newEntryJson(entry, GetPrincipal(c)))
 }
 
 func (dr *driveRoute) makeDir(c *gin.Context) {
@@ -213,7 +172,7 @@ func (dr *driveRoute) makeDir(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, dr.newEntryJson(entry, GetSession(c)))
+	SetResult(c, dr.newEntryJson(entry, GetPrincipal(c)))
 }
 
 func (dr *driveRoute) copyEntry(c *gin.Context) {
@@ -230,14 +189,14 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	session := GetSession(c)
+	principal := GetPrincipal(c)
 	override := utils.ToBool(c.Query("override"))
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (any, error) {
 		r, e := drive_.Copy(ctx, fromEntry, to, override)
 		if e != nil {
 			return nil, e
 		}
-		return dr.newEntryJson(r, session), nil
+		return dr.newEntryJson(r, principal), nil
 	}, 2*time.Second, task.WithNameGroup(from+" -> "+to, "drive/copy"))
 
 	if e != nil {
@@ -261,14 +220,14 @@ func (dr *driveRoute) move(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	session := GetSession(c)
+	principal := GetPrincipal(c)
 	override := utils.ToBool(c.Query("override"))
 	t, e := dr.runner.ExecuteAndWait(func(ctx types.TaskCtx) (any, error) {
 		r, e := drive_.Move(ctx, fromEntry, to, override)
 		if e != nil {
 			return nil, e
 		}
-		return dr.newEntryJson(r, session), nil
+		return dr.newEntryJson(r, principal), nil
 	}, 2*time.Second, task.WithNameGroup(from+" -> "+to, "drive/move"))
 
 	if e != nil {
@@ -456,7 +415,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
 	d := c.MustGet("drive").(types.IDrive)
 
-	session := GetSession(c)
+	principal := GetPrincipal(c)
 	override := utils.ToBool(c.Query("override"))
 	defer func() { _ = c.Request.Body.Close() }()
 	tempFile, size, e := ReadRequestBodyToTempFile(c, dr.config.TempDir)
@@ -473,7 +432,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 		if e != nil {
 			return nil, e
 		}
-		return dr.newEntryJson(r, session), nil
+		return dr.newEntryJson(r, principal), nil
 	}, 2*time.Second, task.WithNameGroup(path, "drive/write"))
 	if e != nil {
 		_ = c.Error(e)
@@ -512,7 +471,7 @@ func (dr *driveRoute) chunkUpload(c *gin.Context) {
 func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 	d := c.MustGet("drive").(types.IDrive)
 
-	session := GetSession(c)
+	principal := GetPrincipal(c)
 	override := utils.ToBool(c.Query("override"))
 	path := utils.CleanPath(c.Param("path"))
 	id := c.Query("id")
@@ -535,7 +494,7 @@ func (dr *driveRoute) chunkUploadComplete(c *gin.Context) {
 		}
 		_ = tempFile.Close()
 		_ = dr.chunkUploader.DeleteUpload(id)
-		return dr.newEntryJson(entry, session), nil
+		return dr.newEntryJson(entry, principal), nil
 	}, 2*time.Second, task.WithNameGroup(path, "drive/chunk-merge"))
 	if e != nil {
 		_ = c.Error(e)
@@ -556,7 +515,7 @@ func (dr *driveRoute) search(c *gin.Context) {
 	query := c.Query("q")
 	next := utils.ToInt(c.Query("next"), 0)
 
-	chroot, e := dr.access.GetChroot(GetSession(c))
+	chroot, e := dr.access.GetChroot(GetPrincipal(c))
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -576,7 +535,7 @@ func (dr *driveRoute) search(c *gin.Context) {
 
 	r, e := dr.searcher.Search(
 		c.Request.Context(), root, query, next,
-		dr.access.GetPerms().Filter(GetSession(c)),
+		dr.access.GetPerms().Filter(GetPrincipal(c)),
 	)
 	if e != nil {
 		_ = c.Error(e)
@@ -593,7 +552,7 @@ func (dr *driveRoute) search(c *gin.Context) {
 	SetResult(c, r)
 }
 
-func (dr *driveRoute) newEntryJson(e types.IEntry, s types.Session) *entryJson {
+func (dr *driveRoute) newEntryJson(e types.IEntry, principal types.Principal) *entryJson {
 	entryMeta := e.Meta()
 	meta := utils.MapCopy(entryMeta.Props, nil)
 	meta["writable"] = entryMeta.Writable
@@ -607,9 +566,9 @@ func (dr *driveRoute) newEntryJson(e types.IEntry, s types.Session) *entryJson {
 			meta["thumbnail"] = true
 		}
 	}
-	meta["accessKey"] = MakeSignature(dr.signer, e.Path(), s.User.Username, dr.config.SignatureTTL)
+	meta["accessKey"] = MakeSignature(dr.signer, e.Path(), principal.User.Username, dr.config.SignatureTTL)
 
-	if !s.HasUserGroup(types.AdminUserGroup) {
+	if !principal.HasUserGroup(types.AdminUserGroup) {
 		delete(meta, "mountAt")
 	}
 	return &entryJson{

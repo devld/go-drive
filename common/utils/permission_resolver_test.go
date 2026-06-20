@@ -40,7 +40,7 @@ func TestPermMap_Filter(t *testing.T) {
 	pm := NewPermMap(perms)
 
 	// Anonymous session: only ANY subject (root read); private inherits read but not write.
-	sessionAnon := types.NewSession()
+	sessionAnon := types.Principal{AuthType: types.AuthTypeNone}
 	filtered := pm.Filter(sessionAnon)
 	if len(filtered) != 1 {
 		t.Errorf("anonymous Filter: want 1 subject, got %d", len(filtered))
@@ -54,9 +54,8 @@ func TestPermMap_Filter(t *testing.T) {
 	}
 
 	// Logged-in user alice: should have ANY + u:alice.
-	sessionAlice := types.Session{
-		User:  types.User{Username: "alice", Groups: nil},
-		Props: types.SM{},
+	sessionAlice := types.Principal{
+		User: types.User{Username: "alice", Groups: nil},
 	}
 	filtered = pm.Filter(sessionAlice)
 	if len(filtered) != 2 {
@@ -68,9 +67,8 @@ func TestPermMap_Filter(t *testing.T) {
 	}
 
 	// Admin user: should get privilegedPermMap (root read+write).
-	sessionAdmin := types.Session{
-		User:  types.User{Username: "admin", Groups: []types.Group{{Name: types.AdminUserGroup}}},
-		Props: types.SM{},
+	sessionAdmin := types.Principal{
+		User: types.User{Username: "admin", Groups: []types.Group{{Name: types.AdminUserGroup}}},
 	}
 	filtered = pm.Filter(sessionAdmin)
 	// privilegedPermMap grants root read+write.
@@ -425,7 +423,7 @@ func TestPermMap_FilterThenResolve(t *testing.T) {
 	pm := NewPermMap(perms)
 
 	// Anonymous: can only read root and driveA, cannot write driveA/docs (no alice subject).
-	sessionAnon := types.NewSession()
+	sessionAnon := types.Principal{AuthType: types.AuthTypeNone}
 	f := pm.Filter(sessionAnon)
 	if f.ResolvePath("").Readable() != true || f.ResolvePath("driveA").Readable() != true {
 		t.Errorf("anonymous: root and driveA should be readable")
@@ -435,7 +433,7 @@ func TestPermMap_FilterThenResolve(t *testing.T) {
 	}
 
 	// alice: driveA/docs is read-write.
-	sessionAlice := types.Session{User: types.User{Username: "alice", Groups: nil}, Props: types.SM{}}
+	sessionAlice := types.Principal{User: types.User{Username: "alice", Groups: nil}}
 	f = pm.Filter(sessionAlice)
 	if !f.ResolvePath("driveA/docs").Writable() {
 		t.Errorf("alice: driveA/docs should be writable")

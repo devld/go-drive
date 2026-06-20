@@ -26,10 +26,13 @@ export default {
       form.appendChild(prefix)
     }
 
-    const token = document.createElement('input')
-    token.name = AUTH_PARAM
-    token.value = getToken()!
-    form.appendChild(token)
+    const tokenValue = getToken()
+    if (tokenValue) {
+      const token = document.createElement('input')
+      token.name = AUTH_PARAM
+      token.value = tokenValue
+      form.appendChild(token)
+    }
 
     const files = document.createElement('textarea')
     files.name = 'files'

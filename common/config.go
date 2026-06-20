@@ -27,10 +27,11 @@ var (
 )
 
 const (
-	HeaderAuth        = "Authorization"
-	ParamAuth         = "token"
-	SignatureQueryKey = "_k"
-	ResponseHeaderKey = "X-Response"
+	HeaderAuth         = "Authorization"
+	HeaderPathPassword = "X-Path-Password"
+	ParamAuth          = "token"
+	SignatureQueryKey  = "_k"
+	ResponseHeaderKey  = "X-Response"
 )
 
 const (
@@ -52,6 +53,7 @@ const (
 	DefaultThumbnailTTL        = 30 * 24 * time.Hour
 	DefaultAuthValidity        = 2 * time.Hour
 	DefaultAuthAutoRefresh     = true
+	DefaultAuthMaxAge          = 7 * 24 * time.Hour
 	DefaultSignatureTTL        = 12 * time.Hour
 	DefaultWebDavPrefix        = "/dav"
 	DefaultWebDavMaxCacheItems = 1000
@@ -151,6 +153,9 @@ type ThumbnailHandlerItem struct {
 type AuthConfig struct {
 	Validity    time.Duration `yaml:"validity"`
 	AutoRefresh bool          `yaml:"auto-refresh"`
+	// MaxAge is the absolute maximum lifetime of a session regardless of sliding
+	// refresh. 0 means no absolute cap.
+	MaxAge time.Duration `yaml:"max-age"`
 }
 
 type WebDavConfig struct {
@@ -194,6 +199,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		Auth: AuthConfig{
 			Validity:    DefaultAuthValidity,
 			AutoRefresh: DefaultAuthAutoRefresh,
+			MaxAge:      DefaultAuthMaxAge,
 		},
 		SignatureTTL: DefaultSignatureTTL,
 		WebDav: WebDavConfig{

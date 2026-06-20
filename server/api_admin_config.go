@@ -82,7 +82,7 @@ func (cr *configRoute) deletePathMeta(c *gin.Context) {
 }
 
 func (cr *configRoute) savePathMounts(c *gin.Context) {
-	s := GetSession(c)
+	principal := GetPrincipal(c)
 	to := utils.CleanPath(c.Param("to"))
 	src := make([]mountSource, 0)
 	if e := c.Bind(&src); e != nil {
@@ -113,8 +113,8 @@ func (cr *configRoute) savePathMounts(c *gin.Context) {
 	_ = cr.rootDrive.ReloadMounts()
 	for _, m := range mounts {
 		cr.bus.Publish(event.EntryUpdated, types.DriveListenerContext{
-			Session: &s,
-			Drive:   cr.rootDrive.Get(),
+			Principal: &principal,
+			Drive:     cr.rootDrive.Get(),
 		}, path2.Join(*m.Path, m.Name), true)
 	}
 }

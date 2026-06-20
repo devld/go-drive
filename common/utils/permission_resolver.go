@@ -49,7 +49,7 @@ func (pm PermMap) filter(subjects []string) PermMap {
 	return result
 }
 
-func (pm PermMap) Filter(session types.Session) PermMap {
+func (pm PermMap) Filter(session types.Principal) PermMap {
 	if session.HasUserGroup(types.AdminUserGroup) {
 		return privilegedPermMap
 	}
@@ -99,7 +99,7 @@ func (p pathPermItem) String() string {
 	return fmt.Sprintf("%s,%s,%d,%d", *p.Path, p.Subject, p.Permission, p.Policy)
 }
 
-func makeSubjects(session types.Session) []string {
+func makeSubjects(session types.Principal) []string {
 	subjects := make([]string, 0, 3)
 	subjects = append(subjects, types.AnySubject) // Anonymous
 	if !session.IsAnonymous() {

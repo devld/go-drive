@@ -55,7 +55,9 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	fileTokenStore, err := server.NewFileTokenStore(config, ch)
+	userDAO := storage.NewUserDAO(db, ch)
+	sessionDAO := storage.NewSessionDAO(db, ch)
+	dbTokenStore, err := server.NewDBTokenStore(sessionDAO, userDAO, config, ch)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +70,6 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	userDAO := storage.NewUserDAO(db, ch)
 	groupDAO := storage.NewGroupDAO(db, ch)
 	jobDAO := storage.NewJobDAO(db, ch)
 	fileBucketDAO := storage.NewFileBucketDAO(db, ch)
@@ -80,7 +81,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, fileTokenStore, maker, signer, chunkUploader, tunnyRunner, optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO, jobExecutor, fileMessageSource)
+	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, dbTokenStore, maker, signer, chunkUploader, tunnyRunner, optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO, jobExecutor, fileMessageSource)
 	if err != nil {
 		return nil, err
 	}
