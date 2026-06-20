@@ -38,6 +38,17 @@ func TestPathParent(t *testing.T) {
 	}
 }
 
+func TestCleanPathRemovesParentTraversal(t *testing.T) {
+	for _, input := range []string{"..", "../..", "../../", "/../../"} {
+		if got := CleanPath(input); got != "" {
+			t.Errorf("CleanPath(%q) = %q, want empty", input, got)
+		}
+	}
+	if got := CleanPath("../../safe/file"); got != "safe/file" {
+		t.Errorf("CleanPath traversal result = %q", got)
+	}
+}
+
 func TestPathParentTree(t *testing.T) {
 	path := "a/b/c"
 
