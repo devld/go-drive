@@ -17,6 +17,7 @@ import (
 	"time"
 
 	xdraw "golang.org/x/image/draw"
+	_ "golang.org/x/image/webp"
 )
 
 func init() {

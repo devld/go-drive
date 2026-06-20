@@ -81,7 +81,7 @@ thumbnail:
     # Notice: this have bad performance
     - type: image
       tags:
-      file-types: jpg,jpeg,png,gif
+      file-types: jpg,jpeg,png,gif,webp
       #config:
       #  # max supported file size
       #  max-size: 33554432 # 32MB
