@@ -5,7 +5,7 @@ import "reflect"
 type VisitNode func(reflect.Value, *reflect.StructField)
 
 func VisitValueTree(v any, fn VisitNode) any {
-	val := reflect.Indirect(reflect.ValueOf(v))
+	val := reflect.ValueOf(v)
 	r := visitValueTree(val, nil, fn)
 	if r.IsValid() {
 		return r.Interface()
@@ -18,15 +18,16 @@ func visitValueTree(v reflect.Value, sf *reflect.StructField, fn VisitNode) refl
 		return v
 	}
 	switch v.Kind() {
-	case reflect.Interface, reflect.Ptr:
-		if v.IsNil() {
-			return v
-		}
-		el := v.Elem()
-		p := visitValueTree(el, nil, fn)
-		pr := reflect.New(p.Type())
-		pr.Elem().Set(p)
-		return pr
+	case reflect.Interface:
+		p := visitValueTree(v.Elem(), sf, fn)
+		r := reflect.New(v.Type()).Elem()
+		r.Set(p)
+		return r
+	case reflect.Ptr:
+		p := visitValueTree(v.Elem(), sf, fn)
+		r := reflect.New(v.Type().Elem())
+		r.Elem().Set(p)
+		return r
 	case reflect.Map:
 		r := reflect.MakeMapWithSize(v.Type(), v.Len())
 		mapR := v.MapRange()
@@ -41,26 +42,29 @@ func visitValueTree(v reflect.Value, sf *reflect.StructField, fn VisitNode) refl
 			r.Index(i).Set(visitValueTree(v.Index(i), nil, fn))
 		}
 		return r
+	case reflect.Array:
+		r := reflect.New(v.Type()).Elem()
+		for i := 0; i < v.Len(); i++ {
+			r.Index(i).Set(visitValueTree(v.Index(i), nil, fn))
+		}
+		return r
 	case reflect.Struct:
+		// Preserve the existing behavior for structs with unexported fields:
+		// they are treated as opaque values.
+		for i := 0; i < v.NumField(); i++ {
+			if !reflect.New(v.Type()).Elem().Field(i).CanSet() {
+				return v
+			}
+		}
 		r := reflect.New(v.Type())
 		n := v.NumField()
-		failedFields := false
 		for i := 0; i < n; i++ {
 			f := v.Field(i)
 			rf := r.Elem().Field(i)
-			if !rf.CanSet() {
-				failedFields = true
-				// if there is any unexported field in this Struct, then just skip...
-				break
-			}
 			sf := v.Type().Field(i)
 			rf.Set(visitValueTree(f, &sf, fn))
 		}
-		if failedFields {
-			return v
-		}
-		re := r.Elem()
-		return re
+		return r.Elem()
 	}
 	vv := reflect.New(v.Type())
 	vv.Elem().Set(v)

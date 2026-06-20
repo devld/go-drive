@@ -38,6 +38,11 @@ func (p *IdPool[T]) Release(id T) {
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	// IDs above max have never been issued. Adding them to the free list would
+	// make Next return the same ID again when max eventually reaches it.
+	if id > p.max {
+		return
+	}
 
 	if len(p.pool) == 0 {
 		p.pool = append(p.pool, [2]T{id, id})
