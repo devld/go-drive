@@ -58,7 +58,6 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequ
 			return
 		}
 
-		session := types.NewSession()
 		var username string
 
 		path := utils.CleanPath(c.Param("path"))
@@ -81,6 +80,9 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequ
 			return
 		}
 
+		// a valid signature already proves authorization for this path, even for
+		// an anonymous access key (empty username)
+		principal := types.Principal{AuthType: types.AuthTypeSignature}
 		if username != "" {
 			user, e := userDAO.GetUser(username)
 			if e != nil {
@@ -88,10 +90,10 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequ
 				c.Abort()
 				return
 			}
-			session.User = user
+			principal.User = user
 		}
 
-		SetSession(c, session)
+		SetPrincipal(c, principal)
 		c.Next()
 	}
 }
@@ -126,16 +128,21 @@ func tokenAuth(tokenStore types.TokenStore, getToken func(*gin.Context) string) 
 		}
 
 		tokenKey := getToken(c)
+		if tokenKey == "" {
+			// no token: browse as an anonymous session
+			SetPrincipal(c, types.Principal{})
+			c.Next()
+			return
+		}
 		token, e := tokenStore.Validate(tokenKey)
 		if e != nil {
 			_ = c.Error(e)
 			c.Abort()
 			return
 		}
-		session := token.Value
 
 		SetToken(c, token.Token)
-		SetSession(c, session)
+		SetPrincipal(c, token.Value)
 
 		c.Next()
 	}
@@ -149,7 +156,7 @@ func BasicAuth(userAuth *UserAuth, realm string, allowAnonymous bool) gin.Handle
 		}
 
 		username, password, ok := c.Request.BasicAuth()
-		session := types.NewSession()
+		principal := types.Principal{}
 		if ok {
 			user, e := userAuth.AuthByUsernamePassword(username, password)
 			if e != nil {
@@ -158,26 +165,28 @@ func BasicAuth(userAuth *UserAuth, realm string, allowAnonymous bool) gin.Handle
 					c.Abort()
 					return
 				}
+				// invalid credentials: fall back to an anonymous principal
+			} else {
+				principal = types.Principal{User: user, AuthType: types.AuthTypeBasic}
 			}
-			session.User = user
 		}
 
-		if session.IsAnonymous() && !allowAnonymous {
+		if principal.IsAnonymous() && !allowAnonymous {
 			c.Status(http.StatusUnauthorized)
 			c.Header("WWW-Authenticate", fmt.Sprintf("Basic realm=\"%s\"", realm))
 			c.Abort()
 			return
 		}
 
-		SetSession(c, session)
+		SetPrincipal(c, principal)
 		c.Next()
 	}
 }
 
 func UserGroupRequired(group string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		session := GetSession(c)
-		if session.HasUserGroup(group) {
+		principal := GetPrincipal(c)
+		if principal.HasUserGroup(group) {
 			c.Next()
 			return
 		}
@@ -288,28 +297,15 @@ func GetMessageSource(c *gin.Context) i18n.MessageSource {
 	return nil
 }
 
-func GetSession(c *gin.Context) types.Session {
+func GetPrincipal(c *gin.Context) types.Principal {
 	if s, exists := c.Get(keySession); exists {
-		return s.(types.Session)
+		return s.(types.Principal)
 	}
-	return types.NewSession()
+	return types.Principal{}
 }
 
-func SetSession(c *gin.Context, session types.Session) {
-	c.Set(keySession, session)
-}
-
-func UpdateSession(c *gin.Context, tokenStore types.TokenStore, update func(session *types.Session)) error {
-	session := GetSession(c)
-	update(&session)
-	if token := GetToken(c); token != "" {
-		_, e := tokenStore.Update(token, session)
-		if e != nil {
-			return e
-		}
-	}
-	SetSession(c, session)
-	return nil
+func SetPrincipal(c *gin.Context, principal types.Principal) {
+	c.Set(keySession, principal)
 }
 
 func TranslateV(c *gin.Context, ms i18n.MessageSource, v any) any {
