@@ -3,7 +3,7 @@ module go-drive
 go 1.25.6
 
 require (
-	github.com/Jeffail/tunny v0.1.4
+	github.com/alitto/pond/v2 v2.7.1
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.31.16

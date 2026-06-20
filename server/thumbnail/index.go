@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Jeffail/tunny"
+	"github.com/alitto/pond/v2"
 	"github.com/bmatcuk/doublestar/v4"
 )
 
@@ -46,7 +46,7 @@ type Maker struct {
 	cacheDir string
 	apiPath  string
 
-	pool    *tunny.Pool
+	pool    pond.Pool
 	options *storage.OptionsDAO
 
 	validity    time.Duration
@@ -81,7 +81,7 @@ func NewMaker(config common.Config, optionsDAO *storage.OptionsDAO,
 	})
 
 	m.stopCleaner = utils.TimeTick(m.clean, 12*time.Hour)
-	m.pool = tunny.NewFunc(config.Thumbnail.Concurrent, m.executeTask)
+	m.pool = pond.NewPool(config.Thumbnail.Concurrent)
 	ch.Add(registry.KeyThumbnail, m)
 	return m, nil
 }
@@ -272,20 +272,18 @@ func (m *Maker) doMake(ctx context.Context, entry ThumbnailEntry, path string) (
 	}
 	task := &taskWrapper{h: h, entry: entry, dest: path}
 
-	// buffered so the goroutine never blocks on send after a ctx cancellation
+	// Buffered so the worker never blocks after the caller's context is canceled.
 	c := make(chan error, 1)
-	go func() {
-		taskErr := m.pool.Process(task)
+	if e := m.pool.Go(func() {
+		taskErr := m.executeTask(task)
 		if taskErr == errMaking {
 			c <- waitPendingTask(ctx, task.dest, task.dest+lockSuffix)
 			return
 		}
-		if taskErr == nil {
-			c <- nil
-		} else {
-			c <- taskErr.(error)
-		}
-	}()
+		c <- taskErr
+	}); e != nil {
+		return nil, e
+	}
 
 	select {
 	case <-ctx.Done():
@@ -299,8 +297,7 @@ func (m *Maker) doMake(ctx context.Context, entry ThumbnailEntry, path string) (
 	return m.openFile(path, nil, nil, 0)
 }
 
-func (m *Maker) executeTask(v any) any {
-	task := v.(*taskWrapper)
+func (m *Maker) executeTask(task *taskWrapper) error {
 	exists, e := utils.FileExists(task.dest)
 	if e != nil {
 		return e
@@ -504,7 +501,7 @@ func (m *Maker) clean() {
 
 func (m *Maker) Dispose() error {
 	m.stopCleaner()
-	m.pool.Close()
+	m.pool.StopAndWait()
 	return nil
 }
 
