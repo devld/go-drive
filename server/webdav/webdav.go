@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -70,6 +71,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if errors.Is(err, os.ErrPermission) {
+		status = http.StatusForbidden
+	}
 	if status != 0 {
 		w.WriteHeader(status)
 		if status != http.StatusNoContent {
@@ -284,6 +288,9 @@ func (h *Handler) handlePut(w http.ResponseWriter, r *http.Request) (status int,
 
 	f, err := h.FileSystem.OpenFile(ctx, reqPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return http.StatusConflict, err
+		}
 		return http.StatusNotFound, err
 	}
 	_, copyErr := io.Copy(f, r.Body)
@@ -554,13 +561,13 @@ func (h *Handler) handlePropfind(w http.ResponseWriter, r *http.Request) (status
 
 	walkFn := func(reqPath string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return handlePropfindError(err, info)
 		}
 		var pstats []Propstat
 		if pf.Propname != nil {
 			pnames, err := propnames(ctx, h.FileSystem, h.LockSystem, info, reqPath)
 			if err != nil {
-				return err
+				return handlePropfindError(err, info)
 			}
 			pstat := Propstat{Status: http.StatusOK}
 			for _, xmlname := range pnames {
@@ -573,7 +580,7 @@ func (h *Handler) handlePropfind(w http.ResponseWriter, r *http.Request) (status
 			pstats, err = props(ctx, h.FileSystem, h.LockSystem, info, reqPath, pf.Prop)
 		}
 		if err != nil {
-			return err
+			return handlePropfindError(err, info)
 		}
 		href := path.Join(h.Prefix, reqPath)
 		if href != "/" && info.IsDir() {
@@ -650,6 +657,24 @@ func makePropstatResponse(href string, pstats []Propstat) *response {
 		})
 	}
 	return &resp
+}
+
+// handlePropfindError mirrors the upstream x/net/webdav behavior: resources
+// that cannot be represented as valid WebDAV resources are omitted while a
+// directory that cannot be traversed is pruned from the walk.
+func handlePropfindError(err error, info os.FileInfo) error {
+	var skipResp error
+	if info != nil && info.IsDir() {
+		skipResp = filepath.SkipDir
+	}
+
+	if errors.Is(err, os.ErrPermission) {
+		return skipResp
+	}
+	if _, ok := err.(*os.PathError); ok {
+		return skipResp
+	}
+	return err
 }
 
 const (
