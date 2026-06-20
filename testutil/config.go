@@ -62,7 +62,6 @@ func defaultTestConfigWithDirs(dataDir, tempDir string) common.Config {
 		Auth: common.AuthConfig{
 			Validity:    common.DefaultAuthValidity,
 			AutoRefresh: common.DefaultAuthAutoRefresh,
-			MaxAge:      common.DefaultAuthMaxAge,
 		},
 		SignatureTTL: common.DefaultSignatureTTL,
 		WebDav: common.WebDavConfig{

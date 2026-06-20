@@ -15,7 +15,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2"
 )
+
+const sessionCacheMaxEntries = 1000
 
 // DBTokenStore is a server-side opaque token store backed by the database.
 //
@@ -31,29 +34,30 @@ type DBTokenStore struct {
 	userDAO    *storage.UserDAO
 
 	validity    time.Duration
-	maxAge      time.Duration
 	autoRefresh bool
 
-	cache       *utils.KVCache[dbTokenCacheItem]
+	cache       *lru.Cache[string, dbTokenCacheItem]
 	stopCleaner func()
 }
 
 type dbTokenCacheItem struct {
 	username  string
-	createdAt int64
 	expiresAt int64
 }
 
 func NewDBTokenStore(sessionDAO *storage.SessionDAO, userDAO *storage.UserDAO,
 	config common.Config, ch *registry.ComponentsHolder) (*DBTokenStore, error) {
 	authConfig := config.Auth
+	cache, e := lru.New[string, dbTokenCacheItem](sessionCacheMaxEntries)
+	if e != nil {
+		return nil, e
+	}
 	ts := &DBTokenStore{
 		sessionDAO:  sessionDAO,
 		userDAO:     userDAO,
 		validity:    authConfig.Validity,
-		maxAge:      authConfig.MaxAge,
 		autoRefresh: authConfig.AutoRefresh,
-		cache:       utils.NewKVCache[dbTokenCacheItem](authConfig.Validity),
+		cache:       cache,
 	}
 	ts.stopCleaner = utils.TimeTick(ts.clean, authConfig.Validity)
 	ch.Add(registry.KeyTokenStore, ts)
@@ -82,11 +86,10 @@ func (ts *DBTokenStore) Create(value types.Principal) (types.Token, error) {
 	if e := ts.sessionDAO.Create(row); e != nil {
 		return types.Token{}, e
 	}
-	ts.cache.Set(row.TokenHash, dbTokenCacheItem{
+	ts.setCached(row.TokenHash, dbTokenCacheItem{
 		username:  row.Username,
-		createdAt: row.CreatedAt,
 		expiresAt: row.ExpiresAt,
-	}, ts.validity)
+	})
 	return types.Token{Token: token, Value: value, ExpiredAt: expiresAt}, nil
 }
 
@@ -96,20 +99,29 @@ func (ts *DBTokenStore) Validate(token string) (types.Token, error) {
 	}
 	hash := hashToken(token)
 
-	item, ok := ts.cache.Get(hash)
+	item, ok := ts.getCached(hash)
 	if !ok {
 		row, e := ts.sessionDAO.GetByHash(hash)
 		if e != nil {
 			return types.Token{}, ts.invalidTokenError()
 		}
-		item = dbTokenCacheItem{username: row.Username, createdAt: row.CreatedAt, expiresAt: row.ExpiresAt}
-		ts.cache.Set(hash, item, ts.validity)
+		item = dbTokenCacheItem{username: row.Username, expiresAt: row.ExpiresAt}
+		ts.setCached(hash, item)
 	}
 
 	now := time.Now()
-	if item.expiresAt < now.Unix() {
+	if item.expiresAt <= now.Unix() {
 		_ = ts.revokeHash(hash)
 		return types.Token{}, ts.invalidTokenError()
+	}
+
+	expiresAt := item.expiresAt
+	if ts.autoRefresh {
+		var exists bool
+		expiresAt, exists = ts.maybeRefresh(hash, item, now)
+		if !exists {
+			return types.Token{}, ts.invalidTokenError()
+		}
 	}
 
 	principal := types.Principal{}
@@ -123,38 +135,37 @@ func (ts *DBTokenStore) Validate(token string) (types.Token, error) {
 		principal = types.Principal{User: user, AuthType: types.AuthTypeToken}
 	}
 
-	expiresAt := item.expiresAt
-	if ts.autoRefresh {
-		expiresAt = ts.maybeRefresh(hash, item, now)
-	}
-
 	return types.Token{Token: token, Value: principal, ExpiredAt: expiresAt}, nil
 }
 
 // maybeRefresh extends the token expiry only when it has passed half of its
-// validity, capped by the absolute max age (created_at + maxAge). It returns the
-// effective expiry (refreshed or not).
-func (ts *DBTokenStore) maybeRefresh(hash string, item dbTokenCacheItem, now time.Time) int64 {
+// validity. It returns the effective expiry and whether the session still
+// exists. The cache itself is concurrency-safe. Refresh and revoke are not
+// serialized; RowsAffected detects a session removed before this update.
+func (ts *DBTokenStore) maybeRefresh(hash string, item dbTokenCacheItem, now time.Time) (int64, bool) {
 	half := int64(ts.validity.Seconds()) / 2
 	if item.expiresAt-now.Unix() > half {
-		return item.expiresAt
+		return item.expiresAt, true
+	}
+
+	if current, ok := ts.getCached(hash); ok && current.expiresAt > item.expiresAt {
+		return current.expiresAt, true
 	}
 	newExp := now.Add(ts.validity).Unix()
-	if ts.maxAge > 0 {
-		maxExp := item.createdAt + int64(ts.maxAge.Seconds())
-		if newExp > maxExp {
-			newExp = maxExp
-		}
-	}
 	if newExp <= item.expiresAt {
-		return item.expiresAt
+		return item.expiresAt, true
 	}
-	if e := ts.sessionDAO.UpdateExpiresAt(hash, newExp); e != nil {
-		return item.expiresAt
+	updated, e := ts.sessionDAO.UpdateExpiresAt(hash, newExp)
+	if e != nil {
+		return item.expiresAt, true
+	}
+	if !updated {
+		ts.removeCached(hash)
+		return item.expiresAt, false
 	}
 	item.expiresAt = newExp
-	ts.cache.Set(hash, item, ts.validity)
-	return newExp
+	ts.setCached(hash, item)
+	return newExp, true
 }
 
 func (ts *DBTokenStore) Revoke(token string) error {
@@ -162,8 +173,28 @@ func (ts *DBTokenStore) Revoke(token string) error {
 }
 
 func (ts *DBTokenStore) revokeHash(hash string) error {
-	ts.cache.Remove(hash)
+	ts.removeCached(hash)
 	return ts.sessionDAO.DeleteByHash(hash)
+}
+
+func (ts *DBTokenStore) getCached(hash string) (dbTokenCacheItem, bool) {
+	item, ok := ts.cache.Get(hash)
+	if !ok {
+		return dbTokenCacheItem{}, false
+	}
+	if item.expiresAt <= time.Now().Unix() {
+		ts.cache.Remove(hash)
+		return dbTokenCacheItem{}, false
+	}
+	return item, true
+}
+
+func (ts *DBTokenStore) setCached(hash string, item dbTokenCacheItem) {
+	ts.cache.Add(hash, item)
+}
+
+func (ts *DBTokenStore) removeCached(hash string) {
+	ts.cache.Remove(hash)
 }
 
 func (ts *DBTokenStore) clean() {
@@ -185,5 +216,6 @@ func (ts *DBTokenStore) Status() (string, types.SM, error) {
 
 func (ts *DBTokenStore) Dispose() error {
 	ts.stopCleaner()
-	return ts.cache.Dispose()
+	ts.cache.Purge()
+	return nil
 }
