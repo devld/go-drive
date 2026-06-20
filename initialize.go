@@ -42,8 +42,8 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	tunnyRunner := task.NewTunnyRunner(config, ch)
-	service, err := search.NewService(ch, config, optionsDAO, rootDrive, tunnyRunner, bus)
+	runner := task.NewPondRunner(config, ch)
+	service, err := search.NewService(ch, config, optionsDAO, rootDrive, runner, bus)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, dbTokenStore, maker, signer, chunkUploader, tunnyRunner, optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO, jobExecutor, fileMessageSource)
+	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, dbTokenStore, maker, signer, chunkUploader, runner, optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO, jobExecutor, fileMessageSource)
 	if err != nil {
 		return nil, err
 	}
