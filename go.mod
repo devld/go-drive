@@ -18,7 +18,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jlaffaye/ftp v0.2.0
-	github.com/jolestar/go-commons-pool/v2 v2.1.2
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/pkg/sftp v1.13.10
 	github.com/robertkrimen/otto v0.5.1
