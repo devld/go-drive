@@ -28,7 +28,8 @@
 export default { name: 'EntryListView' }
 </script>
 <script setup lang="ts">
-import { setPathPassword, listEntries } from '@/api'
+import { listEntries } from '@/api'
+import { setCachedPathPassword } from '@/api/http'
 import { HttpError, RequestTask } from '@/utils/http'
 import { EntryEventData, GetLinkFn, ListViewMode } from '@/components/entry'
 import { Entry } from '@/types'
@@ -140,30 +141,25 @@ const loadEntries = async () => {
 }
 
 const onPathRequired = async () => {
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    let password
-    try {
-      password = await input({
-        type: 'password',
-        title: T('app.password_protected'),
-        placeholder: T('app.input_password'),
-        validator: {
-          pattern: /^.+$/,
-          message: T('app.input_password'),
-        },
-      })
-    } catch {
-      return false
-    }
-    try {
-      await setPathPassword(currentPath.value!, password)
-    } catch {
-      continue
-    }
-    loadEntries()
-    return true
+  let password
+  try {
+    password = await input({
+      type: 'password',
+      title: T('app.password_protected'),
+      placeholder: T('app.input_password'),
+      validator: {
+        pattern: /^.+$/,
+        message: T('app.input_password'),
+      },
+    })
+  } catch {
+    return false
   }
+  // cache the password for this path (and its subtree); it is attached as a
+  // request header on the retry. A wrong password re-triggers this prompt.
+  setCachedPathPassword(currentPath.value!, password)
+  loadEntries()
+  return true
 }
 
 const commitPathChange = (path = '') => {

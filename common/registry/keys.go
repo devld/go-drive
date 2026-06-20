@@ -14,15 +14,16 @@ var (
 	KeyDriveAccess = componentKey{k: "driveAccess"}
 	KeyRootDrive   = componentKey{k: "rootDrive"}
 
-	KeyEventBus       = componentKey{k: "eventBus"}
-	KeyTaskRunner     = componentKey{k: "taskRunner"}
-	KeyJobExecutor    = componentKey{k: "jobExecutor"}
-	KeyFailBanGroup   = componentKey{k: "failBanGroup"}
-	KeyThumbnail      = componentKey{k: "thumbnail"}
-	KeySearchService  = componentKey{k: "searchService"}
-	KeyFileTokenStore = componentKey{k: "fileTokenStore"}
+	KeyEventBus      = componentKey{k: "eventBus"}
+	KeyTaskRunner    = componentKey{k: "taskRunner"}
+	KeyJobExecutor   = componentKey{k: "jobExecutor"}
+	KeyFailBanGroup  = componentKey{k: "failBanGroup"}
+	KeyThumbnail     = componentKey{k: "thumbnail"}
+	KeySearchService = componentKey{k: "searchService"}
+	KeyTokenStore    = componentKey{k: "tokenStore"}
 
 	KeyUserDAO           = componentKey{k: "userDAO"}
+	KeySessionDAO        = componentKey{k: "sessionDAO"}
 	KeyPathMetaDAO       = componentKey{k: "pathMetaDAO"}
 	KeyJobDAO            = componentKey{k: "jobDAO"}
 	KeyOptionsDAO        = componentKey{k: "optionsDAO"}

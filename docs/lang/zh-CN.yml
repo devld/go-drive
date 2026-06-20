@@ -29,9 +29,7 @@ api:
     expected__bytes_but__bytes: 预期读取 {{ 1 }} bytes, 但实际读取了 {{ 2 }} bytes
     missing_chunks: 缺失分片
     invalid_upload_id: 无效的分片上传
-  mem_token:
-    invalid_token: 无效的 token
-  file_token:
+  db_token:
     invalid_token: 无效的 token
   permission_wrapper:
     no_subfolder_permission: 你可能没有子路径的操作权限

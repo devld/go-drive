@@ -12,8 +12,6 @@ func InitAuthRoutes(r gin.IRouter, ua *UserAuth,
 
 	ar := authRoute{ua, tokenStore}
 
-	r.POST("/auth/init", ar.init)
-
 	auth := r.Group("/auth", TokenAuth(tokenStore))
 	{
 		auth.POST(
@@ -34,15 +32,6 @@ type authRoute struct {
 	tokenStore types.TokenStore
 }
 
-func (a *authRoute) init(c *gin.Context) {
-	token, e := a.tokenStore.Create(types.NewSession())
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
-	SetResult(c, token)
-}
-
 func (a *authRoute) login(c *gin.Context) {
 	user := types.User{}
 	if e := c.Bind(&user); e != nil {
@@ -54,20 +43,29 @@ func (a *authRoute) login(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	e = UpdateSession(c, a.tokenStore, func(session *types.Session) { session.User = user })
+	// rotate: drop any token carried into this request before issuing a new one
+	if old := GetToken(c); old != "" {
+		_ = a.tokenStore.Revoke(old)
+	}
+	principal := types.Principal{User: user, AuthType: types.AuthTypeToken}
+	token, e := a.tokenStore.Create(principal)
 	if e != nil {
 		_ = c.Error(e)
+		return
 	}
+	SetResult(c, token)
 }
 
 func (a *authRoute) logout(c *gin.Context) {
-	_ = UpdateSession(c, a.tokenStore, func(session *types.Session) { session.User = types.User{} })
+	if token := GetToken(c); token != "" {
+		_ = a.tokenStore.Revoke(token)
+	}
 }
 
 func (a *authRoute) getUser(c *gin.Context) {
-	s := GetSession(c)
-	if !s.IsAnonymous() {
-		u := s.User
+	principal := GetPrincipal(c)
+	if !principal.IsAnonymous() {
+		u := principal.User
 		u.Password = ""
 		u.RootPath = ""
 		SetResult(c, u)

@@ -8,7 +8,13 @@ import {
   User,
 } from '@/types'
 import { buildURL } from '@/utils'
-import http, { API_PATH } from './http'
+import http, {
+  API_PATH,
+  clearCachedPathPasswords,
+  clearToken,
+  pathPasswordHeaders,
+  setToken,
+} from './http'
 import { createHttp } from '@/utils/http/http'
 import {
   transformErrorResponse,
@@ -24,17 +30,15 @@ export interface FileURLParams {
 }
 
 export function listEntries(path: string) {
-  return http.get<Entry[]>(`/entries/${path}`)
-}
-
-export function setPathPassword(path: string, password: string) {
-  return http.post<Task<void>>(`/password/${path}`, undefined, {
-    params: { password },
+  return http.get<Entry[]>(`/entries/${path}`, {
+    headers: pathPasswordHeaders(path),
   })
 }
 
 export function getEntry(path: string) {
-  return http.get<Entry>(`/entry/${path}`)
+  return http.get<Entry>(`/entry/${path}`, {
+    headers: pathPasswordHeaders(path),
+  })
 }
 
 export function searchEntries(path: string, q: string, next?: number) {
@@ -142,15 +146,28 @@ export function deleteTask(id: string) {
 
 /// auth
 
+export interface LoginResult {
+  token: string
+  expiresAt: number
+}
+
 export function login(username: string, password: string) {
-  return http.post<void>('/auth/login', {
-    username,
-    password,
-  })
+  return http
+    .post<LoginResult>('/auth/login', {
+      username,
+      password,
+    })
+    .then((res) => {
+      setToken(res.token)
+      return res
+    })
 }
 
 export function logout() {
-  return http.post<void>('/auth/logout')
+  return http.post<void>('/auth/logout').finally(() => {
+    clearToken()
+    clearCachedPathPasswords()
+  })
 }
 
 export function getUser() {

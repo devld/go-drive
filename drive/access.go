@@ -49,7 +49,7 @@ func NewAccess(ch *registry.ComponentsHolder,
 	return da, nil
 }
 
-func (da *Access) GetChroot(s types.Session) (*Chroot, error) {
+func (da *Access) GetChroot(s types.Principal) (*Chroot, error) {
 	if s.HasUserGroup(types.AdminUserGroup) {
 		return nil, nil
 	}
@@ -69,7 +69,7 @@ func (da *Access) GetChroot(s types.Session) (*Chroot, error) {
 	return NewChroot(rootPath, nil), nil
 }
 
-func (da *Access) GetDrive(session types.Session) (types.IDrive, error) {
+func (da *Access) GetDrive(session types.Principal) (types.IDrive, error) {
 	chroot, e := da.GetChroot(session)
 	if e != nil {
 		return nil, e
@@ -90,10 +90,10 @@ func (da *Access) GetDrive(session types.Session) (types.IDrive, error) {
 	return drive, nil
 }
 
-func (da *Access) GetRootDrive(session *types.Session) types.IDrive {
+func (da *Access) GetRootDrive(session *types.Principal) types.IDrive {
 	return NewListenerWrapper(da.rootDrive.Get(), types.DriveListenerContext{
-		Session: session,
-		Drive:   da.rootDrive.Get(),
+		Principal: session,
+		Drive:     da.rootDrive.Get(),
 	}, da.bus)
 }
 

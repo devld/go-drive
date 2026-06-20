@@ -7,6 +7,16 @@ type Option struct {
 	Value string `gorm:"column:value;type:string;size:4096"`
 }
 
+// Session is a server-side login session. Only the SHA-256 hash of the
+// token is persisted, so a database leak does not expose usable tokens.
+// The table name follows gorm's default naming ("sessions").
+type Session struct {
+	TokenHash string `gorm:"column:token_hash;primaryKey;type:string;size:64"`
+	Username  string `gorm:"column:username;type:string;size:32"`
+	CreatedAt int64  `gorm:"column:created_at;not null"`
+	ExpiresAt int64  `gorm:"column:expires_at;not null"`
+}
+
 type User struct {
 	Username string  `gorm:"column:username;primaryKey;not null;type:string;size:32" json:"username" binding:"required"`
 	Password string  `gorm:"column:password;not null;type:string;size:64" json:"password,omitempty"`

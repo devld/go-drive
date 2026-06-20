@@ -29,9 +29,7 @@ api:
     expected__bytes_but__bytes: Expect {{ 1 }} bytes, but {{ 2 }} bytes received
     missing_chunks: Missing chunks
     invalid_upload_id: Invalid upload id
-  mem_token:
-    invalid_token: Invalid token
-  file_token:
+  db_token:
     invalid_token: Invalid token
   permission_wrapper:
     no_subfolder_permission: You don't have the appropriate permission for the subfolders
