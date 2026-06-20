@@ -1,10 +1,13 @@
 package storage
 
 import (
+	"context"
+	"database/sql"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/testutil"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -19,6 +22,46 @@ func newTestDB(t *testing.T) (*DB, *registry.ComponentsHolder, func()) {
 	return db, ch, func() {
 		_ = db.Dispose()
 		_ = ch.Dispose()
+	}
+}
+
+func TestNewDB_SQLitePragmasApplyToEveryConnection(t *testing.T) {
+	db, _, cleanup := newTestDB(t)
+	defer cleanup()
+
+	sqlDB, e := db.C().DB()
+	if e != nil {
+		t.Fatalf("DB: %v", e)
+	}
+	sqlDB.SetMaxOpenConns(2)
+	ctx := context.Background()
+	conn1, e := sqlDB.Conn(ctx)
+	if e != nil {
+		t.Fatalf("first connection: %v", e)
+	}
+	defer conn1.Close()
+	conn2, e := sqlDB.Conn(ctx)
+	if e != nil {
+		t.Fatalf("second connection: %v", e)
+	}
+	defer conn2.Close()
+
+	for i, conn := range []*sql.Conn{conn1, conn2} {
+		var busyTimeout int
+		if e := conn.QueryRowContext(ctx, "PRAGMA busy_timeout").Scan(&busyTimeout); e != nil {
+			t.Fatalf("connection %d busy_timeout: %v", i+1, e)
+		}
+		if busyTimeout != 5000 {
+			t.Errorf("connection %d busy_timeout = %d, want 5000", i+1, busyTimeout)
+		}
+
+		var journalMode string
+		if e := conn.QueryRowContext(ctx, "PRAGMA journal_mode").Scan(&journalMode); e != nil {
+			t.Fatalf("connection %d journal_mode: %v", i+1, e)
+		}
+		if strings.ToLower(journalMode) != "wal" {
+			t.Errorf("connection %d journal_mode = %q, want wal", i+1, journalMode)
+		}
 	}
 }
 

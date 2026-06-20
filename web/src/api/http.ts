@@ -45,16 +45,16 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-// Cache of path passwords keyed by the path the user unlocked, persisted in
-// localStorage. The password applies to the whole subtree, so it is attached
-// automatically when requesting that path or any of its descendants.
+// Cache of path passwords keyed by the path the user unlocked, persisted for
+// the current browser session. The password applies to the whole subtree, so
+// it is attached automatically when requesting that path or its descendants.
 const PATH_PASSWORDS_KEY = 'pathPasswords'
 
 type CachedPathPassword = { path: string; password: string }
 
 function loadCachedPathPasswords(): CachedPathPassword[] {
   try {
-    const raw = localStorage.getItem(PATH_PASSWORDS_KEY)
+    const raw = sessionStorage.getItem(PATH_PASSWORDS_KEY)
     const parsed = raw ? JSON.parse(raw) : []
     return Array.isArray(parsed) ? parsed : []
   } catch {
@@ -65,7 +65,7 @@ function loadCachedPathPasswords(): CachedPathPassword[] {
 let pathPasswords: CachedPathPassword[] = loadCachedPathPasswords()
 
 function saveCachedPathPasswords() {
-  localStorage.setItem(PATH_PASSWORDS_KEY, JSON.stringify(pathPasswords))
+  sessionStorage.setItem(PATH_PASSWORDS_KEY, JSON.stringify(pathPasswords))
 }
 
 export function setCachedPathPassword(path: string, password: string) {
@@ -77,7 +77,7 @@ export function setCachedPathPassword(path: string, password: string) {
 
 export function clearCachedPathPasswords() {
   pathPasswords = []
-  localStorage.removeItem(PATH_PASSWORDS_KEY)
+  sessionStorage.removeItem(PATH_PASSWORDS_KEY)
 }
 
 function getCachedPathPassword(path: string): string | undefined {

@@ -53,7 +53,6 @@ const (
 	DefaultThumbnailTTL        = 30 * 24 * time.Hour
 	DefaultAuthValidity        = 2 * time.Hour
 	DefaultAuthAutoRefresh     = true
-	DefaultAuthMaxAge          = 7 * 24 * time.Hour
 	DefaultSignatureTTL        = 12 * time.Hour
 	DefaultWebDavPrefix        = "/dav"
 	DefaultWebDavMaxCacheItems = 1000
@@ -153,9 +152,6 @@ type ThumbnailHandlerItem struct {
 type AuthConfig struct {
 	Validity    time.Duration `yaml:"validity"`
 	AutoRefresh bool          `yaml:"auto-refresh"`
-	// MaxAge is the absolute maximum lifetime of a session regardless of sliding
-	// refresh. 0 means no absolute cap.
-	MaxAge time.Duration `yaml:"max-age"`
 }
 
 type WebDavConfig struct {
@@ -199,7 +195,6 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		Auth: AuthConfig{
 			Validity:    DefaultAuthValidity,
 			AutoRefresh: DefaultAuthAutoRefresh,
-			MaxAge:      DefaultAuthMaxAge,
 		},
 		SignatureTTL: DefaultSignatureTTL,
 		WebDav: WebDavConfig{
@@ -310,7 +305,9 @@ func (c Config) GetDB() gorm.Dialector {
 	var d gorm.Dialector = nil
 	switch db.Type {
 	case "sqlite":
-		d = sqlite.Open(path.Join(c.DataDir, db.Name))
+		// SQLite PRAGMAs configured through the DSN are applied to every
+		// connection opened by database/sql, not only the first pooled connection.
+		d = sqlite.Open(path.Join(c.DataDir, db.Name) + "?_busy_timeout=5000&_journal_mode=WAL")
 	case "mysql":
 		params, _ := url.ParseQuery("charset=utf8mb4&parseTime=True&loc=Local")
 		if db.Config != nil {

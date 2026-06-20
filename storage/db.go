@@ -44,13 +44,6 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		return nil, e
 	}
 
-	if config.Db.Type == "" || config.Db.Type == "sqlite" {
-		// WAL lets readers and a single writer run concurrently; busy_timeout
-		// makes writers wait instead of failing with SQLITE_BUSY immediately.
-		db.Exec("PRAGMA journal_mode=WAL")
-		db.Exec("PRAGMA busy_timeout=5000")
-	}
-
 	if e := db.AutoMigrate(
 		&types.User{},
 		&types.Group{},
