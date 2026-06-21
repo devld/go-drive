@@ -2,10 +2,16 @@
 
 declare const selfDrive: DriveInstance;
 
+declare type JSONPrimitive = string | number | boolean | null;
+declare type JSONValue =
+  | JSONPrimitive
+  | JSONValue[]
+  | { [key: string]: JSONValue };
+
 /** set drive's instance data */
-declare function setData(d: M): void;
+declare function setData(d: M<JSONValue>): void;
 /** get drive's instance data by key */
-declare function getData(key: string): any;
+declare function getData(key: string): JSONValue;
 
 declare interface DriveMeta {
   Writable: boolean;

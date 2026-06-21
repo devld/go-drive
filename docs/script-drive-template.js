@@ -197,8 +197,10 @@ function cacheItemToEntry(item) {
  * @param {DriveCache} cache
  */
 function DriveHolder(data, cache) {
-    // Notice: instance variables that start with $ are shared variables.
+    // Notice: instance variables that start with $ are JSON-serializable shared variables.
     // Shared variables can be modified at runtime, while the rest of the variables cannot.
+    // Objects and arrays are returned as copies. Reassign the whole $ property to persist changes;
+    // mutating a nested property in place does not update the shared value.
     // In other words, variables that do not start with $ are constants and can only be initialized in defineCreate
     this.$sharedVar = 123;
 

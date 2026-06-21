@@ -3,6 +3,7 @@ package script
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"go-drive/common"
 	"go-drive/common/drive_util"
@@ -69,19 +70,19 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.
 
 	d := &ScriptDrive{
 		baseVM: vm,
-		data:   make(map[string]*s.Value),
+		data:   make(map[string]json.RawMessage),
 	}
 
 	vm.Set("setData", s.WrapVmCall(vm, d.setData))
 	vm.Set("getData", s.WrapVmCall(vm, d.getData))
 
-	_, e = vm.Call(ctx, "__driveCreate", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
+	_, e = vm.Call(ctx, "__driveCreate", s.NewContext(vm, ctx), config, newScriptDriveUtils(driveUtils))
 
 	if e != nil {
 		_ = d.Dispose()
 		return nil, e
 	}
-	vm.Set("selfDrive", s.NewDrive(vm, d))
+	vm.Set("selfDrive", s.NewDrive(d))
 	d.pool = s.NewVMPool(vm, poolConfig)
 
 	return d, nil
@@ -136,7 +137,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 		return retCfg, nil
 	}
 
-	v, e := vm.Call(ctx, "__driveInitConfig", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
+	v, e := vm.Call(ctx, "__driveInitConfig", s.NewContext(vm, ctx), config, newScriptDriveUtils(driveUtils))
 	if e != nil {
 		return nil, e
 	}
@@ -181,7 +182,7 @@ func init_(ctx context.Context, data, config types.SM, driveUtils drive_util.Dri
 		return nil
 	}
 
-	_, e = vm.Call(ctx, "__driveInit", s.NewContext(vm, ctx), data, config, newScriptDriveUtils(vm, driveUtils))
+	_, e = vm.Call(ctx, "__driveInit", s.NewContext(vm, ctx), data, config, newScriptDriveUtils(driveUtils))
 	return e
 }
 
@@ -226,13 +227,11 @@ func parsePoolConfig(arg string) (*s.VMPoolConfig, error) {
 	return c, nil
 }
 
-func newScriptDriveUtils(vm *s.VM, utils drive_util.DriveUtils) *scriptDriveUtils {
-	return &scriptDriveUtils{vm, utils.CreateCache, driveDataStore{vm, utils.Data}, utils.Config}
+func newScriptDriveUtils(utils drive_util.DriveUtils) *scriptDriveUtils {
+	return &scriptDriveUtils{utils.CreateCache, driveDataStore{utils.Data}, utils.Config}
 }
 
 type scriptDriveUtils struct {
-	vm *s.VM
-
 	createCache drive_util.DriveCacheFactory
 
 	Data   driveDataStore
@@ -240,18 +239,18 @@ type scriptDriveUtils struct {
 }
 
 func (sdu *scriptDriveUtils) CreateCache() *scriptDriveCache {
-	return &scriptDriveCache{sdu.vm, sdu.createCache(nil)}
+	return &scriptDriveCache{sdu.createCache(nil)}
 }
 
 func (sdu *scriptDriveUtils) OAuthInitConfig(or drive_util.OAuthRequest,
 	cred drive_util.OAuthCredentials) *oauthInitConfigResp {
 	c, r, e := drive_util.OAuthInitConfig(or, cred, sdu.Data.data)
 	if e != nil {
-		sdu.vm.ThrowError(e)
+		s.ThrowDetachedError(e)
 	}
 	var resp *oauthRespWrapper
 	if r != nil {
-		resp = &oauthRespWrapper{sdu.vm, r}
+		resp = &oauthRespWrapper{r}
 	}
 	return &oauthInitConfigResp{c, resp}
 }
@@ -261,11 +260,11 @@ func (sdu *scriptDriveUtils) OAuthInit(ctx s.Context,
 	cred drive_util.OAuthCredentials) *oauthRespWrapper {
 	resp, e := drive_util.OAuthInit(s.GetContext(ctx), or, data, cred, sdu.Data.data)
 	if e != nil {
-		sdu.vm.ThrowError(e)
+		s.ThrowDetachedError(e)
 	}
 	var r *oauthRespWrapper
 	if resp != nil {
-		r = &oauthRespWrapper{sdu.vm, resp}
+		r = &oauthRespWrapper{resp}
 	}
 	return r
 }
@@ -274,30 +273,29 @@ func (sdu *scriptDriveUtils) OAuthGet(o drive_util.OAuthRequest,
 	cred drive_util.OAuthCredentials) *oauthRespWrapper {
 	resp, e := drive_util.OAuthGet(o, cred, sdu.Data.data)
 	if e != nil {
-		sdu.vm.ThrowError(e)
+		s.ThrowDetachedError(e)
 	}
 	var r *oauthRespWrapper
 	if resp != nil {
-		r = &oauthRespWrapper{sdu.vm, resp}
+		r = &oauthRespWrapper{resp}
 	}
 	return r
 }
 
 type driveDataStore struct {
-	vm   *s.VM
 	data drive_util.DriveDataStore
 }
 
-func (d driveDataStore) Save(s types.SM) {
-	if e := d.data.Save(s); e != nil {
-		d.vm.ThrowError(e)
+func (d driveDataStore) Save(data types.SM) {
+	if e := d.data.Save(data); e != nil {
+		s.ThrowDetachedError(e)
 	}
 }
 
 func (d driveDataStore) Load(keys ...string) types.SM {
 	r, e := d.data.Load(keys...)
 	if e != nil {
-		d.vm.ThrowError(e)
+		s.ThrowDetachedError(e)
 	}
 	return r
 }
@@ -308,14 +306,13 @@ type oauthInitConfigResp struct {
 }
 
 type oauthRespWrapper struct {
-	vm   *s.VM
 	resp *drive_util.OAuthResponse
 }
 
 func (or *oauthRespWrapper) Token() *oauth2.Token {
 	t, e := or.resp.Token()
 	if e != nil {
-		or.vm.ThrowError(e)
+		s.ThrowDetachedError(e)
 	}
 	return t
 }

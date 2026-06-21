@@ -6,17 +6,16 @@ import (
 	"go-drive/common/utils"
 )
 
-func NewDrive(vm *VM, d types.IDrive) Drive {
-	return Drive{vm, d}
+func NewDrive(d types.IDrive) Drive {
+	return Drive{d}
 }
 
-func NewEntry(vm *VM, e types.IEntry) Entry {
-	return Entry{vm, e}
+func NewEntry(e types.IEntry) Entry {
+	return Entry{e}
 }
 
 type Drive struct {
-	vm *VM
-	d  types.IDrive
+	d types.IDrive
 }
 
 func GetDrive(v any) types.IDrive {
@@ -28,62 +27,68 @@ func GetDrive(v any) types.IDrive {
 }
 
 func (d Drive) Get(ctx any, path string) Entry {
+	vm := GetVM(ctx)
 	entry, e := d.d.Get(GetContext(ctx), path)
 	if e != nil {
-		d.vm.ThrowError(e)
+		throwForVM(vm, e)
 	}
-	return NewEntry(d.vm, entry)
+	return NewEntry(entry)
 }
 
 func (d Drive) Save(ctx any, path string, size int64, override bool, reader any) Entry {
+	vm := GetVM(ctx)
 	entry, e := d.d.Save(GetTaskCtx(ctx), path, size, override, GetReader(reader))
 	if e != nil {
-		d.vm.ThrowError(e)
+		throwForVM(vm, e)
 	}
-	return NewEntry(d.vm, entry)
+	return NewEntry(entry)
 }
 
 func (d Drive) MakeDir(ctx any, path string) Entry {
+	vm := GetVM(ctx)
 	entry, e := d.d.MakeDir(GetContext(ctx), path)
 	if e != nil {
-		d.vm.ThrowError(e)
+		throwForVM(vm, e)
 	}
-	return NewEntry(d.vm, entry)
+	return NewEntry(entry)
 }
 
 func (d Drive) Copy(ctx any, from any, to string, override bool) Entry {
+	vm := GetVM(ctx)
 	entry, e := d.d.Copy(GetTaskCtx(ctx), GetEntry(from), to, override)
 	if e != nil {
-		d.vm.ThrowError(e)
+		throwForVM(vm, e)
 	}
-	return NewEntry(d.vm, entry)
+	return NewEntry(entry)
 }
 
 func (d Drive) Move(ctx any, from any, to string, override bool) Entry {
+	vm := GetVM(ctx)
 	entry, e := d.d.Move(GetTaskCtx(ctx), GetEntry(from), to, override)
 	if e != nil {
-		d.vm.ThrowError(e)
+		throwForVM(vm, e)
 	}
-	return NewEntry(d.vm, entry)
+	return NewEntry(entry)
 }
 
 func (d Drive) List(ctx any, path string) []Entry {
+	vm := GetVM(ctx)
 	entries, e := d.d.List(GetContext(ctx), path)
 	if e != nil {
-		d.vm.ThrowError(e)
+		throwForVM(vm, e)
 	}
-	return utils.ArrayMap(entries, func(t *types.IEntry) Entry { return NewEntry(d.vm, *t) })
+	return utils.ArrayMap(entries, func(t *types.IEntry) Entry { return NewEntry(*t) })
 }
 
 func (d Drive) Delete(ctx any, path string) {
+	vm := GetVM(ctx)
 	if e := d.d.Delete(GetTaskCtx(ctx), path); e != nil {
-		d.vm.ThrowError(e)
+		throwForVM(vm, e)
 	}
 }
 
 type Entry struct {
-	vm *VM
-	e  types.IEntry
+	e types.IEntry
 }
 
 func GetEntry(v any) types.IEntry {
@@ -119,24 +124,26 @@ func (e Entry) ModTime() int64 {
 }
 
 func (e Entry) GetURL(ctx any) *types.ContentURL {
+	vm := GetVM(ctx)
 	r, er := e.e.GetURL(GetContext(ctx))
 	if er != nil {
-		e.vm.ThrowError(er)
+		throwForVM(vm, er)
 	}
 	return r
 }
 
 func (e Entry) GetReader(ctx any, start, size int64) ReadCloser {
+	vm := GetVM(ctx)
 	r, err := e.e.GetReader(GetContext(ctx), start, size)
 	if err != nil {
-		e.vm.ThrowError(err)
+		throwForVM(vm, err)
 	}
-	return NewReadCloser(e.vm, r)
+	return NewReadCloser(vm, r)
 }
 
 func (e Entry) Unwrap() Entry {
 	entry := drive_util.UnwrapIEntry(e.e)
-	return NewEntry(e.vm, entry)
+	return NewEntry(entry)
 }
 
 func (e Entry) Data() any {
@@ -155,5 +162,5 @@ func (e Entry) Data() any {
 }
 
 func (e Entry) Drive() Drive {
-	return NewDrive(e.vm, e.e.Drive())
+	return NewDrive(e.e.Drive())
 }

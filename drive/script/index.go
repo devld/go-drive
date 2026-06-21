@@ -2,6 +2,7 @@ package script
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"go-drive/common"
 	"go-drive/common/drive_util"
@@ -10,6 +11,7 @@ import (
 	"go-drive/common/utils"
 	s "go-drive/script"
 	"io"
+	"maps"
 	"sync"
 )
 
@@ -43,30 +45,42 @@ type ScriptDrive struct {
 	pool   *s.VMPool
 
 	// data is the place where the data of the script instance is stored
-	data map[string]*s.Value
+	data map[string]json.RawMessage
 	mu   sync.RWMutex
 }
 
 func (sd *ScriptDrive) setData(vm *s.VM, args s.Values) any {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
 	data := args.Get(0)
 	keys := data.Keys()
+	encodedValues := make(map[string]json.RawMessage, len(keys))
 	for _, k := range keys {
-		sd.data[k] = data.Get(k)
+		encoded, e := vm.EncodeJSONValue(data.Get(k))
+		if e != nil {
+			vm.ThrowTypeError("shared state must be JSON serializable: " + e.Error())
+		}
+		encodedValues[k] = encoded
 	}
+
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+	maps.Copy(sd.data, encodedValues)
 	return nil
 }
 
 func (sd *ScriptDrive) getData(vm *s.VM, args s.Values) any {
-	sd.mu.RLock()
-	defer sd.mu.RUnlock()
 	key := args.Get(0).String()
-	v, ok := sd.data[key]
+	sd.mu.RLock()
+	encoded, ok := sd.data[key]
+	encoded = append(json.RawMessage(nil), encoded...)
+	sd.mu.RUnlock()
 	if !ok {
 		vm.ThrowError(errors.New(key + " not found"))
 	}
-	return v.InternalValue()
+	value, e := vm.DecodeJSONValue(encoded)
+	if e != nil {
+		vm.ThrowError(e)
+	}
+	return value
 }
 
 func (sd *ScriptDrive) call(ctx context.Context, vm *s.VM, fn string, args ...any) (*s.Value, error) {
@@ -141,7 +155,7 @@ func (sd *ScriptDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, ove
 		return nil, e
 	}
 	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "copy", s.NewTaskCtx(vm, ctx), s.NewEntry(vm, from), to, override)
+	v, e := sd.call(ctx, vm, "copy", s.NewTaskCtx(vm, ctx), s.NewEntry(from), to, override)
 	if e != nil {
 		return nil, e
 	}
@@ -154,7 +168,7 @@ func (sd *ScriptDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, ove
 		return nil, e
 	}
 	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "move", s.NewTaskCtx(vm, ctx), s.NewEntry(vm, from), to, override)
+	v, e := sd.call(ctx, vm, "move", s.NewTaskCtx(vm, ctx), s.NewEntry(from), to, override)
 	if e != nil {
 		return nil, e
 	}

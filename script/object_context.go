@@ -23,6 +23,16 @@ func GetContext(v any) context.Context {
 	return nil
 }
 
+func GetVM(v any) *VM {
+	switch v := v.(type) {
+	case Context:
+		return v.vm
+	case TaskCtx:
+		return v.vm
+	}
+	return nil
+}
+
 func GetTaskCtx(v any) types.TaskCtx {
 	switch v := v.(type) {
 	case TaskCtx:

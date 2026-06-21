@@ -80,6 +80,9 @@ function __newGoError__(type, status, msg) {
 
 function __isTypeOfErr__(e, type) {
   var message = e && e.message;
+  if (typeof message !== "string" && e != null) {
+    message = String(e).replace(/^Error: /, "");
+  }
   return typeof message === "string" && message.indexOf("E:" + type) === 0;
 }
 
