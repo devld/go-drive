@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -59,28 +60,29 @@ func newShellThumbnailTypeHandler(c types.SM) (TypeHandler, error) {
 	shell := c["shell"]
 	mimeType := c["mime-type"]
 	writeContent := c.GetBool("write-content")
-	args := make([]string, 0)
-	for _, s := range strings.Split(shell, " ") {
-		s = strings.TrimSpace(s)
-		if s != "" {
-			args = append(args, s)
-		}
-	}
-	if len(args) == 0 {
-		return nil, errors.New("invalid command, you must specify valid 'shell'")
+	if strings.TrimSpace(shell) == "" {
+		return nil, errors.New("invalid command, you must specify a valid 'shell'")
 	}
 	if mimeType == "" {
 		return nil, errors.New("mime-type must be specified")
 	}
+	command, args := platformShellCommand(runtime.GOOS, shell)
 
 	return &shellThumbnailTypeHandler{
-		command:      args[0],
-		args:         args[1:],
+		command:      command,
+		args:         args,
 		writeContent: writeContent,
 		maxSize:      c.GetInt64("max-size", -1),
 		mimeType:     mimeType,
 		timeout:      c.GetDuration("timeout", -1),
 	}, nil
+}
+
+func platformShellCommand(goos, script string) (string, []string) {
+	if goos == "windows" {
+		return "cmd.exe", []string{"/D", "/S", "/C", script}
+	}
+	return "/bin/sh", []string{"-c", script}
 }
 
 func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
@@ -89,7 +91,7 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry T
 	}
 	cmd := exec.Command(s.command, s.args...)
 
-	cmd.Env = append(cmd.Env,
+	cmd.Env = append(cmd.Environ(),
 		"GO_DRIVE_ENTRY_TYPE="+string(entry.Type()),
 		"GO_DRIVE_ENTRY_REAL_PATH="+entry.GetRealPath(),
 		"GO_DRIVE_ENTRY_PATH="+entry.Path(),

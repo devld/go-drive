@@ -92,6 +92,23 @@ thumbnail:
       #  # thumbnail image quality(1-100), higher is better
       #  quality: 50
 
+    # vips: low-memory image thumbnail generator using an external libvips command
+    # Requires libvips and /bin/sh.
+    # This handler replaces the embedded image handler for the same file types when enabled.
+    #- type: shell
+    #  tags:
+    #  file-types: jpg,jpeg,png,gif,webp
+    #  config:
+    #    shell: |
+    #      work_dir=$(mktemp -d)
+    #      trap 'rm -rf "$work_dir"' EXIT
+    #      vips thumbnail /dev/stdin "$work_dir/thumbnail.jpg[Q=50,strip]" 220 --height 220 --size down
+    #      cat "$work_dir/thumbnail.jpg"
+    #    mime-type: image/jpeg
+    #    write-content: true
+    #    max-size: -1
+    #    timeout: 10m
+
     # text: embed generator for text files
     # Generating a svg file by reading some content
     - type: text
@@ -123,7 +140,7 @@ thumbnail:
     #  tag:
     #  file-types: mp4,avi
     #  config:
-    #    # the command to generating thumbnail
+    #    # Shell command or multiline script. Executed by /bin/sh on Unix and cmd.exe on Windows.
     #    shell: ffmpeg -hide_banner -loglevel error -i - -frames:v 1 -vf scale=220:-1 -f mjpeg -
     #    # the output file mime-type
     #    mime-type: image/jpeg
