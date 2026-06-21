@@ -79,7 +79,6 @@
           :data-name="entry.name"
           :draggable="draggable"
           @click="entryClicked"
-          @menu="entryContextMenu"
           @dragstart="onDragStart"
           @dragover="onDragOver"
           @drop="onDrop"
@@ -91,6 +90,15 @@
             @icon-click="iconClicked(entry, $event)"
           />
         </EntryLink>
+        <button
+          class="entry-list__menu-button plain-button"
+          type="button"
+          :title="$t('app.entry_actions')"
+          :aria-label="$t('app.entry_actions')"
+          @click="entryMenuClicked(entry, $event)"
+        >
+          <span aria-hidden="true">&#8942;</span>
+        </button>
       </li>
     </ul>
     <div v-if="sortedEntries.length === 0" class="entry-list__empty">
@@ -240,7 +248,9 @@ const entryClicked = (e: EntryEventData) => {
   emit('entry-click', e)
 }
 
-const entryContextMenu = (e: EntryEventData) => emit('entry-menu', e)
+const entryMenuClicked = (entry: Entry, event: MouseEvent) => {
+  emit('entry-menu', { entry, event })
+}
 
 const toggleSelect = (entry: Entry) => {
   if (selectionMap.value[entry.path]) {
@@ -448,6 +458,7 @@ defineExpose({
 }
 
 .entry-list__item {
+  position: relative;
   animation: fade-in 0.3s;
 
   & > .entry-link {
@@ -465,6 +476,46 @@ defineExpose({
 
   &.selected > .entry-link {
     background-color: var(--select-bg-color);
+  }
+}
+
+.entry-list__menu-button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 32px;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--primary-text-color);
+    background-color: var(--hover-bg-color);
+  }
+}
+
+.entry-list--view-list .entry-item {
+  padding-right: 56px;
+}
+
+.entry-list--view-thumbnail {
+  .entry-list__menu-button {
+    top: auto;
+    right: 12px;
+    bottom: 8px;
+    transform: none;
+    font-size: 20px;
+  }
+
+  .entry-item__info {
+    display: block;
+    padding-right: 28px;
   }
 }
 

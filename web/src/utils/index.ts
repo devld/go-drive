@@ -1,7 +1,6 @@
 import { getTask } from '@/api'
 
 import focus from './directives/focus'
-import longPress from './directives/long-press'
 import markdown from './directives/markdown'
 import lazySrc from './directives/lazy-src'
 import { Entry, Task, User } from '../types'
@@ -387,7 +386,6 @@ export async function taskDone<T = any>(
 
 const directives: O<Directive> = {
   markdown,
-  longPress,
   focus,
   lazySrc,
 }

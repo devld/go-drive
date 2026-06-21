@@ -1,5 +1,5 @@
 <template>
-  <div class="entry-menu">
+  <div class="entry-menu" :class="{ 'entry-menu--compact': compact }">
     <h2 v-if="!multiple" class="entry-menu__entry">
       <EntryIcon :entry="(entry as Entry)" />
       <span class="entry-menu__entry-name">{{ (entry as Entry).name }}</span>
@@ -35,6 +35,9 @@ const props = defineProps({
   entry: {
     type: [Object, Array] as PropType<Entry | Entry[]>,
     required: true,
+  },
+  compact: {
+    type: Boolean,
   },
 })
 
@@ -113,6 +116,25 @@ const multiple = computed(() => Array.isArray(props.entry))
   &:hover {
     color: #fff;
     background-color: #f56c6c;
+  }
+}
+
+.entry-menu--compact {
+  width: 220px;
+  padding: 8px 0;
+  border-radius: 8px;
+
+  .entry-menu__entry {
+    display: none;
+  }
+
+  .entry-menu__menus {
+    max-height: min(60vh, 420px);
+  }
+
+  .entry-menu__menu-item {
+    min-height: 40px;
+    padding: 0 12px;
   }
 }
 
