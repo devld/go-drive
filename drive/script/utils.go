@@ -62,7 +62,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.
 		return nil, err.NewNotAllowedMessageError(i18n.T("drive.script.invalid_pool_config", e.Error()))
 	}
 
-	vm, e := createVm(driveUtils.Config, cfg["_script"])
+	vm, e := createVm(ctx, driveUtils.Config, cfg["_script"])
 	if e != nil {
 		return nil, e
 	}
@@ -75,7 +75,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.
 	vm.Set("setData", s.WrapVmCall(vm, d.setData))
 	vm.Set("getData", s.WrapVmCall(vm, d.getData))
 
-	_, e = vm.Call(context.Background(), "__driveCreate", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
+	_, e = vm.Call(ctx, "__driveCreate", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
 
 	if e != nil {
 		_ = d.Dispose()
@@ -122,7 +122,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 		Value:      values,
 	}
 
-	vm, e := createVm(driveUtils.Config, selectedScript)
+	vm, e := createVm(ctx, driveUtils.Config, selectedScript)
 	if e != nil {
 		return nil, e
 	}
@@ -136,7 +136,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 		return retCfg, nil
 	}
 
-	v, e := vm.Call(context.Background(), "__driveInitConfig", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
+	v, e := vm.Call(ctx, "__driveInitConfig", s.NewContext(vm, ctx), config, newScriptDriveUtils(vm, driveUtils))
 	if e != nil {
 		return nil, e
 	}
@@ -167,7 +167,7 @@ func init_(ctx context.Context, data, config types.SM, driveUtils drive_util.Dri
 		}
 	}
 
-	vm, e := createVm(driveUtils.Config, cfg["_script"])
+	vm, e := createVm(ctx, driveUtils.Config, cfg["_script"])
 	if e != nil {
 		return e
 	}
@@ -181,7 +181,7 @@ func init_(ctx context.Context, data, config types.SM, driveUtils drive_util.Dri
 		return nil
 	}
 
-	_, e = vm.Call(context.Background(), "__driveInit", s.NewContext(vm, ctx), data, config, newScriptDriveUtils(vm, driveUtils))
+	_, e = vm.Call(ctx, "__driveInit", s.NewContext(vm, ctx), data, config, newScriptDriveUtils(vm, driveUtils))
 	return e
 }
 
@@ -320,7 +320,7 @@ func (or *oauthRespWrapper) Token() *oauth2.Token {
 	return t
 }
 
-func createVm(config common.Config, script string) (*s.VM, error) {
+func createVm(ctx context.Context, config common.Config, script string) (*s.VM, error) {
 	scriptsPath, _ := config.GetDir(config.DrivesDir, false)
 	scriptBytes, e := os.ReadFile(filepath.Join(scriptsPath, script))
 	if e != nil {
@@ -329,7 +329,7 @@ func createVm(config common.Config, script string) (*s.VM, error) {
 
 	vm := baseVM.Fork()
 
-	_, e = vm.Run(context.Background(), scriptBytes)
+	_, e = vm.Run(ctx, scriptBytes)
 	return vm, e
 }
 
