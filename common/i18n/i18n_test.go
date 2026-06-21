@@ -1,10 +1,11 @@
 package i18n
 
 import (
-	"fmt"
 	"go-drive/common"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -21,36 +22,67 @@ func TestTranslate(t *testing.T) {
 	}
 }
 
-func TestT(t *testing.T) {
-	fmt.Println(T("Hello, {{1}}. \"How are you{{2}}\"", "\"J\"J", "?"))
+func TestTranslateTSupportsNestedMessage(t *testing.T) {
+	source := testMessageSource{
+		"outer": "outer: {{1}}",
+		"inner": "inner: {{1}}",
+	}
+	message := T("outer", T("inner", "detail"))
+	if got := TranslateT("en", source, message); got != "outer: inner: detail" {
+		t.Fatalf("nested translation = %q", got)
+	}
 }
 
-func TestUnmarshalT(t *testing.T) {
-	// "Hello, {1}. ""How are you{2}""","""J""J","?"
-	s := "\"Hello, {{1}}. \"\"How are you{{2}}\"\"\",\"\"\"J\"\"J\",\"?\""
-	r, e := UnmarshalT(s)
-	if e != nil {
-		t.Error(e)
+func TestTranslateTDepthLimit(t *testing.T) {
+	source := testMessageSource{
+		"outer": "outer: {{1}}",
+		"inner": "inner: {{1}}",
+		"deep":  "deep: {{1}}",
 	}
-	if len(r) != 3 {
-		t.Errorf("unexpected result: length: %d, %v", len(r), r)
+	deep := T("deep", "detail")
+	message := T("outer", T("inner", deep))
+	if got := TranslateT("en", source, message); got != "outer: inner: "+deep {
+		t.Fatalf("depth-limited translation = %q", got)
 	}
-	for _, ss := range r {
-		fmt.Print("==> ")
-		fmt.Println(ss)
-	}
+}
 
-	s += ","
-	r, e = UnmarshalT(s)
+func TestT(t *testing.T) {
+	want := []string{"Hello, {{1}}. \"How are you{{2}}\"", "\"J\"J", "?", "你好"}
+	token := T(want[0], want[1:]...)
+	if !strings.HasPrefix(token, tokenPrefix) {
+		t.Fatalf("token %q does not have prefix %q", token, tokenPrefix)
+	}
+	got, e := UnmarshalT(token)
 	if e != nil {
-		t.Error(e)
+		t.Fatal(e)
 	}
-	if len(r) != 3 {
-		t.Errorf("unexpected result: length: %d, %v", len(r), r)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("decoded token = %#v, want %#v", got, want)
 	}
-	for _, ss := range r {
-		fmt.Print("==> ")
-		fmt.Println(ss)
+}
+
+func TestUnmarshalTRejectsUnversionedToken(t *testing.T) {
+	for _, token := range []string{
+		`"key"`,
+		`"key","arg"`,
+		"plain string",
+		"",
+	} {
+		if _, e := UnmarshalT(token); e == nil {
+			t.Errorf("expected unversioned token %q to be rejected", token)
+		}
+	}
+}
+
+func TestUnmarshalTRejectsInvalidVersionedToken(t *testing.T) {
+	for _, token := range []string{
+		tokenPrefix + `[]`,
+		tokenPrefix + `["key"],`,
+		tokenPrefix + `[1]`,
+	} {
+		if _, e := UnmarshalT(token); e == nil {
+			t.Errorf("expected token %q to be rejected", token)
+		}
 	}
 }
 
@@ -72,6 +104,37 @@ func TestTranslateVPreservesTypesAndTranslatesPointerFields(t *testing.T) {
 	mapResult := TranslateV("en", testMessageSource{"message": "translated"}, map[string]any{"value": message}).(map[string]any)
 	if _, ok := mapResult["value"].(string); !ok {
 		t.Fatalf("map value type is %T, want string", mapResult["value"])
+	}
+}
+
+func TestTranslateVCollectionAndStructFieldBehavior(t *testing.T) {
+	message := T("message")
+	type payload struct {
+		Plain  string
+		Tagged string `i18n:""`
+		Items  []string
+	}
+
+	result := TranslateV("en", testMessageSource{"message": "translated"}, payload{
+		Plain:  message,
+		Tagged: message,
+		Items:  []string{message},
+	}).(payload)
+	if result.Plain != message {
+		t.Fatalf("untagged string field was translated: %q", result.Plain)
+	}
+	if result.Tagged != "translated" {
+		t.Fatalf("tagged string field was not translated: %q", result.Tagged)
+	}
+	if result.Items[0] != "translated" {
+		t.Fatalf("collection string was not translated: %q", result.Items[0])
+	}
+
+	mapResult := TranslateV("en", testMessageSource{"key": "translated-key", "message": "translated-value"}, map[string]string{
+		T("key"): message,
+	}).(map[string]string)
+	if mapResult["translated-key"] != "translated-value" {
+		t.Fatalf("map keys and values were not translated: %#v", mapResult)
 	}
 }
 

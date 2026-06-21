@@ -1,6 +1,7 @@
 package i18n
 
 import (
+	"encoding/json"
 	"errors"
 	"go-drive/common/utils"
 	"reflect"
@@ -27,13 +28,22 @@ func TranslateV(lang string, ms MessageSource, v any) any {
 }
 
 func TranslateT(lang string, ms MessageSource, t string) string {
+	return translateT(lang, ms, t, 0)
+}
+
+const maxTranslationDepth = 2
+
+func translateT(lang string, ms MessageSource, t string, depth int) string {
+	if depth >= maxTranslationDepth {
+		return t
+	}
 	arr, e := UnmarshalT(t)
 	if e != nil || len(arr) == 0 {
 		return t
 	}
 	// translate args
 	for i := 1; i < len(arr); i++ {
-		arr[i] = TranslateT(lang, ms, arr[i])
+		arr[i] = translateT(lang, ms, arr[i], depth+1)
 	}
 	return ms.Translate(lang, arr[0], arr[1:]...)
 }
@@ -114,24 +124,15 @@ func expandVar(s string, vars []string) string {
 	return vars[index]
 }
 
-// T encodes pattern and args into a single string
+const tokenPrefix = "@go-drive/i18n:v1:"
+
+// T encodes pattern and args into a versioned translation token.
 func T(pattern string, args ...string) string {
-	sb := strings.Builder{}
-	sb.WriteRune('"')
-	sb.WriteString(strings.ReplaceAll(pattern, "\"", "\"\""))
-	sb.WriteRune('"')
-	if len(args) > 0 {
-		sb.WriteRune(',')
-		for i, s := range args {
-			sb.WriteRune('"')
-			sb.WriteString(strings.ReplaceAll(s, "\"", "\"\""))
-			sb.WriteRune('"')
-			if i < len(args)-1 {
-				sb.WriteRune(',')
-			}
-		}
-	}
-	return sb.String()
+	items := make([]string, 1, len(args)+1)
+	items[0] = pattern
+	items = append(items, args...)
+	data, _ := json.Marshal(items) // []string is always JSON-marshalable.
+	return tokenPrefix + string(data)
 }
 
 func TPrefix(prefix string) func(string, ...string) string {
@@ -140,55 +141,16 @@ func TPrefix(prefix string) func(string, ...string) string {
 	}
 }
 
-const (
-	stateIdle      = 0
-	stateString    = 1
-	stateStringEnd = 2
-)
-
 func UnmarshalT(s string) ([]string, error) {
-	state := stateIdle
-	sb := strings.Builder{}
-	result := make([]string, 0)
-	for _, ch := range s {
-		switch ch {
-		case '"':
-			switch state {
-			case stateIdle:
-				state = stateString
-			case stateString:
-				state = stateStringEnd
-			case stateStringEnd:
-				state = stateString
-				sb.WriteRune('"')
-			default:
-				return nil, errors.New("unexpected char '\"'")
-			}
-		case ',':
-			switch state {
-			case stateString:
-				sb.WriteRune(',')
-			case stateStringEnd:
-				state = stateIdle
-				result = append(result, sb.String())
-				sb.Reset()
-			default:
-				return nil, errors.New("unexpected char ','")
-			}
-		default:
-			switch state {
-			case stateString:
-				sb.WriteRune(ch)
-			default:
-				return nil, errors.New("unexpected char '" + string(ch) + "'")
-			}
-		}
+	if !strings.HasPrefix(s, tokenPrefix) {
+		return nil, errors.New("invalid translation token prefix")
 	}
-	if state != stateIdle && state != stateStringEnd {
-		return nil, errors.New("unexpected end of string")
+	var result []string
+	if e := json.Unmarshal([]byte(strings.TrimPrefix(s, tokenPrefix)), &result); e != nil {
+		return nil, e
 	}
-	if state == stateStringEnd {
-		result = append(result, sb.String())
+	if len(result) == 0 {
+		return nil, errors.New("translation token contains no message key")
 	}
 	return result, nil
 }
