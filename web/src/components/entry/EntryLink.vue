@@ -1,6 +1,5 @@
 <template>
   <a
-    v-long-press
     class="entry-link"
     :href="href"
     :draggable="draggable ? 'true' : undefined"
@@ -8,8 +7,6 @@
     @dragover="onDragOver"
     @drop="onDrop"
     @click="entryClicked"
-    @contextmenu="entryContextMenu"
-    @long-press="entryContextMenu"
   >
     <slot />
   </a>
@@ -39,7 +36,6 @@ const router = useRouter()
 
 const emit = defineEmits<{
   (e: 'click', data: EntryEventData): void
-  (e: 'menu', data: EntryEventData): void
   (e: 'dragstart', data: EntryEventData): void
   (e: 'dragover', data: EntryEventData): void
   (e: 'drop', data: EntryEventData): void
@@ -64,14 +60,6 @@ const href = computed(() => {
 
 const entryClicked = (event: MouseEvent) => {
   emit('click', {
-    entry: props.entry,
-    path: props.path,
-    event,
-  })
-}
-
-const entryContextMenu = (event: MouseEvent) => {
-  emit('menu', {
     entry: props.entry,
     path: props.path,
     event,

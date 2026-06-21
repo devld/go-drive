@@ -38,19 +38,34 @@
     <!-- README -->
 
     <!-- entry menu -->
-    <DialogView
-      v-model:show="entryMenuShowing"
-      overlay-close
-      esc-close
-      transition="scale-opacity"
-    >
-      <EntryMenu
-        v-if="entryMenuData"
-        :menus="entryMenuData.menus"
-        :entry="entryMenuData.entry"
-        @click="onEntryMenuClicked"
-      />
-    </DialogView>
+    <Teleport to="body">
+      <div
+        v-if="entryMenuOverlayShowing"
+        class="entry-menu-overlay"
+        @click.self="closeEntryMenu"
+      >
+        <Transition
+          name="top-fade"
+          appear
+          @after-leave="entryMenuOverlayShowing = false"
+        >
+          <div
+            v-if="entryMenuShowing"
+            ref="entryMenuEl"
+            class="entry-menu-popup"
+            :style="entryMenuPosition"
+          >
+            <EntryMenu
+              v-if="entryMenuData"
+              compact
+              :menus="entryMenuData.menus"
+              :entry="entryMenuData.entry"
+              @click="onEntryMenuClicked"
+            />
+          </div>
+        </Transition>
+      </div>
+    </Teleport>
     <!-- entry menu -->
 
     <!-- new entry menu -->
@@ -80,7 +95,7 @@ import { copyOrMove } from '@/utils/entry'
 import { triggerDownloadFile } from '@/utils/file'
 import { confirm, loading } from '@/utils/ui-utils'
 import EntryListView from '@/views/EntryListView/index.vue'
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   onBeforeRouteLeave,
@@ -133,6 +148,9 @@ const selectedEntries = ref<Entry[]>([])
 
 const entryMenuData = ref<EntryHandlersMenu | undefined>()
 const entryMenuShowing = ref(false)
+const entryMenuOverlayShowing = ref(false)
+const entryMenuEl = ref<HTMLElement | null>(null)
+const entryMenuPosition = ref({ left: '0px', top: '0px' })
 
 const { viewMode, sortBy, onViewModeChange, onSortByChange, filterFn } =
   useEntriesListState(currentDirEntry, user)
@@ -266,8 +284,39 @@ const onEntryClicked = ({ entry, event }: EntryEventData) => {
 }
 
 const onEntryMenuClicked = ({ entry, menu }: EntryMenuClickData) => {
-  entryMenuShowing.value = false
+  closeEntryMenu()
   executeHandler(menu.name, entry)
+}
+
+const closeEntryMenu = () => {
+  entryMenuShowing.value = false
+}
+
+const positionEntryMenu = async (target: HTMLElement) => {
+  const anchor = target.getBoundingClientRect()
+  entryMenuPosition.value = {
+    left: `${anchor.right}px`,
+    top: `${anchor.bottom}px`,
+  }
+  await nextTick()
+
+  const popup = entryMenuEl.value
+  if (!popup) return
+
+  const margin = 8
+  const gap = 4
+  const popupRect = popup.getBoundingClientRect()
+  const left = Math.min(
+    Math.max(margin, anchor.right - popupRect.width),
+    window.innerWidth - popupRect.width - margin
+  )
+  let top = anchor.bottom + gap
+  if (top + popupRect.height > window.innerHeight - margin) {
+    top = anchor.top - popupRect.height - gap
+  }
+  top = Math.max(margin, top)
+
+  entryMenuPosition.value = { left: `${left}px`, top: `${top}px` }
 }
 
 const showEntryMenu = ({ entry, event }: EntryEventData) => {
@@ -289,7 +338,12 @@ const showEntryMenu = ({ entry, event }: EntryEventData) => {
     }
   }
   entryMenuData.value = menu
+  entryMenuOverlayShowing.value = true
   entryMenuShowing.value = true
+  const target = event?.currentTarget
+  if (target instanceof HTMLElement) {
+    void positionEntryMenu(target)
+  }
 }
 
 const onEntriesLoaded = ({
@@ -383,6 +437,12 @@ const navigateToEntry = (entry: Entry) => {
 
 const onKeyDown = async (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
+    if (entryMenuShowing.value) {
+      closeEntryMenu()
+      e.stopPropagation()
+      e.preventDefault()
+      return
+    }
     if (!getViewHandlerShowing()) return
     e.stopPropagation()
     e.preventDefault()
@@ -428,6 +488,17 @@ window.addEventListener('keydown', onKeyDown)
   background-color: var(--primary-bg-color);
   padding: 16px;
   border-radius: 16px;
+}
+
+.entry-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.entry-menu-popup {
+  position: fixed;
+  box-shadow: var(--dialog-content-shadow);
 }
 
 @media screen and (max-width: 900px) {

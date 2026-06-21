@@ -53,6 +53,7 @@
     "toggle_to_list": "Toggle to list mode (T)",
     "toggle_to_thumbnail": "Toggle to thumbnail mode (T)",
     "toggle_sort": "Toggle sort mode",
+    "entry_actions": "File actions",
     "password_protected": "Password Required",
     "input_password": "Please input the password",
     "sort": {
