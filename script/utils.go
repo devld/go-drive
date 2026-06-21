@@ -320,21 +320,25 @@ func parseValue(ov *Value, v reflect.Value) {
 
 func WrapVmCall(vm *VM, fn func(vm *VM, args Values) any) any {
 	return func(c otto.FunctionCall) otto.Value {
-		vm = vm.vms[c.Otto]
-		if vm == nil {
+		// Resolve into a local variable instead of reassigning the captured
+		// vm: the closure is shared across all forked VMs (otto copies the
+		// runtime but not the Go closure), so writing the captured variable
+		// would race between concurrent VM runs.
+		actualVM := vm.resolveVM(c.Otto)
+		if actualVM == nil {
 			panic("detached vm")
 		}
 
 		defer func() {
 			if e := recover(); e != nil {
-				vm.ThrowError(e)
+				actualVM.ThrowError(e)
 			}
 		}()
 
-		ret := fn(vm, newValues(vm, c.ArgumentList))
-		ov, e := vm.o.ToValue(ret)
+		ret := fn(actualVM, newValues(actualVM, c.ArgumentList))
+		ov, e := actualVM.o.ToValue(ret)
 		if e != nil {
-			vm.ThrowTypeError(e.Error())
+			actualVM.ThrowTypeError(e.Error())
 		}
 		return ov
 	}

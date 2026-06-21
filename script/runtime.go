@@ -19,7 +19,7 @@ var jsDir embed.FS
 type VM struct {
 	o     *otto.Otto
 	vms   map[*otto.Otto]*VM
-	vmsMu *sync.Mutex
+	vmsMu *sync.RWMutex
 
 	disposables map[any]struct{}
 }
@@ -30,7 +30,7 @@ func NewVM() (*VM, error) {
 	vm := &VM{
 		o:           ovm,
 		vms:         make(map[*otto.Otto]*VM),
-		vmsMu:       &sync.Mutex{},
+		vmsMu:       &sync.RWMutex{},
 		disposables: make(map[any]struct{}),
 	}
 
@@ -83,6 +83,15 @@ func (v *VM) Fork() *VM {
 	return newVM
 }
 
+// resolveVM returns the *VM that owns the given otto runtime. Forks share a
+// single vms map, so reads must be guarded against concurrent Fork/Dispose
+// writes happening on other VMs of the same family.
+func (v *VM) resolveVM(o *otto.Otto) *VM {
+	v.vmsMu.RLock()
+	defer v.vmsMu.RUnlock()
+	return v.vms[o]
+}
+
 // Run runs code with this VM. Run can NOT be executed concurrency
 func (v *VM) Run(ctx context.Context, code any) (*Value, error) {
 	return wrapVmRun(ctx, v, func() (otto.Value, error) {
@@ -103,6 +112,21 @@ func (v *VM) GetValue(prop string) (value *Value, e error) {
 	return newValue(v, vv), e
 }
 
+func (v *VM) EncodeJSONValue(value *Value) ([]byte, error) {
+	encoded, e := v.o.Call("JSON.stringify", nil, value.v)
+	if e != nil {
+		return nil, e
+	}
+	if encoded.IsUndefined() {
+		return nil, fmt.Errorf("value is not JSON serializable")
+	}
+	return []byte(encoded.String()), nil
+}
+
+func (v *VM) DecodeJSONValue(encoded []byte) (any, error) {
+	return v.o.Call("JSON.parse", nil, string(encoded))
+}
+
 func (v *VM) ThrowError(e any) {
 	if oe, ok := e.(otto.Value); ok {
 		panic(oe)
@@ -114,6 +138,32 @@ func (v *VM) ThrowError(e any) {
 		panic(v.o.MakeCustomError("Error", ee.Error()))
 	}
 	panic(v.o.MakeCustomError("Error", fmt.Sprintf("%v", e)))
+}
+
+func ThrowDetachedError(e any) {
+	message := errorMessage(e)
+	value, conversionErr := otto.ToValue("Error: " + message)
+	if conversionErr != nil {
+		panic(conversionErr)
+	}
+	panic(value)
+}
+
+func throwForVM(vm *VM, e any) {
+	if vm == nil {
+		ThrowDetachedError(e)
+	}
+	vm.ThrowError(e)
+}
+
+func errorMessage(e any) string {
+	if re, ok := e.(err.Error); ok {
+		return fmt.Sprintf("E:%s:%d:%s", re.Name(), re.Code(), re.Error())
+	}
+	if ee, ok := e.(error); ok {
+		return ee.Error()
+	}
+	return fmt.Sprintf("%v", e)
 }
 
 func (v *VM) ThrowTypeError(message string) {

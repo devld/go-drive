@@ -125,11 +125,11 @@ func (m *memDriveCache) GetChildrenRaw(path string) ([]EntryCacheItem, error) {
 		node.L().RUnlock()
 		return nil, nil
 	}
-	childrenNames := node.Data.childrenNames
+	childrenNames := append([]string(nil), node.Data.childrenNames...)
 	node.L().RUnlock()
 
 	data := make([]EntryCacheItem, 0, len(childrenNames))
-	for _, key := range node.Data.childrenNames {
+	for _, key := range childrenNames {
 		t, _ := node.Get(key)
 		if t == nil {
 			return nil, nil

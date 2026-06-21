@@ -12,15 +12,15 @@ type entryTreeNode struct {
 	Excluded bool
 }
 
-func convertEntryTreeNode(vm *VM, root drive_util.EntryTreeNode) entryTreeNode {
+func convertEntryTreeNode(root drive_util.EntryTreeNode) entryTreeNode {
 	var children []entryTreeNode
 	if root.Children != nil {
 		children = make([]entryTreeNode, 0, len(root.Children))
 		for _, e := range root.Children {
-			children = append(children, convertEntryTreeNode(vm, e))
+			children = append(children, convertEntryTreeNode(e))
 		}
 	}
-	return entryTreeNode{NewEntry(vm, root.Entry), children, root.Excluded}
+	return entryTreeNode{NewEntry(root.Entry), children, root.Excluded}
 }
 
 func flattenEntriesTree(root entryTreeNode, result []entryTreeNode, deepFirst bool) []entryTreeNode {
@@ -45,7 +45,7 @@ func vm_buildEntriesTree(vm *VM, args Values) any {
 	if e != nil {
 		vm.ThrowError(e)
 	}
-	return convertEntryTreeNode(vm, r)
+	return convertEntryTreeNode(r)
 }
 
 // vm_buildEntriesTreeWithPattern: (ctx TaskCtx, root Drive, pattern string, bytesProgress bool) []Entry
@@ -58,7 +58,7 @@ func vm_findEntries(vm *VM, args Values) any {
 	if e != nil {
 		vm.ThrowError(e)
 	}
-	return utils.ArrayMap(r, func(t *types.IEntry) Entry { return NewEntry(vm, *t) })
+	return utils.ArrayMap(r, func(t *types.IEntry) Entry { return NewEntry(*t) })
 }
 
 // vm_flattenEntriesTree: (root entryTreeNode, deepFirst bool) []entryTreeNode
