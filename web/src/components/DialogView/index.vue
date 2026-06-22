@@ -7,11 +7,21 @@
     :class="{ 'dialog-view--fullscreen': fullscreen }"
     @click="overlayClicked"
   >
-    <Transition :name="transition" @after-leave="onDialogClosed">
+    <Transition
+      :name="transition"
+      @after-enter="focusInitial"
+      @after-leave="onDialogClosed"
+    >
       <div
         v-if="eager || contentShowing"
         v-show="contentShowing"
+        ref="contentEl"
         class="dialog-view__content"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="ariaLabel"
+        tabindex="-1"
+        @keydown="onContentKeyDown"
       >
         <div v-if="$slots.header || title" class="dialog-view__header">
           <slot name="header">
@@ -19,10 +29,13 @@
           </slot>
           <button
             v-if="closeable"
+            type="button"
             class="dialog-view__close-button plain-button"
+            :title="closeLabel"
+            :aria-label="closeLabel"
             @click="closeButtonClicked"
           >
-            <Icon name="close" />
+            <Icon name="close" aria-hidden="true" />
           </button>
         </div>
         <div class="dialog-view__body">
@@ -39,8 +52,16 @@
 export default { name: 'DialogView' }
 </script>
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watchEffect } from 'vue'
-import { addScrollLockedCount, getScrollLockedCount } from './state'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { s, T } from '@/i18n'
+import {
+  addScrollLockedCount,
+  getScrollLockedCount,
+  isTopDialog,
+  pushDialog,
+  removeDialog,
+  type DialogController,
+} from './state'
 
 const props = defineProps({
   show: {
@@ -83,7 +104,12 @@ const emit = defineEmits<{
 const overlayShowing = ref(false)
 const contentShowing = ref(false)
 const overlayEl = ref(null)
+const contentEl = ref<HTMLElement | null>(null)
 let scrollLocked = false
+let lastFocused: HTMLElement | null = null
+
+const ariaLabel = computed(() => (props.title ? s(props.title) : undefined))
+const closeLabel = computed(() => s(T('dialog.base.close')))
 
 const overlayClicked = (e: MouseEvent) => {
   if (!props.overlayClose) return
@@ -94,25 +120,98 @@ const overlayClicked = (e: MouseEvent) => {
 const close = () => emit('update:show', false)
 const closeButtonClicked = () => close()
 
-const onKeyDown = (e: KeyboardEvent) => {
-  if (!props.escClose) return
-  if (props.closeable && e.key === 'Escape' && props.show) {
-    close()
+const dialogController: DialogController = {
+  canEscClose: () => !!props.escClose && !!props.closeable && !!props.show,
+  requestClose: () => close(),
+}
+
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'textarea:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
+const getFocusable = (root: HTMLElement | null): HTMLElement[] => {
+  if (!root) return []
+  return Array.from(
+    root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+  ).filter((el) => el.offsetParent !== null || el === document.activeElement)
+}
+
+const focusInitial = () => {
+  const content = contentEl.value
+  if (!content) return
+  const active = document.activeElement as HTMLElement | null
+  // Respect focus that inner content already claimed (e.g. an input field).
+  if (active && active !== content && content.contains(active)) return
+
+  const autofocus = content.querySelector<HTMLElement>('[autofocus]')
+  if (autofocus) return autofocus.focus()
+
+  const field = content.querySelector<HTMLElement>(
+    'input:not([disabled]),textarea:not([disabled]),select:not([disabled])'
+  )
+  if (field) return field.focus()
+
+  // Default to the primary (last) footer button so Enter/Esc work right away.
+  const buttons = content.querySelectorAll<HTMLElement>(
+    '.dialog-view__footer button:not([disabled])'
+  )
+  if (buttons.length) return buttons[0].focus()
+
+  content.focus()
+}
+
+// Focusing during the frame the dialog opens in does not stick: focus() lands
+// but the v-if/v-show + <Transition> enter work runs in that same frame and
+// resets activeElement back to <body>. Waiting until the next frame (a
+// microtask via nextTick is still too early) makes the focus stick. The
+// transition's @after-enter re-asserts it as a final guarantee.
+const focusInitialDeferred = () => {
+  requestAnimationFrame(() => requestAnimationFrame(() => focusInitial()))
+}
+
+const restoreFocus = () => {
+  const el = lastFocused
+  lastFocused = null
+  if (el && typeof el.focus === 'function' && document.contains(el)) {
+    el.focus()
+  }
+}
+
+// Keep Tab focus within the topmost dialog (basic focus trap).
+const onContentKeyDown = (e: KeyboardEvent) => {
+  if (e.key !== 'Tab') return
+  if (!isTopDialog(dialogController)) return
+  const content = contentEl.value
+  if (!content) return
+  const focusable = getFocusable(content)
+  const active = document.activeElement as HTMLElement | null
+  if (!focusable.length) {
     e.preventDefault()
+    content.focus()
+    return
+  }
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (e.shiftKey) {
+    if (active === first || !content.contains(active)) {
+      e.preventDefault()
+      last.focus()
+    }
+  } else if (active === last || !content.contains(active)) {
+    e.preventDefault()
+    first.focus()
   }
 }
 
 const onDialogClosed = () => {
   overlayShowing.value = false
+  restoreFocus()
   emit('closed')
-}
-
-const setupEvents = () => {
-  window.addEventListener('keydown', onKeyDown)
-}
-
-const removeEvents = () => {
-  window.removeEventListener('keydown', onKeyDown)
 }
 
 const onDialogVisibleChanged = (showing: boolean) => {
@@ -133,30 +232,40 @@ const onDialogVisibleChanged = (showing: boolean) => {
   }
 }
 
-watchEffect(() => {
-  const val = props.show
-  if (val) {
-    overlayShowing.value = val
-    nextTick(() => {
-      contentShowing.value = true
-    })
-    setupEvents()
-  } else {
-    contentShowing.value = false
-    if (props.transition === 'none') {
-      overlayShowing.value = false
+watch(
+  () => props.show,
+  (val) => {
+    if (val) {
+      lastFocused = document.activeElement as HTMLElement | null
+      overlayShowing.value = true
+      nextTick(() => {
+        contentShowing.value = true
+        focusInitialDeferred()
+      })
+    } else {
+      contentShowing.value = false
+      if (props.transition === 'none') {
+        overlayShowing.value = false
+        restoreFocus()
+      }
     }
-    removeEvents()
-  }
-})
+  },
+  { immediate: true }
+)
 
-watchEffect(() => {
-  onDialogVisibleChanged(overlayShowing.value)
-})
+watch(
+  overlayShowing,
+  (showing) => {
+    onDialogVisibleChanged(showing)
+    if (showing) pushDialog(dialogController)
+    else removeDialog(dialogController)
+  },
+  { immediate: true }
+)
 
 onBeforeUnmount(() => {
   onDialogVisibleChanged(false)
-  removeEvents()
+  removeDialog(dialogController)
 })
 </script>
 <style lang="scss">

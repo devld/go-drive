@@ -1,7 +1,7 @@
 import BaseDialog from './BaseDialog.vue'
 import { IS_DEBUG } from '@/utils'
 import { T } from '@/i18n'
-import { createApp, defineComponent, h } from 'vue'
+import { createApp, defineComponent, h, reactive, ref, shallowRef } from 'vue'
 import dialogUse from '../dialog-use'
 import { SimpleButtonType } from '@/components/SimpleButton'
 
@@ -40,185 +40,272 @@ const ON_OPTIONS_KEYS = [
   'cancelType',
   'escClose',
   'overlayClose',
-]
+] as const
+
+type LoadingState = '' | 'confirm' | 'cancel'
+
+/** Inner dialog component exposing optional confirm/cancel guards. */
+interface DialogInner {
+  beforeConfirm?: () => PromiseValue<any>
+  beforeCancel?: () => PromiseValue<any>
+}
+
+/** Manages the loading indicator and deferring it to avoid flicker. */
+function useLoading() {
+  const loading = ref<LoadingState>('')
+
+  const toggleLoading = (value?: string | boolean) => {
+    if (typeof value !== 'string' && typeof value !== 'boolean') {
+      loading.value = ''
+      return
+    }
+    if (value === 'confirm' || value === 'cancel' || value === '') {
+      loading.value = value
+      return
+    }
+    loading.value = value ? 'confirm' : 'cancel'
+  }
+
+  // Only show the loading indicator if `task` does not settle synchronously,
+  // which avoids a flicker for fast operations.
+  const runWithLoading = async <T>(
+    confirm: boolean,
+    task: () => PromiseValue<T>
+  ): Promise<T> => {
+    const timer = setTimeout(() => toggleLoading(confirm), 0)
+    try {
+      return await task()
+    } finally {
+      clearTimeout(timer)
+      toggleLoading()
+    }
+  }
+
+  return { loading, toggleLoading, runWithLoading }
+}
+
+interface DialogDisplayState {
+  title: I18nText
+  confirmText?: I18nText
+  confirmType?: SimpleButtonType
+  confirmDisabled: boolean
+  cancelText?: I18nText
+  cancelType?: SimpleButtonType
+  transition: string
+  closeable: boolean
+  escClose: boolean
+  overlayClose: boolean
+}
+
+/** Reactive display options forwarded to BaseDialog. */
+function useDialogOptions() {
+  const state = reactive<DialogDisplayState>({
+    title: '',
+    confirmText: undefined,
+    confirmType: undefined,
+    confirmDisabled: false,
+    cancelText: undefined,
+    cancelType: 'info',
+    transition: '',
+    closeable: true,
+    escClose: true,
+    overlayClose: false,
+  })
+
+  const applyOptions = (opts: BaseDialogOptions) => {
+    state.title = opts.title || ''
+    state.confirmText = opts.confirmText
+    state.confirmType = opts.confirmType
+    state.cancelText = opts.cancelText
+    state.cancelType = opts.cancelType || 'info'
+    state.transition = opts.transition || 'bottom-fade'
+    state.closeable = opts.closeable ?? true
+    state.escClose = opts.escClose ?? state.closeable
+    state.overlayClose = !!opts.overlayClose
+  }
+
+  const updateOptions = (opts: Partial<BaseDialogOptionsData>) => {
+    ;(Object.keys(opts) as (keyof BaseDialogOptionsData)[]).forEach((key) => {
+      if (!ON_OPTIONS_KEYS.includes(key as (typeof ON_OPTIONS_KEYS)[number])) {
+        return
+      }
+      ;(state as any)[key] = opts[key]
+    })
+  }
+
+  return { state, applyOptions, updateOptions }
+}
+
+/**
+ * Bridges the dialog result to either callbacks (onOk/onCancel) or a Promise,
+ * depending on how the dialog was opened.
+ */
+function useDialogResult() {
+  let callbacks:
+    | { onOk?: (v?: any) => any; onCancel?: (v?: any) => any }
+    | undefined
+  let promise:
+    | { resolve: (v?: any) => void; reject: (v?: any) => void }
+    | undefined
+
+  /** Initialize for a new dialog; returns a Promise unless callbacks are used. */
+  const setup = (opts: BaseDialogOptions): Promise<any> | undefined => {
+    callbacks = undefined
+    promise = undefined
+    if (
+      typeof opts.onOk === 'function' ||
+      typeof opts.onCancel === 'function'
+    ) {
+      callbacks = { onOk: opts.onOk, onCancel: opts.onCancel }
+      return
+    }
+    return new Promise((resolve, reject) => {
+      promise = { resolve, reject }
+    })
+  }
+
+  const hasCallbacks = () => !!callbacks
+
+  const runCallback = async (confirm: boolean, val: any) => {
+    if (!callbacks) return
+    if (confirm) await callbacks.onOk?.(val)
+    else await callbacks.onCancel?.(val || 'cancel')
+  }
+
+  const clear = () => {
+    callbacks = undefined
+    promise = undefined
+  }
+
+  /** Resolve the pending Promise (callbacks already ran) and stop tracking. */
+  const settle = (confirm: boolean, val: any) => {
+    if (promise) {
+      if (confirm) promise.resolve(val)
+      else promise.reject(val || 'cancel')
+    }
+    clear()
+  }
+
+  /** External dismiss (overlay/esc/close button) is treated as a cancel. */
+  const dismiss = () => {
+    callbacks?.onCancel?.()
+    promise?.reject()
+    clear()
+  }
+
+  return { setup, hasCallbacks, runCallback, settle, dismiss }
+}
 
 export function createDialog(name: string, component: any) {
-  return defineComponent({
+  const Dialog = defineComponent({
     name,
-    data() {
-      return {
-        loading: '',
-        opts: {} as BaseDialogOptions,
+    setup(_, { expose }) {
+      const showing = ref(false)
+      const opts = shallowRef<BaseDialogOptions>({})
+      const inner = ref<DialogInner>()
 
-        title: '' as I18nText,
-        confirmText: '' as I18nText | undefined,
-        confirmType: '' as SimpleButtonType | undefined,
-        confirmDisabled: false,
-        cancelText: '' as I18nText | undefined,
-        cancelType: '' as SimpleButtonType | undefined,
-        showing: false,
+      const { loading, toggleLoading, runWithLoading } = useLoading()
+      const options = useDialogOptions()
+      const result = useDialogResult()
 
-        transition: '',
-        closeable: true,
-        escClose: false,
-        overlayClose: false,
+      let onCloseCb: (() => void) | undefined
 
-        onClose_: undefined as (() => void) | undefined,
-        callback_: undefined as
-          | { onOk?: (v?: any) => any; onCancel?: (v?: any) => any }
-          | undefined,
-        promise_: undefined as
-          | { resolve: (v?: any) => any; reject: (v?: any) => any }
-          | undefined,
+      const show = (o: BaseDialogOptions) => {
+        opts.value = o
+        options.applyOptions(o)
+        const promise = result.setup(o)
+        showing.value = true
+        return promise
       }
-    },
-    methods: {
-      show(opts: BaseDialogOptions) {
-        this.opts = opts
 
-        this.title = opts.title || ''
-        this.confirmText = opts.confirmText
-        this.confirmType = opts.confirmType
-        this.cancelText = opts.cancelText
-        this.cancelType = opts.cancelType || 'info'
-        this.transition = opts.transition || 'bottom-fade'
-        this.closeable = opts.closeable ?? true
-        this.escClose = !!opts.escClose
-        this.overlayClose = !!opts.overlayClose
+      const hide = () => {
+        toggleLoading()
+        showing.value = false
+      }
 
-        if (
-          typeof opts.onOk === 'function' ||
-          typeof opts.onCancel === 'function'
-        ) {
-          this.callback_ = { onOk: opts.onOk, onCancel: opts.onCancel }
-        }
+      // Triggered by overlay click / esc / close button.
+      const dismiss = () => {
+        result.dismiss()
+        hide()
+      }
 
-        this.showing = true
+      const runInnerGuard = (confirm: boolean) => {
+        const target = inner.value
+        if (!target) return
+        const guard = confirm ? target.beforeConfirm : target.beforeCancel
+        return guard?.()
+      }
 
-        if (!this.callback_) {
-          return new Promise((resolve, reject) => {
-            this.promise_ = { resolve, reject }
-          })
-        }
-      },
-      beforeConfirmOrCancel(confirm: boolean) {
-        const inner = this.$refs.inner as any
-        if (!inner) return
-        let cb
-        if (confirm && (cb = inner.beforeConfirm)) return cb && cb()
-        if (!confirm && (cb = inner.beforeCancel)) return cb && cb()
-      },
-      async onConfirmOrCancel(confirm: boolean) {
+      const confirmOrCancel = async (confirm: boolean) => {
         let val
-        let t = setTimeout(() => this.toggleLoading(confirm), 0)
         try {
-          val = await this.beforeConfirmOrCancel(confirm)
-        } catch (e: any) {
-          if (IS_DEBUG) {
-            console.warn(e)
-          }
+          val = await runWithLoading(confirm, () => runInnerGuard(confirm))
+        } catch (e) {
+          // A rejected guard (e.g. failed validation) keeps the dialog open.
+          if (IS_DEBUG) console.warn(e)
           return
-        } finally {
-          clearTimeout(t)
-          this.toggleLoading()
         }
 
-        if (this.callback_) {
-          t = setTimeout(() => this.toggleLoading(confirm), 0)
+        if (result.hasCallbacks()) {
           try {
-            if (confirm && this.callback_.onOk) {
-              await this.callback_.onOk(val)
-            }
-            if (!confirm && this.callback_.onCancel) {
-              await this.callback_.onCancel(val || 'cancel')
-            }
-          } catch (e: any) {
+            await runWithLoading(confirm, () =>
+              result.runCallback(confirm, val)
+            )
+          } catch (e) {
             console.warn('dialog callback error', e)
             return
-          } finally {
-            clearTimeout(t)
-            this.toggleLoading()
           }
-          this.close()
         }
 
-        if (this.promise_) {
-          if (confirm) this.promise_.resolve(val)
-          else this.promise_.reject(val || 'cancel')
-          this.close()
-        }
-      },
-      toggleLoading(loading?: string | boolean) {
-        if (typeof loading !== 'string' && typeof loading !== 'boolean') {
-          this.loading = ''
-          return
-        }
-        if (loading === 'confirm' || loading === 'cancel' || loading === '') {
-          this.loading = loading
-          return
-        }
-        this.loading = loading ? 'confirm' : 'cancel'
-      },
-      onOptionsChange(opts: Partial<BaseDialogOptionsData>) {
-        Object.keys(opts).forEach((key) => {
-          if (!ON_OPTIONS_KEYS.includes(key)) return
-          ;(this.$data as any)[key] = opts[
-            key as keyof BaseDialogOptionsData
-          ] as any
-        })
-      },
-      close() {
-        this.toggleLoading()
-        this.callback_ && this.callback_.onCancel && this.callback_.onCancel()
-        this.callback_ = undefined
+        result.settle(confirm, val)
+        hide()
+      }
 
-        this.promise_ && this.promise_.reject()
-        this.promise_ = undefined
+      const onClose = (fn: () => void) => {
+        onCloseCb = fn
+      }
 
-        this.showing = false
-      },
-      onClose(fn: () => void) {
-        this.onClose_ = fn
-      },
+      expose({ show, onClose })
+
+      return () =>
+        h(
+          BaseDialog as any,
+          {
+            showing: showing.value,
+            loading: loading.value,
+            title: options.state.title,
+            confirmText: options.state.confirmText || T('dialog.base.ok'),
+            confirmType: options.state.confirmType,
+            confirmDisabled: options.state.confirmDisabled,
+            cancelText: options.state.cancelText,
+            cancelType: options.state.cancelType,
+            transition: options.state.transition,
+            escClose: options.state.escClose,
+            closeable: options.state.closeable,
+            overlayClose: options.state.overlayClose,
+            onClose: dismiss,
+            onClosed: () => onCloseCb?.(),
+            onConfirm: () => confirmOrCancel(true),
+            onCancel: () => confirmOrCancel(false),
+          },
+          {
+            default: () =>
+              h(component, {
+                ref: inner,
+                loading: loading.value,
+                opts: opts.value,
+                onLoading: toggleLoading,
+                onConfirm: () => confirmOrCancel(true),
+                onCancel: () => confirmOrCancel(false),
+                onOptions: options.updateOptions,
+              }),
+          }
+        )
     },
-    render() {
-      return h(
-        BaseDialog as any,
-        {
-          ref: 'bd',
-          showing: this.showing,
-          loading: this.loading,
-          title: this.title,
-          confirmText: this.confirmText || T('dialog.base.ok'),
-          confirmType: this.confirmType,
-          confirmDisabled: this.confirmDisabled,
-          cancelText: this.cancelText,
-          cancelType: this.cancelType,
-          transition: this.transition,
-          escClose: this.escClose,
-          closeable: this.closeable,
-          overlayClose: this.overlayClose,
-          onClose: () => this.close(),
-          onClosed: () => this.onClose_?.(),
-          onConfirm: () => this.onConfirmOrCancel(true),
-          onCancel: () => this.onConfirmOrCancel(false),
-        },
-        {
-          default: () =>
-            h(component, {
-              ref: 'inner',
-              loading: this.loading,
-              opts: this.opts,
-              onLoading: this.toggleLoading,
-              onConfirm: () => this.onConfirmOrCancel(true),
-              onCancel: () => this.onConfirmOrCancel(false),
-              onOptions: this.onOptionsChange,
-            }),
-        }
-      )
-    },
-    _base_dialog: true,
   })
+
+  ;(Dialog as any)._base_dialog = true
+  return Dialog
 }
 
 export default function showBaseDialog<T = any>(

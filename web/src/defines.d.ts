@@ -14,7 +14,7 @@ import {
 } from '@/components/entry'
 import ErrorView from '@/components/ErrorView.vue'
 import DialogView from '@/components/DialogView'
-import FloatButton from '@/components/FloatButton.vue'
+import FloatButton from '@/components/FloatButton'
 import ProgressBar from '@/components/ProgressBar.vue'
 
 import { s } from '@/i18n'

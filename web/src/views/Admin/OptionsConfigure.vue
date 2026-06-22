@@ -16,7 +16,7 @@
 
       <div v-if="detailsInited[i]" class="options-form">
         <SimpleForm
-          ref="configFormElsSet"
+          :ref="configFormElsSet"
           v-model="configValues[i]"
           :form="form.form"
         />
@@ -32,7 +32,7 @@
 import { getOptions, setOptions } from '@/api/admin'
 import { FormItem } from '@/types'
 import { alert } from '@/utils/ui-utils'
-import { onUpdated, ref, watch } from 'vue'
+import { ComponentPublicInstance, onUpdated, ref, watch } from 'vue'
 
 export interface OptionsForm {
   title?: I18nText
@@ -48,8 +48,9 @@ const props = defineProps({
 })
 
 const configFormEls: InstanceType<SimpleFormType>[] = []
-const configFormElsSet = (el: InstanceType<SimpleFormType>) =>
-  configFormEls.push(el)
+const configFormElsSet = (el: Element | ComponentPublicInstance | null) => {
+  if (el) configFormEls.push(el as unknown as InstanceType<SimpleFormType>)
+}
 
 onUpdated(() => configFormEls.splice(0))
 

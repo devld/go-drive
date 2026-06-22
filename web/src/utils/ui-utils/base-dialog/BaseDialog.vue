@@ -1,6 +1,5 @@
 <template>
   <DialogView
-    v-focus
     class="base-dialog"
     :title="title"
     :show="showing"
@@ -8,10 +7,9 @@
     :esc-close="escClose"
     :overlay-close="overlayClose"
     :closeable="!loading && closeable"
-    tabindex="-1"
     @update:show="emit('close')"
     @closed="emit('closed')"
-    @keydown.enter="emit('confirm')"
+    @keydown.enter="onEnter"
   >
     <div class="base-dialog__content-wrapper">
       <slot />
@@ -94,6 +92,14 @@ const emit = defineEmits<{
   (e: 'confirm'): void
   (e: 'cancel'): void
 }>()
+
+// Only confirm on Enter from single-line inputs. Buttons activate natively
+// (avoids a double confirm) and textareas keep Enter for new lines.
+const onEnter = (e: KeyboardEvent) => {
+  if ((e.target as HTMLElement | null)?.tagName === 'INPUT') {
+    emit('confirm')
+  }
+}
 </script>
 <style lang="scss">
 .base-dialog__content-wrapper {

@@ -22,7 +22,8 @@
   },
   "dialog": {
     "base": {
-      "ok": "确定"
+      "ok": "确定",
+      "close": "关闭"
     },
     "open": {
       "max_items": "最多可选择 {n} 个",
