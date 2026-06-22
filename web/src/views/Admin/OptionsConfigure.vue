@@ -10,7 +10,7 @@
       <summary>
         <h3 class="options-group-title">
           {{ form.title }}
-          <Icon v-if="loading" class="loading-icon" svg="#icon-loading" />
+          <Icon v-if="loading" class="loading-icon" name="loading" />
         </h3>
       </summary>
 

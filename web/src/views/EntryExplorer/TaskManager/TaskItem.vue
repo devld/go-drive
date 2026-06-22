@@ -40,7 +40,7 @@
         :title="t('p.task.start')"
         @click="emit('start')"
       >
-        <Icon svg="#icon-play" />
+        <Icon name="play" />
       </button>
       <button
         v-if="showPause"
@@ -48,7 +48,7 @@
         :title="t('p.task.pause')"
         @click="emit('pause')"
       >
-        <Icon svg="#icon-pause" />
+        <Icon name="pause" />
       </button>
       <button
         v-if="showStop"
@@ -56,7 +56,7 @@
         :title="t('p.task.stop')"
         @click="emit('stop')"
       >
-        <Icon svg="#icon-stop" />
+        <Icon name="stop" />
       </button>
       <button
         v-if="showRemove"
@@ -64,7 +64,7 @@
         :title="t('p.task.remove')"
         @click="emit('remove')"
       >
-        <Icon svg="#icon-close" />
+        <Icon name="close" />
       </button>
     </span>
   </div>

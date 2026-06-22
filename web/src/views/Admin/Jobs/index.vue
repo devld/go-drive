@@ -3,7 +3,7 @@
     <div class="jobs-list">
       <div class="actions">
         <SimpleButton
-          icon="#icon-add"
+          icon="add"
           :title="$t('p.admin.jobs.add_job')"
           @click="addJob"
         />
@@ -41,20 +41,20 @@
                 <SimpleButton
                   :title="$t('p.admin.jobs.view_log')"
                   small
-                  icon="#icon-list"
+                  icon="list"
                   @click="showJobExecutions(j)"
                 />
                 <SimpleButton
                   v-if="!jobEdit"
                   :title="$t('p.admin.jobs.execute')"
                   small
-                  icon="#icon-play"
+                  icon="play"
                   @click="executeJob(j)"
                 />
                 <SimpleButton
                   :title="$t('p.admin.jobs.edit')"
                   small
-                  icon="#icon-edit"
+                  icon="edit"
                   @click="editJob(j)"
                 />
                 <SimpleButton
@@ -62,7 +62,7 @@
                   :title="$t('p.admin.jobs.delete')"
                   type="danger"
                   small
-                  icon="#icon-delete"
+                  icon="delete"
                   @click="deleteJob(j)"
                 />
               </td>
@@ -88,7 +88,7 @@
             :title="$t('p.admin.jobs.eval_code')"
             @click="evalJobCode"
           >
-            <Icon svg="#icon-play" />
+            <Icon name="play" />
           </a>
         </template>
       </SimpleForm>
@@ -167,7 +167,7 @@
                   :title="$t('p.admin.jobs.abort_execution')"
                   type="danger"
                   small
-                  icon="#icon-reject"
+                  icon="reject"
                   @click="abortExecution(e)"
                 />
               </td>

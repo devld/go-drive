@@ -6,7 +6,7 @@
     <div v-if="executing" class="execution-log-dialog__executing">
       <Icon
         class="execution-log-dialog__executing-icon loading-icon"
-        svg="#icon-loading"
+        name="loading"
       />
     </div>
   </div>

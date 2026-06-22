@@ -18,7 +18,7 @@
         :title="s(item.description)"
         @click.stop="toggleHelpShowing"
       >
-        <Icon svg="#icon-help" />
+        <Icon name="help" />
       </a>
 
       <span v-if="slots['label-suffix']" class="form-item-suffix" @click.stop>
@@ -138,7 +138,7 @@
           :title="$t('form.select_path')"
           @click="selectPath"
         >
-          <Icon svg="#icon-folder" />
+          <Icon name="folder" />
         </button>
       </div>
       <FormItemForm

@@ -8,7 +8,7 @@ export default {
   display: {
     name: T('handler.video.name'),
     description: T('handler.video.desc'),
-    icon: '#icon-play-circle',
+    icon: 'play-circle',
   },
   view: {
     name: 'VideoView',

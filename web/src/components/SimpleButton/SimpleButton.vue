@@ -6,15 +6,16 @@
     :type="nativeType"
     @click="emit('click', $event)"
   >
-    <Icon v-if="loading" class="loading-icon" svg="#icon-loading" />
+    <Icon v-if="loading" class="loading-icon" name="loading" />
     <template v-else>
-      <Icon v-if="icon" :svg="icon" />
+      <Icon v-if="icon" :name="icon" />
       <slot />
     </template>
   </button>
 </template>
 <script setup lang="ts">
 import type { SimpleButtonType, SimpleButtonNativeType } from '.'
+import type { IconName } from '@/components/icons'
 
 defineProps({
   loading: {
@@ -27,7 +28,7 @@ defineProps({
     type: Boolean,
   },
   icon: {
-    type: String,
+    type: String as PropType<IconName>,
   },
   disabled: {
     type: Boolean,

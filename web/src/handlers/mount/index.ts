@@ -8,7 +8,7 @@ export default {
   display: {
     name: T('handler.mount.name'),
     description: T('handler.mount.desc'),
-    icon: '#icon-path',
+    icon: 'path',
   },
   supports: ({ entry }, { user }) =>
     isAdmin(user) && !entry.some((e) => e.meta.mountAt),

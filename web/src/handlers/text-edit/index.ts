@@ -17,7 +17,7 @@ export default {
         ? 'handler.text_edit.edit_desc'
         : 'handler.text_edit.view_desc'
     ),
-    icon: '#icon-cursor-text',
+    icon: 'cursor-text',
   }),
   style: { fullscreen: true },
   view: {

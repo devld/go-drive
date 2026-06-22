@@ -10,7 +10,7 @@
             class="close-button plain-button small"
             @click="removeItem(i)"
           >
-            <Icon svg="#icon-close" />
+            <Icon name="close" />
           </button>
         </div>
         <Form
@@ -24,7 +24,7 @@
     </div>
     <div v-if="!disabled && addable" class="form-item__form-add">
       <SimpleDropdown v-model="addDropdownShowing" position="bottom-right">
-        <SimpleButton icon="#icon-add" native-type="button">{{
+        <SimpleButton icon="add" native-type="button">{{
           forms.addText
         }}</SimpleButton>
         <template #dropdown>

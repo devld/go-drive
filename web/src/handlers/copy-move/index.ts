@@ -12,7 +12,7 @@ const createHandler = (isMove: boolean): EntryHandler => {
       description: T(
         isMove ? 'handler.copy_move.move_desc' : 'handler.copy_move.copy_desc'
       ),
-      icon: isMove ? '#icon-move' : '#icon-copy',
+      icon: isMove ? 'move' : 'copy',
     },
     multiple: true,
     supports: isMove

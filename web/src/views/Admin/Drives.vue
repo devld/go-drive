@@ -4,12 +4,12 @@
       <div class="actions">
         <SimpleButton
           class="add-button"
-          icon="#icon-add"
+          icon="add"
           :title="$t('p.admin.drive.add_drive')"
           @click="addDrive"
         />
         <SimpleButton
-          icon="#icon-refresh2"
+          icon="refresh"
           :title="$t('p.admin.drive.reload_tip')"
           :loading="reloading"
           @click="reloadDrives"
@@ -42,14 +42,14 @@
               <SimpleButton
                 :title="$t('p.admin.drive.edit')"
                 small
-                icon="#icon-edit"
+                icon="edit"
                 @click="editDrive(d)"
               />
               <SimpleButton
                 :title="$t('p.admin.drive.delete')"
                 type="danger"
                 small
-                icon="#icon-delete"
+                icon="delete"
                 @click="deleteDrive(d)"
               />
             </td>
@@ -140,7 +140,7 @@
       </div>
     </div>
     <div v-else class="edit-tips">
-      <SimpleButton icon="#icon-add" title="Add drive" small @click="addDrive">
+      <SimpleButton icon="add" title="Add drive" small @click="addDrive">
         {{ $t('p.admin.drive.add') }}
       </SimpleButton>
       {{ $t('p.admin.drive.or_edit') }}

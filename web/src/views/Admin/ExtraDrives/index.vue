@@ -59,7 +59,7 @@
               <td class="line center">
                 <SimpleButton
                   v-if="item.installed"
-                  icon="#icon-edit"
+                  icon="edit"
                   :loading="item.loading"
                   :disabled="loading"
                   :title="$t('p.admin.extra_drive.edit')"
@@ -68,7 +68,7 @@
                 <SimpleButton
                   v-if="item.installed"
                   type="danger"
-                  icon="#icon-delete"
+                  icon="delete"
                   :loading="item.loading"
                   :disabled="loading"
                   :title="$t('p.admin.extra_drive.uninstall')"
@@ -76,7 +76,7 @@
                 />
                 <SimpleButton
                   v-else
-                  icon="#icon-add"
+                  icon="add"
                   :loading="item.loading"
                   :disabled="loading"
                   :title="$t('p.admin.extra_drive.install')"

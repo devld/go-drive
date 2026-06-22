@@ -4,7 +4,7 @@
     :class="`entry-icon-${entry.type}`"
     @click="emit('click', $event)"
   >
-    <Icon :svg="icon || entryIcon" />
+    <Icon :name="icon || entryIcon" />
     <img
       v-if="showThumbnail && thumbnail && !err"
       v-lazy-src="thumbnail"
@@ -15,12 +15,13 @@
   </span>
 </template>
 <script setup lang="ts">
-import { getIconSVG } from './file-icon'
+import { getEntryIcon } from './file-icon'
 import { fileThumbnail } from '@/api'
 import { filenameExt } from '@/utils'
 import { ref, computed } from 'vue'
 import { Entry } from '@/types'
 import { useAppStore } from '@/store'
+import type { IconName } from '@/components/icons'
 
 const props = defineProps({
   entry: {
@@ -28,7 +29,7 @@ const props = defineProps({
     required: true,
   },
   icon: {
-    type: String,
+    type: String as PropType<IconName>,
   },
   showThumbnail: {
     type: Boolean,
@@ -43,7 +44,7 @@ const err = ref<Event | null>(null)
 const store = useAppStore()
 
 const thumbnailConfig = computed(() => store.config!.thumbnail)
-const entryIcon = computed(() => getIconSVG(props.entry))
+const entryIcon = computed(() => getEntryIcon(props.entry))
 const supportThumbnail = computed(() => {
   const entry = props.entry
   const ext = entry.type === 'dir' ? '/' : filenameExt(entry.name)

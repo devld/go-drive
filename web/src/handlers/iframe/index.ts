@@ -8,7 +8,7 @@ export default {
   display: {
     name: T('handler.iframe.name'),
     description: T('handler.iframe.desc'),
-    icon: '#icon-wendang',
+    icon: 'document',
   },
   style: { fullscreen: true },
   view: {

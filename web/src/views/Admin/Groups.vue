@@ -3,7 +3,7 @@
     <div class="groups-list">
       <div class="actions">
         <SimpleButton
-          icon="#icon-add"
+          icon="add"
           :title="$t('p.admin.group.add_group')"
           @click="addGroup"
         />
@@ -26,14 +26,14 @@
               <SimpleButton
                 :title="$t('p.admin.group.edit')"
                 small
-                icon="#icon-edit"
+                icon="edit"
                 @click="editGroup(g)"
               />
               <SimpleButton
                 :title="$t('p.admin.group.delete')"
                 type="danger"
                 small
-                icon="#icon-delete"
+                icon="delete"
                 @click="deleteGroup(g)"
               />
             </td>
@@ -76,7 +76,7 @@
     </div>
     <div v-else class="edit-tips">
       <SimpleButton
-        icon="#icon-add"
+        icon="add"
         :title="$t('p.admin.group.add_group')"
         small
         @click="addGroup"

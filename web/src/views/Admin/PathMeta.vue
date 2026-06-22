@@ -19,7 +19,7 @@
     <div class="path-meta-list">
       <div v-if="!pathMeta" class="actions">
         <SimpleButton
-          icon="#icon-add"
+          icon="add"
           :title="$t('p.admin.path_meta.add')"
           @click="addPathMeta"
         />
@@ -59,14 +59,14 @@
                 <SimpleButton
                   :title="$t('p.admin.path_meta.edit')"
                   small
-                  icon="#icon-edit"
+                  icon="edit"
                   @click="editPathMeta(u)"
                 />
                 <SimpleButton
                   :title="$t('p.admin.path_meta.delete')"
                   type="danger"
                   small
-                  icon="#icon-delete"
+                  icon="delete"
                   @click="deletePathMeta(u)"
                 />
               </td>
