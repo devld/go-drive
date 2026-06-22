@@ -23,6 +23,16 @@
   @include meta.load-css('highlight.js/scss/agate.scss');
 }
 
+// Nicer keyboard-focus ring using the theme primary color. Only shows for
+// keyboard/programmatic focus (not on mouse clicks) via :focus-visible. The
+// transparent outline keeps a visible focus indicator under forced-colors /
+// Windows High Contrast mode where box-shadow is dropped.
+:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--focus-ring-color);
+}
+
 .full-width {
   width: 100%;
 }

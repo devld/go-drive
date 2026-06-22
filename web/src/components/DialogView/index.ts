@@ -1,3 +1,3 @@
-import DialogView from './DialogView.vue'
+import DialogView from './index.vue'
 
 export default DialogView

@@ -22,7 +22,8 @@
   },
   "dialog": {
     "base": {
-      "ok": "OK"
+      "ok": "OK",
+      "close": "Close"
     },
     "open": {
       "max_items": "Select at most {n} items.",

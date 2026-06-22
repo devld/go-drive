@@ -4,11 +4,12 @@
     :class="{ loading, [type!]: !!type, small }"
     :disabled="!!loading || disabled"
     :type="nativeType"
+    :aria-busy="loading ? 'true' : undefined"
     @click="emit('click', $event)"
   >
-    <Icon v-if="loading" class="loading-icon" name="loading" />
+    <Icon v-if="loading" class="loading-icon" name="loading" aria-hidden="true" />
     <template v-else>
-      <Icon v-if="icon" :name="icon" />
+      <Icon v-if="icon" :name="icon" aria-hidden="true" />
       <slot />
     </template>
   </button>
@@ -35,6 +36,7 @@ defineProps({
   },
   nativeType: {
     type: String as PropType<SimpleButtonNativeType>,
+    default: 'button',
   },
 })
 
