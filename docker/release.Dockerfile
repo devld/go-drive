@@ -8,6 +8,10 @@ ARG TARGETPLATFORM
 
 WORKDIR /app
 
+RUN apk add --no-cache ffmpeg vips-tools
+
+COPY setup-config.sh /usr/local/bin/setup-config
+
 RUN set -e; \
     case "${TARGETPLATFORM}" in \
         linux/arm64*) \
@@ -34,7 +38,7 @@ RUN set -e; \
     mv ${name}/* . && \
     rmdir ${name} && \
     mkdir data && \
-    sed 's/data-dir: .\//data-dir: \/app\/data/; s/web-dir: .\/web/web-dir: \/app\/web/; s/lang-dir: .\/lang/lang-dir: \/app\/lang/' -i config.yml
+    sh /usr/local/bin/setup-config config.yml
 
 ENTRYPOINT ["/app/go-drive", "-c", "/app/config.yml"]
 

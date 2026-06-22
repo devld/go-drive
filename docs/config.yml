@@ -92,12 +92,14 @@ thumbnail:
       #  # thumbnail image quality(1-100), higher is better
       #  quality: 50
 
-    # vips: low-memory image thumbnail generator using an external libvips command
-    # Requires libvips and /bin/sh.
+    # vips: low-memory image thumbnail generator using an external libvips command.
+    # Requires the `vips` command (Alpine: vips-tools) and /bin/sh.
     # This handler replaces the embedded image handler for the same file types when enabled.
+    # The official Docker image installs libvips and enables the block below automatically.
+    # docker-handlers:begin
     #- type: shell
     #  tags:
-    #  file-types: jpg,jpeg,png,gif,webp
+    #  file-types: jpg,jpeg,png,gif,webp,tif,tiff,svg,heic,heif,avif
     #  config:
     #    shell: |
     #      work_dir=$(mktemp -d)
@@ -108,6 +110,7 @@ thumbnail:
     #    write-content: true
     #    max-size: -1
     #    timeout: 10m
+    # docker-handlers:end
 
     # text: embed generator for text files
     # Generating a svg file by reading some content
@@ -136,12 +139,22 @@ thumbnail:
     # GO_DRIVE_ENTRY_SIZE: the entry file size
     # GO_DRIVE_ENTRY_MOD_TIME: timestamp, modTime of this entry
     # GO_DRIVE_ENTRY_URL: URL of the file content or folder children (e.g. /content/a/a.txt or /entries/a)
+    # media: generate thumbnails for video and audio files via ffmpeg.
+    # For video it grabs the first frame; for audio it grabs the embedded cover
+    # (poster/album art), which ffmpeg exposes as a video stream, so `-frames:v 1`
+    # works for both. `-an` drops the audio stream (irrelevant for thumbnails).
+    # Files with no usable picture simply produce no thumbnail (non-zero exit).
+    # Only audio formats whose cover is stored at the head of the file are listed,
+    # because the content is piped through a non-seekable stdin. Containers that
+    # keep their cover/metadata at the tail (m4a/mp4, ape, wma) are omitted.
+    # The official Docker image installs ffmpeg and enables the block below automatically.
+    # docker-handlers:begin
     #- type: shell
-    #  tag:
-    #  file-types: mp4,avi
+    #  tags:
+    #  file-types: mp4,avi,mkv,mov,webm,flv,m4v,mpg,mpeg,3gp,mp3,flac,ogg,opus
     #  config:
     #    # Shell command or multiline script. Executed by /bin/sh on Unix and cmd.exe on Windows.
-    #    shell: ffmpeg -hide_banner -loglevel error -i - -frames:v 1 -vf scale=220:-1 -f mjpeg -
+    #    shell: ffmpeg -hide_banner -loglevel error -i - -an -frames:v 1 -vf scale=220:-1 -f mjpeg -
     #    # the output file mime-type
     #    mime-type: image/jpeg
     #    # whether writing file content to stdin
@@ -150,6 +163,7 @@ thumbnail:
     #    max-size: -1
     #    # the timeout to generating, if <= 0, no limitation
     #    timeout: 10m
+    # docker-handlers:end
 
 auth:
   # User session validity
