@@ -8,7 +8,7 @@ export default {
   display: {
     name: T('handler.permission.name'),
     description: T('handler.permission.desc'),
-    icon: '#icon-permission',
+    icon: 'permission',
   },
   view: {
     name: 'PermissionsView',

@@ -1,6 +1,7 @@
 import type { ConfigOptionsMap } from '@/store/options'
 import { Config, Entry, User } from '@/types'
 import { UIUtils } from '@/utils/ui-utils'
+import type { IconName } from '@/components/icons'
 
 export interface EntryHandlerExecutionOption {
   ctx: EntryHandlerContext
@@ -38,7 +39,7 @@ export interface EntryHandlersMenu {
 export interface EntryHandlerDisplayConfig {
   name: I18nText
   description?: I18nText
-  icon?: string
+  icon?: IconName
   type?: 'danger'
 }
 

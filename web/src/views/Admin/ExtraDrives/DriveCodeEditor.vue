@@ -16,7 +16,7 @@
         $t('p.admin.extra_drive.save')
       }}</SimpleButton>
       <button class="plain-button close-button" @click="emit('close')">
-        <Icon svg="#icon-close" />
+        <Icon name="close" />
       </button>
     </div>
     <div class="drive-code-editors">

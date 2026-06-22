@@ -12,7 +12,7 @@
       title="Close"
       @click="emit('close')"
     >
-      <Icon svg="#icon-close" />
+      <Icon name="close" />
     </button>
   </h1>
 </template>

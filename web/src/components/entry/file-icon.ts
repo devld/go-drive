@@ -1,5 +1,6 @@
 import { Entry } from '@/types'
 import { createEntryExtMatcher } from '@/utils'
+import type { IconName } from '@/components/icons'
 
 const fileExts: O<string[]> = {
   log: [
@@ -17,11 +18,11 @@ const fileExts: O<string[]> = {
     '/dockerfile',
     '/.vimrc',
   ],
-  mp: ['mp3', 'm4a', 'flac', 'mid', 'midi', 'wav'],
+  mp3: ['mp3', 'm4a', 'flac', 'mid', 'midi', 'wav'],
   exe: ['exe', 'deb', 'sh', 'rpm', 'com', 'jar', 'msi'],
   jpeg: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
   md: ['md', 'markdown'],
-  mp1: ['mp4', 'mov', 'wmv', 'avi', 'flv', 'webm', 'rmvb', 'mkv', 'ogg'],
+  mp4: ['mp4', 'mov', 'wmv', 'avi', 'flv', 'webm', 'rmvb', 'mkv', 'ogg'],
   pdf: ['pdf'],
   doc: ['doc', 'docx'],
   pptx: ['ppt', 'pptx'],
@@ -114,16 +115,16 @@ const fileExts: O<string[]> = {
 
 const fileIconMatcher = createEntryExtMatcher(fileExts)
 
-const dirIcon = 'folder'
-const parentDirIcon = 'iconfanhuishangyiji'
-const fileFallbackIcon = 'file'
+const dirIcon: IconName = 'folder'
+const parentDirIcon: IconName = 'level-up'
+const fileFallbackIcon: IconName = 'file'
 
-export function getIconSVG(entry: Entry) {
-  let icon
+export function getEntryIcon(entry: Entry): IconName {
+  let icon: IconName = fileFallbackIcon
   if (entry.type === 'dir') icon = dirIcon
   if (entry.type === 'file') {
-    icon = fileIconMatcher(entry) || fileFallbackIcon
+    icon = (fileIconMatcher(entry) as IconName) || fileFallbackIcon
   }
   if (entry.name === '..') icon = parentDirIcon
-  return '#icon-' + icon
+  return icon
 }

@@ -1,9 +1,10 @@
+import type { IconName } from '@/components/icons'
 import FloatButton from './FloatButton.vue'
 
 export interface FloatButtonItem extends O {
   title?: I18nText
   slot: string
-  icon?: string
+  icon?: IconName
 }
 
 export interface FloatButtonClickEventData {

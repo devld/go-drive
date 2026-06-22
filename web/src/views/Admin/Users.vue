@@ -3,7 +3,7 @@
     <div class="users-list">
       <div class="actions">
         <SimpleButton
-          icon="#icon-add"
+          icon="add"
           :title="$t('p.admin.user.add_user')"
           @click="addUser"
         />
@@ -26,14 +26,14 @@
               <SimpleButton
                 :title="$t('p.admin.user.edit')"
                 small
-                icon="#icon-edit"
+                icon="edit"
                 @click="editUser(u)"
               />
               <SimpleButton
                 :title="$t('p.admin.user.delete')"
                 type="danger"
                 small
-                icon="#icon-delete"
+                icon="delete"
                 @click="deleteUser(u)"
               />
             </td>
@@ -71,7 +71,7 @@
       </div>
     </div>
     <div v-else class="edit-tips">
-      <SimpleButton icon="#icon-add" title="Add user" small @click="addUser">
+      <SimpleButton icon="add" title="Add user" small @click="addUser">
         {{ $t('p.admin.user.add') }}
       </SimpleButton>
       {{ $t('p.admin.user.or_edit') }}

@@ -8,7 +8,7 @@ export default {
   display: {
     name: T('handler.audio.name'),
     description: T('handler.audio.desc'),
-    icon: '#icon-play-circle',
+    icon: 'play-circle',
   },
   view: {
     name: 'AudioView',

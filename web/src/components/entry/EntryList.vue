@@ -22,12 +22,12 @@
           @click="toggleViewMode"
         >
           <Icon
-            :svg="validViewMode === 'list' ? '#icon-gallery' : '#icon-list'"
+            :name="validViewMode === 'list' ? 'grid' : 'list'"
           />
         </button>
         <SimpleDropdown v-model="sortDropdownShowing">
           <span :title="$t('app.toggle_sort')">
-            <Icon svg="#icon-sort" />
+            <Icon name="sort" />
           </span>
           <template #dropdown>
             <ul class="sort-modes">
@@ -60,7 +60,7 @@
           <EntryItem
             :view-mode="validViewMode"
             :entry="parentDirEntry"
-            :icon="selected.length > 0 ? '#icon-duigou' : undefined"
+            :icon="selected.length > 0 ? 'check' : undefined"
             :show-thumbnail="false"
             @icon-click="parentIconClicked($event)"
           />

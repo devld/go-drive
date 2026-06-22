@@ -8,7 +8,7 @@ export default {
   display: {
     name: T('handler.zip.name'),
     description: T('handler.zip.desc'),
-    icon: '#icon-zip-grey',
+    icon: 'archive',
   },
   supports: () => true,
   multiple: true,

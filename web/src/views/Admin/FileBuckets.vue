@@ -31,7 +31,7 @@
     <div class="file-bucket-list">
       <div v-if="!fileBucket" class="actions">
         <SimpleButton
-          icon="#icon-add"
+          icon="add"
           :title="$t('p.admin.file_bucket.add')"
           @click="addFileBucket"
         />
@@ -58,14 +58,14 @@
                 <SimpleButton
                   :title="$t('p.admin.file_bucket.edit')"
                   small
-                  icon="#icon-edit"
+                  icon="edit"
                   @click="editFileBucket(u)"
                 />
                 <SimpleButton
                   :title="$t('p.admin.file_bucket.delete')"
                   type="danger"
                   small
-                  icon="#icon-delete"
+                  icon="delete"
                   @click="deleteFileBucket(u)"
                 />
               </td>

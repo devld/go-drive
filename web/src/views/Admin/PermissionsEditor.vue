@@ -40,7 +40,7 @@
           <td class="center">
             <SimpleButton
               :title="$t('p.admin.p_edit.reject')"
-              icon="#icon-reject"
+              icon="reject"
               small
               :type="
                 p.policy === PathPermissionPolicy.REJECTED ? 'danger' : 'info'
@@ -49,7 +49,7 @@
             />
             <SimpleButton
               :title="$t('p.admin.p_edit.accept')"
-              icon="#icon-accept"
+              icon="accept"
               small
               :type="
                 p.policy === PathPermissionPolicy.ACCEPTED ? undefined : 'info'
@@ -60,7 +60,7 @@
           <td>
             <SimpleButton
               type="danger"
-              icon="#icon-delete"
+              icon="delete"
               small
               @click="removePermission(i)"
             />
@@ -68,7 +68,7 @@
         </tr>
         <tr>
           <td class="center" colspan="4">
-            <SimpleButton icon="#icon-add" small @click="addPermission" />
+            <SimpleButton icon="add" small @click="addPermission" />
           </td>
         </tr>
       </tbody>

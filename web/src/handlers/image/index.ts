@@ -8,7 +8,7 @@ export default {
   display: {
     name: T('handler.image.name'),
     description: T('handler.image.desc'),
-    icon: '#icon-image',
+    icon: 'image',
   },
   style: { fullscreen: true },
   view: {

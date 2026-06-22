@@ -43,6 +43,7 @@ import { filenameExt, formatBytes, formatTime } from '@/utils'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ListViewMode } from '.'
+import type { IconName } from '@/components/icons'
 
 const { t } = useI18n()
 
@@ -52,7 +53,7 @@ const props = defineProps({
     required: true,
   },
   icon: {
-    type: String,
+    type: String as PropType<IconName>,
   },
   viewMode: {
     type: String as PropType<ListViewMode>,

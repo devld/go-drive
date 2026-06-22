@@ -14,7 +14,7 @@
         @click="emit('click', { entry, menu: m })"
       >
         <span class="entry-menu__icon">
-          <Icon v-if="m.display.icon" :svg="m.display.icon" />
+          <Icon v-if="m.display.icon" :name="m.display.icon" />
         </span>
         <span class="entry-menu__text">{{ m.display.name }}</span>
       </li>

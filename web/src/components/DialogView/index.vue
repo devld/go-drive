@@ -22,7 +22,7 @@
             class="dialog-view__close-button plain-button"
             @click="closeButtonClicked"
           >
-            <Icon svg="#icon-close" />
+            <Icon name="close" />
           </button>
         </div>
         <div class="dialog-view__body">

@@ -25,16 +25,16 @@
       @click="newButtonClicked"
     >
       <span class="icon-new-item" :class="{ active: floatMenuShowing }">
-        <Icon svg="#icon-add1" />
+        <Icon name="plus" />
       </span>
       <template #new-file>
-        <Icon svg="#icon-new-file" />
+        <Icon name="new-file" />
       </template>
       <template #upload-file>
-        <Icon svg="#icon-upload-file" />
+        <Icon name="upload-file" />
       </template>
       <template #new-folder>
-        <Icon svg="#icon-new-folder" />
+        <Icon name="new-folder" />
       </template>
     </FloatButton>
 

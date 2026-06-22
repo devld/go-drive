@@ -3,7 +3,7 @@
     <h1 class="page-title">
       <span>{{ $t('hv.download.download') }}</span>
       <button class="plain-button close-button" @click="emit('close')">
-        <Icon svg="#icon-close" />
+        <Icon name="close" />
       </button>
     </h1>
     <div class="page-content">

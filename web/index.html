@@ -6,7 +6,6 @@
     <meta name="referrer" content="same-origin" />
     <link rel="icon" href="/favicon.png?t=<%= Date.now() %>" />
     <title><%- mode === 'production' ? '{{ (.Options.Get "app.name") }}' : 'Drive' %></title>
-    <link rel="stylesheet" href="/static/iconfont/iconfont.css?t=<%= Date.now() %>" />
     <% if (mode === 'production') { %>
     <script>
       var ___config___ = {
@@ -36,6 +35,5 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
-    <script src="/static/iconfont/iconfont.js?t=<%= Date.now() %>"></script>
   </body>
 </html>

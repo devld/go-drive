@@ -10,7 +10,7 @@ export default {
     name: T('handler.delete.name'),
     description: T('handler.delete.desc'),
     type: 'danger',
-    icon: '#icon-delete',
+    icon: 'delete',
   },
   supports: ({ entry, parent }) =>
     entry.every((e) =>

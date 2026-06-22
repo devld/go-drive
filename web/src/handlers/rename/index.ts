@@ -8,7 +8,7 @@ export default {
   display: {
     name: T('handler.rename.name'),
     description: T('handler.rename.desc'),
-    icon: '#icon-rename',
+    icon: 'rename',
   },
   supports: ({ entry, parent }) => entry.meta.writable && parent?.meta.writable,
   handler: ({ entry }, { input, alert }) => {

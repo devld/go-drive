@@ -20,7 +20,7 @@
         >
           <slot v-if="$slots[b.slot]" :name="b.slot"></slot>
           <template v-else>
-            <Icon v-if="b.icon" :svg="b.icon" />
+            <Icon v-if="b.icon" :name="b.icon" />
           </template>
         </button>
       </Transition>

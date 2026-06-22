@@ -7,7 +7,7 @@ export default {
   display: {
     name: T('handler.download.name'),
     description: T('handler.download.desc'),
-    icon: '#icon-download',
+    icon: 'download',
   },
   view: {
     name: 'DownloadView',
