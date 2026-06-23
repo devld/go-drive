@@ -12,6 +12,7 @@ import (
 	"go-drive/common"
 	"go-drive/common/drive_util"
 	err "go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -73,9 +74,15 @@ func NewMaker(config common.Config, optionsDAO *storage.OptionsDAO,
 		validity: config.Thumbnail.TTL,
 	}
 
+	// Remove leftover lock files and empty failure markers on startup. Empty
+	// files mark previously failed generations; dropping them on restart gives
+	// those entries a fresh chance to be regenerated.
 	_ = filepath.Walk(m.cacheDir, func(path string, info os.FileInfo, e error) error {
-		if e == nil && !info.IsDir() && strings.HasSuffix(info.Name(), lockSuffix) {
-			_ = os.Remove(filepath.Join(m.cacheDir, info.Name()))
+		if e != nil || info.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(info.Name(), lockSuffix) || info.Size() == 0 {
+			_ = os.Remove(path)
 		}
 		return nil
 	})
@@ -216,8 +223,8 @@ func (m *Maker) resolveHandler(entry ThumbnailEntry) ([]TypeHandler, error) {
 			continue
 		}
 		if ok, e := doublestar.Match(temp[1], entry.GetRealPath()); ok && e == nil {
-			tags := strings.Split(temp[0], ",")
-			for _, tag := range tags {
+			tags := strings.SplitSeq(temp[0], ",")
+			for tag := range tags {
 				if h, ok := hs[tag]; ok {
 					matchedHandlers = append(matchedHandlers, h)
 				}
@@ -247,22 +254,35 @@ func (m *Maker) tryToGetFromCache(entry ThumbnailEntry, path string) (Thumbnail,
 	if e != nil {
 		return nil, e
 	}
-	if exists {
-		f, e := os.Open(path)
-		if e != nil {
+	if !exists {
+		return nil, nil
+	}
+	f, e := os.Open(path)
+	if e != nil {
+		return nil, e
+	}
+	stat, e := f.Stat()
+	if e != nil {
+		_ = f.Close()
+		return nil, e
+	}
+	// An empty file is a failure marker: a previous generation failed. Return
+	// the cached failure instead of re-running the (possibly expensive) handler.
+	// Successful cache files always carry a non-empty meta header. The marker is
+	// kept until it expires (cleaned by the periodic cleaner / on restart).
+	if stat.Size() == 0 {
+		_ = f.Close()
+		return nil, err.NewNotFoundMessageError(i18n.T("api.thumbnail.create_failed"))
+	}
+	meta, headerSize, e := m.readItemMeta(f)
+	if e != nil || m.isThumbnailExpired(entry, *meta) {
+		_ = f.Close()
+		if e := m.remove(path); e != nil {
 			return nil, e
 		}
-		meta, headerSize, e := m.readItemMeta(f)
-		if e != nil || m.isThumbnailExpired(entry, *meta) {
-			_ = f.Close()
-			if e := m.remove(path); e != nil {
-				return nil, e
-			}
-		} else {
-			return m.openFile("", f, meta, headerSize)
-		}
+		return nil, nil
 	}
-	return nil, nil
+	return m.openFile("", f, meta, headerSize)
 }
 
 func (m *Maker) doMake(ctx context.Context, entry ThumbnailEntry, path string) (Thumbnail, error) {
@@ -294,7 +314,17 @@ func (m *Maker) doMake(ctx context.Context, entry ThumbnailEntry, path string) (
 		}
 	}
 
-	return m.openFile(path, nil, nil, 0)
+	// The task finished (either created the thumbnail directly or waited for a
+	// concurrent task). Re-read through the cache so a negative cache entry
+	// written by the producing task surfaces as the cached failure.
+	t, e := m.tryToGetFromCache(entry, path)
+	if e != nil {
+		return nil, e
+	}
+	if t == nil {
+		return nil, err.NewNotFoundMessageError(i18n.T("api.thumbnail.create_failed"))
+	}
+	return t, nil
 }
 
 func (m *Maker) executeTask(task *taskWrapper) error {
@@ -314,6 +344,7 @@ func (m *Maker) executeTask(task *taskWrapper) error {
 	if exists {
 		return errMaking
 	}
+	var lastErr error
 	for _, h := range task.h {
 		item, e := m.createItem(task.entry, lockFile, h.MimeType())
 		if e != nil {
@@ -337,19 +368,47 @@ func (m *Maker) executeTask(task *taskWrapper) error {
 		}
 
 		if e == nil {
-			e = os.Rename(lockFile, task.dest)
+			if e = os.Rename(lockFile, task.dest); e != nil {
+				_ = os.Remove(lockFile)
+				_ = os.Remove(task.dest)
+				return e
+			}
+			return nil
 		}
 
-		if e != nil {
-			_ = os.Remove(lockFile)
-			_ = os.Remove(task.dest)
-		}
-		return e
+		// A handler matched but failed to generate the thumbnail.
+		lastErr = e
+		break
 	}
 
-	_ = os.Remove(lockFile)
-	_ = os.Remove(task.dest)
-	return err.NewNotFoundMessageError("unable to create thumbnail")
+	if lastErr == nil {
+		lastErr = err.NewNotFoundMessageError("unable to create thumbnail")
+	}
+
+	// Mark the failure with an empty cache file so the (possibly expensive)
+	// handler is not executed again on every subsequent request. The marker
+	// follows the regular cache TTL and is also dropped on restart.
+	if e := writeFailedMarker(task.dest); e != nil {
+		log.Println("failed to write thumbnail failure marker:", e)
+		_ = os.Remove(lockFile)
+		_ = os.Remove(task.dest)
+	}
+	return lastErr
+}
+
+// writeFailedMarker atomically writes an empty file to mark that thumbnail
+// generation failed for this entry.
+func writeFailedMarker(dest string) error {
+	lockFile := dest + lockSuffix
+	f, e := os.OpenFile(lockFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if e != nil {
+		return e
+	}
+	if e := f.Close(); e != nil {
+		_ = os.Remove(lockFile)
+		return e
+	}
+	return os.Rename(lockFile, dest)
 }
 
 func waitPendingTask(ctx context.Context, path string, lock string) error {

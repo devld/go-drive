@@ -27,7 +27,7 @@ FROM alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache ffmpeg vips-tools
+RUN apk add --no-cache ffmpeg vips-tools vips-heif cairo
 
 COPY --from=builder /work/go-drive/build/go-drive_docker.tar.gz .
 

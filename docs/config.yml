@@ -96,9 +96,9 @@ thumbnail:
     #    shell: |
     #      work_dir=$(mktemp -d)
     #      trap 'rm -rf "$work_dir"' EXIT
-    #      vips thumbnail /dev/stdin "$work_dir/thumbnail.jpg[Q=50,strip]" 220 --height 220 --size down
-    #      cat "$work_dir/thumbnail.jpg"
-    #    mime-type: image/jpeg
+    #      vips thumbnail /dev/stdin "$work_dir/thumbnail.webp[Q=50,strip]" 220 --height 220 --size down
+    #      cat "$work_dir/thumbnail.webp"
+    #    mime-type: image/webp
     #    write-content: true
     #    max-size: -1
     #    timeout: 10m
@@ -146,9 +146,9 @@ thumbnail:
     #  file-types: mp4,avi,mkv,mov,webm,flv,m4v,mpg,mpeg,3gp,mp3,flac,ogg,opus
     #  config:
     #    # Shell command or multiline script. Executed by /bin/sh on Unix and cmd.exe on Windows.
-    #    shell: ffmpeg -hide_banner -loglevel error -i - -an -frames:v 1 -vf scale=220:-1 -f mjpeg -
+    #    shell: ffmpeg -hide_banner -loglevel error -i - -an -frames:v 1 -vf scale=220:-1 -c:v libwebp -f webp -
     #    # the output file mime-type
-    #    mime-type: image/jpeg
+    #    mime-type: image/webp
     #    # whether writing file content to stdin
     #    write-content: true
     #    # max supported file size, if <= 0, no limitation
