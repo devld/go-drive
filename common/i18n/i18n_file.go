@@ -2,10 +2,9 @@ package i18n
 
 import (
 	"fmt"
-	"go-drive/common"
 	"go-drive/common/utils"
+	"io/fs"
 	"log"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -21,14 +20,13 @@ type FileMessageSource struct {
 	languages   []language.Tag
 }
 
-// NewFileMessageSource creates a MessageSource read translated texts from file
-func NewFileMessageSource(config common.Config) (*FileMessageSource, error) {
-	langDir := config.LangDir
-
+// NewFileMessageSource creates a MessageSource that reads translated texts from
+// the given filesystem (the i18n files embedded in the binary).
+func NewFileMessageSource(fsys fs.FS) (*FileMessageSource, error) {
 	msg := make(map[language.Tag]map[string]string)
 
-	if exists, _ := utils.FileExists(langDir); exists {
-		temp, e := readAllLang(langDir)
+	if fsys != nil {
+		temp, e := readAllLang(fsys)
 		if e != nil {
 			return nil, e
 		}
@@ -42,12 +40,8 @@ func NewFileMessageSource(config common.Config) (*FileMessageSource, error) {
 		lang = append(lang, lt)
 	}
 	sort.Slice(lang, func(i, j int) bool { return lang[i].String() < lang[j].String() })
-	log.Printf("[i18n] %d languages loaded: %v", len(lang), lang)
 
-	def, e := language.Parse(config.DefaultLang)
-	if e != nil {
-		def = language.AmericanEnglish
-	}
+	def := language.AmericanEnglish
 	matcher := language.NewMatcher(lang)
 	if len(lang) > 0 {
 		_, index, confidence := matcher.Match(def)
@@ -55,7 +49,7 @@ func NewFileMessageSource(config common.Config) (*FileMessageSource, error) {
 			def = lang[index]
 		}
 	}
-	log.Printf("[i18n] default language: %v", def)
+	log.Printf("[i18n] %d languages loaded: %v, default language: %v", len(lang), lang, def)
 
 	return &FileMessageSource{
 		defaultLang: def,
@@ -90,8 +84,8 @@ func (f *FileMessageSource) getMessage(key, lang string) string {
 	return msg
 }
 
-func readAllLang(path string) (map[language.Tag]map[string]string, error) {
-	files, e := os.ReadDir(path)
+func readAllLang(fsys fs.FS) (map[language.Tag]map[string]string, error) {
+	files, e := fs.ReadDir(fsys, ".")
 	if e != nil {
 		return nil, e
 	}
@@ -112,7 +106,7 @@ func readAllLang(path string) (map[language.Tag]map[string]string, error) {
 			continue
 		}
 
-		bytes, e := os.ReadFile(filepath.Join(path, file.Name()))
+		bytes, e := fs.ReadFile(fsys, file.Name())
 		if e != nil {
 			return nil, e
 		}

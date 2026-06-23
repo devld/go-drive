@@ -15,6 +15,7 @@ import (
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
+	"io/fs"
 	"net/http"
 	"os"
 	"runtime"
@@ -45,7 +46,8 @@ func InitServer(config common.Config,
 	jobDAO *storage.JobDAO,
 	fileBucketDAO *storage.FileBucketDAO,
 	jobExecutor *job.JobExecutor,
-	messageSource i18n.MessageSource) (*gin.Engine, error) {
+	messageSource i18n.MessageSource,
+	webFS fs.FS) (*gin.Engine, error) {
 
 	if utils.IsDebugOn {
 		gin.SetMode(gin.DebugMode)
@@ -104,8 +106,8 @@ func InitServer(config common.Config,
 		}
 	}
 
-	if config.WebDir != "" {
-		webFiles := newWebFiles(config.WebDir, config, optionsDAO)
+	if webFS != nil {
+		webFiles := newWebFiles(http.FS(webFS), config, optionsDAO)
 		s := http.StripPrefix(config.WebPath, webFiles)
 		engine.NoRoute(func(c *gin.Context) { s.ServeHTTP(c.Writer, c.Request) })
 	}

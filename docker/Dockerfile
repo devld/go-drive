@@ -29,8 +29,6 @@ WORKDIR /app
 
 RUN apk add --no-cache ffmpeg vips-tools
 
-COPY --from=builder /work/go-drive/docker/setup-config.sh /usr/local/bin/setup-config
-
 COPY --from=builder /work/go-drive/build/go-drive_docker.tar.gz .
 
 RUN tar xf go-drive_docker.tar.gz && \
@@ -38,7 +36,7 @@ RUN tar xf go-drive_docker.tar.gz && \
     mv go-drive_docker/* . && \
     rmdir go-drive_docker && \
     mkdir data && \
-    sh /usr/local/bin/setup-config config.yml
+    sed -i '/docker-handlers:begin/,/docker-handlers:end/{/docker-handlers:/d;s/^    #/    /;}' config.yml
 
 ENTRYPOINT ["/app/go-drive", "-c", "/app/config.yml"]
 

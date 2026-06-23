@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
 	"go-drive/common"
 	"go-drive/common/event"
 	"go-drive/common/i18n"
@@ -15,6 +14,8 @@ import (
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
+
+	"github.com/gin-gonic/gin"
 )
 
 func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine, error) {
@@ -69,11 +70,15 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	fileMessageSource, err := i18n.NewFileMessageSource(config)
+	fileMessageSource, err := i18n.NewFileMessageSource(langResourceFS())
 	if err != nil {
 		return nil, err
 	}
-	engine, err := server.InitServer(config, ch, bus, rootDrive, access, service, dbTokenStore, maker, signer, chunkUploader, runner, optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO, pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO, jobExecutor, fileMessageSource)
+	engine, err := server.InitServer(config, ch, bus, rootDrive, access,
+		service, dbTokenStore, maker, signer, chunkUploader, runner,
+		optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO,
+		pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO,
+		jobExecutor, fileMessageSource, webResourceFS())
 	if err != nil {
 		return nil, err
 	}

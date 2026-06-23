@@ -36,13 +36,13 @@ func setFileCacheControl(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func newWebFiles(webDir string, config common.Config, options *storage.OptionsDAO) http.HandlerFunc {
+func newWebFiles(fsys http.FileSystem, config common.Config, options *storage.OptionsDAO) http.HandlerFunc {
 	data := templateData{Options: options, Config: &config}
 
 	tp := newTemplateProcessor(isAllowedTemplate)
 	fileProcess := func(path string, file http.File) ([]byte, error) { return tp.Process(path, file, data) }
 
-	handler := http.FileServer(&rootFs{root: http.Dir(webDir), fileProcess: fileProcess})
+	handler := http.FileServer(&rootFs{root: fsys, fileProcess: fileProcess})
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		setFileCacheControl(w, r)

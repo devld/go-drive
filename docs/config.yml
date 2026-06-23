@@ -45,18 +45,10 @@ db:
 # - temp: Temp dir
 # - thumbnails: Thumbnail cache dir
 # - data.db: SQLite database file
-data-dir: ./
+data-dir: ./data
 
 # Temp dir. Default is data-dir/temp
 temp-dir: ""
-
-# Web static files dir.
-web-dir: ./web
-
-# i18n languages
-lang-dir: ./lang
-# If the client's language is not supported, then this language will be used
-default-lang: en-US
 
 # Concurrent task. eg. copy, move, delete
 max-concurrent-task: 100

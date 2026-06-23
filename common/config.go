@@ -43,10 +43,7 @@ const (
 	DefaultListen              = ":8089"
 	DefaultAPIPath             = ""
 	DefaultWebPath             = ""
-	DefaultDataDir             = "./"
-	DefaultWebDir              = "./web"
-	DefaultLangDir             = "./lang"
-	DefaultLang                = "en-US"
+	DefaultDataDir             = "./data"
 	DefaultOAuthRedirectURI    = "https://go-drive.top/oauth_callback"
 	DefaultMaxConcurrentTask   = 100
 	DefaultFreeFs              = false
@@ -85,12 +82,6 @@ type Config struct {
 	// all data will be stored in DataDir
 	DataDir string `yaml:"data-dir"`
 	TempDir string `yaml:"temp-dir"`
-	// WebDir is the web ui static files dir
-	WebDir string `yaml:"web-dir"`
-	// LangDir is the i18n files dir
-	LangDir string `yaml:"lang-dir"`
-	// DefaultLang is the default language code
-	DefaultLang string `yaml:"default-lang"`
 
 	// DrivesDir is the location of the extra script drives
 	DrivesDir string `yaml:"drives-dir"`
@@ -174,13 +165,10 @@ type CacheConfig struct {
 
 func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	config := Config{
-		Listen:      DefaultListen,
-		APIPath:     DefaultAPIPath,
-		WebPath:     DefaultWebPath,
-		DataDir:     DefaultDataDir,
-		WebDir:      DefaultWebDir,
-		LangDir:     DefaultLangDir,
-		DefaultLang: DefaultLang,
+		Listen:  DefaultListen,
+		APIPath: DefaultAPIPath,
+		WebPath: DefaultWebPath,
+		DataDir: DefaultDataDir,
 
 		DrivesDir:          DefaultDrivesDir,
 		DriveUploadersDir:  DefaultDriveUploadersDir,
@@ -244,7 +232,9 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	}
 
 	if _, e := os.Stat(config.DataDir); os.IsNotExist(e) {
-		return config, fmt.Errorf("data dir '%s' does not exist", config.DataDir)
+		if e := os.Mkdir(config.DataDir, 0755); e != nil {
+			return config, fmt.Errorf("failed to create data dir '%s': %w", config.DataDir, e)
+		}
 	}
 
 	if config.Thumbnail.Concurrent <= 0 {

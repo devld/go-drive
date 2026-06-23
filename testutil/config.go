@@ -45,9 +45,6 @@ func defaultTestConfigWithDirs(dataDir, tempDir string) common.Config {
 		WebPath:     common.DefaultWebPath,
 		DataDir:     dataDir,
 		TempDir:     tempDir,
-		WebDir:      common.DefaultWebDir,
-		LangDir:     common.DefaultLangDir,
-		DefaultLang: common.DefaultLang,
 
 		DrivesDir:          common.DefaultDrivesDir,
 		DriveUploadersDir:  common.DefaultDriveUploadersDir,

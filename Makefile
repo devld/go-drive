@@ -14,21 +14,17 @@ $(build_dir)/$(target_name).tar.gz: $(build_dir)/$(target_name)
 $(build_dir)/$(target_name).zip: $(build_dir)/$(target_name)
 	cd $(work_dir); zip -q -r $(target_name).zip $(target_name)
 
-$(build_dir)/$(target_name): $(build_dir)/go-drive $(build_dir)/web $(build_dir)/lang $(build_dir)/config.yml
+$(build_dir)/$(target_name): $(build_dir)/go-drive $(build_dir)/config.yml
 
-$(build_dir)/go-drive: $(build_dir)
+# The web UI (web/dist) and i18n files (docs/lang) are embedded into the binary,
+# so the frontend must be built before linking.
+$(build_dir)/go-drive: $(build_dir) web/dist
 	CGO_CFLAGS="-Wno-return-local-addr" \
 	go build -o $(build_dir) -ldflags \
 		"-w -s \
 		-X 'go-drive/common.Version=${BUILD_VERSION}' \
 		-X 'go-drive/common.RevHash=$(shell git rev-parse HEAD)' \
 		-X 'go-drive/common.BuildAt=$(shell date -R)'"
-
-$(build_dir)/web: $(build_dir) web/dist
-	cp -R web/dist $(build_dir)/web
-
-$(build_dir)/lang: $(build_dir)
-	cp -R docs/lang $(build_dir)/
 
 $(build_dir)/config.yml: $(build_dir)
 	cp docs/config.yml $(build_dir)/

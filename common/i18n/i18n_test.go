@@ -1,7 +1,6 @@
 package i18n
 
 import (
-	"go-drive/common"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -153,7 +152,7 @@ func TestFileMessageSourceFallbackAndFileFiltering(t *testing.T) {
 		t.Fatal(e)
 	}
 
-	source, e := NewFileMessageSource(common.Config{LangDir: dir, DefaultLang: "en-US"})
+	source, e := NewFileMessageSource(os.DirFS(dir))
 	if e != nil {
 		t.Fatal(e)
 	}
