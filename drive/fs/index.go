@@ -59,10 +59,21 @@ func NewDrive(_ context.Context, config types.SM,
 		return nil, e
 	}
 
-	path, e = filepath.Abs(filepath.Join(localRoot, path))
-	if e != nil {
-		return nil, e
+	if localRoot != "" {
+		path, e = filepath.Abs(filepath.Join(localRoot, utils.CleanPath(path)))
+		if e != nil {
+			return nil, e
+		}
+		if e := os.MkdirAll(path, 0755); e != nil {
+			return nil, e
+		}
+	} else {
+		path, e = filepath.Abs(path)
+		if e != nil {
+			return nil, e
+		}
 	}
+
 	if exists, _ := utils.FileExists(path); !exists {
 		return nil, err.NewNotFoundMessageError(fsT("root_path_not_exists"))
 	}
