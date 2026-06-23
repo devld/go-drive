@@ -12,6 +12,9 @@ RUN apk update && \
 # Setup golang
 COPY --from=golang /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:${PATH}"
+# musl (Alpine 3.19+) no longer exposes the LFS64 symbols (pread64/pwrite64/off64_t)
+# used by go-sqlite3 unless _LARGEFILE64_SOURCE is defined.
+ENV CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
 
 ADD https://api.github.com/repos/devld/go-drive/git/refs/${REF} /tmp/ref-info
 
