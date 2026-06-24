@@ -59,9 +59,25 @@
                 v-model="group.users"
                 type="checkbox"
                 :value="u.username"
+                :disabled="isGroupSyncedUser(u)"
+                :title="
+                  isGroupSyncedUser(u)
+                    ? $t('p.admin.group.user_managed_externally', {
+                        s: u.source,
+                      })
+                    : ''
+                "
               />
-              <span class="user-name">{{ u.username }}</span>
+              <span
+                class="user-name"
+                :class="{ external: isGroupSyncedUser(u) }"
+              >
+                {{ u.username }}
+              </span>
             </span>
+            <p v-if="hasExternalUser" class="external-tips">
+              {{ $t('p.admin.group.external_user_tips') }}
+            </p>
           </div>
         </div>
         <div class="save-button">
@@ -96,7 +112,7 @@ import {
   getUsers,
   updateGroup,
 } from '@/api/admin'
-import { FormItem, Group, User } from '@/types'
+import { ADMIN_GROUP, FormItem, Group, isGroupSyncedUser, User } from '@/types'
 import { alert, confirm } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -109,6 +125,13 @@ const group = ref<O | null>(null)
 const edit = ref(false)
 const saving = ref(false)
 
+// Users whose source syncs groups (e.g. LDAP) have their group membership
+// managed by that provider, so they cannot be toggled here.
+const hasExternalUser = computed(() => users.value.some(isGroupSyncedUser))
+
+// The admin group is unrestricted, so its root path is meaningless and hidden.
+const isAdminGroup = computed(() => group.value?.name === ADMIN_GROUP)
+
 const groupForm = computed<FormItem[]>(() => [
   {
     field: 'name',
@@ -117,6 +140,16 @@ const groupForm = computed<FormItem[]>(() => [
     required: true,
     disabled: edit.value,
   },
+  ...(isAdminGroup.value
+    ? []
+    : [
+        {
+          field: 'rootPath',
+          label: t('p.admin.group.f_rootPath'),
+          description: t('p.admin.group.f_rootPath_desc'),
+          type: 'path',
+        } as FormItem,
+      ]),
 ])
 
 const formEl = ref<InstanceType<SimpleFormType> | null>(null)
@@ -138,6 +171,7 @@ const loadGroups = async () => {
 const addGroup = () => {
   group.value = {
     name: '',
+    rootPath: '',
     users: [],
   }
   edit.value = false
@@ -182,6 +216,7 @@ const saveGroup = async () => {
   }
   const g = {
     name: group.value!.name,
+    rootPath: group.value!.rootPath,
     users: group.value!.users.map((username: string) => ({ username })),
   }
   saving.value = true
@@ -240,6 +275,16 @@ loadUsers()
     &:not(:last-child) {
       margin-right: 10px;
     }
+
+    .user-name.external {
+      color: var(--secondary-text-color);
+    }
+  }
+
+  .external-tips {
+    margin: 8px 0 0;
+    color: var(--secondary-text-color);
+    font-size: 13px;
   }
 
   .simple-form {

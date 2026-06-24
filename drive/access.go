@@ -61,12 +61,30 @@ func (da *Access) GetChroot(s types.Principal) (*Chroot, error) {
 		}
 		rootPath = p
 	} else {
-		rootPath = s.User.RootPath
+		rootPath = resolveUserRootPath(s.User)
 	}
 	if rootPath == "" {
 		return nil, nil
 	}
 	return NewChroot(rootPath, nil), nil
+}
+
+func resolveUserRootPath(user types.User) string {
+	if user.RootPath != "" {
+		return user.RootPath
+	}
+	best := ""
+	bestDepth := -1
+	for _, g := range user.Groups {
+		if g.RootPath == "" {
+			continue
+		}
+		if d := utils.PathDepth(g.RootPath); bestDepth == -1 || d < bestDepth {
+			best = g.RootPath
+			bestDepth = d
+		}
+	}
+	return best
 }
 
 func (da *Access) GetDrive(session types.Principal) (types.IDrive, error) {

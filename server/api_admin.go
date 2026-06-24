@@ -50,7 +50,7 @@ func InitAdminRoutes(
 	// delete user
 	r.DELETE("/user/:username", ur.deleteUser)
 
-	gr := &groupsRoute{userDAO, groupDAO}
+	gr := &groupsRoute{groupDAO}
 	// list groups
 	r.GET("/groups", gr.listGroups)
 	// get group and it's users

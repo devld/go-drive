@@ -133,7 +133,7 @@
           @input="textInput"
         />
         <button
-          v-if="!disabled || item.disabled"
+          v-if="!(disabled || item.disabled)"
           class="form-item--type-path-select"
           :title="$t('form.select_path')"
           @click="selectPath"

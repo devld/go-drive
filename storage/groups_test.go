@@ -10,7 +10,7 @@ import (
 func TestGroupDAO_AddGroup_duplicateReturnsNotAllowed(t *testing.T) {
 	db, ch, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewGroupDAO(db, ch)
+	dao := NewGroupDAO(db, NewUserDAO(db, ch), ch)
 	_, _ = dao.AddGroup(GroupWithUsers{Group: types.Group{Name: "g1"}})
 	_, e := dao.AddGroup(GroupWithUsers{Group: types.Group{Name: "g1"}})
 	if e == nil {
@@ -25,7 +25,7 @@ func TestGroupDAO_AddGroup_duplicateReturnsNotAllowed(t *testing.T) {
 func TestGroupDAO_GetGroup_notFoundReturnsNotFound(t *testing.T) {
 	db, ch, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewGroupDAO(db, ch)
+	dao := NewGroupDAO(db, NewUserDAO(db, ch), ch)
 	_, e := dao.GetGroup("nonexistent")
 	if e == nil {
 		t.Fatal("expected error for nonexistent group")

@@ -63,7 +63,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err != nil {
 		return nil, err
 	}
-	groupDAO := storage.NewGroupDAO(db, ch)
+	groupDAO := storage.NewGroupDAO(db, userDAO, ch)
 	jobDAO := storage.NewJobDAO(db, ch)
 	fileBucketDAO := storage.NewFileBucketDAO(db, ch)
 	jobExecutor, err := job.NewJobExecutor(jobDAO, ch)

@@ -11,7 +11,8 @@ import (
 )
 
 type GroupDAO struct {
-	db *DB
+	db      *DB
+	userDAO *UserDAO
 }
 
 type GroupWithUsers struct {
@@ -19,8 +20,8 @@ type GroupWithUsers struct {
 	Users []types.User `json:"users"`
 }
 
-func NewGroupDAO(db *DB, ch *registry.ComponentsHolder) *GroupDAO {
-	dao := &GroupDAO{db}
+func NewGroupDAO(db *DB, userDAO *UserDAO, ch *registry.ComponentsHolder) *GroupDAO {
+	dao := &GroupDAO{db: db, userDAO: userDAO}
 	ch.Add(registry.KeyGroupDAO, dao)
 	return dao
 }
@@ -86,14 +87,14 @@ func (g *GroupDAO) AddGroup(group GroupWithUsers) (GroupWithUsers, error) {
 		}
 		return saveUserGroup(group.Users, group.Name, tx)
 	})
+	if e == nil {
+		g.userDAO.EvictCache("")
+	}
 	return group, e
 }
 
 func (g *GroupDAO) UpdateGroup(name string, gus GroupWithUsers) error {
-	if gus.Users == nil {
-		return nil
-	}
-	return g.db.C().Transaction(func(tx *gorm.DB) error {
+	e := g.db.C().Transaction(func(tx *gorm.DB) error {
 		group := types.Group{}
 		e := tx.First(&group, "`name` = ?", name).Error
 		if errors.Is(e, gorm.ErrRecordNotFound) {
@@ -102,15 +103,31 @@ func (g *GroupDAO) UpdateGroup(name string, gus GroupWithUsers) error {
 		if e != nil {
 			return e
 		}
+		// Update the group's own mutable fields (name is the PK, not editable).
+		if e := tx.Model(&types.Group{}).Where("`name` = ?", name).
+			Update("root_path", gus.RootPath).Error; e != nil {
+			return e
+		}
+		// Users is only rewritten when provided; a nil slice leaves membership
+		// untouched (e.g. a root-path-only update).
+		if gus.Users == nil {
+			return nil
+		}
 		if e := tx.Delete(&types.UserGroup{}, "`group_name` = ?", name).Error; e != nil {
 			return e
 		}
 		return saveUserGroup(gus.Users, group.Name, tx)
 	})
+	if e == nil {
+		// Membership and/or the group root path may have changed, both of which
+		// affect members' resolved state.
+		g.userDAO.EvictCache("")
+	}
+	return e
 }
 
 func (g *GroupDAO) DeleteGroup(name string) error {
-	return g.db.C().Transaction(func(tx *gorm.DB) error {
+	e := g.db.C().Transaction(func(tx *gorm.DB) error {
 		s := tx.Delete(types.Group{}, "`name` = ?", name)
 		if s.Error != nil {
 			return s.Error
@@ -123,4 +140,8 @@ func (g *GroupDAO) DeleteGroup(name string) error {
 		}
 		return tx.Where("`subject` = ?", types.GroupSubject(name)).Delete(&types.PathPermission{}).Error
 	})
+	if e == nil {
+		g.userDAO.EvictCache("")
+	}
+	return e
 }

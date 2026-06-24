@@ -30,6 +30,10 @@ type User struct {
 
 type Group struct {
 	Name string `gorm:"column:name;primaryKey;not null;type:string;size:32" json:"name" binding:"required"`
+	// RootPath restricts members of this group to a sub-directory, like a user's
+	// own root path. The user's own root path takes precedence; among groups the
+	// shallowest one wins (see resolveUserRootPath in drive/access.go).
+	RootPath string `gorm:"column:root_path;type:string;size:512" json:"rootPath,omitempty"`
 }
 
 type UserGroup struct {

@@ -55,9 +55,17 @@
           <span class="label">{{ $t('p.admin.user.groups') }}</span>
           <div class="value">
             <span v-for="g in groups" :key="g.name" class="group-item">
-              <input v-model="user.groups" type="checkbox" :value="g.name" />
+              <input
+                v-model="user.groups"
+                type="checkbox"
+                :value="g.name"
+                :disabled="isExternalUser"
+              />
               <span class="group-name">{{ g.name }}</span>
             </span>
+            <p v-if="isExternalUser" class="external-tips">
+              {{ $t('p.admin.user.groups_managed_externally', { s: user.source }) }}
+            </p>
           </div>
         </div>
         <div class="save-button">
@@ -87,7 +95,7 @@ import {
   getUsers,
   updateUser,
 } from '@/api/admin'
-import { FormItem, Group, User } from '@/types'
+import { ADMIN_GROUP, FormItem, Group, isGroupSyncedUser, User } from '@/types'
 import { alert, confirm } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -100,6 +108,15 @@ const groups = ref<Group[]>([])
 const user = ref<O | null>(null)
 const edit = ref(false)
 const saving = ref(false)
+
+const isExternalUser = computed(() =>
+  user.value ? isGroupSyncedUser(user.value) : false
+)
+
+// Members of the admin group are unrestricted, so the root path has no effect.
+const isAdminUser = computed(
+  () => !!user.value?.groups?.includes(ADMIN_GROUP)
+)
 
 const formEl = ref<InstanceType<SimpleFormType> | null>(null)
 
@@ -120,8 +137,11 @@ const userForm = computed<FormItem[]>(() => [
   {
     field: 'rootPath',
     label: t('p.admin.user.f_rootPath'),
-    description: t('p.admin.user.f_rootPath_desc'),
+    description: isAdminUser.value
+      ? t('p.admin.user.f_rootPath_admin')
+      : t('p.admin.user.f_rootPath_desc'),
     type: 'path',
+    disabled: isAdminUser.value,
   },
 ])
 
@@ -252,6 +272,12 @@ loadGroups()
     &:not(:last-child) {
       margin-right: 10px;
     }
+  }
+
+  .external-tips {
+    margin: 8px 0 0;
+    color: var(--secondary-text-color);
+    font-size: 13px;
   }
 
   .simple-form {
