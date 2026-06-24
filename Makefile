@@ -17,10 +17,12 @@ $(build_dir)/$(target_name).zip: $(build_dir)/$(target_name)
 $(build_dir)/$(target_name): $(build_dir)/go-drive $(build_dir)/config.yml
 
 # The web UI (web/dist) and i18n files (docs/lang) are embedded into the binary,
-# so the frontend must be built before linking.
+# so the frontend must be built before linking. The web UI embed only happens
+# under the "release" build tag; without it (e.g. `go test`/`go build`) web/dist
+# is not required.
 $(build_dir)/go-drive: $(build_dir) web/dist
 	CGO_CFLAGS="-Wno-return-local-addr" \
-	go build -o $(build_dir) -ldflags \
+	go build -tags release -o $(build_dir) -ldflags \
 		"-w -s \
 		-X 'go-drive/common.Version=${BUILD_VERSION}' \
 		-X 'go-drive/common.RevHash=$(shell git rev-parse HEAD)' \
