@@ -71,7 +71,6 @@ func (ar *usersRoute) deleteUser(c *gin.Context) {
 }
 
 type groupsRoute struct {
-	userDAO  *storage.UserDAO
 	groupDAO *storage.GroupDAO
 }
 
@@ -105,7 +104,6 @@ func (gr *groupsRoute) createGroup(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	gr.userDAO.EvictCache("")
 	SetResult(c, addGroup)
 }
 
@@ -120,7 +118,6 @@ func (gr *groupsRoute) updateGroup(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	gr.userDAO.EvictCache("")
 }
 
 func (gr *groupsRoute) deleteGroup(c *gin.Context) {
@@ -130,5 +127,4 @@ func (gr *groupsRoute) deleteGroup(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	gr.userDAO.EvictCache("")
 }

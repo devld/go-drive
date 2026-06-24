@@ -3,8 +3,13 @@ import { ApiError } from '../'
 export * from './admin'
 export * from './config'
 
+/** The built-in admin group whose members are unrestricted. */
+export const ADMIN_GROUP = 'admin'
+
 export interface Group {
   name: string
+
+  rootPath?: string
 
   users?: User[]
 }
@@ -12,7 +17,24 @@ export interface Group {
 export interface User {
   username: string
   groups: Group[]
+  /**
+   * The auth provider that owns this user. Empty for local users; external
+   * providers (e.g. "ldap") set their provider name. Group membership of
+   * external users is managed by the provider, so it cannot be edited locally.
+   */
+  source?: string
 }
+
+/**
+ * Auth provider sources that sync a user's group membership from the provider.
+ * For these users group membership must not be edited locally. Add future
+ * group-syncing providers here.
+ */
+export const GROUP_SYNCED_SOURCES: readonly string[] = ['ldap']
+
+/** Whether the user's group membership is managed by an external provider. */
+export const isGroupSyncedUser = (user: Pick<User, 'source'>): boolean =>
+  !!user.source && GROUP_SYNCED_SOURCES.includes(user.source)
 
 export type TaskStatus = 'pending' | 'running' | 'done' | 'error' | 'canceled'
 
