@@ -20,6 +20,16 @@ import (
 	"testing"
 )
 
+func serveMuxTrailingSlashRedirectStatus(method string) int {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/a/", func(http.ResponseWriter, *http.Request) {})
+
+	req := httptest.NewRequest(method, "/a", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	return rec.Code
+}
+
 // TODO: add tests to check XML responses with the expected prefix path
 func TestPrefix(t *testing.T) {
 	const dst, blah = "Destination", "blah blah blah"
@@ -59,6 +69,12 @@ func TestPrefix(t *testing.T) {
 		return res.Header, nil
 	}
 
+	redirectStatus := map[string]int{
+		"COPY":  serveMuxTrailingSlashRedirectStatus("COPY"),
+		"MKCOL": serveMuxTrailingSlashRedirectStatus("MKCOL"),
+		"PUT":   serveMuxTrailingSlashRedirectStatus("PUT"),
+	}
+
 	prefixes := []string{
 		"/",
 		"/a/",
@@ -94,7 +110,7 @@ func TestPrefix(t *testing.T) {
 
 		wantA := map[string]int{
 			"/":       http.StatusCreated,
-			"/a/":     http.StatusMovedPermanently,
+			"/a/":     redirectStatus["MKCOL"],
 			"/a/b/":   http.StatusNotFound,
 			"/a/b/c/": http.StatusNotFound,
 		}[prefix]
@@ -106,7 +122,7 @@ func TestPrefix(t *testing.T) {
 		wantB := map[string]int{
 			"/":       http.StatusCreated,
 			"/a/":     http.StatusCreated,
-			"/a/b/":   http.StatusMovedPermanently,
+			"/a/b/":   redirectStatus["MKCOL"],
 			"/a/b/c/": http.StatusNotFound,
 		}[prefix]
 		if _, err := do("MKCOL", srv.URL+"/a/b", "", wantB); err != nil {
@@ -118,7 +134,7 @@ func TestPrefix(t *testing.T) {
 			"/":       http.StatusCreated,
 			"/a/":     http.StatusCreated,
 			"/a/b/":   http.StatusCreated,
-			"/a/b/c/": http.StatusMovedPermanently,
+			"/a/b/c/": redirectStatus["PUT"],
 		}[prefix]
 		if _, err := do("PUT", srv.URL+"/a/b/c", blah, wantC); err != nil {
 			t.Errorf("prefix=%-9q PUT /a/b/c: %v", prefix, err)
@@ -129,7 +145,7 @@ func TestPrefix(t *testing.T) {
 			"/":       http.StatusCreated,
 			"/a/":     http.StatusCreated,
 			"/a/b/":   http.StatusCreated,
-			"/a/b/c/": http.StatusMovedPermanently,
+			"/a/b/c/": redirectStatus["COPY"],
 		}[prefix]
 		if _, err := do("COPY", srv.URL+"/a/b/c", "", wantD, dst, srv.URL+"/a/b/d"); err != nil {
 			t.Errorf("prefix=%-9q COPY /a/b/c /a/b/d: %v", prefix, err)

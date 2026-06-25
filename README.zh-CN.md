@@ -7,7 +7,7 @@
 通过统一的界面管理本地文件以及多种云存储服务。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go Report Card](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](go.mod)
+[![Go Report Card](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](go.mod)
 [![Vue](https://img.shields.io/badge/Vue-3-42b883?logo=vue.js&logoColor=white)](web)
 [![Docker](https://img.shields.io/badge/Docker-devld%2Fgo--drive-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/devld/go-drive)
 [![Docker Pulls](https://img.shields.io/docker/pulls/devld/go-drive?logo=docker&logoColor=white)](https://hub.docker.com/r/devld/go-drive)
