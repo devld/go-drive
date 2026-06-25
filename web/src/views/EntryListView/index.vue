@@ -10,6 +10,7 @@
       :selectable="selectable"
       :view-mode="viewMode"
       :show-toggles="showToggles"
+      :show-menu-button="showMenuButton"
       :get-link="getLink"
       :draggable="draggable"
       @entries-change="emit('entries-change', $event)"
@@ -61,6 +62,10 @@ const props = defineProps({
   },
   showToggles: {
     type: Boolean,
+  },
+  showMenuButton: {
+    type: Boolean,
+    default: true,
   },
   getLink: {
     type: Function as PropType<GetLinkFn>,

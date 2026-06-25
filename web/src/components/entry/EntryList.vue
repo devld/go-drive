@@ -21,9 +21,7 @@
           "
           @click="toggleViewMode"
         >
-          <Icon
-            :name="validViewMode === 'list' ? 'grid' : 'list'"
-          />
+          <Icon :name="validViewMode === 'list' ? 'grid' : 'list'" />
         </button>
         <SimpleDropdown v-model="sortDropdownShowing">
           <span :title="$t('app.toggle_sort')">
@@ -91,13 +89,14 @@
           />
         </EntryLink>
         <button
+          v-if="showMenuButton"
           class="entry-list__menu-button plain-button"
           type="button"
           :title="$t('app.entry_actions')"
           :aria-label="$t('app.entry_actions')"
           @click="entryMenuClicked(entry, $event)"
         >
-          <span aria-hidden="true">&#8942;</span>
+          <Icon name="menu-dots" />
         </button>
       </li>
     </ul>
@@ -148,6 +147,10 @@ const props = defineProps({
   },
   showToggles: {
     type: Boolean,
+  },
+  showMenuButton: {
+    type: Boolean,
+    default: true,
   },
   getLink: {
     type: Function as PropType<GetLinkFn>,
@@ -490,13 +493,25 @@ defineExpose({
   border-radius: 50%;
   color: var(--secondary-text-color);
   cursor: pointer;
-  font-size: 24px;
-  line-height: 32px;
+  font-size: 18px;
+  line-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover,
   &:focus-visible {
-    color: var(--primary-text-color);
     background-color: var(--hover-bg-color);
+  }
+
+  .icon {
+    vertical-align: middle;
+    color: var(--secondary-text-color);
+  }
+
+  &:hover .icon,
+  &:focus-visible .icon {
+    color: var(--primary-text-color);
   }
 }
 
@@ -510,7 +525,7 @@ defineExpose({
     right: 12px;
     bottom: 8px;
     transform: none;
-    font-size: 20px;
+    font-size: 16px;
   }
 
   .entry-item__info {

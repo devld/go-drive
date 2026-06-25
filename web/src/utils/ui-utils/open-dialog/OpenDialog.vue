@@ -6,6 +6,7 @@
       :filter="filterEntries"
       :selectable="dirMode ? false : isEntrySelectable"
       view-mode="list"
+      :show-menu-button="false"
       @entry-click="entryClicked"
       @update:path="pathChanged"
       @entries-load="entriesLoaded"
