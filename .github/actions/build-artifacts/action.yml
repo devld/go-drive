@@ -1,0 +1,126 @@
+name: Build artifacts
+description: Cross-compile go-drive binaries and upload them as workflow artifacts.
+
+inputs:
+  version:
+    description: Build version embedded into the binaries.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install tools
+      shell: bash
+      run: |
+        # debian 10 is end of life, so we need to use archive.debian.org
+        sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list
+        sed -i 's|security.debian.org|archive.debian.org|g' /etc/apt/sources.list
+        sed -i '/buster-updates/d' /etc/apt/sources.list
+
+        apt-get update -y && apt-get install -y git curl tar zip build-essential gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-mingw-w64-x86-64
+
+    - name: Cache downloaded cross-build environment
+      id: cache-cross-build-env
+      uses: actions/cache@v4
+      with:
+        path: /tmp/cross-build-env
+        key: aarch64_arm_amd64
+
+    - name: Download cross-build environment
+      if: steps.cache-cross-build-env.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -e
+        mkdir -p /tmp/cross-build-env
+
+        pkg_file=/tmp/cross-build-env/packages
+
+        echo aarch64-linux-musl-cross >> $pkg_file
+        echo arm-linux-musleabihf-cross >> $pkg_file
+        echo x86_64-linux-musl-cross >> $pkg_file
+
+        base_url=https://github.com/devld/go-drive/releases/download/musl-building-toolchain/
+
+        for i in `cat ${pkg_file}`; do
+          url="${base_url}${i}.tgz"
+          echo "downloading ${i} from ${url}"
+          curl -s -L -o "/tmp/cross-build-env/${i}.tgz" "${url}"
+        done
+
+    - name: Setup cross-build environment
+      shell: bash
+      run: |
+        set -e
+
+        pkg_file=/tmp/cross-build-env/packages
+
+        for i in `cat ${pkg_file}`; do
+          tar xf "/tmp/cross-build-env/${i}.tgz" --strip-components 1 -C /usr/local
+        done
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "~1.26.4"
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+
+    - name: Configure git
+      shell: bash
+      run: git config --global --add safe.directory $(pwd)
+
+    - name: Show building env info
+      shell: bash
+      run: |
+        ldd --version
+        go version
+        npm --version
+        node --version
+        if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+          git log -n1
+        else
+          echo "commit ${GITHUB_SHA}"
+        fi
+
+    - name: Test
+      shell: bash
+      run: go test -v ./...
+
+    - name: Build
+      shell: bash
+      run: |
+        set -e
+        export BUILD_VERSION="${{ inputs.version }}"
+        export BUILD_REV="${GITHUB_SHA:-}"
+        BUILDS=(  linux_amd64 windows_amd64          linux_arm64           linux_arm               linux_musl_amd64      linux_musl_arm64       linux_musl_arm)
+        CGO_ARGS=(gcc         x86_64-w64-mingw32-gcc aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc x86_64-linux-musl-gcc aarch64-linux-musl-gcc arm-linux-musleabihf-gcc)
+        make clean
+        for i in "${!BUILDS[@]}"; do
+            os_arch=${BUILDS[$i]}
+            cgo_cc=${CGO_ARGS[$i]}
+            export GOOS=${os_arch%%_*}
+            export GOARCH=${os_arch##*_}
+            echo building for ${os_arch}
+            target=all
+            if [ ${GOOS} == 'windows' ]; then
+                target=zip
+            fi
+            export CC=
+            export CGO_ENABLED=1
+            if [ ! -z "$cgo_cc" ]; then
+                export CC=${cgo_cc}
+            fi
+            make ${target} target_name="go-drive_${os_arch}"
+        done
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: go-drive-artifacts
+        path: |
+          build/*.tar.gz
+          build/*.zip
+        retention-days: 1

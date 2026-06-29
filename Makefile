@@ -2,6 +2,8 @@
 work_dir = build
 target_name ?= go-drive_build
 build_dir = $(work_dir)/$(target_name)
+BUILD_REV := $(or $(BUILD_REV),$(shell git rev-parse HEAD 2>/dev/null),unknown)
+BUILD_AT := $(or $(BUILD_AT),$(shell date -R),unknown)
 
 all: $(build_dir)/$(target_name).tar.gz
 zip: $(build_dir)/$(target_name).zip
@@ -25,8 +27,8 @@ $(build_dir)/go-drive: $(build_dir) web/dist
 	go build -tags release -o $(build_dir) -ldflags \
 		"-w -s \
 		-X 'go-drive/common.Version=${BUILD_VERSION}' \
-		-X 'go-drive/common.RevHash=$(shell git rev-parse HEAD)' \
-		-X 'go-drive/common.BuildAt=$(shell date -R)'"
+		-X 'go-drive/common.RevHash=$(BUILD_REV)' \
+		-X 'go-drive/common.BuildAt=$(BUILD_AT)'"
 
 $(build_dir)/config.yml: $(build_dir)
 	cp docs/config.yml $(build_dir)/
