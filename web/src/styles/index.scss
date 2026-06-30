@@ -23,31 +23,21 @@
   @include meta.load-css('highlight.js/scss/agate.scss');
 }
 
-// Nicer keyboard-focus ring using the theme primary color. Only shows for
-// keyboard/programmatic focus (not on mouse clicks) via :focus-visible. The
-// transparent outline keeps a visible focus indicator under forced-colors /
-// Windows High Contrast mode where box-shadow is dropped.
-:focus-visible {
+// Nicer keyboard-focus ring for buttons and links using the theme primary
+// color. Only shows for keyboard/programmatic focus (not on mouse clicks) via
+// :focus-visible. The ring is drawn inside the element to avoid clipping by
+// parent overflow. The transparent outline keeps a visible focus indicator
+// under forced-colors / Windows High Contrast mode where box-shadow is dropped.
+button:focus-visible,
+a:focus-visible {
   outline: 2px solid transparent;
-  outline-offset: 1px;
-  box-shadow: 0 0 0 3px var(--focus-ring-color);
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 3px var(--focus-ring-color);
   // Lift the focused element in the paint order so its ring is drawn above
   // adjacent siblings instead of being clipped by them. This takes effect for
   // elements that already establish a positioning context; statically
   // positioned controls get one via the rule below.
   z-index: 1;
-}
-
-// Native form controls are always in flow, so without a positioning context a
-// neighbouring element (e.g. stacked inputs with no gap) paints over one side
-// of the box-shadow ring. relative positioning (no offsets) fixes the paint
-// order without shifting layout. We intentionally do not force positioning on
-// buttons/links, which may be absolutely positioned and would jump while
-// focused; those still benefit from the z-index above.
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  position: relative;
 }
 
 .full-width {
