@@ -241,10 +241,15 @@ func ReadRequestBodyToTempFile(c *gin.Context, tempDir string) (*utils.TempFile,
 		_ = os.Remove(file.Name())
 		return nil, -1, e
 	}
-	if size != stat.Size() {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
-		return nil, -1, err.NewBadRequestError(i18n.T("api.drive.invalid_file_size"))
+	actualSize := stat.Size()
+	if size >= 0 {
+		if size != actualSize {
+			_ = file.Close()
+			_ = os.Remove(file.Name())
+			return nil, -1, err.NewBadRequestError(i18n.T("api.drive.invalid_file_size"))
+		}
+	} else {
+		size = actualSize
 	}
 	return utils.NewTempFile(file), size, nil
 }
