@@ -434,6 +434,7 @@
       "prev": "Previous",
       "next": "Next",
       "shuffle": "Shuffle",
+      "repeat_one": "Repeat One",
       "volume": "Volume",
       "mute": "Mute",
       "unmute": "Unmute",
@@ -441,7 +442,14 @@
     },
     "video": {
       "name": "Play",
-      "desc": "Play video"
+      "desc": "Play video",
+      "play": "Play",
+      "pause": "Pause",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "fullscreen": "Fullscreen",
+      "exit_fullscreen": "Exit Fullscreen",
+      "pip": "Picture-in-Picture"
     },
     "mount": {
       "name": "Mount to",

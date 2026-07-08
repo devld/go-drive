@@ -1,3 +1,29 @@
+import type { Ref } from 'vue'
+
+const ratioFromEvent = (el: HTMLElement, e: PointerEvent) => {
+  const rect = el.getBoundingClientRect()
+  return Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
+}
+
+export const createDrag = (
+  elRef: Ref<HTMLElement | undefined>,
+  onChange: (ratio: number) => void
+) => {
+  const onMove = (e: PointerEvent) => {
+    if (elRef.value) onChange(ratioFromEvent(elRef.value, e))
+  }
+  const onUp = () => {
+    window.removeEventListener('pointermove', onMove)
+    window.removeEventListener('pointerup', onUp)
+  }
+  return (e: PointerEvent) => {
+    if (!elRef.value) return
+    onChange(ratioFromEvent(elRef.value, e))
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+}
+
 type ResizeCallback = (e: ResizeObserverEntry) => void
 
 interface ResizeObservedHTMLElement extends HTMLElement {

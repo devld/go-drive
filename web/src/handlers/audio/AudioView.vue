@@ -50,7 +50,7 @@
             class="audio-player__btn plain-button"
             :class="{ 'is-active': shuffle }"
             :title="$t('handler.audio.shuffle')"
-            @click="shuffle = !shuffle"
+            @click="shuffle = !shuffle; if (shuffle) repeatOne = false"
           >
             <svg viewBox="0 0 24 24" class="audio-player__icon">
               <path
@@ -64,6 +64,19 @@
               <path
                 fill="currentColor"
                 d="M18.5 4.5 22 7l-3.5 2.5zM18.5 14.5 22 17l-3.5 2.5z"
+              />
+            </svg>
+          </button>
+          <button
+            class="audio-player__btn plain-button"
+            :class="{ 'is-active': repeatOne }"
+            :title="$t('handler.audio.repeat_one')"
+            @click="repeatOne = !repeatOne; if (repeatOne) shuffle = false"
+          >
+            <svg viewBox="0 0 24 24" class="audio-player__icon">
+              <path
+                fill="currentColor"
+                d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"
               />
             </svg>
           </button>
@@ -192,6 +205,7 @@ import { fileThumbnail, fileUrl } from '@/api'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { useAppStore } from '@/store'
 import { Entry } from '@/types'
+import { createDrag } from '@/utils/dom'
 import { filenameBase, filenameExt } from '@/utils'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { EntryHandlerContext } from '../types'
@@ -238,6 +252,7 @@ const loaded = ref(0)
 const volume = ref(1)
 const muted = ref(false)
 const shuffle = ref(false)
+const repeatOne = ref(false)
 const coverErrored = ref(false)
 
 const audioExts = computed<readonly string[]>(
@@ -347,7 +362,17 @@ const onProgress = () => {
   if (!el || el.buffered.length === 0) return
   loaded.value = el.buffered.end(el.buffered.length - 1)
 }
-const onEnded = () => loadTrack(nextIndex(), true)
+const onEnded = () => {
+  if (repeatOne.value) {
+    const el = audioEl.value
+    if (el) {
+      el.currentTime = 0
+      el.play().catch(() => undefined)
+    }
+  } else {
+    loadTrack(nextIndex(), true)
+  }
+}
 
 const applyVolume = () => {
   if (!audioEl.value) return
@@ -370,30 +395,6 @@ const setVolumeByRatio = (ratio: number) => {
   volume.value = Math.min(1, Math.max(0, ratio))
   muted.value = volume.value === 0
   applyVolume()
-}
-
-const ratioFromEvent = (el: HTMLElement, e: PointerEvent) => {
-  const rect = el.getBoundingClientRect()
-  return Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
-}
-
-const createDrag = (
-  elRef: typeof progressEl,
-  onChange: (ratio: number) => void
-) => {
-  const onMove = (e: PointerEvent) => {
-    if (elRef.value) onChange(ratioFromEvent(elRef.value, e))
-  }
-  const onUp = () => {
-    window.removeEventListener('pointermove', onMove)
-    window.removeEventListener('pointerup', onUp)
-  }
-  return (e: PointerEvent) => {
-    if (!elRef.value) return
-    onChange(ratioFromEvent(elRef.value, e))
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-  }
 }
 
 const onProgressDown = createDrag(progressEl, seekByRatio)

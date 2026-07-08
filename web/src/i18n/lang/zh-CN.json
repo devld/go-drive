@@ -434,6 +434,7 @@
       "prev": "上一首",
       "next": "下一首",
       "shuffle": "随机播放",
+      "repeat_one": "单曲循环",
       "volume": "音量",
       "mute": "静音",
       "unmute": "取消静音",
@@ -441,7 +442,14 @@
     },
     "video": {
       "name": "播放",
-      "desc": "播放视频"
+      "desc": "播放视频",
+      "play": "播放",
+      "pause": "暂停",
+      "mute": "静音",
+      "unmute": "取消静音",
+      "fullscreen": "全屏",
+      "exit_fullscreen": "退出全屏",
+      "pip": "画中画"
     },
     "mount": {
       "name": "挂载到",

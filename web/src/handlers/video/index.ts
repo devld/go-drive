@@ -1,7 +1,7 @@
+import { wrapAsyncComponent } from '@/components/async'
 import { T } from '@/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
-import VideoView from './VideoView.vue'
 
 export default {
   name: 'video',
@@ -10,9 +10,10 @@ export default {
     description: T('handler.video.desc'),
     icon: 'play-circle',
   },
+  style: { fullscreen: true },
   view: {
     name: 'VideoView',
-    component: VideoView,
+    component: wrapAsyncComponent(() => import('./VideoView.vue')),
   },
   supports: ({ entry }, { options }) =>
     entry.type === 'file' &&
