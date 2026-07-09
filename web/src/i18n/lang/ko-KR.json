@@ -434,6 +434,7 @@
       "prev": "이전",
       "next": "다음",
       "shuffle": "임의 재생",
+      "repeat_one": "한 곡 반복",
       "volume": "볼륨",
       "mute": "음소거",
       "unmute": "음소거 해제",
@@ -441,7 +442,14 @@
     },
     "video": {
       "name": "재생",
-      "desc": "동영상 재생"
+      "desc": "동영상 재생",
+      "play": "재생",
+      "pause": "일시정지",
+      "mute": "음소거",
+      "unmute": "음소거 해제",
+      "fullscreen": "전체 화면",
+      "exit_fullscreen": "전체 화면 종료",
+      "pip": "화면 속 화면"
     },
     "mount": {
       "name": "마운트 위치",
