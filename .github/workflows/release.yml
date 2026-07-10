@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release"
+        description: "Version to release (for example, v0.13.1)"
         required: true
   push:
     tags:
@@ -14,8 +14,43 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    name: Prepare release tag
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.version.outputs.release_tag }}
+    steps:
+      - name: Resolve release tag
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.version || github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "${RELEASE_TAG}" == v* ]] || {
+            echo "::error::Release tag must start with v"
+            exit 1
+          }
+          git check-ref-format "refs/tags/${RELEASE_TAG}"
+          echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
+
+      # A draft release does not materialize a missing tag until it is
+      # published. Create the tag up front for manual runs so publishing the
+      # draft cannot trigger this workflow a second time via push.tags.
+      - name: Create tag for manual release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          gh api --method POST "repos/${GH_REPO}/git/refs" \
+            -f ref="refs/tags/${RELEASE_TAG}" \
+            -f sha="${GITHUB_SHA}"
+
   build:
     name: Build
+    needs: prepare
     runs-on: ubuntu-latest
     container: debian:10
     steps:
@@ -25,11 +60,11 @@ jobs:
       - name: Build artifacts
         uses: ./.github/actions/build-artifacts
         with:
-          version: ${{ github.event.inputs.version || github.ref_name }}
+          version: ${{ needs.prepare.outputs.release_tag }}
 
   release:
     name: Create draft release
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
       - name: Download build artifacts
@@ -42,10 +77,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.event.inputs.version || github.ref_name }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
         run: |
           set -euo pipefail
           gh release create "${RELEASE_TAG}" artifacts/* \
+            --verify-tag \
             --draft \
             --title "Release ${RELEASE_TAG}" \
             --notes "Release ${RELEASE_TAG}"
