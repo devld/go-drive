@@ -1,0 +1,307 @@
+error:
+  not_found: 찾을 수 없습니다
+  not_allowed: 허용되지 않는 작업입니다
+  permission_denied: 리소스를 찾을 수 없거나 권한이 없습니다
+  fail_ban_message: 실패 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요
+util:
+  request_failed: "[{{ 1 }}] 요청이 실패했습니다"
+oauth:
+  state_mismatch: state 값이 일치하지 않습니다
+search:
+  invalid_query: 잘못된 검색어입니다
+api:
+  admin:
+    unknown_drive_type: 알 수 없는 드라이브 유형 '{{ 1 }}'
+    invalid_drive_name: 잘못된 드라이브 이름 '{{ 1 }}'
+    invalid_file_bucket_name: 잘못된 이름 '{{ 1 }}'
+  auth:
+    invalid_username_or_password: 아이디 또는 비밀번호가 올바르지 않습니다
+    provider_not_found: 인증 제공자 '{{ 1 }}'를 찾을 수 없습니다
+    start_not_supported: 인증 제공자 '{{ 1 }}'는 이 작업을 지원하지 않습니다
+    group_permission_required: 그룹 '{{ 1 }}'의 권한이 필요합니다
+    field_username: 아이디
+    field_password: 비밀번호
+  drive:
+    copy_to_same_path_not_allowed: 같은 경로로 복사하거나 이동할 수 없습니다
+    copy_to_child_path_not_allowed: 하위 경로로 복사하거나 이동할 수 없습니다
+    invalid_file_size: 잘못된 파일 크기입니다
+    invalid_size_or_chunk_size: 잘못된 크기 또는 청크 크기입니다
+  chunk_uploader:
+    invalid_file_size: 잘못된 파일 크기입니다
+    invalid_chunk_seq: 잘못된 청크 순서입니다
+    chunk_size_cannot_less_than: 청크 크기는 {{ 1 }}보다 작을 수 없습니다
+    expected__bytes_but__bytes: "{{ 1 }} 바이트를 예상했지만 {{ 2 }} 바이트를 받았습니다"
+    missing_chunks: 누락된 청크가 있습니다
+    invalid_upload_id: 잘못된 업로드 ID입니다
+  db_token:
+    invalid_token: 잘못된 토큰입니다
+  permission_wrapper:
+    no_subfolder_permission: 하위 폴더에 대한 권한이 없습니다
+  thumbnail:
+    file_too_large: 파일 크기가 너무 커서 썸네일을 생성할 수 없습니다
+    image_too_large: 이미지가 너무 커서 썸네일을 생성할 수 없습니다
+    create_failed: 썸네일을 생성할 수 없습니다
+  zip:
+    size_exceed: 최대 허용 크기 {{ 1 }}를 초과했습니다
+storage:
+  drives:
+    drive_exists: 드라이브 '{{ 1 }}'가 이미 존재합니다
+  groups:
+    group_not_exists: 그룹 '{{ 1 }}'이(가) 존재하지 않습니다
+    group_exists: 그룹 '{{ 1 }}'이(가) 이미 존재합니다
+  users:
+    user_not_exists: 사용자 '{{ 1 }}'이(가) 존재하지 않습니다
+    user_exists: 사용자 '{{ 1 }}'이(가) 이미 존재합니다
+  file_bucket:
+    bucket_exists: 버킷 '{{ 1 }}'이(가) 이미 존재합니다
+drive:
+  not_configured: 드라이브가 설정되지 않았습니다
+  copy_type_mismatch1: 대상 '{{ 2 }}'은(는) 파일이지만, 원본 '{{ 1 }}'은(는) 폴더입니다
+  copy_type_mismatch2: 대상 '{{ 2 }}'은(는) 폴더이지만, 원본 '{{ 1 }}'은(는) 파일입니다
+  file_exists: 파일이 이미 존재합니다
+  file_not_exists: 파일이 존재하지 않습니다
+  invalid_path: 잘못된 경로입니다
+  file_not_downloadable: 이 파일은 다운로드할 수 없습니다
+  path_meta:
+    incorrect_password: 비밀번호가 올바르지 않습니다
+  root:
+    invalid_drive_type: 잘못된 드라이브 유형 '{{ 1 }}'
+    invalid_drive_config: 드라이브 '{{ 1 }}'의 설정이 잘못되었습니다
+    error_create_drive: "드라이브 '{{ 1 }}' 생성 중 오류 발생: {{ 2 }}"
+  dispatcher:
+    move_across_not_supported: 드라이브 간 이동은 지원되지 않습니다
+  gdrive:
+    name: Google Drive
+    readme: Google Drive, 참고 [Google Drive 설정하기](https://go-drive.top/drives/google-drive)
+    form:
+      client_id:
+        label: 클라이언트 ID
+        description: ""
+      client_secret:
+        label: 클라이언트 보안 비밀
+        description: ""
+      cache_ttl:
+        label: 캐시 TTL
+        description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
+      proxy_thumbnail:
+        label: 썸네일 프록시
+        description: 썸네일이 제대로 표시되지 않는 경우 이 옵션을 켜 보세요
+    oauth_text: Google Drive에 연결
+    drive_label: 드라이브
+    my_drive_name: 내 드라이브
+  onedrive:
+    name: OneDrive
+    readme: OneDrive, 참고 [OneDrive 설정하기](https://go-drive.top/drives/onedrive)
+    form:
+      site:
+        label: 계정 유형
+        description: ""
+        global: 글로벌
+        china: 중국
+      tenant:
+        label: 테넌트
+        description: ""
+        common: 개인 Microsoft 계정과 회사/학교 계정 모두 지원
+        organizations: 회사/학교 계정만 지원
+        consumers: 개인 Microsoft 계정만 지원
+      client_id:
+        label: 클라이언트 ID
+        description: ""
+      client_secret:
+        label: 클라이언트 보안 비밀
+        description: ""
+      share_point:
+        label: SharePoint URL
+        description: "SharePoint 사이트에 파일을 저장하려는 경우에만 입력하세요"
+      proxy_in:
+        label: 업로드 프록시
+        description: 서버 프록시를 통해 파일을 업로드합니다
+      proxy_out:
+        label: 다운로드 프록시
+        description: 서버 프록시를 통해 파일을 다운로드합니다
+      cache_ttl:
+        label: 캐시 TTL
+        description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
+    drive_not_selected: 드라이브가 아직 선택되지 않았거나 SharePoint 사이트 정보를 가져오지 못했습니다
+    oauth_text: OneDrive에 연결
+    drive_select: 드라이브 선택
+    drive_desc: "{{ 1 }} ({{ 2 }} / {{ 3 }} | {{ 4 }} 사용됨)"
+    unexpected_status: 예상치 못한 상태 코드 {{ 1 }}
+    unknown_action_status: "알 수 없는 작업 상태: {{ 1 }}"
+  fs:
+    name: 파일 시스템
+    readme: 로컬 파일 시스템 드라이브
+    form:
+      path:
+        label: 루트
+        description: 루트 경로
+    invalid_root_path: 잘못된 루트 경로입니다
+    root_path_not_exists: 루트 경로가 존재하지 않습니다
+    cannot_list_file: 파일에 대해서는 목록을 조회할 수 없습니다
+    cannot_delete_root: 루트는 삭제할 수 없습니다
+  s3:
+    name: S3
+    readme: S3 호환 스토리지
+    form:
+      ak:
+        label: AccessKey
+        description: ""
+      sk:
+        label: SecretKey
+        description: ""
+      bucket:
+        label: 버킷
+        description: ""
+      path_style:
+        label: PathStyle
+        description: path style API 사용을 강제합니다
+      region:
+        label: 리전
+        description: ""
+      endpoint:
+        label: 엔드포인트
+        description: S3 API 엔드포인트
+      proxy_in:
+        label: 업로드 프록시
+        description: 서버 프록시를 통해 파일을 업로드합니다
+      proxy_out:
+        label: 다운로드 프록시
+        description: 서버 프록시를 통해 파일을 다운로드합니다
+      cache_ttl:
+        label: 캐시 TTL
+        description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
+    bucket_not_exists: 버킷 '{{ 1 }}'을(를) 찾을 수 없습니다
+  webdav:
+    name: WebDAV
+    readme: WebDAV 프로토콜 드라이브
+    form:
+      url:
+        label: URL
+        description: 기본 URL
+      username:
+        label: 아이디
+        description: 아이디이며, 생략하면 인증이 필요하지 않습니다
+      password:
+        label: 비밀번호
+        description: ""
+      cache_ttl:
+        label: 캐시 TTL
+        description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
+    wrong_user_or_password: 아이디 또는 비밀번호가 올바르지 않을 수 있습니다
+    remote_error: "원격 서비스 오류: {{ 1 }}"
+  ftp:
+    name: FTP
+    readme: FTP 드라이브
+    form:
+      host:
+        label: 호스트
+        description: ""
+      port:
+        label: 포트
+        description: ""
+      user:
+        label: 사용자
+        description: 사용자 이름이며, 기본값은 'anonymous'입니다
+      password:
+        label: 비밀번호
+        description: 필요한 경우 사용자 비밀번호이며, 기본값은 'anonymous'입니다
+      concurrent:
+        label: 동시 연결 수
+        description: 최대 동시 FTP 연결 수이며, 기본값은 5입니다
+      timeout:
+        label: 타임아웃
+        description: "기본값은 5초이며, 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다"
+      cache_ttl:
+        label: 캐시 TTL
+        description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
+  sftp:
+    name: SFTP
+    readme: SFTP 드라이브 <br/> @[Vgbhfive](https://blog.vgbhfive.cn)
+    form:
+      host:
+        label: 호스트
+        description: ""
+      port:
+        label: 포트
+        description: "기본값은 22입니다"
+      user:
+        label: 사용자
+        description: 사용자 이름
+      password:
+        label: 비밀번호
+        description: 로그인 인증에 사용되는 비밀번호이며, 비밀번호와 개인 키 중 하나는 반드시 있어야 합니다
+      priv_key:
+        label: 개인 키
+        description: |
+          로그인 인증에 사용되는 개인 키입니다. 예: -----BEGIN RSA PRIVATE KEY-----. 현재 암호화된 개인 키는 지원되지 않으며, 개인 키와 비밀번호 중 하나는 반드시 있어야 합니다
+      host_key:
+        label: 호스트 키
+        description: 서버 신원 확인을 위한 호스트 키(선택 사항)
+      root_path:
+        label: 경로
+        description: "원격 서버의 루트 경로입니다. 기본값은 '/'입니다."
+      cache_ttl:
+        label: 캐시 TTL
+        description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
+    invalid_root_path: "루트 경로는 '/'로 시작해야 합니다"
+  script:
+    name: 스크립트
+    readme: JavaScript 드라이버를 사용합니다. 아래에서 저장하고 설정하세요
+    invalid_pool_config: "잘못된 Pool 설정: {{ 1 }}"
+    form:
+      pool:
+        label: Pool
+        description: "'MaxTotal,MaxIdle,MinIdle,IdleTime' 형식의 JavaScript 런타임 풀 설정이며, 기본값은 '100,50,10,30m'입니다. 자세한 내용은 https://pkg.go.dev/github.com/jolestar/go-commons-pool#ObjectPoolConfig 를 참고하세요"
+      script:
+        label: 스크립트 파일
+        description: scripts 폴더에 있는 스크립트를 선택하세요
+stat:
+  task:
+    total: 전체
+    pending: 대기 중
+    running: 실행 중
+    done: 완료
+    error: 오류
+    canceled: 취소됨
+jobs:
+  copy:
+    name: 복사
+    desc: 파일 복사
+    src: 원본 경로
+    src_desc: 복사할 원본 경로(한 줄에 하나씩), 와일드카드 지원
+    dest: 대상 경로
+    dest_desc: 반드시 존재하는 폴더여야 합니다
+    override: 덮어쓰기
+    override_desc: 복사 시 같은 이름의 파일을 덮어쓸지 여부이며, 그렇지 않으면 자동으로 이름이 변경됩니다
+    move: 이동
+    move_desc: 복사가 아닌 이동을 수행합니다
+  delete:
+    name: 삭제
+    desc: 파일 삭제
+    paths: 경로
+    paths_desc: 삭제할 경로(한 줄에 하나씩), 와일드카드 지원
+  flow:
+    name: 흐름
+    desc: 여러 작업을 순서대로 실행합니다
+    add_text: 작업 추가
+    ignore_err: 오류 무시
+    ignore_err_desc: 이 작업이 실패하면 오류를 무시하고 다음 작업을 계속 진행합니다
+  script:
+    name: 스크립트
+    desc: JavaScript를 실행합니다
+    code: 코드
+    code_desc: JavaScript 코드
+  trigger:
+    cron:
+      name: Cron
+      desc: cron 일정에 따라 실행합니다
+      schedule: 일정
+      schedule_desc: "Cron 표현식 (참고: https://crontab.cronhub.io/)"
+    entry:
+      name: 항목
+      desc: 파일이나 폴더가 생성, 수정 또는 삭제될 때 실행합니다
+      path_pattern: 경로 패턴
+      path_pattern_desc: "경로와 일치시킬 Glob 패턴이며, 경로는 /로 시작하지 않습니다\n** 는 0개 이상의 디렉터리와 일치합니다;\n* 는 디렉터리 구분자가 아닌 문자를 임의 개수만큼 일치시킵니다;\n? 는 디렉터리 구분자가 아닌 문자 하나와 일치합니다."
+      event_types: 이벤트 유형
+      event_entry_updated: 수정됨
+      event_entry_deleted: 삭제됨
