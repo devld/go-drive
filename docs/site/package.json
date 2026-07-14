@@ -1,0 +1,17 @@
+{
+  "name": "go-drive-docs",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "npm run check:translations && vitepress build",
+    "preview": "vitepress preview",
+    "check:translations": "node scripts/check-translations.mjs"
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  }
+}

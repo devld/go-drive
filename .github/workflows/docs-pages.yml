@@ -1,0 +1,71 @@
+name: Deploy documentation to Pages
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - docs/site/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Pages artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/site/package-lock.json
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        working-directory: docs/site
+        run: npm ci
+
+      - name: Cache VitePress
+        uses: actions/cache@v4
+        with:
+          path: docs/site/.vitepress/cache
+          key: ${{ runner.os }}-vitepress-${{ hashFiles('docs/site/**') }}
+          restore-keys: |
+            ${{ runner.os }}-vitepress-
+
+      - name: Build documentation
+        working-directory: docs/site
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs/site/.vitepress/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

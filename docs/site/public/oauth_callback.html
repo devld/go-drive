@@ -21,11 +21,17 @@
     return qs
   }
 
+  function callback(error, data) {
+    if (!window.opener) return
+    window.opener.postMessage({
+      oauth: true,
+      error: error,
+      data: data
+    }, '*')
+  }
+
   var qs = getQueries()
-  window.postMessage({
-    oauth: true,
-    data: qs
-  }, '*')
+  callback(qs.error, qs)
 })();
 </script>
 </body>
