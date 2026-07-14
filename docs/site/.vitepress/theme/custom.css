@@ -1,0 +1,10 @@
+@media (max-width: 767px) {
+  .VPNavBar .VPNavBarTranslations {
+    display: flex;
+    align-items: center;
+  }
+
+  .VPNavScreen .VPNavScreenTranslations {
+    display: none;
+  }
+}
