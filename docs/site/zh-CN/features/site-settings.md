@@ -1,8 +1,9 @@
 ---
 title: 站点设置
+description: 自定义 go-drive 品牌、匿名访问、文件处理、界面外观、注入样式及其他浏览器端站点行为。
 lang: zh-CN
 translation_key: site-settings
-source_hash: 05a3da23e190385ad45084f5ec5ef4f6467f82d5bec373d280852f286ee42aaf
+source_hash: ecde342c584a77ab0e650efa6f4683a030ef3c633e0a98798aeeffdf4db9d7db
 ---
 
 # 站点设置

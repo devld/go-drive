@@ -1,5 +1,6 @@
 ---
 title: Developing and Installing Script Drives
+description: Install third-party script drives or develop custom go-drive storage adapters and browser-side direct-upload integrations in JavaScript.
 lang: en
 translation_key: script-drives
 ---

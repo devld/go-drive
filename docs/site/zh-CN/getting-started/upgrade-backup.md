@@ -1,8 +1,9 @@
 ---
 title: 升级、备份与恢复
+description: 安全升级 go-drive，并备份或恢复数据库、配置、本地文件、会话、脚本及生成的缓存数据。
 lang: zh-CN
 translation_key: upgrade-backup
-source_hash: 5bd6b4c6eb1062d8397cebd375249145f5f607f5e4f5091464fd3ba651211b6a
+source_hash: 98ce5aee55fb83b5e59d1fdb9bf700263cbde1c8e550b8b619d9d51f3c015bf5
 ---
 
 # 升级、备份与恢复

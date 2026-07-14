@@ -1,5 +1,6 @@
 ---
 title: OneDrive
+description: Connect personal, organization, 21Vianet, or SharePoint OneDrive storage to go-drive with the correct OAuth and tenant settings.
 lang: en
 translation_key: drive-onedrive
 ---

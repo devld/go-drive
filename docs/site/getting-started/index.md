@@ -1,5 +1,6 @@
 ---
 title: Installation and Startup
+description: Install go-drive with Docker, release packages, or source code, configure persistent data, and complete the first secure startup.
 lang: en
 translation_key: getting-started
 ---

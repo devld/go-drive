@@ -1,8 +1,9 @@
 ---
 title: 命令行参考
+description: 使用 go-drive 命令行参数选择配置文件、输出版本信息、控制启动并执行管理操作。
 lang: zh-CN
 translation_key: cli
-source_hash: 712ed9434936b6011fc35d4de5cde93945e690d08e1860fa5ca3170c03d3c0be
+source_hash: 17ef0e9ae63515081d4f50424d23833034d049bad03039b502a2f1fbd39146fb
 ---
 
 # 命令行参考

@@ -1,8 +1,9 @@
 ---
 title: 安装与启动
+description: 使用 Docker、发行包或源码安装 go-drive，配置持久化数据，并完成首次安全启动。
 lang: zh-CN
 translation_key: getting-started
-source_hash: f032ad1ba0632f7834e6b02696ae3b32fea2f067218aae961c1c953f1d3ba590
+source_hash: 60322ee619d5ef80db193a6c1b9af511b364d84fa6873c7c1ca85f7a1bc3e407
 ---
 
 # 安装与启动

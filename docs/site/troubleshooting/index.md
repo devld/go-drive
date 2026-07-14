@@ -1,5 +1,6 @@
 ---
 title: Troubleshooting
+description: Diagnose common go-drive startup, OAuth, storage, upload, WebDAV, reverse proxy, search, permission, cache, and thumbnail problems.
 lang: en
 translation_key: troubleshooting
 ---

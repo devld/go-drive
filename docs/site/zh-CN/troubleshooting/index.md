@@ -1,8 +1,9 @@
 ---
 title: 故障排查
+description: 排查 go-drive 启动、OAuth、存储、上传、WebDAV、反向代理、搜索、权限、缓存和缩略图问题。
 lang: zh-CN
 translation_key: troubleshooting
-source_hash: 032eead613ee9d2c0e51716dcd370a79a6093ba1013ec43af15a55546f6b78d1
+source_hash: 6b8300f5d0c229c78d54908572a7e8ae4fe3a2e5c2585995527e77b806f3391c
 ---
 
 # 故障排查

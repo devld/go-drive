@@ -1,8 +1,9 @@
 ---
 title: Drive 总览
+description: 比较 go-drive 支持的存储后端、能力差异、配置要求及浏览器直传和直下限制。
 lang: zh-CN
 translation_key: drives
-source_hash: 03433eeea918706c5fb874563b01ef645fdabd5176b49d9eebb7ff42cb70bc12
+source_hash: a8b26b8764f063973ca0c6b01b080f34e81b6b44983dd836c8cae5a0ddb89eab
 ---
 
 # Drive 总览

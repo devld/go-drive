@@ -1,8 +1,9 @@
 ---
 title: 配置文件参考
+description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: 8385b8e365aa21d9672b84bccab67ccdc56a1328b7eccff5e850bc01dd0d3c63
+source_hash: 507e3efd917833d29527a148c1209165a1c9fb98ed3aafbe81cdd0cb6d79af89
 ---
 
 # 配置文件参考

@@ -1,8 +1,9 @@
 ---
 title: 搜索与索引
+description: 启用 go-drive 文件名搜索，建立和维护 SQLite 索引，排除指定路径并排查搜索结果过期问题。
 lang: zh-CN
 translation_key: search
-source_hash: de36cd7834e709a87ee45e7c0fdfcd580d3d0b7ec6ee2aaab118f3defe824644
+source_hash: 15eafa5ad709ce81d2d731beff9a502f084968e9d2be505af8c232461718d344
 ---
 
 # 搜索与索引

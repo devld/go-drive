@@ -1,5 +1,6 @@
 ---
 title: File Buckets
+description: Publish controlled upload and download endpoints with go-drive file buckets, access tokens, type limits, and hotlink protection.
 lang: en
 translation_key: file-buckets
 ---

@@ -1,5 +1,6 @@
 ---
 title: Maintenance and Runtime Status
+description: Monitor go-drive runtime status, reload drives, rebuild the search index, manage caches, and perform routine service maintenance.
 lang: en
 translation_key: maintenance
 ---

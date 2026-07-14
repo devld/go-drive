@@ -1,8 +1,9 @@
 ---
 title: 安全指南
+description: 通过修改默认凭据、限制公网暴露、保护密钥和配置可信代理，提高 go-drive 部署的安全性。
 lang: zh-CN
 translation_key: security
-source_hash: 98d600d6e80be11a7217d85456530660d822639b09e21313485092956fd0047a
+source_hash: 2bb10424bc3a2a7b0662daa80890ec8498c6be8c6c5f4f445ad0c168611f7c2f
 ---
 
 # 安全指南

@@ -1,8 +1,9 @@
 ---
 title: 路径属性与挂载
+description: 使用路径属性和挂载自定义文件行为，将条目展示到虚拟路径，并控制 go-drive 中设置的继承方式。
 lang: zh-CN
 translation_key: path-attrs-mounts
-source_hash: 5b7a71ffd7ada2268af37df937ebff741cdb6061e696c19eece9d00c3894b5ea
+source_hash: 6dc76caeeb431f32cff0bf205902257b60f9d4b6907473a53541b513c99c6591
 ---
 
 # 路径属性与挂载

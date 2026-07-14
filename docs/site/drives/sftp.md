@@ -1,5 +1,6 @@
 ---
 title: SFTP Drive
+description: Connect go-drive to an SFTP server using a password or SSH key, with host-key verification, root paths, and connection settings.
 lang: en
 translation_key: drive-sftp
 ---

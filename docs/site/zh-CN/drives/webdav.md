@@ -1,8 +1,9 @@
 ---
 title: WebDAV 存储 Drive
+description: 将远端 WebDAV 服务器挂载为 go-drive 存储后端，并配置 URL、账号、根路径和目录缓存。
 lang: zh-CN
 translation_key: drive-webdav
-source_hash: 0641da688c8ce2fcf328c0bd5bff381d1b2df1e8ba01a1d3936d22ea028d0311
+source_hash: 4157bee30f16f21f5f4ab76f9d633a72ac992756e121b002e1b6fd4c09732029
 ---
 
 # WebDAV 存储 Drive

@@ -1,5 +1,7 @@
 ---
-title: go-drive
+title: "go-drive: Self-Hosted File Manager for S3, WebDAV, and Cloud Storage"
+titleTemplate: false
+description: Manage local files, S3, WebDAV, FTP, SFTP, OneDrive, and Google Drive in one self-hosted go-drive server.
 lang: en
 translation_key: home
 ---

@@ -1,8 +1,9 @@
 ---
 title: 路径模式
+description: 编写包含通配符、递归匹配、排除和排序规则的 go-drive 路径模式，用于权限、索引和处理器配置。
 lang: zh-CN
 translation_key: path-patterns
-source_hash: 9c0b7e7a0d0625b561a383a1d0e59a98134cf30db828a86588bd21796eb39bac
+source_hash: 189226db755bc0d3502a3659595109ffb9b80bdd531c97f101e509b9c402ce60
 ---
 
 # 路径模式

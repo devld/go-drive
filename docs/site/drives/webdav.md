@@ -1,5 +1,6 @@
 ---
 title: WebDAV Storage Drive
+description: Mount a remote WebDAV server as a go-drive storage backend and configure its URL, credentials, root path, and directory cache.
 lang: en
 translation_key: drive-webdav
 ---

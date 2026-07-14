@@ -1,8 +1,9 @@
 ---
 title: 本地文件 Drive
+description: 将服务器或 NAS 目录映射到 go-drive，并控制根路径、文件系统访问限制和跨平台兼容性。
 lang: zh-CN
 translation_key: drive-local
-source_hash: 201ba2df55ac022bf297d1df557650cf033c43a25fdbd9a53308bd0837307eb3
+source_hash: ef923f3d728ca74145657e63b31faaf12ab37a0371b46a6990b09cd0d3857229
 ---
 
 # 本地文件 Drive

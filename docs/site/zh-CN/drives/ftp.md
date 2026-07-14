@@ -1,8 +1,9 @@
 ---
 title: FTP Drive
+description: 将 go-drive 连接到 FTP 服务器，并配置账号、远端根路径、超时、并发和目录缓存。
 lang: zh-CN
 translation_key: drive-ftp
-source_hash: 6e66b4e0501147b2109e9d5632fc869ce2a2267eb7a1b7e3738bca85fe8d0318
+source_hash: 441e5fecb0efef288cbc05d8843b7de098a7a50d872a489a9874493ce31eac08
 ---
 
 # FTP Drive

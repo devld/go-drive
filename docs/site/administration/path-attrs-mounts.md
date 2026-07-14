@@ -1,5 +1,6 @@
 ---
 title: Path Attributes and Mounts
+description: Use path attributes and mounts to customize file behavior, expose entries at virtual paths, and control inherited settings in go-drive.
 lang: en
 translation_key: path-attrs-mounts
 ---

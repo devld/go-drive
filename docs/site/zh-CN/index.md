@@ -1,8 +1,10 @@
 ---
-title: go-drive
+title: "go-drive：支持 S3、WebDAV 与云存储的自托管文件管理器"
+titleTemplate: false
+description: 使用一台自托管 go-drive 服务器统一管理本地文件、S3、WebDAV、FTP、SFTP、OneDrive 和 Google Drive。
 lang: zh-CN
 translation_key: home
-source_hash: 190b480b12b5ee27f0b568d87f8958011a1212edd5eb5f0b7da1607a9da48a4e
+source_hash: 706ee92f98880269111b5fe79b1eff2e84c67efdc6971eacf0516515446eecc9
 ---
 
 # go-drive

@@ -1,5 +1,6 @@
 ---
 title: Local File Drive
+description: Map a server or NAS directory into go-drive while controlling its root path, filesystem access restrictions, and portability.
 lang: en
 translation_key: drive-local
 ---

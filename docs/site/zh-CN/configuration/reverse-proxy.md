@@ -1,8 +1,9 @@
 ---
 title: 反向代理和子路径部署
+description: 将 go-drive 部署到 Nginx 等反向代理之后，正确配置 HTTPS 请求头、WebSocket 转发和子路径访问。
 lang: zh-CN
 translation_key: reverse-proxy
-source_hash: eea715690c2ceef686d2adef921b4c9ae7665d2087f0b32168af1cf09e109f0c
+source_hash: d80e2a9b38d4a5967045870777536bb277340beacc4f1d7c7d9cf26035faeb19
 ---
 
 # 反向代理和子路径部署

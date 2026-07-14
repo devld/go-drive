@@ -1,5 +1,6 @@
 ---
 title: Google Drive
+description: Connect Google Drive to go-drive with OAuth credentials, redirect URIs, API scopes, shared drives, and thumbnail proxy settings.
 lang: en
 translation_key: drive-google-drive
 ---

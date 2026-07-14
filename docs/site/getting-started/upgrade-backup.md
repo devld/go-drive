@@ -1,5 +1,6 @@
 ---
 title: Upgrade, Backup, and Restore
+description: Upgrade go-drive safely and back up or restore its database, configuration, local files, sessions, scripts, and generated caches.
 lang: en
 translation_key: upgrade-backup
 ---

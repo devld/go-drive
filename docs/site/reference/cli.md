@@ -1,5 +1,6 @@
 ---
 title: Command-Line Reference
+description: Use go-drive command-line flags to select configuration files, print version information, control startup, and run administrative operations.
 lang: en
 translation_key: cli
 ---

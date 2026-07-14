@@ -1,5 +1,6 @@
 ---
 title: Drive Overview
+description: Compare the storage backends supported by go-drive, their capabilities, configuration requirements, and direct-transfer limitations.
 lang: en
 translation_key: drives
 ---

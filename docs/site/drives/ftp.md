@@ -1,5 +1,6 @@
 ---
 title: FTP Drive
+description: Connect go-drive to an FTP server and configure credentials, the remote root path, timeouts, concurrency, and directory caching.
 lang: en
 translation_key: drive-ftp
 ---

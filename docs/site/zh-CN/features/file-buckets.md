@@ -1,8 +1,9 @@
 ---
 title: 文件桶
+description: 使用 go-drive 文件桶发布受控上传下载入口，并配置访问 Token、文件类型限制和防盗链。
 lang: zh-CN
 translation_key: file-buckets
-source_hash: da195f276a72f0e52c837ec4163ece4450ec2ad7659ecd72d297608dafce8c78
+source_hash: cc899e1aad91f0785217a8c38c03854e739f5578eab5b9ae0302a08efd1ea98a
 ---
 
 # 文件桶

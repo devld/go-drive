@@ -1,8 +1,9 @@
 ---
 title: 用户、组、根路径和权限
+description: 配置 go-drive 用户、用户组、根路径隔离及按路径读写权限，为多人文件访问建立安全边界。
 lang: zh-CN
 translation_key: access-control
-source_hash: 63e69867a80e161663ae146551705128c358e7d42666cafc0478231a8e711777
+source_hash: 456924d3d89c7a68513dbc3c8740c1cd8e9d09c8e62d85944c79b4b1077ba68e
 ---
 
 # 用户、组、根路径和权限

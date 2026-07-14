@@ -1,5 +1,6 @@
 ---
 title: Privacy and Data Processing
+description: Understand what data go-drive stores and processes, which optional third-party services receive data, and how operators control retention.
 lang: en
 translation_key: privacy
 ---

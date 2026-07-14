@@ -1,8 +1,9 @@
 ---
 title: Google Drive
+description: 使用 OAuth 凭据、重定向 URI 和 API Scope 将 Google Drive 或共享云端硬盘连接到 go-drive。
 lang: zh-CN
 translation_key: drive-google-drive
-source_hash: 1d13d9173c4719ef49df05283ac32b61d3aabeda420038154cfe5dec8db3a447
+source_hash: 86c052b42dae64b8c273e2a43bc12b8d123d77b7d5b80d0f3c32048936f232f5
 ---
 
 # Google Drive

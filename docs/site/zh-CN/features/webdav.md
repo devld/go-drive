@@ -1,8 +1,9 @@
 ---
 title: 通过 WebDAV 访问
+description: 启用 go-drive WebDAV 服务，并通过反向代理连接桌面、移动端、Linux 和命令行客户端。
 lang: zh-CN
 translation_key: webdav-access
-source_hash: 4561c234a03f19d2a4225ed741323906bb7e1fc20754038894fdcf1365ebaeda
+source_hash: c8be6341b2f8b9111fdee54b1e3f81903f2832be6cf9026a78482fcf5a528634
 ---
 
 # 通过 WebDAV 访问

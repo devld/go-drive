@@ -1,8 +1,9 @@
 ---
 title: 隐私与数据处理说明
+description: 了解 go-drive 存储和处理的数据、可选第三方服务接收的信息，以及管理员可控制的数据保留方式。
 lang: zh-CN
 translation_key: privacy
-source_hash: c2e0a1fc2590d8f2c5324015a97c2bc73cd2c79adcf7a3577fc5ac3886931f8f
+source_hash: dc121ff9f308c0257bad659dd1e71c195bf74eab1ea4303f07002e6309f87b49
 ---
 
 # 隐私与数据处理说明

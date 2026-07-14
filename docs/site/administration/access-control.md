@@ -1,5 +1,6 @@
 ---
 title: Users, Groups, Root Paths, and Permissions
+description: Configure go-drive users, groups, root-path isolation, and per-path read and write permissions for secure shared file access.
 lang: en
 translation_key: access-control
 ---

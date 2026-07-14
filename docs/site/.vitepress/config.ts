@@ -1,5 +1,73 @@
 import { defineConfig } from 'vitepress'
 
+const siteUrl = 'https://go-drive.top'
+const socialImageUrl = `${siteUrl}/social-card.png`
+
+function pageUrl(relativePath: string) {
+  const pathname = relativePath
+    .replace(/(^|\/)index\.md$/, '$1')
+    .replace(/\.md$/, '.html')
+  return new URL(pathname, `${siteUrl}/`).href
+}
+
+const breadcrumbLabels: Record<string, Record<string, string>> = {
+  en: {
+    administration: 'Administration',
+    configuration: 'Configuration',
+    drives: 'Drives',
+    extensions: 'Extensions',
+    features: 'Features',
+    'getting-started': 'Getting Started',
+    jobs: 'Jobs',
+    reference: 'Reference',
+    troubleshooting: 'Troubleshooting'
+  },
+  'zh-CN': {
+    administration: '管理',
+    configuration: '配置',
+    drives: 'Drive',
+    extensions: '扩展',
+    features: '功能',
+    'getting-started': '快速开始',
+    jobs: '自动任务',
+    reference: '参考',
+    troubleshooting: '故障排查'
+  }
+}
+
+function breadcrumbs(relativePath: string, title: string, lang: string) {
+  const withoutLocale = relativePath.replace(/^zh-CN\//, '')
+  const segments = withoutLocale.split('/')
+  const localePrefix = lang === 'zh-CN' ? 'zh-CN/' : ''
+  const items = [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: lang === 'zh-CN' ? '首页' : 'Home',
+      item: `${siteUrl}/${localePrefix}`
+    }
+  ]
+
+  const isSectionIndex = segments.at(-1) === 'index.md'
+  if (segments.length > 1 && !isSectionIndex) {
+    const section = segments[0]
+    items.push({
+      '@type': 'ListItem',
+      position: items.length + 1,
+      name: breadcrumbLabels[lang]?.[section] ?? section,
+      item: `${siteUrl}/${localePrefix}${section}/`
+    })
+  }
+
+  items.push({
+    '@type': 'ListItem',
+    position: items.length + 1,
+    name: title,
+    item: pageUrl(relativePath)
+  })
+  return items
+}
+
 const enSidebar = [
   {
     text: 'Getting Started',
@@ -127,7 +195,75 @@ export default defineConfig({
   lastUpdated: true,
   head: [['link', { rel: 'icon', href: '/favicon.png' }]],
   sitemap: {
-    hostname: 'https://go-drive.top'
+    hostname: siteUrl
+  },
+  transformPageData(pageData) {
+    if (pageData.isNotFound) return
+
+    const { relativePath, title, description, frontmatter } = pageData
+    const canonicalUrl = pageUrl(relativePath)
+    const lang = frontmatter.lang || 'en'
+    const isHome = relativePath === 'index.md' || relativePath === 'zh-CN/index.md'
+    const socialTitle = isHome ? title : `${title} | go-drive`
+    const structuredData = isHome
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          '@id': `${siteUrl}/#website`,
+          url: canonicalUrl,
+          name: 'go-drive',
+          alternateName: lang === 'zh-CN' ? 'go-drive 文档' : 'go-drive Documentation',
+          description,
+          inLanguage: lang
+        }
+      : [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'TechArticle',
+            headline: title,
+            description,
+            inLanguage: lang,
+            image: socialImageUrl,
+            dateModified: pageData.lastUpdated
+              ? new Date(pageData.lastUpdated).toISOString()
+              : undefined,
+            url: canonicalUrl,
+            mainEntityOfPage: canonicalUrl,
+            isPartOf: {
+              '@type': 'WebSite',
+              '@id': `${siteUrl}/#website`,
+              name: 'go-drive Documentation',
+              url: `${siteUrl}/`
+            }
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: breadcrumbs(relativePath, title, lang)
+          }
+        ]
+
+    frontmatter.head ??= []
+    frontmatter.head.push(
+      ['link', { rel: 'canonical', href: canonicalUrl }],
+      ['meta', { property: 'og:type', content: isHome ? 'website' : 'article' }],
+      ['meta', { property: 'og:site_name', content: 'go-drive' }],
+      ['meta', { property: 'og:title', content: socialTitle }],
+      ['meta', { property: 'og:description', content: description }],
+      ['meta', { property: 'og:url', content: canonicalUrl }],
+      ['meta', { property: 'og:image', content: socialImageUrl }],
+      ['meta', { property: 'og:image:width', content: '1731' }],
+      ['meta', { property: 'og:image:height', content: '909' }],
+      ['meta', { property: 'og:image:alt', content: 'go-drive' }],
+      ['meta', { property: 'og:locale', content: lang === 'zh-CN' ? 'zh_CN' : 'en_US' }],
+      ['meta', { property: 'og:locale:alternate', content: lang === 'zh-CN' ? 'en_US' : 'zh_CN' }],
+      ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+      ['meta', { name: 'twitter:title', content: socialTitle }],
+      ['meta', { name: 'twitter:description', content: description }],
+      ['meta', { name: 'twitter:image', content: socialImageUrl }],
+      ['meta', { name: 'twitter:image:alt', content: 'go-drive' }],
+      ['script', { type: 'application/ld+json' }, JSON.stringify(structuredData)]
+    )
   },
   locales: {
     root: {

@@ -1,8 +1,9 @@
 ---
 title: OneDrive
+description: 使用正确的 OAuth 和租户设置，将个人版、组织版、世纪互联或 SharePoint OneDrive 连接到 go-drive。
 lang: zh-CN
 translation_key: drive-onedrive
-source_hash: 44ec2f95573fe79a100bd14716bdfd45267c4ed6767d27c6af4f2ef464820ab3
+source_hash: 32877155616e5962830b831342513c071674974370358ccfce07444ba346b869
 ---
 
 # OneDrive

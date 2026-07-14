@@ -1,8 +1,9 @@
 ---
 title: 维护和运行状态
+description: 查看 go-drive 运行状态，重新加载 Drive、重建搜索索引、管理缓存，并执行常规服务维护。
 lang: zh-CN
 translation_key: maintenance
-source_hash: 9cf84cd06b625e3be6ec3c49d9d5870f268f1036fa052c91dc2f4190d0253f51
+source_hash: f0bc59e87c478d6b9a46c357fe89ffb9cd00ce6e2f5471469aaee80303baeb70
 ---
 
 # 维护和运行状态

@@ -1,5 +1,6 @@
 ---
 title: Path Patterns
+description: Write go-drive path patterns with wildcards, recursive matches, exclusions, and ordering rules for permissions, indexing, and handlers.
 lang: en
 translation_key: path-patterns
 ---

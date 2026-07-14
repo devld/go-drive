@@ -1,5 +1,6 @@
 ---
 title: Automated Jobs
+description: Automate go-drive copy, move, delete, and JavaScript actions with cron schedules or file-event triggers and execution history.
 lang: en
 translation_key: jobs
 ---

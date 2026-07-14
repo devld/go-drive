@@ -7,9 +7,10 @@
   },
   "scripts": {
     "dev": "vitepress dev",
-    "build": "npm run check:translations && vitepress build",
+    "build": "npm run check:translations && vitepress build && npm run check:seo",
     "preview": "vitepress preview",
-    "check:translations": "node scripts/check-translations.mjs"
+    "check:translations": "node scripts/check-translations.mjs",
+    "check:seo": "node scripts/check-seo.mjs"
   },
   "devDependencies": {
     "vitepress": "1.6.4"

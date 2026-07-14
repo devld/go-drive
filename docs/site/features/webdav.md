@@ -1,5 +1,6 @@
 ---
 title: Access Through WebDAV
+description: Enable the go-drive WebDAV service and connect desktop, mobile, Linux, and command-line clients through a reverse proxy.
 lang: en
 translation_key: webdav-access
 ---

@@ -1,5 +1,6 @@
 ---
 title: Search and Indexing
+description: Enable go-drive filename search, build and maintain the SQLite index, exclude paths, and troubleshoot stale search results.
 lang: en
 translation_key: search
 ---

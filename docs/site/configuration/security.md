@@ -1,5 +1,6 @@
 ---
 title: Security Guide
+description: Secure a go-drive deployment by changing default credentials, limiting exposure, protecting secrets, and configuring trusted proxies.
 lang: en
 translation_key: security
 ---

@@ -1,5 +1,6 @@
 ---
 title: Site Settings
+description: Customize go-drive branding, anonymous access, file handling, appearance, injected styles, and other browser-facing site behavior.
 lang: en
 translation_key: site-settings
 ---

@@ -1,5 +1,6 @@
 ---
 title: File Preview and Thumbnails
+description: Configure go-drive file viewers and thumbnail handlers for images, video, audio artwork, text, PDF, and office documents.
 lang: en
 translation_key: preview-thumbnail
 ---

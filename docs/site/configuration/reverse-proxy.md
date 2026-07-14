@@ -1,5 +1,6 @@
 ---
 title: Reverse Proxy and Subpath Deployment
+description: Deploy go-drive behind Nginx or another reverse proxy, including HTTPS headers, WebSocket forwarding, and subpath configuration.
 lang: en
 translation_key: reverse-proxy
 ---

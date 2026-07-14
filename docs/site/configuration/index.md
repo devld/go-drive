@@ -1,5 +1,6 @@
 ---
 title: Configuration Reference
+description: Reference go-drive options for networking, databases, storage, search, WebDAV, thumbnails, automated jobs, and security.
 lang: en
 translation_key: configuration
 ---

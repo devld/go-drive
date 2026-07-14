@@ -1,8 +1,9 @@
 ---
 title: 文件预览与缩略图
+description: 为图片、视频、音频封面、文本、PDF 和 Office 文档配置 go-drive 文件预览器与缩略图处理器。
 lang: zh-CN
 translation_key: preview-thumbnail
-source_hash: 1a5f2b675e3481629d812f35966b7554b0f61bed2d75bb5d77aec7f8d3577ed7
+source_hash: a294d6c97d2b95e9050b218a1ae1b7a5f8b270a41cdf5d195128c5364d7fbada
 ---
 
 # 文件预览与缩略图
