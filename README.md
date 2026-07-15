@@ -47,14 +47,16 @@ The whole application ships as a single self-contained binary (the web UI and i1
 
 - **File management** — browse, copy, move, rename, and delete with drag-and-drop and paste-to-upload support.
 - **Uploads & downloads** — chunked uploads for large files and zip packaging for batch downloads.
-- **Permission control** — fine-grained, user- and group-based access control per path.
+- **Access control** — isolate users, groups, and anonymous visitors with virtual root paths and fine-grained per-path read/write permissions.
+- **LDAP authentication** — connect to LDAP/LDAPS with just-in-time user creation and automatic group synchronization.
 - **Path mounting** — mount any drive or subpath into a unified virtual tree.
-- **Media preview** — image gallery powered by [PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe), built-in music player, and video playback.
+- **File preview** — image gallery powered by [PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe), built-in audio/video players and PDF viewer, plus configurable external previewers.
 - **Editors** — text editing with [CodeMirror](https://github.com/codemirror/) and full code editing with [Monaco Editor](https://github.com/microsoft/monaco-editor).
 - **Thumbnails** — generate thumbnails for images, text, video, and audio (pluggable handlers, optional `libvips`/`ffmpeg`).
-- **Full-text search** — optional file search across mounted drives.
+- **Filename search** — optional indexed filename search across mounted drives.
 - **WebDAV access** — expose your drives over the WebDAV protocol.
-- **Scheduled jobs** — cron-style background tasks powered by [gocron](https://github.com/go-co-op/gocron).
+- **Automated jobs** — run copy, move, delete, flow, and JavaScript actions on cron schedules or file events, with execution history and logs.
+- **File buckets** — publish token-protected upload and public-read endpoints with path templates, type/size limits, caching, and hotlink protection.
 - **Extensible drives** — add new storage backends with JavaScript, no recompilation required.
 - **Admin console** — manage drives, users, groups, permissions, and jobs from the browser.
 

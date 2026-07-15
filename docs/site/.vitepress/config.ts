@@ -276,7 +276,8 @@ export default defineConfig({
           { text: 'Home', link: '/' },
           { text: 'Install', link: '/getting-started/' },
           { text: 'Configuration', link: '/configuration/' },
-          { text: 'Drives', link: '/drives/' },
+          { text: 'Supported Drives', link: '/drives/' },
+          { text: 'Demo', link: 'https://demo.go-drive.top' },
           { text: 'Download', link: 'https://github.com/devld/go-drive/releases' }
         ],
         sidebar: enSidebar,
@@ -304,7 +305,8 @@ export default defineConfig({
           { text: '首页', link: '/zh-CN/' },
           { text: '安装', link: '/zh-CN/getting-started/' },
           { text: '配置', link: '/zh-CN/configuration/' },
-          { text: 'Drive', link: '/zh-CN/drives/' },
+          { text: '支持的存储', link: '/zh-CN/drives/' },
+          { text: '在线演示', link: 'https://demo.go-drive.top' },
           { text: '下载', link: 'https://github.com/devld/go-drive/releases' }
         ],
         sidebar: zhSidebar,
