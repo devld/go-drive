@@ -192,7 +192,8 @@
     <audio
       ref="audioEl"
       @timeupdate="onTimeUpdate"
-      @loadedmetadata="onLoadedMetadata"
+      @loadedmetadata="syncDuration"
+      @durationchange="syncDuration"
       @progress="onProgress"
       @ended="onEnded"
       @play="playing = true"
@@ -354,8 +355,10 @@ const prev = () => loadTrack(prevIndex(), true)
 const onTimeUpdate = () => {
   currentTime.value = audioEl.value?.currentTime ?? 0
 }
-const onLoadedMetadata = () => {
-  duration.value = audioEl.value?.duration ?? 0
+const syncDuration = () => {
+  const value = audioEl.value?.duration
+  duration.value =
+    value !== undefined && Number.isFinite(value) && value >= 0 ? value : 0
 }
 const onProgress = () => {
   const el = audioEl.value

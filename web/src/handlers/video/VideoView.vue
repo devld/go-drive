@@ -18,7 +18,8 @@
         class="video-player__video"
         :src="fileUrl(entry.path, entry.meta, { useProxy: 'referrer' })"
         @timeupdate="onTimeUpdate"
-        @loadedmetadata="onLoadedMetadata"
+        @loadedmetadata="syncDuration"
+        @durationchange="syncDuration"
         @progress="onProgress"
         @ended="playing = false"
         @play="playing = true"
@@ -222,8 +223,10 @@ const togglePlay = () => {
 const onTimeUpdate = () => {
   currentTime.value = videoEl.value?.currentTime ?? 0
 }
-const onLoadedMetadata = () => {
-  duration.value = videoEl.value?.duration ?? 0
+const syncDuration = () => {
+  const value = videoEl.value?.duration
+  duration.value =
+    value !== undefined && Number.isFinite(value) && value >= 0 ? value : 0
 }
 const onProgress = () => {
   const el = videoEl.value
