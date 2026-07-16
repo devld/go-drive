@@ -9,6 +9,8 @@ translation_key: script-drives
 
 JavaScript Drives add storage backends without recompiling go-drive. Extensions for Dropbox, Qiniu, and other services use this mechanism.
 
+They are intended for storage services with HTTP/HTTPS APIs that can map files and directories to paths. They are not a general protocol runtime: SMB/Samba, SFTP, FTP, local filesystems, and services that require raw sockets, native libraries, Node.js packages, or operating-system commands need a built-in Go Drive instead.
+
 ## Installation
 
 Open **Admin → Other Drives**, refresh the repository, and select an extension to install. An extension usually contains:
@@ -47,14 +49,15 @@ Start with the current templates and definitions:
 
 - [`docs/script-drive-template.js`](https://github.com/devld/go-drive/blob/master/docs/script-drive-template.js)
 - [`docs/scripts/global.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/global.d.ts)
-- [`docs/scripts/drive.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/drive.d.ts)
+- [`docs/scripts/env/drive.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/env/drive.d.ts)
 - [`docs/drive-uploaders`](https://github.com/devld/go-drive/tree/master/docs/drive-uploaders)
+- [`script-drives/AGENTS.md`](https://github.com/devld/go-drive/blob/master/script-drives/AGENTS.md): the complete implementation contract, API catalog, suitability guide, and end-to-end example for AI agents and developers.
 
 The template uses TypeScript references for editor completion, but the runtime is still server-side JavaScript. An implementation should:
 
 - Define a unique type name, display name, description, and configuration form.
-- Correctly implement Get/List/Save/MakeDir/Copy/Move/Delete/Content.
-- Return Unsupported for unavailable native operations so the scheduling layer can use its generic fallback.
+- Implement the required `meta`, `get`, `list`, and `getReader` methods, then the write, upload, download, and thumbnail methods supported by the service.
+- Return Unsupported from unavailable native `copy` operations so the dispatcher can stream-copy; note that `move` does not have a copy-and-delete fallback.
 - Use the provided context and propagate cancellation through cancellable operations.
 - Promptly close response bodies, readers, and remote connections.
 - Never write tokens, passwords, or signed URLs to logs.
@@ -71,4 +74,4 @@ An uploader runs in the user's browser and can provide direct transfers to S3-li
 4. Test empty files, large files, overwrite, directories, cancellation, network errors, and credential expiration separately.
 5. Disable debug mode and reload the Drive when testing is complete.
 
-The script VM isolates runtime state between calls, but scripts can still access the network and Drive data. Do not treat it as a sandbox for untrusted code.
+Calls use a pool of concurrent script VMs. Ordinary mutable globals are not reliable shared state; only JSON-serializable `$` instance properties are synchronized between VMs. Scripts can access the network and Drive data, so do not treat the runtime as a sandbox for untrusted code.

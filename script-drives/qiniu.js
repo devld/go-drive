@@ -180,7 +180,7 @@ var DriveImpl = {
     );
     this._cache.Evict(to, true);
     this._cache.Evict(pathUtils.parent(to), false);
-    this._cache.Evict(from.Path, true);
+    this._cache.Evict(from.Path(), true);
     this._cache.Evict(pathUtils.parent(from.Path()), false);
     return this.get(ctx, to);
   },

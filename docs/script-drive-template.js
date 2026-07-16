@@ -78,7 +78,9 @@ defineInit(function (ctx, data, config, utils) {
  * @type {MyDrive}
  */
 var DriveImpl = {
-    meta: function (ctx) { },
+    meta: function (ctx) {
+        return { Writable: true };
+    },
     get: function (ctx, path) {
         if (DEBUG) console.log("get", path);
         if (!path) {
@@ -119,7 +121,7 @@ var DriveImpl = {
         // TODO request
 
         this._cache.Evict(to, true);
-        this._cache.Evict(pathUtils.pa(to), false);
+        this._cache.Evict(pathUtils.parent(to), false);
         return this.get(ctx, to);
     },
     move: function (ctx, from, to, override) {
@@ -133,7 +135,7 @@ var DriveImpl = {
 
         this._cache.Evict(to, true);
         this._cache.Evict(pathUtils.parent(to), false);
-        this._cache.Evict(from.Path, true);
+        this._cache.Evict(from.Path(), true);
         this._cache.Evict(pathUtils.parent(from.Path()), false);
         return this.get(ctx, to);
     },

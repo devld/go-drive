@@ -165,6 +165,8 @@ declare interface TempFile extends ReadCloser {
    * It returns the new absolute offset.
    */
   SeekTo(offset: number, whence: number): number;
+  /** Returns the current file size in bytes. */
+  Size(): number;
 }
 
 /** The EntryType is `file` or `dir` */
@@ -184,6 +186,8 @@ declare interface ContentURL {
   Header?: SM;
   /** Is this request have to go through the server proxy */
   Proxy?: boolean;
+  /** Filename used by go-drive for Content-Disposition. Defaults to Entry.Name(). */
+  DownloadFileName?: string;
 }
 
 declare interface DriveInstance {
@@ -288,8 +292,11 @@ declare type FormItemType =
   | "text"
   | "password"
   | "checkbox"
+  | "checkboxes"
   | "select"
-  | "form";
+  | "path"
+  | "form"
+  | "code";
 
 declare interface FormItemOption {
   Name: string;
@@ -317,6 +324,11 @@ declare interface FormItemForms {
   Forms: FormItemForm[];
 }
 
+declare interface FormItemCode {
+  Type: string;
+  TypeSelectable?: boolean;
+}
+
 declare interface FormItem {
   Label?: string;
   Type: FormItemType;
@@ -333,6 +345,9 @@ declare interface FormItem {
 
   /** for FormItemType form */
   Forms?: FormItemForms;
+
+  /** for FormItemType code */
+  Code?: FormItemCode;
 
   DefaultValue?: string;
 }

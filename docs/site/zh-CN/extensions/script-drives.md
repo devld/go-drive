@@ -3,12 +3,14 @@ title: 脚本 Drive 开发与安装
 description: 安装第三方脚本 Drive，或使用 JavaScript 开发 go-drive 存储适配器和浏览器直传集成。
 lang: zh-CN
 translation_key: script-drives
-source_hash: ce820c46430f71ae9d00edd19ff2020dbd7bacd12c579a45faea35ac60c1e32f
+source_hash: 22245c0b56314dd215cb21cc5940e240d8b8297e041d50f846899d9237165854
 ---
 
 # 脚本 Drive 开发与安装
 
 JavaScript Drive 可以在不重新编译 go-drive 的情况下添加存储后端。Dropbox、七牛云等扩展就是这种类型。
+
+它适用于能通过 HTTP/HTTPS API 把文件和目录映射成路径的存储服务，并不是通用协议运行时。SMB/Samba、SFTP、FTP、本地文件系统，以及依赖原始 socket、原生库、Node.js 包或操作系统命令的服务，应实现内置 Go Drive。
 
 ## 安装
 
@@ -48,14 +50,15 @@ drive-repository-url: https://example.com/my-drives.json
 
 - [`docs/script-drive-template.js`](https://github.com/devld/go-drive/blob/master/docs/script-drive-template.js)
 - [`docs/scripts/global.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/global.d.ts)
-- [`docs/scripts/drive.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/drive.d.ts)
+- [`docs/scripts/env/drive.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/env/drive.d.ts)
 - [`docs/drive-uploaders`](https://github.com/devld/go-drive/tree/master/docs/drive-uploaders)
+- [`script-drives/AGENTS.md`](https://github.com/devld/go-drive/blob/master/script-drives/AGENTS.md)：供 AI Agent 和开发者使用的完整适用性判断、实现契约、API 清单与端到端示例。
 
 模板通过 TypeScript reference 提供编辑器补全，但运行时仍是服务器端 JavaScript。实现应：
 
 - 定义唯一类型名、显示名、说明和配置表单。
-- 正确实现 Get/List/Save/MakeDir/Copy/Move/Delete/Content。
-- 对不支持的原生操作返回 Unsupported，让调度层使用通用回退。
+- 实现必选的 `meta`、`get`、`list`、`getReader`，再按服务能力实现写入、上传、下载和缩略图方法。
+- 原生 `copy` 不可用时返回 Unsupported，调度层会流式复制；`move` 没有 copy-and-delete 回退。
 - 使用传入的 context，并在可中止操作中传播取消。
 - 及时关闭响应体、reader 和远端连接。
 - 不把 Token、密码或签名 URL 输出到日志。
@@ -72,4 +75,4 @@ drive-repository-url: https://example.com/my-drives.json
 4. 分别测试空文件、大文件、覆盖、目录、取消、网络错误和凭据过期。
 5. 测试完成后关闭 debug，并重新加载 Drive。
 
-脚本 VM 会为调用隔离运行状态，但脚本仍可以访问网络和 Drive 数据；不要把它当作不可信代码沙箱。
+调用由并发 VM 池执行，普通可变全局变量不是可靠的共享状态；只有可 JSON 序列化的 `$` 实例属性会在 VM 间同步。脚本仍可以访问网络和 Drive 数据；不要把它当作不可信代码沙箱。

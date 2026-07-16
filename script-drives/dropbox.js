@@ -176,7 +176,7 @@ var DriveImpl = {
       to_path: "/" + to,
     });
     this._cache.Evict(to, true);
-    this._cache.Evict(pathUtils.pa(to), false);
+    this._cache.Evict(pathUtils.parent(to), false);
     return this.get(ctx, to);
   },
   move: function (ctx, from, to, override) {
@@ -191,7 +191,7 @@ var DriveImpl = {
     });
     this._cache.Evict(to, true);
     this._cache.Evict(pathUtils.parent(to), false);
-    this._cache.Evict(from.Path, true);
+    this._cache.Evict(from.Path(), true);
     this._cache.Evict(pathUtils.parent(from.Path()), false);
     return this.get(ctx, to);
   },
