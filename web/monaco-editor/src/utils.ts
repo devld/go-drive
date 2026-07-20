@@ -1,5 +1,9 @@
 import * as monaco from 'monaco-editor'
 import {
+  MenuId,
+  MenuRegistry,
+} from 'monaco-editor/esm/vs/platform/actions/common/actions'
+import {
   EditorOutMessageTypes,
   JavaScriptSetupOptions,
   MessageHandler,
@@ -21,7 +25,20 @@ export function createEditor(language: string) {
 
   const editor = monaco.editor.create(container, {
     language,
+    definitionLinkOpensInPeek: true,
   })
+
+  monaco.editor.registerEditorOpener({
+    openCodeEditor(source, resource) {
+      if (source.getModel()?.uri.toString() !== resource.toString()) {
+        source.trigger('', 'editor.action.peekDefinition', null)
+        return true
+      }
+      return false
+    },
+  })
+
+  removeNavigationMenuItems()
 
   window.addEventListener('resize', () => {
     editor.layout()
@@ -110,4 +127,44 @@ function parseQueries(): Record<string, string> {
       a[k] = v
       return a
     }, {} as Record<string, string>)
+}
+
+const NAVIGATION_ACTION_IDS = new Set([
+  'editor.action.revealDefinition',
+  'editor.action.revealDefinitionAside',
+  'editor.action.goToTypeDefinition',
+  'editor.action.goToImplementation',
+  'editor.action.goToReferences',
+])
+
+function removeNavigationMenuItems() {
+  const menuItems = (MenuRegistry as any)._menuItems as
+    | Map<unknown, Iterable<{ command?: { id?: string } }>>
+    | undefined
+  if (!menuItems) return
+
+  const contextMenu = menuItems.get(MenuId.EditorContext)
+  if (!contextMenu) return
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const list = contextMenu as any
+  let node = list._first
+  while (node && node !== (list.constructor as any).Undefined) {
+    const next = node.next
+    const id = node.element?.command?.id
+    if (id && NAVIGATION_ACTION_IDS.has(id)) {
+      if (node.prev && node.prev !== (list.constructor as any).Undefined) {
+        node.prev.next = node.next
+      } else {
+        list._first = node.next
+      }
+      if (node.next && node.next !== (list.constructor as any).Undefined) {
+        node.next.prev = node.prev
+      } else {
+        list._last = node.prev
+      }
+      list._size--
+    }
+    node = next
+  }
 }
