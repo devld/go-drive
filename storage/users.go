@@ -20,7 +20,7 @@ type UserDAO struct {
 func NewUserDAO(db *DB, ch *registry.ComponentsHolder) *UserDAO {
 	dao := &UserDAO{
 		db:    db,
-		cache: utils.NewKVCache[types.User](0),
+		cache: utils.NewKVCache[types.User](0, 0),
 	}
 	ch.Add(registry.KeyUserDAO, dao)
 	return dao

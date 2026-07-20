@@ -32,7 +32,7 @@ func (f *FailBanGroup) LimiterByIP(path string, duration time.Duration, maxFailu
 }
 
 func (f *FailBanGroup) Limiter(path string, duration time.Duration, maxFailure uint32, keyFn func(ctx *gin.Context) string) gin.HandlerFunc {
-	m := utils.NewKVCache[failBanRecord](f.clearInterval)
+	m := utils.NewKVCache[failBanRecord](0, f.clearInterval)
 	f.cache[path] = m
 
 	return func(c *gin.Context) {

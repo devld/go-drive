@@ -15,7 +15,7 @@ type OptionsDAO struct {
 }
 
 func NewOptionsDAO(db *DB, ch *registry.ComponentsHolder) *OptionsDAO {
-	dao := &OptionsDAO{db: db, cache: utils.NewKVCache[types.Option](0)}
+	dao := &OptionsDAO{db: db, cache: utils.NewKVCache[types.Option](0, 0)}
 	ch.Add(registry.KeyOptionsDAO, dao)
 	return dao
 }

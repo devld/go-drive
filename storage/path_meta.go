@@ -17,7 +17,7 @@ type PathMetaDAO struct {
 }
 
 func NewPathMetaDAO(db *DB, ch *registry.ComponentsHolder) *PathMetaDAO {
-	dao := &PathMetaDAO{db: db, cache: utils.NewKVCache[*types.PathMeta](1 * time.Hour)}
+	dao := &PathMetaDAO{db: db, cache: utils.NewKVCache[*types.PathMeta](0, 1*time.Hour)}
 	ch.Add(registry.KeyPathMetaDAO, dao)
 	return dao
 }

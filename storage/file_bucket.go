@@ -18,7 +18,7 @@ type FileBucketDAO struct {
 }
 
 func NewFileBucketDAO(db *DB, ch *registry.ComponentsHolder) *FileBucketDAO {
-	dao := &FileBucketDAO{db: db, cache: utils.NewKVCache[types.FileBucket](0)}
+	dao := &FileBucketDAO{db: db, cache: utils.NewKVCache[types.FileBucket](0, 0)}
 	ch.Add(registry.KeyFileBucketDAO, dao)
 	dao.reloadBuckets()
 	return dao

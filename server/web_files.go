@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"go-drive/common"
+	"go-drive/common/utils"
 	"go-drive/storage"
 	"io"
 	"io/fs"
@@ -16,8 +17,6 @@ import (
 	"sync"
 	tTmpl "text/template"
 	"time"
-
-	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
 func isAllowedTemplate(name string) bool {
@@ -92,13 +91,13 @@ func (r *rootFs) Open(name string) (http.File, error) {
 func newTemplateProcessor(filter func(name string) bool) *templateProcessor {
 	return &templateProcessor{
 		filter: filter,
-		cache:  cmap.New[*templateCache](),
+		cache:  utils.NewKVCache[*templateCache](0, 0),
 	}
 }
 
 type templateProcessor struct {
 	filter func(name string) bool
-	cache  cmap.ConcurrentMap[string, *templateCache]
+	cache  *utils.KVCache[*templateCache]
 }
 
 func (tp *templateProcessor) Process(path string, file http.File, data any) ([]byte, error) {
@@ -116,14 +115,8 @@ func (tp *templateProcessor) Process(path string, file http.File, data any) ([]b
 
 	cached, ok := tp.cache.Get(name)
 	if !ok {
-		nc := newTemplateCache(name)
-		// SetIfAbsent avoids two concurrent first-requests creating
-		// (and parsing into) two different templateCache instances.
-		if tp.cache.SetIfAbsent(name, nc) {
-			cached = nc
-		} else {
-			cached, _ = tp.cache.Get(name)
-		}
+		cached = newTemplateCache(name)
+		tp.cache.Set(name, cached, 0)
 	}
 
 	// Hold the lock while reading/(re)parsing the template and capturing the

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hashicorp/golang-lru/v2"
 )
 
 const sessionCacheMaxEntries = 1000
@@ -36,7 +35,7 @@ type DBTokenStore struct {
 	validity    time.Duration
 	autoRefresh bool
 
-	cache       *lru.Cache[string, dbTokenCacheItem]
+	cache       *utils.KVCache[dbTokenCacheItem]
 	stopCleaner func()
 }
 
@@ -48,16 +47,12 @@ type dbTokenCacheItem struct {
 func NewDBTokenStore(sessionDAO *storage.SessionDAO, userDAO *storage.UserDAO,
 	config common.Config, ch *registry.ComponentsHolder) (*DBTokenStore, error) {
 	authConfig := config.Auth
-	cache, e := lru.New[string, dbTokenCacheItem](sessionCacheMaxEntries)
-	if e != nil {
-		return nil, e
-	}
 	ts := &DBTokenStore{
 		sessionDAO:  sessionDAO,
 		userDAO:     userDAO,
 		validity:    authConfig.Validity,
 		autoRefresh: authConfig.AutoRefresh,
-		cache:       cache,
+		cache:       utils.NewKVCache[dbTokenCacheItem](sessionCacheMaxEntries, 0),
 	}
 	ts.stopCleaner = utils.TimeTick(ts.clean, authConfig.Validity)
 	ch.Add(registry.KeyTokenStore, ts)
@@ -178,19 +173,15 @@ func (ts *DBTokenStore) revokeHash(hash string) error {
 }
 
 func (ts *DBTokenStore) getCached(hash string) (dbTokenCacheItem, bool) {
-	item, ok := ts.cache.Get(hash)
-	if !ok {
-		return dbTokenCacheItem{}, false
-	}
-	if item.expiresAt <= time.Now().Unix() {
-		ts.cache.Remove(hash)
-		return dbTokenCacheItem{}, false
-	}
-	return item, true
+	return ts.cache.Get(hash)
 }
 
 func (ts *DBTokenStore) setCached(hash string, item dbTokenCacheItem) {
-	ts.cache.Add(hash, item)
+	ttl := time.Until(time.Unix(item.expiresAt, 0))
+	if ttl <= 0 {
+		return
+	}
+	ts.cache.Set(hash, item, ttl)
 }
 
 func (ts *DBTokenStore) removeCached(hash string) {
@@ -216,6 +207,6 @@ func (ts *DBTokenStore) Status() (string, types.SM, error) {
 
 func (ts *DBTokenStore) Dispose() error {
 	ts.stopCleaner()
-	ts.cache.Purge()
+	ts.cache.Clear()
 	return nil
 }

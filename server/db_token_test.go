@@ -3,13 +3,12 @@ package server
 import (
 	"go-drive/common/registry"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"go-drive/storage"
 	"go-drive/testutil"
 	"os"
 	"testing"
 	"time"
-
-	"github.com/hashicorp/golang-lru/v2"
 )
 
 func TestMain(m *testing.M) {
@@ -209,11 +208,7 @@ func TestDBTokenStore_RefreshUsesValidityAsSlidingLifetime(t *testing.T) {
 func TestDBTokenStore_CacheEvictsLeastRecentlyUsedSession(t *testing.T) {
 	ts, _, cleanup := newTestDBTokenStore(t)
 	defer cleanup()
-	cache, e := lru.New[string, dbTokenCacheItem](2)
-	if e != nil {
-		t.Fatalf("New cache: %v", e)
-	}
-	ts.cache = cache
+	ts.cache = utils.NewKVCache[dbTokenCacheItem](2, 0)
 
 	tokens := make([]types.Token, 3)
 	for i := range tokens {
