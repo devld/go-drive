@@ -137,11 +137,6 @@ type IDrive interface {
 	Upload(ctx context.Context, path string, size int64, override bool, config SM) (*DriveUploadConfig, error)
 }
 
-type IDispatcherDrive interface {
-	IDrive
-	FindNonExistsEntryName(ctx context.Context, drive IDrive, path string) (string, error)
-}
-
 const (
 	// LocalProvider is for smaller files. It's upload file directly
 	LocalProvider = "local"

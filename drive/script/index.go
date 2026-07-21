@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -16,20 +16,20 @@ import (
 )
 
 func init() {
-	drive_util.RegisterDynamicDrive("script", func(config common.Config) *drive_util.DriveFactoryConfig {
+	driveutil.RegisterDynamicDrive("script", func(config common.Config) *driveutil.DriveFactoryConfig {
 		scripts, _ := ListDriveScripts(config)
 		scriptOptions := (utils.ArrayMap(scripts, func(t *DriveScript) types.FormItemOption {
 			return types.FormItemOption{Value: t.Name, Name: t.DisplayName}
 		}))
 
-		return &drive_util.DriveFactoryConfig{
+		return &driveutil.DriveFactoryConfig{
 			DisplayName: t("name"),
 			README:      t("readme"),
 			ConfigForm: []types.FormItem{
 				{Field: "script", Label: t("form.script.label"), Type: "select", Description: t("form.script.description"), Options: &scriptOptions, Required: true},
 				{Field: "pool", Label: t("form.pool.label"), Type: "text", Description: t("form.pool.description")},
 			},
-			Factory: drive_util.DriveFactory{
+			Factory: driveutil.DriveFactory{
 				Create:     newScriptDrive,
 				InitConfig: initConfig,
 				Init:       init_,
@@ -380,5 +380,5 @@ func (se *scriptDriveEntry) Thumbnail(ctx context.Context) (types.IContentReader
 	// Otherwise a ContentURL was returned.
 	r := types.ContentURL{}
 	v.ParseInto(&r)
-	return drive_util.NewURLContentReader(r.URL, r.Header, r.Proxy), nil
+	return driveutil.NewURLContentReader(r.URL, r.Header, r.Proxy), nil
 }

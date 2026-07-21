@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/req"
@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "onedrive",
 		DisplayName: t("name"),
 		README:      t("readme"),
@@ -46,7 +46,7 @@ func init() {
 			{Field: "proxy_download", Label: t("form.proxy_out.label"), Type: "checkbox", Description: t("form.proxy_out.description")},
 			{Field: "cache_ttl", Label: t("form.cache_ttl.label"), Type: "text", Description: t("form.cache_ttl.description")},
 		},
-		Factory: drive_util.DriveFactory{Create: NewOneDrive, InitConfig: InitConfig, Init: Init},
+		Factory: driveutil.DriveFactory{Create: NewOneDrive, InitConfig: InitConfig, Init: Init},
 	})
 }
 
@@ -57,16 +57,16 @@ type OneDrive struct {
 	reqPrefix string
 
 	cacheTTL time.Duration
-	cache    drive_util.DriveCache
+	cache    driveutil.DriveCache
 
 	uploadProxy   bool
 	downloadProxy bool
 }
 
 func NewOneDrive(_ context.Context, config types.SM,
-	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
-	resp, e := drive_util.OAuthGet(*oauthReq(driveUtils.Config, config),
-		drive_util.OAuthCredentials{
+	driveUtils driveutil.DriveUtils) (types.IDrive, error) {
+	resp, e := driveutil.OAuthGet(*oauthReq(driveUtils.Config, config),
+		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
 		}, driveUtils.Data)
@@ -82,7 +82,7 @@ func NewOneDrive(_ context.Context, config types.SM,
 		downloadProxy: config.GetBool("proxy_download"),
 	}
 	if cacheTtl <= 0 {
-		od.cache = drive_util.DummyCache()
+		od.cache = driveutil.DummyCache()
 	} else {
 		od.cache = driveUtils.CreateCache(od.deserializeEntry)
 	}
@@ -190,12 +190,12 @@ func (o *OneDrive) MakeDir(ctx context.Context, path string) (types.IEntry, erro
 }
 
 func (o *OneDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(o, from)
+	from = driveutil.GetSelfEntry(o, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, o, to); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, o, to); e != nil {
 			return nil, e
 		}
 	}
@@ -224,12 +224,12 @@ func (o *OneDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, overrid
 }
 
 func (o *OneDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(o, from)
+	from = driveutil.GetSelfEntry(o, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, o, to); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, o, to); e != nil {
 			return nil, e
 		}
 	}
@@ -307,7 +307,7 @@ func (o *OneDrive) Upload(ctx context.Context, path string, size int64,
 		return nil, nil
 	default:
 		if !override {
-			if _, e := drive_util.RequireFileNotExists(ctx, o, path); e != nil {
+			if _, e := driveutil.RequireFileNotExists(ctx, o, path); e != nil {
 				return nil, e
 			}
 		}
@@ -409,7 +409,7 @@ func (o *oneDriveEntry) GetReader(ctx context.Context, start, size int64) (io.Re
 	if resp != nil {
 		return resp.Response().Body, nil
 	}
-	return drive_util.GetURL(ctx, u, nil, start, size)
+	return driveutil.GetURL(ctx, u, nil, start, size)
 }
 
 func (o *oneDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {

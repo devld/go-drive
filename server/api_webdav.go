@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	"go-drive/drive"
 	"go-drive/server/auth"
 	"go-drive/server/webdav"
@@ -22,7 +22,7 @@ var webdavHTTPMethods = []string{
 func InitWebdavAccess(router gin.IRouter, config common.Config,
 	access *drive.Access, userAuth *auth.UserAuth) error {
 
-	cfp, e := drive_util.NewCacheFillPool(config.WebDav.MaxCacheItems, config.TempDir)
+	cfp, e := driveutil.NewCacheFillPool(config.WebDav.MaxCacheItems, config.TempDir)
 	if e != nil {
 		return e
 	}
@@ -49,7 +49,7 @@ func InitWebdavAccess(router gin.IRouter, config common.Config,
 
 type webdavAccess struct {
 	access  *drive.Access
-	cfp     *drive_util.CacheFilePool
+	cfp     *driveutil.CacheFilePool
 	lockSys webdav.LockSystem
 	config  common.Config
 }
@@ -64,7 +64,7 @@ func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 		return
 	}
 
-	driveFs, e := drive_util.NewDriveFS(drive, w.config.TempDir, w.cfp)
+	driveFs, e := driveutil.NewDriveFS(drive, w.config.TempDir, w.cfp)
 	if e != nil {
 		c.AbortWithError(http.StatusInternalServerError, e)
 		return
@@ -79,7 +79,7 @@ func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 }
 
 type webDavFS struct {
-	*drive_util.DriveFS
+	*driveutil.DriveFS
 }
 
 func (wfs webDavFS) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {

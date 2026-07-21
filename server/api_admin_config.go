@@ -1,13 +1,17 @@
 package server
 
 import (
+	"go-drive/common/driveutil"
+	err "go-drive/common/errors"
 	"go-drive/common/event"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/storage"
 	path2 "path"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +24,7 @@ type configRoute struct {
 	optionsDAO    *storage.OptionsDAO
 	rootDrive     *drive.RootDrive
 	bus           event.Bus
+	mountMux      sync.Mutex
 }
 
 func (cr *configRoute) getPathPermissions(c *gin.Context) {
@@ -90,27 +95,48 @@ func (cr *configRoute) savePathMounts(c *gin.Context) {
 		return
 	}
 	if len(src) == 0 {
+		_ = c.Error(err.NewBadRequestError(i18n.T("drive.invalid_path")))
 		return
 	}
+	cr.mountMux.Lock()
+	defer cr.mountMux.Unlock()
 
 	dd := cr.rootDrive.Get()
 
-	var e error
+	existingMounts, e := cr.pathMountDAO.GetMounts()
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	mounts := make([]types.PathMount, len(src))
+	reserved := make(map[string]bool, len(existingMounts)+len(src))
+	for _, mount := range existingMounts {
+		reserved[path2.Join(*mount.Path, mount.Name)] = true
+	}
 	for i, p := range src {
-		mountPath := utils.CleanPath(path2.Join(to, p.Name))
-		mountPath, e = dd.FindNonExistsEntryName(c.Request.Context(), dd, mountPath)
+		mountAt := utils.CleanPath(p.Path)
+		name := utils.CleanPath(p.Name)
+		if mountAt == "" || name == "" || name != p.Name || utils.PathBase(name) != name {
+			_ = c.Error(err.NewBadRequestError(i18n.T("drive.invalid_path")))
+			return
+		}
+		mountPath := path2.Join(to, name)
+		mountPath, e = driveutil.FindNonExistsEntryNameWithReserved(c.Request.Context(), dd, mountPath, reserved)
 		if e != nil {
 			_ = c.Error(e)
 			return
 		}
-		mounts[i] = types.PathMount{Path: &to, Name: utils.PathBase(mountPath), MountAt: p.Path}
+		reserved[mountPath] = true
+		mounts[i] = types.PathMount{Path: &to, Name: utils.PathBase(mountPath), MountAt: mountAt}
 	}
-	if e := cr.pathMountDAO.SaveMounts(mounts, true); e != nil {
+	if e := cr.pathMountDAO.SaveMounts(mounts, false); e != nil {
 		_ = c.Error(e)
 		return
 	}
-	_ = cr.rootDrive.ReloadMounts()
+	if e := cr.rootDrive.ReloadMounts(); e != nil {
+		_ = c.Error(e)
+		return
+	}
 	for _, m := range mounts {
 		cr.bus.PublishEntryUpdated(types.DriveListenerContext{
 			Principal: &principal,
@@ -118,7 +144,6 @@ func (cr *configRoute) savePathMounts(c *gin.Context) {
 		}, path2.Join(*m.Path, m.Name), true)
 	}
 }
-
 func (cr *configRoute) saveOptions(c *gin.Context) {
 	options := make(map[string]string)
 	if e := c.Bind(&options); e != nil {

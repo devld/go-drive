@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
@@ -241,7 +241,7 @@ func checkCopyOrMove(from, to string) error {
 	if from == to {
 		return err.NewNotAllowedMessageError(i18n.T("api.drive.copy_to_same_path_not_allowed"))
 	}
-	if strings.HasPrefix(to, from) && utils.PathDepth(from) != utils.PathDepth(to) {
+	if utils.IsPathParent(to, from) {
 		return err.NewNotAllowedMessageError(i18n.T("api.drive.copy_to_child_path_not_allowed"))
 	}
 	return nil
@@ -295,7 +295,7 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 	if proxyMaxSize > 0 && file.Size() > proxyMaxSize {
 		useProxy = false
 	}
-	if e := drive_util.DownloadIContent(c.Request.Context(), file, c.Writer, c.Request, useProxy); e != nil {
+	if e := driveutil.DownloadIContent(c.Request.Context(), file, c.Writer, c.Request, useProxy); e != nil {
 		_ = c.Error(e)
 		return
 	}
@@ -326,9 +326,9 @@ func (dr *driveRoute) zipDownload(c *gin.Context) {
 
 	ctx := task.NewTaskContext(c.Request.Context())
 
-	entriesTrees := make([]drive_util.EntryTreeNode, 0, len(entries))
+	entriesTrees := make([]driveutil.EntryTreeNode, 0, len(entries))
 	for _, entry := range entries {
-		rootNode, e := drive_util.BuildEntriesTree(ctx, entry, true)
+		rootNode, e := driveutil.BuildEntriesTree(ctx, entry, true)
 		if e != nil {
 			return
 		}
@@ -354,7 +354,7 @@ func (dr *driveRoute) zipDownload(c *gin.Context) {
 	}()
 
 	for _, node := range entriesTrees {
-		if e := drive_util.VisitEntriesTree(node, func(entry types.IEntry) error {
+		if e := driveutil.VisitEntriesTree(node, func(entry types.IEntry) error {
 			if e := ctx.Err(); e != nil {
 				return e
 			}
@@ -372,7 +372,7 @@ func (dr *driveRoute) zipDownload(c *gin.Context) {
 				return e
 			}
 			if entry.Type().IsFile() {
-				if e := drive_util.CopyIContent(task.NewContextWrapper(c.Request.Context()), entry, file); e != nil {
+				if e := driveutil.CopyIContent(task.NewContextWrapper(c.Request.Context()), entry, file); e != nil {
 					return e
 				}
 			}
@@ -582,7 +582,7 @@ func (dr *driveRoute) newEntryJson(e types.IEntry, principal types.Principal) *e
 }
 
 func (dr *driveRoute) wrapEntryWithAccessKey(entry types.IEntry, accessKey string) types.IEntry {
-	return drive_util.WrapEntryWithMeta(entry, types.M{"accessKey": accessKey})
+	return driveutil.WrapEntryWithMeta(entry, types.M{"accessKey": accessKey})
 }
 
 type entryJson struct {

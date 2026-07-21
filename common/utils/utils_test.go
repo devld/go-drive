@@ -58,6 +58,30 @@ func TestPathParentTree(t *testing.T) {
 	}
 }
 
+func TestIsPathParent(t *testing.T) {
+	tests := []struct {
+		name   string
+		path   string
+		parent string
+		want   bool
+	}{
+		{name: "direct child", path: "drive/dir/file", parent: "drive/dir", want: true},
+		{name: "deep child", path: "drive/dir/sub/file", parent: "drive/dir", want: true},
+		{name: "same path", path: "drive/dir", parent: "drive/dir", want: false},
+		{name: "segment prefix only", path: "drive/directory/file", parent: "drive/dir", want: false},
+		{name: "sibling", path: "drive/other", parent: "drive/dir", want: false},
+		{name: "virtual root", path: "drive", parent: "", want: true},
+		{name: "cleaned virtual path", path: "/drive/dir/sub/", parent: "drive/dir", want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsPathParent(tt.path, tt.parent); got != tt.want {
+				t.Fatalf("IsPathParent(%q, %q)=%v, want %v", tt.path, tt.parent, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestTimeTick(t *testing.T) {
 	n := 0
 	stop := TimeTick(func() {

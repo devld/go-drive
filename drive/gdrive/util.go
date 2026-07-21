@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 
@@ -40,8 +40,8 @@ var mimeTypeExtensionsMap = map[string]string{
 	"application/vnd.google-apps.script":       "json",
 }
 
-func oauthReq(c common.Config) *drive_util.OAuthRequest {
-	return &drive_util.OAuthRequest{
+func oauthReq(c common.Config) *driveutil.OAuthRequest {
+	return &driveutil.OAuthRequest{
 		Endpoint:       google.Endpoint,
 		RedirectURL:    c.OAuthRedirectURI,
 		Scopes:         []string{"https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/userinfo.profile"},
@@ -51,9 +51,9 @@ func oauthReq(c common.Config) *drive_util.OAuthRequest {
 }
 
 func InitConfig(ctx context.Context, config types.SM,
-	utils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
-	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(utils.Config),
-		drive_util.OAuthCredentials{
+	utils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
+	initConfig, resp, e := driveutil.OAuthInitConfig(*oauthReq(utils.Config),
+		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
 		}, utils.Data)
@@ -82,8 +82,8 @@ func InitConfig(ctx context.Context, config types.SM,
 	return initConfig, nil
 }
 
-func buildInitForm(ctx context.Context, resp *drive_util.OAuthResponse,
-	driveUtils drive_util.DriveUtils, initConfig *drive_util.DriveInitConfig) error {
+func buildInitForm(ctx context.Context, resp *driveutil.OAuthResponse,
+	driveUtils driveutil.DriveUtils, initConfig *driveutil.DriveInitConfig) error {
 	// get shared drives
 	driveSrv, e := drive.NewService(ctx, option.WithHTTPClient(resp.Client()))
 	if e != nil {
@@ -122,19 +122,19 @@ func buildInitForm(ctx context.Context, resp *drive_util.OAuthResponse,
 }
 
 func Init(ctx context.Context, data types.SM,
-	config types.SM, utils drive_util.DriveUtils) error {
+	config types.SM, utils driveutil.DriveUtils) error {
 	if e := utils.Data.Save(types.SM{"drive_id": data["drive_id"]}); e != nil {
 		return e
 	}
-	_, e := drive_util.OAuthInit(ctx, *oauthReq(utils.Config), data,
-		drive_util.OAuthCredentials{
+	_, e := driveutil.OAuthInit(ctx, *oauthReq(utils.Config), data,
+		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
 		}, utils.Data)
 	return e
 }
 
-func (g *GDrive) deserializeEntry(ci drive_util.EntryCacheItem) (types.IEntry, error) {
+func (g *GDrive) deserializeEntry(ci driveutil.EntryCacheItem) (types.IEntry, error) {
 	id := ci.Data["i"]
 	if id == "" {
 		return nil, errors.New("")

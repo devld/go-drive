@@ -3,7 +3,7 @@ package server
 import (
 	"fmt"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
@@ -243,7 +243,7 @@ func (fr *fileBucketRoute) get(c *gin.Context) {
 	} else {
 		c.Header("Cache-Control", "no-cache")
 	}
-	if e := drive_util.DownloadIContent(c.Request.Context(), entry, c.Writer, c.Request, false); e != nil {
+	if e := driveutil.DownloadIContent(c.Request.Context(), entry, c.Writer, c.Request, false); e != nil {
 		fr.abortWithError(c, e)
 		return
 	}

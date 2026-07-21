@@ -25,10 +25,11 @@ func (p *PathMountDAO) GetMounts() ([]types.PathMount, error) {
 }
 
 func saveMount(db *gorm.DB, mount types.PathMount, override bool) error {
-	e := db.Where("`path` = ? AND `name` = ?", mount.Path, mount.Name).Take(&types.PathMount{}).Error
+	existing := types.PathMount{}
+	e := db.Where("`path` = ? AND `name` = ?", mount.Path, mount.Name).Take(&existing).Error
 	if e == nil {
 		if override {
-			// update
+			mount.ID = existing.ID
 			return db.Save(&mount).Error
 		}
 		return nil

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
@@ -15,12 +15,13 @@ import (
 )
 
 type RootDrive struct {
-	root             *DispatcherDrive
+	root             *PathMountOverlayDrive
+	dispatcher       *DispatcherDrive
 	driveStorage     *storage.DriveDAO
 	mountStorage     *storage.PathMountDAO
 	driveDataStorage *storage.DriveDataDAO
 
-	driveCacheMgr drive_util.DriveCacheManager
+	driveCacheMgr driveutil.DriveCacheManager
 
 	config common.Config
 
@@ -35,9 +36,11 @@ func NewRootDrive(
 	dataStorage *storage.DriveDataDAO,
 	driveCacheStorage *storage.DriveCacheDAO,
 	ch *registry.ComponentsHolder) (*RootDrive, error) {
-	root := NewDispatcherDrive(mountStorage, config)
+	dispatcher := NewDispatcherDrive(config)
+	root := NewPathMountOverlayDrive(dispatcher, mountStorage)
 	r := &RootDrive{
 		root:             root,
+		dispatcher:       dispatcher,
 		driveStorage:     driveStorage,
 		mountStorage:     mountStorage,
 		driveDataStorage: dataStorage,
@@ -50,7 +53,7 @@ func NewRootDrive(
 		r.driveCacheMgr = driveCacheStorage
 		driveCacheStorage.StartCleaner(config.Cache.CleanPeriod)
 	default:
-		r.driveCacheMgr = drive_util.NewMemDriveCacheManager(config.Cache.CleanPeriod)
+		r.driveCacheMgr = driveutil.NewMemDriveCacheManager(config.Cache.CleanPeriod)
 	}
 
 	if e := r.ReloadMounts(); e != nil {
@@ -63,12 +66,12 @@ func NewRootDrive(
 	return r, nil
 }
 
-func (d *RootDrive) Get() types.IDispatcherDrive {
+func (d *RootDrive) Get() types.IDrive {
 	return d.root
 }
 
-func checkAndParseConfig(dc types.Drive, c common.Config) (*drive_util.DriveFactory, types.SM, error) {
-	f := drive_util.GetDrive(dc.Type, c)
+func checkAndParseConfig(dc types.Drive, c common.Config) (*driveutil.DriveFactory, types.SM, error) {
+	f := driveutil.GetDrive(dc.Type, c)
 	if f == nil {
 		return nil, nil, err.NewBadRequestError(i18n.T("drive.root.invalid_drive_type", dc.Type))
 	}
@@ -125,7 +128,7 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 		log.Println("Created drive:", dc.Name)
 		drives[dc.Name] = iDrive
 	}
-	d.root.setDrives(drives)
+	d.dispatcher.setDrives(drives)
 	ok = true
 
 	log.Println("Reloading drives done.")
@@ -142,10 +145,10 @@ func (d *RootDrive) ClearDriveCache(ns string) error {
 
 func (d *RootDrive) Dispose() error {
 	_ = d.driveCacheMgr.Dispose()
-	return d.root.Dispose()
+	return d.dispatcher.Dispose()
 }
 
-func (d *RootDrive) DriveInitConfig(ctx context.Context, name string) (*drive_util.DriveInitConfig, error) {
+func (d *RootDrive) DriveInitConfig(ctx context.Context, name string) (*driveutil.DriveInitConfig, error) {
 	dc, e := d.driveStorage.GetDrive(name)
 	if e != nil {
 		return nil, e
@@ -176,10 +179,10 @@ func (d *RootDrive) DriveInit(ctx context.Context, name string, data types.SM) e
 	return factory.Init(ctx, data, config, d.createDriveUtils(name))
 }
 
-func (d *RootDrive) createDriveUtils(name string) drive_util.DriveUtils {
-	return drive_util.DriveUtils{
+func (d *RootDrive) createDriveUtils(name string) driveutil.DriveUtils {
+	return driveutil.DriveUtils{
 		Data: d.driveDataStorage.GetDataStore(name),
-		CreateCache: func(de drive_util.EntryDeserialize) drive_util.DriveCache {
+		CreateCache: func(de driveutil.EntryDeserialize) driveutil.DriveCache {
 			return d.driveCacheMgr.GetCacheStore(name, de)
 		},
 		Config: d.config,

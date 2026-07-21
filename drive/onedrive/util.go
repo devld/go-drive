@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/req"
@@ -50,7 +50,7 @@ func getSiteConfig(site string) apiConfig {
 	return s
 }
 
-func oauthReq(c common.Config, config types.SM) *drive_util.OAuthRequest {
+func oauthReq(c common.Config, config types.SM) *driveutil.OAuthRequest {
 	tenant := config["tenant"]
 	site := getSiteConfig(config["site"])
 
@@ -59,7 +59,7 @@ func oauthReq(c common.Config, config types.SM) *drive_util.OAuthRequest {
 		filesScope = "Files.ReadWrite.All"
 	}
 
-	return &drive_util.OAuthRequest{
+	return &driveutil.OAuthRequest{
 		Endpoint: oauth2.Endpoint{
 			AuthURL:   strings.ReplaceAll(site.AuthorizeURL, "{tenant}", tenant),
 			TokenURL:  strings.ReplaceAll(site.TokenURL, "{tenant}", tenant),
@@ -105,9 +105,9 @@ func itemPath(path string) string {
 }
 
 func InitConfig(ctx context.Context, config types.SM,
-	driveUtils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
-	initConfig, resp, e := drive_util.OAuthInitConfig(*oauthReq(driveUtils.Config, config),
-		drive_util.OAuthCredentials{
+	driveUtils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
+	initConfig, resp, e := driveutil.OAuthInitConfig(*oauthReq(driveUtils.Config, config),
+		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
 		}, driveUtils.Data)
@@ -159,10 +159,10 @@ func InitConfig(ctx context.Context, config types.SM,
 	return initConfig, nil
 }
 
-func Init(ctx context.Context, data types.SM, config types.SM, utils drive_util.DriveUtils) error {
+func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.DriveUtils) error {
 	oReq := *oauthReq(utils.Config, config)
-	resp, e := drive_util.OAuthInit(ctx, oReq, data,
-		drive_util.OAuthCredentials{
+	resp, e := driveutil.OAuthInit(ctx, oReq, data,
+		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
 		}, utils.Data)
@@ -175,8 +175,8 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils drive_util.
 	sharePointURL := config["share_point"]
 	if sharePointURL != "" {
 		if resp == nil {
-			resp, e = drive_util.OAuthGet(oReq,
-				drive_util.OAuthCredentials{
+			resp, e = driveutil.OAuthGet(oReq,
+				driveutil.OAuthCredentials{
 					ClientID:     config["client_id"],
 					ClientSecret: config["client_secret"],
 				}, utils.Data)
@@ -203,7 +203,7 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils drive_util.
 }
 
 func generateDrivesForm(ctx context.Context, reqClient *req.Client,
-	config types.SM, params types.SM, initConfig *drive_util.DriveInitConfig) error {
+	config types.SM, params types.SM, initConfig *driveutil.DriveInitConfig) error {
 	drives, e := getDrives(ctx, reqClient, config["site"])
 	initConfig.Configured = e == nil
 	if e != nil {
@@ -279,7 +279,7 @@ func (o *OneDrive) uploadSmallFile(ctx types.TaskCtx,
 	parentId, filename string, size int64, reader io.Reader) (*oneDriveEntry, error) {
 	ctx.Total(size, true)
 	resp, e := o.c.Request(ctx, "PUT", idURL(parentId)+":"+utils.BuildURL("/{}:/content", filename),
-		types.SM{"Content-Type": "application/octet-stream"}, req.NewReaderBody(drive_util.ProgressReader(reader, ctx), size))
+		types.SM{"Content-Type": "application/octet-stream"}, req.NewReaderBody(driveutil.ProgressReader(reader, ctx), size))
 	if e != nil {
 		return nil, e
 	}
@@ -291,7 +291,7 @@ func (o *OneDrive) uploadSmallFileOverride(ctx types.TaskCtx,
 	id string, size int64, reader io.Reader) (*oneDriveEntry, error) {
 	ctx.Total(size, true)
 	resp, e := o.c.Request(ctx, "PUT", idURL(id)+"/content", types.SM{"Content-Type": "application/octet-stream"},
-		req.NewReaderBody(drive_util.ProgressReader(reader, ctx), size))
+		req.NewReaderBody(driveutil.ProgressReader(reader, ctx), size))
 	if e != nil {
 		return nil, e
 	}
@@ -320,7 +320,7 @@ func (o *OneDrive) uploadLargeFile(ctx types.TaskCtx,
 		resp, e := httpApi.Request(ctx, "PUT", sessionUrl, types.SM{
 			"Content-Range": contentRange,
 			"Content-Type":  "application/octet-stream",
-		}, req.NewReaderBody(drive_util.ProgressReader(io.LimitReader(reader, chunkSize), ctx), end-s))
+		}, req.NewReaderBody(driveutil.ProgressReader(io.LimitReader(reader, chunkSize), ctx), end-s))
 		if e != nil {
 			_ = deleteUploadSession(ctx, sessionUrl)
 			return nil, e
@@ -392,7 +392,7 @@ func (o *OneDrive) toEntry(resp req.Response) (*oneDriveEntry, error) {
 	return entry, nil
 }
 
-func (o *OneDrive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
+func (o *OneDrive) deserializeEntry(ec driveutil.EntryCacheItem) (types.IEntry, error) {
 	ed := ec.Data
 	if ed == nil || ed["id"] == "" {
 		return nil, errors.New("invalid cache")

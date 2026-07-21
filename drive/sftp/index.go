@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -24,7 +24,7 @@ import (
 var t = i18n.TPrefix("drive.sftp.")
 
 func init() {
-	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "sftp",
 		DisplayName: t("name"),
 		README:      t("readme"),
@@ -38,7 +38,7 @@ func init() {
 			{Label: t("form.root_path.label"), Type: "text", Field: "root_path", Description: t("form.root_path.description")},
 			{Label: t("form.cache_ttl.label"), Type: "text", Field: "cache_ttl", Description: t("form.cache_ttl.description")},
 		},
-		Factory: drive_util.DriveFactory{Create: NewDrive},
+		Factory: driveutil.DriveFactory{Create: NewDrive},
 	})
 }
 
@@ -62,7 +62,7 @@ func createAuthMethods(config types.SM) ([]ssh.AuthMethod, error) {
 	return auth, nil
 }
 
-func NewDrive(_ context.Context, config types.SM, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
+func NewDrive(_ context.Context, config types.SM, driveUtils driveutil.DriveUtils) (types.IDrive, error) {
 	cacheTTL := config.GetDuration("cache_ttl", -1)
 	hostKey := config["host_key"]
 	rootPath := config["root_path"]
@@ -104,7 +104,7 @@ func NewDrive(_ context.Context, config types.SM, driveUtils drive_util.DriveUti
 		},
 	}
 	if cacheTTL <= 0 {
-		s.cache = drive_util.DummyCache()
+		s.cache = driveutil.DummyCache()
 	} else {
 		s.cache = driveUtils.CreateCache(s.deserializeEntry)
 	}
@@ -142,7 +142,7 @@ func (f *Drive) getClient() (*sftp.Client, error) {
 var _ types.IDrive = (*Drive)(nil)
 
 type Drive struct {
-	cache    drive_util.DriveCache
+	cache    driveutil.DriveCache
 	cacheTTL time.Duration
 	rootPath string
 
@@ -185,7 +185,7 @@ func (f *Drive) Get(_ context.Context, path string) (types.IEntry, error) {
 
 func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
 		}
 	}
@@ -202,7 +202,7 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, 
 		return nil, f.handleError(e)
 	}
 	defer func() { _ = file.Close() }()
-	writtenSize, e := file.ReadFrom(drive_util.ProgressReader(reader, ctx))
+	writtenSize, e := file.ReadFrom(driveutil.ProgressReader(reader, ctx))
 	if e != nil {
 		return nil, f.handleError(e)
 	}
@@ -232,13 +232,13 @@ func (f *Drive) Copy(types.TaskCtx, types.IEntry, string, bool) (types.IEntry, e
 }
 
 func (f *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(f, from)
+	from = driveutil.GetSelfEntry(f, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
 	fromEntry := from.(*sftpEntry)
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, f, to); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, f, to); e != nil {
 			return nil, e
 		}
 	}
@@ -301,7 +301,7 @@ func (f *Drive) Delete(ctx types.TaskCtx, path string) error {
 
 func (f *Drive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
 		}
 	}
@@ -318,7 +318,7 @@ func (f *Drive) newSFTPEntry(parent string, stat os.FileInfo) *sftpEntry {
 	}
 }
 
-func (f *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
+func (f *Drive) deserializeEntry(ec driveutil.EntryCacheItem) (types.IEntry, error) {
 	return &sftpEntry{path: ec.Path, d: f, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 
@@ -425,7 +425,7 @@ func (f *sftpEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCl
 					return
 				}
 				if size > 0 {
-					readCloser = drive_util.LimitReadCloser(file, size)
+					readCloser = driveutil.LimitReadCloser(file, size)
 				}
 			}
 			defer func() { _ = file.Close() }()

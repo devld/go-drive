@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/xml"
 	"errors"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/req"
@@ -22,7 +22,7 @@ import (
 var davT = i18n.TPrefix("drive.webdav.")
 
 func init() {
-	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "webdav",
 		DisplayName: davT("name"),
 		README:      davT("readme"),
@@ -32,13 +32,13 @@ func init() {
 			{Field: "password", Label: davT("form.password.label"), Type: "password", Description: davT("form.password.description")},
 			{Field: "cache_ttl", Label: davT("form.cache_ttl.label"), Type: "text", Description: davT("form.cache_ttl.description")},
 		},
-		Factory: drive_util.DriveFactory{Create: NewDrive},
+		Factory: driveutil.DriveFactory{Create: NewDrive},
 	})
 }
 
 // NewDrive creates a webdav drive
 func NewDrive(ctx context.Context, config types.SM,
-	utils drive_util.DriveUtils) (types.IDrive, error) {
+	utils driveutil.DriveUtils) (types.IDrive, error) {
 	u := config["url"]
 	username := config["username"]
 	password := config["password"]
@@ -57,7 +57,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	}
 
 	if cacheTtl <= 0 {
-		w.cache = drive_util.DummyCache()
+		w.cache = driveutil.DummyCache()
 	} else {
 		w.cache = utils.CreateCache(w.deserializeEntry)
 	}
@@ -84,7 +84,7 @@ type Drive struct {
 	password   string
 
 	cacheTTL time.Duration
-	cache    drive_util.DriveCache
+	cache    driveutil.DriveCache
 
 	c *req.Client
 }
@@ -131,12 +131,12 @@ func (w *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 func (w *Drive) Save(ctx types.TaskCtx, path string, size int64,
 	override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, w, path); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, w, path); e != nil {
 			return nil, e
 		}
 	}
 	resp, e := w.c.Request(ctx, "PUT", path, nil,
-		req.NewReaderBody(drive_util.ProgressReader(reader, ctx), size))
+		req.NewReaderBody(driveutil.ProgressReader(reader, ctx), size))
 	if e != nil {
 		return nil, e
 	}
@@ -164,7 +164,7 @@ func (w *Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) 
 
 func (w *Drive) copyOrMove(method string, from types.IEntry, to string,
 	override bool, ctx types.TaskCtx) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(w, from)
+	from = driveutil.GetSelfEntry(w, from)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
 	}
@@ -239,7 +239,7 @@ func (w *Drive) Delete(ctx types.TaskCtx, path string) error {
 func (w *Drive) Upload(ctx context.Context, path string, size int64,
 	override bool, _ types.SM) (*types.DriveUploadConfig, error) {
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, w, path); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, w, path); e != nil {
 			return nil, e
 		}
 	}
@@ -271,7 +271,7 @@ func (w *Drive) afterRequest(resp req.Response) error {
 	return nil
 }
 
-func (w *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
+func (w *Drive) deserializeEntry(ec driveutil.EntryCacheItem) (types.IEntry, error) {
 	return &webDavEntry{
 		path: ec.Path, modTime: ec.ModTime,
 		size: ec.Size, isDir: ec.Type.IsDir(), d: w,
@@ -338,7 +338,7 @@ func (w *webDavEntry) Name() string {
 
 func (w *webDavEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
 	headers := types.SM{}
-	rangeStr := drive_util.BuildRangeHeader(start, size)
+	rangeStr := driveutil.BuildRangeHeader(start, size)
 	if rangeStr != "" {
 		headers["Range"] = rangeStr
 	}

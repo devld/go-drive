@@ -1,4 +1,4 @@
-package drive_util
+package driveutil
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"net/http/httputil"
 	url2 "net/url"
 	"os"
-	"path"
+	pathpkg "path"
 	"strconv"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -88,6 +88,51 @@ func UnwrapIEntry(entry types.IEntry) types.IEntry {
 
 func GetSelfEntry(d types.IDrive, entry types.IEntry) types.IEntry {
 	return GetIEntry(entry, func(ee types.IEntry) bool { return ee.Drive() == d })
+}
+
+// FindNonExistsEntryName returns path when it is available. If it already
+// exists, a numeric suffix is inserted before the extension until an available
+// sibling name is found.
+func FindNonExistsEntryName(ctx context.Context, drive types.IDrive, path string) (string, error) {
+	return FindNonExistsEntryNameWithReserved(ctx, drive, path, nil)
+}
+
+// FindNonExistsEntryNameWithReserved works like FindNonExistsEntryName and
+// also treats paths in reserved as unavailable. This is useful when allocating
+// several sibling names before any of them have been persisted.
+func FindNonExistsEntryNameWithReserved(ctx context.Context, drive types.IDrive, path string, reserved map[string]bool) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	_, e := drive.Get(ctx, path)
+	if e != nil && !err.IsNotFoundError(e) {
+		return "", e
+	}
+	if e != nil && !reserved[path] {
+		return path, nil
+	}
+	parentPath := utils.PathParent(path)
+	pathBaseName := utils.PathName(path)
+	pathExt := pathpkg.Ext(path)
+	siblings, e := drive.List(ctx, parentPath)
+	if e != nil {
+		return "", e
+	}
+	seq := 1
+	for {
+		newPath := utils.CleanPath(pathpkg.Join(parentPath, fmt.Sprintf("%s_%d%s", pathBaseName, seq, pathExt)))
+		available := !reserved[newPath]
+		for _, sibling := range siblings {
+			if newPath == sibling.Path() {
+				available = false
+				break
+			}
+		}
+		if available {
+			return newPath, nil
+		}
+		seq++
+	}
 }
 
 // errInvalidWrite means that a write returned an impossible count.
@@ -447,7 +492,7 @@ func copyAll(ctx types.TaskCtx, entry EntryTreeNode, driveTo types.IDrive, to st
 		}
 		if entry.Children != nil {
 			for _, e := range entry.Children {
-				r, ee := copyAll(ctx, e, driveTo, utils.CleanPath(path.Join(to, utils.PathBase(e.Entry.Path()))),
+				r, ee := copyAll(ctx, e, driveTo, utils.CleanPath(pathpkg.Join(to, utils.PathBase(e.Entry.Path()))),
 					dirCreate, doCopy, after)
 				if ee != nil {
 					return false, ee

@@ -1,7 +1,7 @@
 package script
 
 import (
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 )
@@ -12,7 +12,7 @@ type entryTreeNode struct {
 	Excluded bool
 }
 
-func convertEntryTreeNode(root drive_util.EntryTreeNode) entryTreeNode {
+func convertEntryTreeNode(root driveutil.EntryTreeNode) entryTreeNode {
 	var children []entryTreeNode
 	if root.Children != nil {
 		children = make([]entryTreeNode, 0, len(root.Children))
@@ -41,7 +41,7 @@ func vm_buildEntriesTree(vm *VM, args Values) any {
 	ctx := GetTaskCtx(args.Get(0).Raw())
 	entry := GetEntry(args.Get(1).Raw())
 	byteProgress := args.Get(2).Bool()
-	r, e := drive_util.BuildEntriesTree(ctx, entry, byteProgress)
+	r, e := driveutil.BuildEntriesTree(ctx, entry, byteProgress)
 	if e != nil {
 		vm.ThrowError(e)
 	}
@@ -54,7 +54,7 @@ func vm_findEntries(vm *VM, args Values) any {
 	drive := GetDrive(args.Get(1).Raw())
 	pattern := args.Get(2).String()
 	byteProgress := args.Get(3).Bool()
-	r, e := drive_util.FindEntries(ctx, drive, pattern, byteProgress)
+	r, e := driveutil.FindEntries(ctx, drive, pattern, byteProgress)
 	if e != nil {
 		vm.ThrowError(e)
 	}

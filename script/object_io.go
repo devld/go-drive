@@ -1,7 +1,7 @@
 package script
 
 import (
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	"io"
 	"os"
 )
@@ -137,7 +137,7 @@ func (r Reader) LimitReader(n int64) Reader {
 }
 
 func (r Reader) ProgressReader(ctx any) Reader {
-	return NewReader(r.vm, drive_util.ProgressReader(r.r, GetTaskCtx(ctx)))
+	return NewReader(r.vm, driveutil.ProgressReader(r.r, GetTaskCtx(ctx)))
 }
 
 type ReadCloser struct {

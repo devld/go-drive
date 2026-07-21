@@ -1,7 +1,7 @@
 package script
 
 import (
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 )
@@ -142,19 +142,19 @@ func (e Entry) GetReader(ctx any, start, size int64) ReadCloser {
 }
 
 func (e Entry) Unwrap() Entry {
-	entry := drive_util.UnwrapIEntry(e.e)
+	entry := driveutil.UnwrapIEntry(e.e)
 	return NewEntry(entry)
 }
 
 func (e Entry) Data() any {
-	cacheableEntry := drive_util.GetIEntry(e.e, func(entry types.IEntry) bool {
-		_, ok := entry.(drive_util.CacheableEntry)
+	cacheableEntry := driveutil.GetIEntry(e.e, func(entry types.IEntry) bool {
+		_, ok := entry.(driveutil.CacheableEntry)
 		return ok
 	})
 	if cacheableEntry == nil {
 		return nil
 	}
-	dat := cacheableEntry.(drive_util.CacheableEntry).EntryData()
+	dat := cacheableEntry.(driveutil.CacheableEntry).EntryData()
 	if dat == nil {
 		return nil
 	}

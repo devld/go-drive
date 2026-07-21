@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -28,7 +28,7 @@ type drivesRoute struct {
 }
 
 func (dr *drivesRoute) getDriveFactories(c *gin.Context) {
-	ds := drive_util.GetRegisteredDrives(dr.config)
+	ds := driveutil.GetRegisteredDrives(dr.config)
 	sort.Slice(ds, func(i, j int) bool { return ds[i].Type < ds[j].Type })
 	SetResult(c, ds)
 }
@@ -40,7 +40,7 @@ func (dr *drivesRoute) getDrives(c *gin.Context) {
 		return
 	}
 	for i, d := range drives {
-		f := drive_util.GetDrive(d.Type, dr.config)
+		f := driveutil.GetDrive(d.Type, dr.config)
 		if f == nil {
 			continue
 		}
@@ -74,7 +74,7 @@ func (dr *drivesRoute) updateDrive(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	f := drive_util.GetDrive(d.Type, dr.config)
+	f := driveutil.GetDrive(d.Type, dr.config)
 	if f == nil {
 		_ = c.Error(err.NewNotAllowedMessageError(i18n.T("api.admin.unknown_drive_type", d.Type)))
 		return

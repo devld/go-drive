@@ -1,7 +1,7 @@
 package script
 
 import (
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	s "go-drive/script"
@@ -9,7 +9,7 @@ import (
 )
 
 type scriptDriveCache struct {
-	c drive_util.DriveCache
+	c driveutil.DriveCache
 }
 
 func (sc *scriptDriveCache) PutEntries(entries []scriptEntryStruct, ttl time.Duration) {
@@ -42,7 +42,7 @@ func (sc *scriptDriveCache) EvictAll() {
 	}
 }
 
-func (sc *scriptDriveCache) GetEntry(path string) *drive_util.EntryCacheItem {
+func (sc *scriptDriveCache) GetEntry(path string) *driveutil.EntryCacheItem {
 	r, e := sc.c.GetEntryRaw(path)
 	if e != nil {
 		s.ThrowDetachedError(e)

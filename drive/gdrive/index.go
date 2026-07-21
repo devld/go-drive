@@ -3,7 +3,7 @@ package gdrive
 import (
 	"context"
 	"fmt"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "gdrive",
 		DisplayName: t("name"),
 		README:      t("readme"),
@@ -30,13 +30,13 @@ func init() {
 			{Field: "cache_ttl", Label: t("form.cache_ttl.label"), Type: "text", Description: t("form.cache_ttl.description"), DefaultValue: "4h"},
 			{Field: "proxy_thumbnail", Label: t("form.proxy_thumbnail.label"), Type: "checkbox", Description: t("form.proxy_thumbnail.description"), DefaultValue: "1"},
 		},
-		Factory: drive_util.DriveFactory{Create: NewGDrive, InitConfig: InitConfig, Init: Init},
+		Factory: driveutil.DriveFactory{Create: NewGDrive, InitConfig: InitConfig, Init: Init},
 	})
 }
 
-func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils) (types.IDrive, error) {
-	resp, e := drive_util.OAuthGet(*oauthReq(utils.Config),
-		drive_util.OAuthCredentials{
+func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils) (types.IDrive, error) {
+	resp, e := driveutil.OAuthGet(*oauthReq(utils.Config),
+		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
 		}, utils.Data)
@@ -62,7 +62,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils drive_util.DriveUtils
 		proxyThumbnail: config.GetBool("proxy_thumbnail"),
 	}
 	if cacheTtl <= 0 {
-		g.cache = drive_util.DummyCache()
+		g.cache = driveutil.DummyCache()
 	} else {
 		g.cache = utils.CreateCache(g.deserializeEntry)
 	}
@@ -77,7 +77,7 @@ type GDrive struct {
 	driveId string
 
 	cacheTTL time.Duration
-	cache    drive_util.DriveCache
+	cache    driveutil.DriveCache
 
 	ts oauth2.TokenSource
 
@@ -156,13 +156,13 @@ func (g *GDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error)
 }
 
 func (g *GDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(g, from)
+	from = driveutil.GetSelfEntry(g, from)
 	if from == nil || from.Type().IsDir() {
 		// google drive api does not support to copy folder
 		return nil, err.NewUnsupportedError()
 	}
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, g, to); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, g, to); e != nil {
 			return nil, e
 		}
 	}
@@ -185,12 +185,12 @@ func (g *GDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override 
 }
 
 func (g *GDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(g, from)
+	from = driveutil.GetSelfEntry(g, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, g, to); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, g, to); e != nil {
 			return nil, e
 		}
 	}
@@ -325,7 +325,7 @@ func (g *GDrive) Delete(ctx types.TaskCtx, path string) error {
 
 func (g *GDrive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, g, path); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, g, path); e != nil {
 			return nil, e
 		}
 	}
@@ -472,7 +472,7 @@ func (g *gdriveEntry) GetReader(ctx context.Context, start, size int64) (io.Read
 	if e != nil {
 		return nil, e
 	}
-	return drive_util.GetURL(ctx, u.URL, u.Header, start, size)
+	return driveutil.GetURL(ctx, u.URL, u.Header, start, size)
 }
 
 func (g *gdriveEntry) GetURL(context.Context) (*types.ContentURL, error) {
@@ -508,7 +508,7 @@ func (g *gdriveEntry) GetURL(context.Context) (*types.ContentURL, error) {
 
 	return &types.ContentURL{
 		Proxy: true, URL: downloadUrl,
-		Header: types.SM{"Authorization": t.TokenType + " " + t.AccessToken},
+		Header:           types.SM{"Authorization": t.TokenType + " " + t.AccessToken},
 		DownloadFileName: downloadFilename,
 	}, nil
 }
@@ -521,7 +521,7 @@ func (g *gdriveEntry) Thumbnail(ctx context.Context) (types.IContentReader, erro
 	if !g.d.proxyThumbnail || g.thumbnail == "" {
 		return nil, err.NewUnsupportedError()
 	}
-	return drive_util.NewURLContentReader(g.thumbnail, nil, true), nil
+	return driveutil.NewURLContentReader(g.thumbnail, nil, true), nil
 }
 
 func (g *gdriveEntry) EntryData() types.SM {

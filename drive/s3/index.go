@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
@@ -28,7 +28,7 @@ import (
 var s3T = i18n.TPrefix("drive.s3.")
 
 func init() {
-	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "s3",
 		DisplayName: s3T("name"),
 		README:      s3T("readme"),
@@ -43,7 +43,7 @@ func init() {
 			{Field: "proxy_download", Label: s3T("form.proxy_out.label"), Type: "checkbox", Description: s3T("form.proxy_out.description")},
 			{Field: "cache_ttl", Label: s3T("form.cache_ttl.label"), Type: "text", Description: s3T("form.cache_ttl.description")},
 		},
-		Factory: drive_util.DriveFactory{Create: NewDrive},
+		Factory: driveutil.DriveFactory{Create: NewDrive},
 	})
 }
 
@@ -52,7 +52,7 @@ type Drive struct {
 	bucket        *string
 	uploadProxy   bool
 	downloadProxy bool
-	cache         drive_util.DriveCache
+	cache         driveutil.DriveCache
 	cacheTTL      time.Duration
 
 	tempDir string
@@ -62,7 +62,7 @@ var _ types.IDrive = (*Drive)(nil)
 
 // NewDrive creates a S3 compatible storage
 func NewDrive(ctx context.Context, config types.SM,
-	utils drive_util.DriveUtils) (types.IDrive, error) {
+	utils driveutil.DriveUtils) (types.IDrive, error) {
 	id := config["id"]
 	secret := config["secret"]
 	bucket := config["bucket"]
@@ -90,7 +90,7 @@ func NewDrive(ctx context.Context, config types.SM,
 		tempDir:       utils.Config.TempDir,
 	}
 	if cacheTtl <= 0 {
-		d.cache = drive_util.DummyCache()
+		d.cache = driveutil.DummyCache()
 	} else {
 		d.cache = utils.CreateCache(d.deserializeEntry)
 	}
@@ -110,7 +110,7 @@ func (s *Drive) check(ctx context.Context) error {
 	return e
 }
 
-func (s *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
+func (s *Drive) deserializeEntry(ec driveutil.EntryCacheItem) (types.IEntry, error) {
 	return &s3Entry{key: ec.Path, c: s, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 
@@ -164,7 +164,7 @@ func (s *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 func (s *Drive) Save(ctx types.TaskCtx, path string, _ int64,
 	override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, s, path); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, s, path); e != nil {
 			return nil, e
 		}
 	}
@@ -172,7 +172,7 @@ func (s *Drive) Save(ctx types.TaskCtx, path string, _ int64,
 	_, e := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),
-		Body:   drive_util.ProgressReader(reader, ctx),
+		Body:   driveutil.ProgressReader(reader, ctx),
 	})
 	if e != nil {
 		return nil, e
@@ -206,7 +206,7 @@ func (s *Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) 
 }
 
 func (s *Drive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(s, from)
+	from = driveutil.GetSelfEntry(s, from)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
 	}
@@ -242,7 +242,7 @@ func (s *Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCtx)
 }
 
 func (s *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(s, from)
+	from = driveutil.GetSelfEntry(s, from)
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
 	}
@@ -321,11 +321,11 @@ func (s *Drive) delete(path string, ctx types.TaskCtx) error {
 	if e != nil {
 		return e
 	}
-	tree, e := drive_util.BuildEntriesTree(ctx, entry, false)
+	tree, e := driveutil.BuildEntriesTree(ctx, entry, false)
 	if e != nil {
 		return e
 	}
-	entries := drive_util.FlattenEntriesTree(tree, false)
+	entries := driveutil.FlattenEntriesTree(tree, false)
 	n := int(math.Ceil(float64(len(entries)) / 1000))
 	for i := 0; i < n; i += 1 {
 		batches := entries[i*1000 : int(math.Min(float64((i+1)*1000), float64(len(entries))))]
@@ -407,7 +407,7 @@ func (s *Drive) Upload(ctx context.Context, path string, size int64,
 		return nil, nil
 	default:
 		if !override {
-			if _, e := drive_util.RequireFileNotExists(ctx, s, path); e != nil {
+			if _, e := driveutil.RequireFileNotExists(ctx, s, path); e != nil {
 				return nil, e
 			}
 		}
@@ -538,7 +538,7 @@ func (s *s3Entry) Name() string {
 
 func (s *s3Entry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
 	var awsRange *string
-	rangeStr := drive_util.BuildRangeHeader(start, size)
+	rangeStr := driveutil.BuildRangeHeader(start, size)
 	if rangeStr != "" {
 		awsRange = aws.String(rangeStr)
 	}

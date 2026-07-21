@@ -2,7 +2,7 @@ package storage
 
 import (
 	"errors"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 
@@ -19,7 +19,7 @@ func NewDriveDataDAO(db *DB, ch *registry.ComponentsHolder) *DriveDataDAO {
 	return dao
 }
 
-func (d *DriveDataDAO) GetDataStore(ns string) drive_util.DriveDataStore {
+func (d *DriveDataDAO) GetDataStore(ns string) driveutil.DriveDataStore {
 	return &dbDriveNamespacedDataStore{db: d.db, ns: ns}
 }
 

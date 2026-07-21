@@ -1,4 +1,4 @@
-package drive_util
+package driveutil
 
 import (
 	"go-drive/common/types"

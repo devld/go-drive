@@ -2,7 +2,7 @@ package fs
 
 import (
 	"context"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
@@ -17,14 +17,14 @@ import (
 var fsT = i18n.TPrefix("drive.fs.")
 
 func init() {
-	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "fs",
 		DisplayName: fsT("name"),
 		README:      fsT("readme"),
 		ConfigForm: []types.FormItem{
 			{Field: "path", Label: fsT("form.path.label"), Type: "text", Required: true, Description: fsT("form.path.description")},
 		},
-		Factory: drive_util.DriveFactory{Create: NewDrive},
+		Factory: driveutil.DriveFactory{Create: NewDrive},
 	})
 }
 
@@ -48,7 +48,7 @@ type fsFile struct {
 
 // NewDrive creates a file system drive
 func NewDrive(_ context.Context, config types.SM,
-	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
+	driveUtils driveutil.DriveUtils) (types.IDrive, error) {
 	path := config["path"]
 	if utils.CleanPath(path) == "" {
 		return nil, err.NewNotAllowedMessageError(fsT("invalid_root_path"))
@@ -161,7 +161,7 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, rea
 			return nil, e
 		}
 		defer func() { _ = file.Close() }()
-		_, e = drive_util.Copy(ctx, file, reader)
+		_, e = driveutil.Copy(ctx, file, reader)
 		if e != nil {
 			return nil, e
 		}
@@ -200,7 +200,7 @@ func (f *Drive) Copy(types.TaskCtx, types.IEntry, string, bool) (types.IEntry, e
 }
 
 func (f *Drive) Move(_ types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(f, from)
+	from = driveutil.GetSelfEntry(f, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
@@ -358,7 +358,7 @@ func (f *fsFile) GetReader(ctx context.Context, start, size int64) (io.ReadClose
 			return nil, e
 		}
 		if size > 0 {
-			return drive_util.LimitReadCloser(file, size), nil
+			return driveutil.LimitReadCloser(file, size), nil
 		}
 	}
 	return file, nil

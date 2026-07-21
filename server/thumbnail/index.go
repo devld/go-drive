@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
@@ -152,7 +152,7 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 func (m *Maker) createThumbnailEntry(entry types.IEntry) (ThumbnailEntry, error) {
 	// we need to use the absolute path of this entry to generate thumbnail cache key
 	// so we get the wrapped IDispatcherEntry here
-	dispatcherEntry := drive_util.GetIEntry(entry, func(e types.IEntry) bool {
+	dispatcherEntry := driveutil.GetIEntry(entry, func(e types.IEntry) bool {
 		_, ok := e.(types.IDispatcherEntry)
 		return ok
 	})

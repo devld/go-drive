@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"go-drive/common"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -48,7 +48,7 @@ func init() {
 
 var t = i18n.TPrefix("drive.script.")
 
-func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.DriveUtils) (types.IDrive, error) {
+func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (types.IDrive, error) {
 	cfg, e := driveUtils.Data.Load("_script")
 	if e != nil {
 		return nil, e
@@ -88,7 +88,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils drive_util.
 	return d, nil
 }
 
-func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.DriveUtils) (*drive_util.DriveInitConfig, error) {
+func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
 	selectedScript := config["script"]
 	if selectedScript == "" {
 		return nil, err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
@@ -117,7 +117,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 	}
 	initForm = append(initForm, types.FormItem{Type: "md", Description: ds.Description})
 
-	retCfg := &drive_util.DriveInitConfig{
+	retCfg := &driveutil.DriveInitConfig{
 		Configured: false,
 		Form:       initForm,
 		Value:      values,
@@ -142,7 +142,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 		return nil, e
 	}
 
-	vmCfg := &drive_util.DriveInitConfig{}
+	vmCfg := &driveutil.DriveInitConfig{}
 	v.ParseInto(vmCfg)
 
 	retCfg.Configured = vmCfg.Configured
@@ -153,7 +153,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils drive_util.Driv
 	return retCfg, nil
 }
 
-func init_(ctx context.Context, data, config types.SM, driveUtils drive_util.DriveUtils) error {
+func init_(ctx context.Context, data, config types.SM, driveUtils driveutil.DriveUtils) error {
 	cfg, e := driveUtils.Data.Load("_script")
 	if e != nil {
 		return e
@@ -227,12 +227,12 @@ func parsePoolConfig(arg string) (*s.VMPoolConfig, error) {
 	return c, nil
 }
 
-func newScriptDriveUtils(utils drive_util.DriveUtils) *scriptDriveUtils {
+func newScriptDriveUtils(utils driveutil.DriveUtils) *scriptDriveUtils {
 	return &scriptDriveUtils{utils.CreateCache, driveDataStore{utils.Data}, utils.Config}
 }
 
 type scriptDriveUtils struct {
-	createCache drive_util.DriveCacheFactory
+	createCache driveutil.DriveCacheFactory
 
 	Data   driveDataStore
 	Config common.Config
@@ -242,9 +242,9 @@ func (sdu *scriptDriveUtils) CreateCache() *scriptDriveCache {
 	return &scriptDriveCache{sdu.createCache(nil)}
 }
 
-func (sdu *scriptDriveUtils) OAuthInitConfig(or drive_util.OAuthRequest,
-	cred drive_util.OAuthCredentials) *oauthInitConfigResp {
-	c, r, e := drive_util.OAuthInitConfig(or, cred, sdu.Data.data)
+func (sdu *scriptDriveUtils) OAuthInitConfig(or driveutil.OAuthRequest,
+	cred driveutil.OAuthCredentials) *oauthInitConfigResp {
+	c, r, e := driveutil.OAuthInitConfig(or, cred, sdu.Data.data)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}
@@ -256,9 +256,9 @@ func (sdu *scriptDriveUtils) OAuthInitConfig(or drive_util.OAuthRequest,
 }
 
 func (sdu *scriptDriveUtils) OAuthInit(ctx s.Context,
-	data types.SM, or drive_util.OAuthRequest,
-	cred drive_util.OAuthCredentials) *oauthRespWrapper {
-	resp, e := drive_util.OAuthInit(s.GetContext(ctx), or, data, cred, sdu.Data.data)
+	data types.SM, or driveutil.OAuthRequest,
+	cred driveutil.OAuthCredentials) *oauthRespWrapper {
+	resp, e := driveutil.OAuthInit(s.GetContext(ctx), or, data, cred, sdu.Data.data)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}
@@ -269,9 +269,9 @@ func (sdu *scriptDriveUtils) OAuthInit(ctx s.Context,
 	return r
 }
 
-func (sdu *scriptDriveUtils) OAuthGet(o drive_util.OAuthRequest,
-	cred drive_util.OAuthCredentials) *oauthRespWrapper {
-	resp, e := drive_util.OAuthGet(o, cred, sdu.Data.data)
+func (sdu *scriptDriveUtils) OAuthGet(o driveutil.OAuthRequest,
+	cred driveutil.OAuthCredentials) *oauthRespWrapper {
+	resp, e := driveutil.OAuthGet(o, cred, sdu.Data.data)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}
@@ -283,7 +283,7 @@ func (sdu *scriptDriveUtils) OAuthGet(o drive_util.OAuthRequest,
 }
 
 type driveDataStore struct {
-	data drive_util.DriveDataStore
+	data driveutil.DriveDataStore
 }
 
 func (d driveDataStore) Save(data types.SM) {
@@ -301,12 +301,12 @@ func (d driveDataStore) Load(keys ...string) types.SM {
 }
 
 type oauthInitConfigResp struct {
-	Config   *drive_util.DriveInitConfig
+	Config   *driveutil.DriveInitConfig
 	Response *oauthRespWrapper
 }
 
 type oauthRespWrapper struct {
-	resp *drive_util.OAuthResponse
+	resp *driveutil.OAuthResponse
 }
 
 func (or *oauthRespWrapper) Token() *oauth2.Token {

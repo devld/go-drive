@@ -46,7 +46,7 @@ func (n *PathTreeNode[T]) GetCb(path string, cb func(*PathTreeNode[T])) (*PathTr
 		}
 		return node, parent
 	}
-	for _, i := range strings.Split(CleanPath(path), "/") {
+	for i := range strings.SplitSeq(CleanPath(path), "/") {
 		if cb != nil {
 			cb(node)
 		}
@@ -84,7 +84,7 @@ func (n *PathTreeNode[T]) Create(path string) *PathTreeNode[T] {
 		return n
 	}
 	node := n
-	for _, i := range strings.Split(CleanPath(path), "/") {
+	for i := range strings.SplitSeq(CleanPath(path), "/") {
 		if node.mu != nil {
 			node.mu.Lock()
 		}

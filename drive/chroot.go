@@ -2,7 +2,7 @@ package drive
 
 import (
 	"context"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -171,7 +171,7 @@ func (c *ChrootWrapper) wrapEntry(e types.IEntry) types.IEntry {
 }
 
 func unwrapEntry(e types.IEntry) types.IEntry {
-	ee := drive_util.GetIEntry(e, func(entry types.IEntry) bool {
+	ee := driveutil.GetIEntry(e, func(entry types.IEntry) bool {
 		_, ok := entry.(*chrootEntry)
 		return ok
 	})

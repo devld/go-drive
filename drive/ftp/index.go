@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -22,7 +22,7 @@ import (
 
 func init() {
 	t := i18n.TPrefix("drive.ftp.")
-	drive_util.RegisterDrive(drive_util.DriveFactoryConfig{
+	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "ftp",
 		DisplayName: t("name"),
 		README:      t("readme"),
@@ -35,12 +35,12 @@ func init() {
 			{Label: t("form.timeout.label"), Type: "text", Field: "timeout", Description: t("form.timeout.description")},
 			{Label: t("form.cache_ttl.label"), Type: "text", Field: "cache_ttl", Description: t("form.cache_ttl.description")},
 		},
-		Factory: drive_util.DriveFactory{Create: NewDrive},
+		Factory: driveutil.DriveFactory{Create: NewDrive},
 	})
 }
 
 func NewDrive(ctx context.Context, config types.SM,
-	driveUtils drive_util.DriveUtils) (types.IDrive, error) {
+	driveUtils driveutil.DriveUtils) (types.IDrive, error) {
 	cacheTTL := config.GetDuration("cache_ttl", -1)
 
 	user, password := config["user"], config["password"]
@@ -63,7 +63,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	}
 
 	if cacheTTL <= 0 {
-		ftp.cache = drive_util.DummyCache()
+		ftp.cache = driveutil.DummyCache()
 	} else {
 		ftp.cache = driveUtils.CreateCache(ftp.deserializeEntry)
 	}
@@ -81,7 +81,7 @@ var _ types.IDrive = (*Drive)(nil)
 
 type Drive struct {
 	c        *clientPool
-	cache    drive_util.DriveCache
+	cache    driveutil.DriveCache
 	cacheTTL time.Duration
 }
 
@@ -113,7 +113,7 @@ func (f *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 
 func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
 		}
 	}
@@ -121,7 +121,7 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, rea
 	if e != nil {
 		return nil, e
 	}
-	e = c.Stor(path, drive_util.ProgressReader(reader, ctx))
+	e = c.Stor(path, driveutil.ProgressReader(reader, ctx))
 	f.c.release(c, e == nil)
 	if e != nil {
 		return nil, mapError(e)
@@ -150,13 +150,13 @@ func (f *Drive) Copy(types.TaskCtx, types.IEntry, string, bool) (types.IEntry, e
 }
 
 func (f *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	from = drive_util.GetSelfEntry(f, from)
+	from = driveutil.GetSelfEntry(f, from)
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
 	fromEntry := from.(*ftpEntry)
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, f, to); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, f, to); e != nil {
 			return nil, e
 		}
 	}
@@ -220,11 +220,11 @@ func (f *Drive) Delete(ctx types.TaskCtx, path string) error {
 	if e != nil {
 		return e
 	}
-	tree, e := drive_util.BuildEntriesTree(ctx, deleteRoot, false)
+	tree, e := driveutil.BuildEntriesTree(ctx, deleteRoot, false)
 	if e != nil {
 		return e
 	}
-	entries := drive_util.FlattenEntriesTree(tree, false)
+	entries := driveutil.FlattenEntriesTree(tree, false)
 	c, e := f.c.get(ctx)
 	if e != nil {
 		return e
@@ -253,7 +253,7 @@ func (f *Drive) Delete(ctx types.TaskCtx, path string) error {
 
 func (f *Drive) Upload(ctx context.Context, path string, size int64, override bool, _ types.SM) (*types.DriveUploadConfig, error) {
 	if !override {
-		if _, e := drive_util.RequireFileNotExists(ctx, f, path); e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
 		}
 	}
@@ -270,7 +270,7 @@ func (f *Drive) newFTPEntry(path string, stat *ftpclient.Entry) *ftpEntry {
 	}
 }
 
-func (f *Drive) deserializeEntry(ec drive_util.EntryCacheItem) (types.IEntry, error) {
+func (f *Drive) deserializeEntry(ec driveutil.EntryCacheItem) (types.IEntry, error) {
 	return &ftpEntry{path: ec.Path, d: f, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 

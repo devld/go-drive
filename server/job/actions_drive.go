@@ -3,7 +3,7 @@ package job
 import (
 	"context"
 	"fmt"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
@@ -39,7 +39,7 @@ func init() {
 				if from == "" {
 					continue
 				}
-				fromEntries, e := drive_util.FindEntries(task.NewContextWrapper(ctx), drive, from, false)
+				fromEntries, e := driveutil.FindEntries(task.NewContextWrapper(ctx), drive, from, false)
 				if e != nil {
 					return e
 				}
@@ -86,7 +86,7 @@ func init() {
 				if p == "" {
 					continue
 				}
-				entries, e := drive_util.FindEntries(task.NewContextWrapper(ctx), drive, p, false)
+				entries, e := driveutil.FindEntries(task.NewContextWrapper(ctx), drive, p, false)
 				if e != nil {
 					return e
 				}

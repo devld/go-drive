@@ -112,7 +112,8 @@ export function deletePathMeta(path: string) {
 }
 
 export function mountPaths(pathTo: string, mounts: PathMountSource[]) {
-  return http.post<void>(`/admin/mount/${pathTo}`, mounts)
+  const encodedPath = pathTo.split('/').map(encodeURIComponent).join('/')
+  return http.post<void>(`/admin/mount/${encodedPath}`, mounts)
 }
 
 export function cleanPermissionsAndMounts() {

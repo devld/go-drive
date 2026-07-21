@@ -2,7 +2,7 @@ package drive
 
 import (
 	"context"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -68,7 +68,7 @@ func (pm *PathMetaWrapper) Get(ctx context.Context, path string) (types.IEntry, 
 	if meta == nil {
 		return entry, nil
 	}
-	return drive_util.WrapEntryWithMeta(entry, types.M{"pathMeta": *meta}), nil
+	return driveutil.WrapEntryWithMeta(entry, types.M{"pathMeta": *meta}), nil
 }
 
 // List checks if the path has a password set and validates it

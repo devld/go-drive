@@ -80,7 +80,15 @@ func InitAdminRoutes(
 	// reload drives
 	r.POST("/drives/reload", dr.reloadDrives)
 
-	cr := &configRoute{access, permissionDAO, pathMetaDAO, pathMountDAO, optionsDAO, rootDrive, bus}
+	cr := &configRoute{
+		access:        access,
+		permissionDAO: permissionDAO,
+		pathMetaDAO:   pathMetaDAO,
+		pathMountDAO:  pathMountDAO,
+		optionsDAO:    optionsDAO,
+		rootDrive:     rootDrive,
+		bus:           bus,
+	}
 	// get by path
 	r.GET("/path-permissions/*path", cr.getPathPermissions)
 	// save path permissions

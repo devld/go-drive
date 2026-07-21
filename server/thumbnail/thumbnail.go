@@ -3,7 +3,7 @@ package thumbnail
 import (
 	"context"
 	"errors"
-	"go-drive/common/drive_util"
+	"go-drive/common/driveutil"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"io"
@@ -50,7 +50,7 @@ type IEntryThumbnail interface {
 }
 
 func GetWrappedThumbnailEntry(entry types.IEntry) IEntryThumbnail {
-	e := drive_util.GetIEntry(entry, func(e types.IEntry) bool {
+	e := driveutil.GetIEntry(entry, func(e types.IEntry) bool {
 		_, ok := e.(IEntryThumbnail)
 		return ok
 	})
@@ -78,7 +78,7 @@ func (est *entrySelfThumbnailHandler) CreateThumbnail(ctx context.Context, entry
 	if e != nil {
 		return e
 	}
-	return drive_util.CopyIContent(task.NewContextWrapper(ctx), tr, dest)
+	return driveutil.CopyIContent(task.NewContextWrapper(ctx), tr, dest)
 }
 
 func (est *entrySelfThumbnailHandler) MimeType() string {
