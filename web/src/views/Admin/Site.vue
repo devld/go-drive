@@ -24,6 +24,7 @@ const configForms: OptionsForm[] = [
       {
         field: 'app.styles',
         label: t('p.admin.site.global_styles'),
+        description: t('p.admin.site.global_styles_desc'),
         type: 'code',
         code: { type: 'css', typeSelectable: false, height: '300px' },
         width: '100%',

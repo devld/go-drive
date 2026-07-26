@@ -96,6 +96,7 @@
         "site_settings": "站点",
         "app_name": "站点标题",
         "global_styles": "全局 CSS 样式",
+        "global_styles_desc": "主题自定义指南：https://go-drive.top/zh-CN/features/custom-themes.html",
         "inject_scripts": "插入脚本",
         "anonymous_root_path": "匿名用户根路径",
         "anonymous_root_path_desc": "限制未登录的用户只能访问这个目录下的资源，路径不以 / 开头",

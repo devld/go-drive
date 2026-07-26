@@ -96,6 +96,7 @@
         "site_settings": "사이트",
         "app_name": "사이트 제목",
         "global_styles": "전역 CSS",
+        "global_styles_desc": "테마 사용자 지정 가이드: https://go-drive.top/features/custom-themes.html",
         "inject_scripts": "삽입 스크립트",
         "anonymous_root_path": "익명 사용자 루트 경로",
         "anonymous_root_path_desc": "로그인하지 않은 사용자가 이 디렉터리 아래의 리소스에만 접근하도록 제한합니다. 경로는 /로 시작하지 않아야 합니다",

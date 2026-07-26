@@ -96,6 +96,7 @@
         "site_settings": "Site",
         "app_name": "Site Title",
         "global_styles": "Global CSS",
+        "global_styles_desc": "Theme customization guide: https://go-drive.top/features/custom-themes.html",
         "inject_scripts": "Inject Script",
         "anonymous_root_path": "Anonymous Root Path",
         "anonymous_root_path_desc": "Restrict non-logged-in users to access resources in this directory only, with paths that do not start with /",

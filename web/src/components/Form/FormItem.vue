@@ -29,7 +29,17 @@
       v-if="item.description && (!item.label || helpShowing)"
       class="description"
     >
-      {{ item.description }}
+      <template v-for="(part, i) in descriptionParts" :key="i">
+        <a
+          v-if="part.href"
+          :href="part.href"
+          target="_blank"
+          rel="noreferrer noopener"
+          @click.stop
+          >{{ part.text }}</a
+        >
+        <template v-else>{{ part.text }}</template>
+      </template>
     </span>
     <div class="value-wrapper">
       <div v-if="slots.value" class="value full-width">
@@ -166,7 +176,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { isT } from '@/i18n'
+import { isT, s } from '@/i18n'
 import { FormItem } from '@/types'
 import { ref, computed, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -191,6 +201,64 @@ const props = defineProps({
   },
 })
 
+interface DescriptionPart {
+  text: string
+  href?: string
+}
+
+const countCharacter = (value: string, character: string) =>
+  value.split(character).length - 1
+
+const splitUrlTrailingText = (value: string): [string, string] => {
+  let urlEnd = value.length
+  while (urlEnd > 0 && /[.,;:!?，。；：！？、]/u.test(value[urlEnd - 1])) {
+    urlEnd--
+  }
+
+  const pairs = [
+    ['(', ')'],
+    ['[', ']'],
+    ['{', '}'],
+    ['（', '）'],
+    ['【', '】'],
+    ['《', '》'],
+  ] as const
+  for (const [open, close] of pairs) {
+    while (
+      value[urlEnd - 1] === close &&
+      countCharacter(value.slice(0, urlEnd), close) >
+        countCharacter(value.slice(0, urlEnd), open)
+    ) {
+      urlEnd--
+    }
+  }
+
+  return [value.slice(0, urlEnd), value.slice(urlEnd)]
+}
+
+const parseDescription = (description: string): DescriptionPart[] => {
+  const parts: DescriptionPart[] = []
+  const urlPattern = /https?:\/\/[^\s<>"']+/giu
+  let textStart = 0
+
+  for (const match of description.matchAll(urlPattern)) {
+    const matchStart = match.index ?? 0
+    if (matchStart > textStart) {
+      parts.push({ text: description.slice(textStart, matchStart) })
+    }
+
+    const [url, trailingText] = splitUrlTrailingText(match[0])
+    parts.push({ text: url, href: url })
+    if (trailingText) parts.push({ text: trailingText })
+    textStart = matchStart + match[0].length
+  }
+
+  if (textStart < description.length) {
+    parts.push({ text: description.slice(textStart) })
+  }
+  return parts
+}
+
 const slots = useSlots()
 
 const emit = defineEmits<{
@@ -198,6 +266,9 @@ const emit = defineEmits<{
 }>()
 
 const error = ref<I18nText | null>(null)
+const descriptionParts = computed(() =>
+  parseDescription(s(props.item.description) ?? '')
+)
 const valueId = computed(() => {
   if (props.item.type === 'form' || props.item.type === 'code' || props.item.type === 'checkboxes') return
   return props.id

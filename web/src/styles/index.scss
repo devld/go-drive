@@ -215,6 +215,12 @@ svg {
     color: var(--color-text-muted);
     margin-bottom: 6px;
     white-space: pre-wrap;
+
+    a {
+      color: var(--color-accent);
+      overflow-wrap: anywhere;
+      text-underline-offset: 0.16em;
+    }
   }
 
   input.value:not([type='checkbox']),
