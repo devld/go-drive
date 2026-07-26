@@ -3,7 +3,7 @@ title: 站点设置
 description: 自定义 go-drive 品牌、匿名访问、文件处理、界面外观、注入样式及其他浏览器端站点行为。
 lang: zh-CN
 translation_key: site-settings
-source_hash: 768607d68b33b0b61aa606de5b534afb9cb0c518ceb5d64aee8650d26a132f91
+source_hash: 846c6c8f14f71eb721b9d871a6336d20ca950cbfb1b52c3aaf4413aa44342f94
 ---
 
 # 站点设置
@@ -16,7 +16,7 @@ Web 界面当前内置 `en-US`、`zh-CN` 和 `ko-KR`，启动时按浏览器语�
 
 - “应用名称”修改页面标题和品牌文字。
 - “全局 CSS”用于主题覆盖。支持的变量、选择器和完整示例见[自定义主题](./custom-themes.html)。
-- “插入脚本”在所有访问者页面中执行 JavaScript。
+- “插入脚本”在所有访问者页面的 `<head>` 末尾、全局 CSS 之后执行 JavaScript。此时文档主体尚不存在；需要访问页面元素的脚本必须等待 `DOMContentLoaded`。
 
 最小 CSS 示例：
 
@@ -29,6 +29,14 @@ Web 界面当前内置 `en-US`、`zh-CN` 和 `ko-KR`，启动时按浏览器语�
 ```
 
 文档列出的语义变量以及 `data-ui`、`data-surface` 选择器属于主题接口；内部 class 名只是实现细节。注入脚本拥有与站点相同的浏览器权限，能读取登录状态和页面内容，只能使用可信代码。
+
+需要依赖 DOM 的逻辑可以这样延后执行：
+
+```js
+document.addEventListener('DOMContentLoaded', () => {
+  // 在这里读取或修改页面元素。
+})
+```
 
 ## 文件预览
 

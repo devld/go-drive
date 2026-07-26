@@ -64,8 +64,9 @@ export default defineConfig(({ mode }) => ({
 
 // The Go server evaluates these template actions after Vite has built the
 // page. Running this transform after Vite's own HTML transforms keeps custom
-// CSS after the bundled stylesheet. The actions return complete elements so
-// Vite never parses the user-provided CSS or JavaScript.
+// CSS after the bundled stylesheet and the custom script at the end of head.
+// The actions return complete elements so Vite never parses user-provided CSS
+// or JavaScript.
 const injectServerCustomizations = (mode: string): Plugin => ({
   name: 'inject-server-customizations',
   apply: 'build',
@@ -74,9 +75,10 @@ const injectServerCustomizations = (mode: string): Plugin => ({
     handler(html) {
       if (mode !== 'production') return
 
-      return html
-        .replace('</head>', '{{ .AppStyle }}</head>')
-        .replace('</body>', '{{ .AppScript }}</body>')
+      return html.replace(
+        '</head>',
+        '{{ .AppStyle }}{{ .AppScript }}</head>'
+      )
     },
   },
 })

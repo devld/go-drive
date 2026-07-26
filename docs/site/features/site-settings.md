@@ -16,7 +16,9 @@ The web interface currently includes `en-US`, `zh-CN`, and `ko-KR`. It selects a
 - **Application name** changes the page title and branding text.
 - **Global CSS** provides theme overrides. See [Custom Themes](./custom-themes.html)
   for the supported variables, selectors, and complete examples.
-- **Injected script** executes JavaScript on every visitor's page.
+- **Injected script** executes JavaScript at the end of `<head>` on every
+  visitor's page, after the global CSS. The document body does not exist yet;
+  scripts that access page elements must wait for `DOMContentLoaded`.
 
 A minimal CSS example:
 
@@ -32,6 +34,14 @@ Documented semantic variables and `data-ui` / `data-surface` selectors are the
 theme API. Internal class names are implementation details. Injected scripts
 have the same browser privileges as the site and can read login state and page
 content; use only trusted code.
+
+For example, defer DOM-dependent work like this:
+
+```js
+document.addEventListener('DOMContentLoaded', () => {
+  // Read or modify page elements here.
+})
+```
 
 ## File preview
 

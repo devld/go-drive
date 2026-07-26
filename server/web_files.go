@@ -57,8 +57,8 @@ type templateData struct {
 
 // AppStyle and AppScript return complete elements so the built HTML only needs
 // opaque Go template actions. This prevents Vite from parsing user-provided
-// CSS or JavaScript while keeping both customizations in their final document
-// positions without a runtime initializer.
+// CSS or JavaScript. The build places both customizations at the end of head,
+// with the script after the style, without a runtime initializer.
 func (d templateData) AppStyle() (string, error) {
 	content, err := d.Options.Get("app.styles")
 	if err != nil || content == "" {
