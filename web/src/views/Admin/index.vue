@@ -1,5 +1,10 @@
 <template>
-  <div v-if="store.isAdmin" class="admin-page">
+  <div
+    v-if="store.isAdmin"
+    class="admin-page glass-surface"
+    data-ui="admin-page"
+    data-surface="glass"
+  >
     <ul class="menu-list">
       <li
         v-for="m in menus"
@@ -60,8 +65,8 @@ const currentMenu = computed(() => router.currentRoute.value.path)
 .admin-page {
   max-width: 1000px;
   margin: 16px auto 0;
-  background-color: var(--primary-bg-color);
-  border-radius: 16px;
+  background-color: var(--color-bg-glass);
+  border-radius: var(--radius-dialog);
   display: flex;
   overflow: hidden;
 
@@ -77,11 +82,11 @@ const currentMenu = computed(() => router.currentRoute.value.path)
     white-space: nowrap;
 
     &:hover {
-      background-color: var(--hover-bg-color);
+      background-color: var(--color-bg-hover);
     }
 
     &.active {
-      background-color: var(--select-bg-color);
+      background-color: var(--color-bg-selected);
     }
   }
 
@@ -91,7 +96,7 @@ const currentMenu = computed(() => router.currentRoute.value.path)
     width: 100%;
     padding: 8px 16px;
     text-decoration: none;
-    color: var(--primary-text-color);
+    color: var(--color-text);
   }
 
   // pc
@@ -99,13 +104,13 @@ const currentMenu = computed(() => router.currentRoute.value.path)
     width: 120px;
     padding: 16px 0 42px;
     border-right: solid 1px;
-    border-color: var(--border-color);
+    border-color: var(--color-border);
   }
 
   .menu-item {
     &:not(:last-child) {
       border-bottom: solid 1px;
-      border-color: var(--border-color);
+      border-color: var(--color-border);
     }
   }
 
@@ -126,7 +131,7 @@ const currentMenu = computed(() => router.currentRoute.value.path)
       overflow-x: auto;
       overflow-y: hidden;
       border-bottom: solid 1px;
-      border-color: var(--border-color);
+      border-color: var(--color-border);
       border-right: none;
       padding: 0;
     }

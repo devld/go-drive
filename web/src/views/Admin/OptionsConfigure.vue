@@ -14,7 +14,7 @@
         </h3>
       </summary>
 
-      <div v-if="detailsInited[i]" class="options-form">
+      <div v-if="detailsInited[i]">
         <SimpleForm
           :ref="configFormElsSet"
           v-model="configValues[i]"

@@ -6,7 +6,7 @@
           edit ? $t('p.admin.file_bucket.edit') : $t('p.admin.file_bucket.add')
         }}
       </div>
-      <div class="file-bucket-form">
+      <div>
         <SimpleForm ref="formEl" v-model="fileBucket" :form="pathMetaForm" />
         <div class="save-button">
           <SimpleButton small :loading="saving" @click="saveFileBucket">
@@ -27,6 +27,7 @@
         })
       "
       class="file-bucket-upload-help markdown-body"
+      data-ui="markdown"
     ></div>
     <div class="file-bucket-list">
       <div v-if="!fileBucket" class="actions">

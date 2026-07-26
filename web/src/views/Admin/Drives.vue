@@ -85,6 +85,7 @@
             <div
               v-markdown="driveFactoriesMap[drive.type].readme"
               class="markdown-body"
+              data-ui="markdown"
             ></div>
           </details>
 
@@ -414,7 +415,7 @@ loadDrives()
   }
 
   .not-enabled-drive {
-    color: #999;
+    color: var(--color-text-disabled);
   }
 
   .drive-config-readme {
@@ -432,11 +433,11 @@ loadDrives()
   .drive-init-state {
     margin-left: 1em;
     font-size: 14px;
-    color: #ffa000;
+    color: var(--color-warning);
   }
 
   .drive-configured {
-    color: #00e676;
+    color: var(--color-success);
   }
 
   .drive-init-form {

@@ -4,7 +4,7 @@
       <div class="small-title">
         {{ edit ? $t('p.admin.path_meta.edit') : $t('p.admin.path_meta.add') }}
       </div>
-      <div class="path-meta-form">
+      <div>
         <SimpleForm ref="formEl" v-model="pathMeta" :form="pathMetaForm" />
         <div class="save-button">
           <SimpleButton small :loading="saving" @click="savePathMeta">

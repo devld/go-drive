@@ -14,9 +14,6 @@
         version: JSON.parse('{{ .Json (.Config.Version) }}'),
       }
     </script>
-    <script id="app-style" type="text/plain">{{ (.Options.Get "app.styles") }}</script>
-    <script id="app-script" type="text/plain">{{ (.Options.Get "app.scripts") }}</script>
-    <script id="app-init-script">(function (d,z,y,x,v,s){function a(i,t,n){t=d[x]("app-"+i);n=d.createElement(i);n[z]=t[z];d.head.appendChild(n);t[v][y](t)}a("style");a("script");s=d[x]("app-init-script");s[v][y](s)})(document,"innerHTML","removeChild","getElementById","parentElement")</script>
     <% } else { %>
     <script>
       var ___config___ = {
@@ -32,7 +29,7 @@
     </script>
     <% } %>
   </head>
-  <body>
+  <body data-ui="app-canvas">
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

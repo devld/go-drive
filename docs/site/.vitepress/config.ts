@@ -112,6 +112,7 @@ const enSidebar = [
       { text: 'WebDAV Access', link: '/features/webdav' },
       { text: 'File Buckets', link: '/features/file-buckets' },
       { text: 'Site Settings', link: '/features/site-settings' },
+      { text: 'Custom Themes', link: '/features/custom-themes' },
       { text: 'Preview and Thumbnails', link: '/features/preview-thumbnail' },
       { text: 'Automated Jobs', link: '/jobs/' }
     ]
@@ -172,6 +173,7 @@ const zhSidebar = [
       { text: 'WebDAV 访问', link: '/zh-CN/features/webdav' },
       { text: '文件桶', link: '/zh-CN/features/file-buckets' },
       { text: '站点设置', link: '/zh-CN/features/site-settings' },
+      { text: '自定义主题', link: '/zh-CN/features/custom-themes' },
       { text: '预览与缩略图', link: '/zh-CN/features/preview-thumbnail' },
       { text: '自动任务', link: '/zh-CN/jobs/' }
     ]

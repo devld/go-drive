@@ -9,6 +9,7 @@
         v-if="item.type === 'md'"
         v-markdown="item.description"
         class="form-item form-markdown markdown-body"
+        data-ui="markdown"
       ></div>
 
       <FormItem

@@ -69,6 +69,9 @@ defineExpose(handle)
 .entry-handler-dialog {
   .dialog-view__content {
     background-color: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    outline: none;
   }
 }
 </style>

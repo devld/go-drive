@@ -1,5 +1,5 @@
 <template>
-  <div v-if="store.inited" class="app">
+  <div v-if="store.inited" class="app" data-ui="app">
     <RouterView />
   </div>
 </template>
@@ -18,8 +18,8 @@ store.init().catch((e) => {
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--body-bg-color);
-  color: var(--primary-text-color);
+  background-color: var(--color-bg-canvas);
+  color: var(--color-text);
 }
 
 .app {

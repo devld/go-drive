@@ -1,7 +1,7 @@
 <template>
   <div class="error-view">
     <span class="error-code" :title="message">{{ status || 'ERROR' }}</span>
-    <span class="error-message">{{ message }}</span>
+    <span>{{ message }}</span>
     <div class="back-button">
       <SimpleButton @click="$router.go(-1)">{{
         $t('app.go_back')
@@ -30,8 +30,7 @@ defineProps({
     display: block;
     font-weight: bold;
     font-size: 80px;
-    color: #787878;
-    animation: text-flicker-in-glow 4s 2s linear infinite reverse both;
+    color: var(--color-text-muted);
   }
 
   .back-button {

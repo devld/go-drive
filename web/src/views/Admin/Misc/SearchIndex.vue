@@ -65,7 +65,7 @@
       </div>
     </template>
 
-    <div v-else class="search-index-disabled-tip">
+    <div v-else>
       {{ $t('p.admin.misc.search_disabled') }}
     </div>
   </div>
@@ -236,11 +236,11 @@ loadIndexFilters()
   margin-right: 0.5em;
 
   &-index {
-    color: #1890ff;
+    color: var(--color-accent);
   }
 
   &-delete {
-    color: #f5222d;
+    color: var(--color-danger);
   }
 }
 

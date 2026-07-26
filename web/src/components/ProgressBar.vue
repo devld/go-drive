@@ -73,7 +73,7 @@ watchEffect(() => {
 
 .progress-bar__inner {
   height: 100%;
-  background-color: #66ccff;
-  transition: all 0.4s;
+  background-color: var(--color-progress-value);
+  transition: width 400ms linear;
 }
 </style>

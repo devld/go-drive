@@ -8,6 +8,8 @@
           >
           <button
             class="close-button plain-button small"
+            data-ui="button"
+            data-variant="plain"
             @click="removeItem(i)"
           >
             <Icon name="close" />
@@ -22,7 +24,7 @@
         />
       </template>
     </div>
-    <div v-if="!disabled && addable" class="form-item__form-add">
+    <div v-if="!disabled && addable">
       <SimpleDropdown v-model="addDropdownShowing" position="bottom-right">
         <SimpleButton icon="add" native-type="button">{{
           forms.addText
@@ -161,7 +163,12 @@ defineExpose({ validate })
 <style lang="scss">
 .form-item__form-item {
   margin-bottom: 16px;
-  border: solid 1px var(--border-color);
+  border: solid 1px var(--color-border);
+  border-radius: var(--radius-control);
+  background-color: var(--color-field-bg);
+  -webkit-backdrop-filter: var(--backdrop-filter-field);
+  backdrop-filter: var(--backdrop-filter-field);
+  overflow: hidden;
 
   & > .simple-form {
     padding: 4px 10px;
@@ -170,7 +177,7 @@ defineExpose({ validate })
 
 .form-item__form-item-title {
   margin-bottom: 8px;
-  border-bottom: solid 1px var(--border-color);
+  border-bottom: solid 1px var(--color-border);
   padding: 4px 10px;
   display: flex;
   align-items: center;
@@ -203,11 +210,11 @@ defineExpose({ validate })
   font-size: 14px;
 
   &:hover {
-    background-color: var(--hover-bg-color);
+    background-color: var(--color-bg-hover);
   }
 
   &.active {
-    background-color: var(--select-bg-color);
+    background-color: var(--color-bg-selected);
   }
 }
 </style>

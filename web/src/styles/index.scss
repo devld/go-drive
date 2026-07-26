@@ -4,23 +4,63 @@
 @use './themes/dark.scss' as dark-theme;
 @import 'github-markdown-css/github-markdown.css';
 
-// theme
-:root {
-  @each $prop, $val in default-theme.$theme-default {
+@mixin emit-theme($theme) {
+  @each $prop, $val in $theme {
     --#{$prop}: #{$val};
   }
 }
 
-// theme dark
-@media (prefers-color-scheme: dark) {
-  :root {
-    @each $prop, $val in dark-theme.$theme-dark {
-      --#{$prop}: #{$val};
-    }
-  }
+// Public theme contract. Applications can force a built-in theme with
+// data-theme="light" / "dark", or define the same semantic variables after
+// this stylesheet to create a custom theme.
+:root {
+  color-scheme: light;
+  --radius-control: 8px;
+  --radius-popover: 12px;
+  --radius-dialog: 16px;
+  --radius-glass: 16px;
+  --radius-glass-compact: 12px;
+  --motion-duration-fast: 140ms;
+  --motion-duration-normal: 200ms;
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-easing-exit: cubic-bezier(0.4, 0, 1, 1);
+  @include emit-theme(default-theme.$theme-default);
+}
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    @include emit-theme(dark-theme.$theme-dark);
+
+    @include meta.load-css('./markdown-dark.scss');
+    @include meta.load-css('highlight.js/scss/agate.scss');
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  @include emit-theme(default-theme.$theme-default);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  @include emit-theme(dark-theme.$theme-dark);
   @include meta.load-css('./markdown-dark.scss');
   @include meta.load-css('highlight.js/scss/agate.scss');
+}
+
+:where(.glass-surface, [data-surface='glass']) {
+  background-color: var(--color-bg-glass);
+  -webkit-backdrop-filter: var(--backdrop-filter-glass);
+  backdrop-filter: var(--backdrop-filter-glass);
+  border-radius: var(--radius-glass);
+  background-clip: padding-box;
+  outline: 1px solid var(--color-glass-border);
+  outline-offset: -1px;
+}
+
+.markdown-body {
+  background-color: transparent;
 }
 
 // Nicer keyboard-focus ring for buttons and links using the theme primary
@@ -32,7 +72,7 @@ button:focus-visible,
 a:focus-visible {
   outline: 2px solid transparent;
   outline-offset: -2px;
-  box-shadow: inset 0 0 0 3px var(--focus-ring-color);
+  box-shadow: inset 0 0 0 3px var(--color-focus-ring);
   // Lift the focused element in the paint order so its ring is drawn above
   // adjacent siblings instead of being clipped by them. This takes effect for
   // elements that already establish a positioning context; statically
@@ -65,7 +105,7 @@ svg {
   outline: none;
   border: none;
   background-color: transparent;
-  color: var(--primary-text-color);
+  color: var(--color-text);
   -webkit-user-select: none;
   user-select: none;
   cursor: pointer;
@@ -106,32 +146,32 @@ svg {
     text-align: center;
     -webkit-user-select: none;
     user-select: none;
-    background-color: var(--thead-bg-color);
+    background-color: var(--color-bg-table-header);
   }
 
   tr {
     &:not(:last-child) td {
       border-bottom: solid 1px;
-      border-color: var(--border-color);
+      border-color: var(--color-border);
     }
 
     &:hover {
-      background-color: var(--hover-bg-color);
+      background-color: var(--color-bg-hover);
     }
 
     td:first-child {
       border-left: solid 1px;
-      border-color: var(--border-color);
+      border-color: var(--color-border);
     }
 
     td:last-child {
       border-right: solid 1px;
-      border-color: var(--border-color);
+      border-color: var(--color-border);
     }
 
     td {
       border-bottom: solid 1px;
-      border-color: var(--border-color);
+      border-color: var(--color-border);
       overflow-wrap: break-word;
     }
   }
@@ -172,30 +212,63 @@ svg {
   .description {
     display: block;
     font-size: 12px;
-    color: #999;
+    color: var(--color-text-muted);
     margin-bottom: 6px;
     white-space: pre-wrap;
   }
 
-  input[type='text'].value,
-  input[type='password'].value,
+  input.value:not([type='checkbox']),
+  select.value,
   textarea.value {
     box-sizing: border-box;
   }
 
-  input.value,
+  input.value:not([type='checkbox']),
   select.value,
   textarea.value {
-    background-color: var(--form-value-bg-color);
-    border: var(--form-value-border);
-    color: var(--primary-text-color);
+    background-color: var(--color-field-bg);
+    -webkit-backdrop-filter: var(--backdrop-filter-field);
+    backdrop-filter: var(--backdrop-filter-field);
+    border: solid 1px var(--color-field-border);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
     font-size: 16px;
     outline: none;
     padding: 6px 8px;
+    transition:
+      background-color var(--motion-duration-fast)
+        var(--motion-easing-standard),
+      border-color var(--motion-duration-fast) var(--motion-easing-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+
+    &::placeholder {
+      color: var(--color-text-muted);
+      opacity: 0.72;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: var(--color-text-muted);
+    }
+
+    &:focus {
+      border-color: var(--color-focus-ring);
+      box-shadow: inset 0 0 0 1px var(--color-focus-ring);
+    }
 
     &:disabled {
-      background-color: var(--form-value-bg-color-disabled);
+      background-color: var(--color-field-bg-disabled);
+      color: var(--color-text-disabled);
+      cursor: not-allowed;
     }
+  }
+
+  input[type='checkbox'] {
+    accent-color: var(--color-accent-strong);
+  }
+
+  select.value option {
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text);
   }
 
   textarea.value {
@@ -205,35 +278,6 @@ svg {
 
 .loading-icon {
   animation: spinning 1.5s linear infinite;
-}
-
-// animations
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-.fade-enter-active {
-  animation: fade-in 0.3s ease-in;
-}
-
-.fade-leave-active {
-  animation: fade-in 0.3s ease-out reverse;
-}
-
-@keyframes scale-in {
-  from {
-    transform: scale(0);
-  }
-
-  to {
-    transform: scale(1);
-  }
 }
 
 @keyframes spinning {
@@ -246,267 +290,85 @@ svg {
   }
 }
 
-/* ----------------------------------------------
- * Generated by Animista on 2020-5-10 20:37:53
- * Licensed under FreeBSD License.
- * See http://animista.net/license for more info. 
- * w: http://animista.net, t: @cssanimista
- * ---------------------------------------------- */
-
-/**
- * ----------------------------------------
- * animation text-flicker-in-glow
- * ----------------------------------------
- */
-@keyframes text-flicker-in-glow {
-  0% {
-    opacity: 0;
-  }
-
-  10% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  10.1% {
-    opacity: 1;
-    text-shadow: none;
-  }
-
-  10.2% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  20% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  20.1% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.25);
-  }
-
-  20.6% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  30% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  30.1% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.45),
-      0 0 60px rgba(255, 255, 255, 0.25);
-  }
-
-  30.5% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.45),
-      0 0 60px rgba(255, 255, 255, 0.25);
-  }
-
-  30.6% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  45% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  45.1% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.45),
-      0 0 60px rgba(255, 255, 255, 0.25);
-  }
-
-  50% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.45),
-      0 0 60px rgba(255, 255, 255, 0.25);
-  }
-
-  55% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.45),
-      0 0 60px rgba(255, 255, 255, 0.25);
-  }
-
-  55.1% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  57% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  57.1% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.55),
-      0 0 60px rgba(255, 255, 255, 0.35);
-  }
-
-  60% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.55),
-      0 0 60px rgba(255, 255, 255, 0.35);
-  }
-
-  60.1% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  65% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  65.1% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.55),
-      0 0 60px rgba(255, 255, 255, 0.35), 0 0 100px rgba(255, 255, 255, 0.1);
-  }
-
-  75% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.55),
-      0 0 60px rgba(255, 255, 255, 0.35), 0 0 100px rgba(255, 255, 255, 0.1);
-  }
-
-  75.1% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  77% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  77.1% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.55),
-      0 0 60px rgba(255, 255, 255, 0.4), 0 0 110px rgba(255, 255, 255, 0.2),
-      0 0 100px rgba(255, 255, 255, 0.1);
-  }
-
-  85% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.55),
-      0 0 60px rgba(255, 255, 255, 0.4), 0 0 110px rgba(255, 255, 255, 0.2),
-      0 0 100px rgba(255, 255, 255, 0.1);
-  }
-
-  85.1% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  86% {
-    opacity: 0;
-    text-shadow: none;
-  }
-
-  86.1% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.6),
-      0 0 60px rgba(255, 255, 255, 0.45), 0 0 110px rgba(255, 255, 255, 0.25),
-      0 0 100px rgba(255, 255, 255, 0.1);
-  }
-
-  100% {
-    opacity: 1;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.6),
-      0 0 60px rgba(255, 255, 255, 0.45), 0 0 110px rgba(255, 255, 255, 0.25),
-      0 0 100px rgba(255, 255, 255, 0.1);
-  }
+.fade-slide-up-enter-active,
+.fade-slide-up-leave-active {
+  transition:
+    opacity var(--motion-duration-normal) var(--motion-easing-standard),
+    transform var(--motion-duration-normal) var(--motion-easing-standard);
 }
 
-@keyframes bottom-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(50%);
+.fade-slide-up-leave-active {
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-easing-exit);
+}
+
+.fade-slide-up-enter-from,
+.fade-slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}
+
+.fade-slide-down-enter-active,
+.fade-slide-down-leave-active {
+  transition:
+    opacity var(--motion-duration-normal) var(--motion-easing-standard),
+    transform var(--motion-duration-normal) var(--motion-easing-standard);
+}
+
+.fade-slide-down-leave-active {
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-easing-exit);
+}
+
+.fade-slide-down-enter-from,
+.fade-slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+}
+
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition:
+    opacity var(--motion-duration-normal) var(--motion-easing-standard),
+    transform var(--motion-duration-normal) var(--motion-easing-standard);
+}
+
+.fade-scale-leave-active {
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-easing-exit);
+}
+
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.82);
+}
+
+.fade-scale-up-enter-active,
+.fade-scale-up-leave-active {
+  transition:
+    opacity var(--motion-duration-normal) var(--motion-easing-standard),
+    transform var(--motion-duration-normal) var(--motion-easing-standard);
+}
+
+.fade-scale-up-leave-active {
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-easing-exit);
+}
+
+.fade-scale-up-enter-from,
+.fade-scale-up-leave-to {
+  opacity: 0;
+  transform: translateY(6px) scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.bottom-fade-enter-active {
-  animation: bottom-fade-in 0.3s ease-in;
-}
-
-.bottom-fade-leave-active {
-  animation: bottom-fade-in 0.3s ease-out reverse;
-}
-
-@keyframes top-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.top-fade-enter-active {
-  animation: top-fade-in 0.3s ease-in;
-}
-
-.top-fade-leave-active {
-  animation: top-fade-in 0.3s ease-out reverse;
-}
-
-@keyframes scale-fade-in {
-  from {
-    opacity: 0;
-    transform: scale(0);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.scale-fade-enter-active {
-  animation: scale-fade-in 0.3s cubic-bezier(0, 0.01, 0.77, 1.79);
-}
-
-.scale-fade-leave-active {
-  animation: scale-fade-in 0.3s reverse;
-}
-
-@keyframes scale-opacity-in {
-  from {
-    opacity: 0;
-    transform: scale(1.1);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.scale-opacity-enter-active {
-  animation: scale-opacity-in 0.3s;
-}
-
-.scale-opacity-leave-active {
-  animation: scale-opacity-in 0.3s reverse;
 }

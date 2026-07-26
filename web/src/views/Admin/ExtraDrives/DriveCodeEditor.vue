@@ -15,7 +15,12 @@
       <SimpleButton :loading="saving" :disabled="loading" @click="onSave">{{
         $t('p.admin.extra_drive.save')
       }}</SimpleButton>
-      <button class="plain-button close-button" @click="emit('close')">
+      <button
+        class="plain-button close-button"
+        data-ui="button"
+        data-variant="plain"
+        @click="emit('close')"
+      >
         <Icon name="close" />
       </button>
     </div>
@@ -144,8 +149,8 @@ loadData()
   cursor: pointer;
 
   &.active {
-    color: var(--link-color);
-    border-bottom: solid 2px var(--link-color);
+    color: var(--color-accent);
+    border-bottom: solid 2px var(--color-accent);
   }
 }
 

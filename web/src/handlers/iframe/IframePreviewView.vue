@@ -1,5 +1,9 @@
 <template>
-  <div class="iframe-preview-view">
+  <div
+    class="iframe-preview-view"
+    data-ui="preview"
+    data-handler="iframe"
+  >
     <HandlerTitleBar :title="filename" @close="emit('close')">
       <template #actions>
         <select v-if="services.length > 1" v-model="serviceIndex">
@@ -81,8 +85,8 @@ const previewURL = computed(() => {
   width: 100vw;
   height: 100%;
   padding-top: 48px;
-  background-color: var(--secondary-bg-color);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background-color: var(--color-bg-elevated);
+  box-shadow: var(--shadow-elevated);
   box-sizing: border-box;
 
   .handler-title-bar {

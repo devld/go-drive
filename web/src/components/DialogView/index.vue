@@ -4,6 +4,7 @@
     v-show="overlayShowing"
     ref="overlayEl"
     class="dialog-view dialog-view__overlay"
+    data-ui="dialog-overlay"
     :class="{ 'dialog-view--fullscreen': fullscreen }"
     @click="overlayClicked"
   >
@@ -16,14 +17,20 @@
         v-if="eager || contentShowing"
         v-show="contentShowing"
         ref="contentEl"
-        class="dialog-view__content"
+        class="dialog-view__content glass-surface"
+        data-ui="dialog"
+        data-surface="glass"
         role="dialog"
         aria-modal="true"
         :aria-label="ariaLabel"
         tabindex="-1"
         @keydown="onContentKeyDown"
       >
-        <div v-if="$slots.header || title" class="dialog-view__header">
+        <div
+          v-if="$slots.header || title"
+          class="dialog-view__header"
+          data-ui="dialog-header"
+        >
           <slot name="header">
             <span>{{ title }}</span>
           </slot>
@@ -31,6 +38,8 @@
             v-if="closeable"
             type="button"
             class="dialog-view__close-button plain-button"
+            data-ui="button"
+            data-variant="plain"
             :title="closeLabel"
             :aria-label="closeLabel"
             @click="closeButtonClicked"
@@ -38,10 +47,14 @@
             <Icon name="close" aria-hidden="true" />
           </button>
         </div>
-        <div class="dialog-view__body">
+        <div class="dialog-view__body" data-ui="dialog-body">
           <slot />
         </div>
-        <div v-if="$slots.footer" class="dialog-view__footer">
+        <div
+          v-if="$slots.footer"
+          class="dialog-view__footer"
+          data-ui="dialog-footer"
+        >
           <slot name="footer" />
         </div>
       </div>
@@ -72,7 +85,7 @@ const props = defineProps({
   },
   transition: {
     type: String,
-    default: 'fade',
+    default: 'fade-scale-up',
   },
   overlayClose: {
     type: Boolean,
@@ -282,7 +295,7 @@ onBeforeUnmount(() => {
   min-height: -webkit-fill-available;
   max-height: -webkit-fill-available;
   overflow: hidden;
-  background-color: var(--dialog-overlay-bg-color);
+  background-color: var(--color-overlay);
   z-index: 1000;
 
   display: flex;
@@ -291,8 +304,10 @@ onBeforeUnmount(() => {
 }
 
 .dialog-view__content {
-  background-color: var(--secondary-bg-color);
-  box-shadow: var(--dialog-content-shadow);
+  background-color: var(--color-bg-glass);
+  border-radius: var(--radius-dialog);
+  box-shadow: var(--shadow-elevated);
+  overflow: hidden;
 }
 
 .dialog-view__header {
@@ -322,6 +337,7 @@ onBeforeUnmount(() => {
   .dialog-view__content {
     width: 100%;
     height: 100%;
+    border-radius: 0;
     overflow: hidden;
 
     display: flex;

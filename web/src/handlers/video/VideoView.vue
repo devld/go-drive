@@ -3,6 +3,8 @@
     ref="containerEl"
     class="video-view-page"
     :class="{ 'is-idle': controlsHidden }"
+    data-ui="preview"
+    data-handler="video"
     @mousemove="showControls"
     @mouseleave="scheduleHide"
   >
@@ -52,6 +54,8 @@
       <div class="video-controls__row">
         <button
           class="video-controls__btn plain-button"
+          data-ui="button"
+          data-variant="plain"
           :title="
             playing ? $t('handler.video.pause') : $t('handler.video.play')
           "
@@ -74,6 +78,8 @@
         <div class="video-controls__volume">
           <button
             class="video-controls__btn plain-button"
+            data-ui="button"
+            data-variant="plain"
             :title="
               muted
                 ? $t('handler.video.unmute')
@@ -119,6 +125,8 @@
         <button
           v-if="supportsPip"
           class="video-controls__btn plain-button"
+          data-ui="button"
+          data-variant="plain"
           :title="$t('handler.video.pip')"
           @click="togglePip"
         >
@@ -132,6 +140,8 @@
 
         <button
           class="video-controls__btn plain-button"
+          data-ui="button"
+          data-variant="plain"
           :title="
             isFullscreen
               ? $t('handler.video.exit_fullscreen')
@@ -378,7 +388,8 @@ onUnmounted(() => {
     right: 0;
     z-index: 3;
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
-    transition: opacity 0.3s;
+    transition: opacity var(--motion-duration-normal)
+      var(--motion-easing-standard);
 
     .handler-title-bar-text {
       color: #fff;
@@ -429,7 +440,8 @@ onUnmounted(() => {
   z-index: 3;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
   padding: 24px 12px 10px;
-  transition: opacity 0.3s;
+  transition: opacity var(--motion-duration-normal)
+    var(--motion-easing-standard);
 
   &__bar {
     width: 100%;
@@ -443,7 +455,8 @@ onUnmounted(() => {
     height: 4px;
     border-radius: 2px;
     background-color: rgba(255, 255, 255, 0.25);
-    transition: height 0.12s;
+    transition: height var(--motion-duration-fast)
+      var(--motion-easing-standard);
   }
 
   &__bar:hover &__bar-bg {
@@ -465,7 +478,7 @@ onUnmounted(() => {
     left: 0;
     height: 100%;
     border-radius: 2px;
-    background-color: var(--link-color);
+    background-color: var(--color-accent);
   }
 
   &__bar-thumb {
@@ -474,11 +487,12 @@ onUnmounted(() => {
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background-color: var(--link-color);
+    background-color: var(--color-accent);
     transform: translate(-50%, -50%);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     opacity: 0;
-    transition: opacity 0.15s;
+    transition: opacity var(--motion-duration-fast)
+      var(--motion-easing-standard);
   }
 
   &__bar:hover &__bar-thumb {
@@ -501,7 +515,8 @@ onUnmounted(() => {
     border-radius: 50%;
     color: #fff;
     cursor: pointer;
-    transition: background-color 0.15s;
+    transition: background-color var(--motion-duration-fast)
+      var(--motion-easing-standard);
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.15);

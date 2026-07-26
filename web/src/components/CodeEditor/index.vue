@@ -2,7 +2,10 @@
   <div class="code-editor" :style="{ 'min-height': height }">
     <iframe ref="el" class="code-editor__inner"></iframe>
     <div v-if="typeSelectable" class="code-editor__languages">
-      <select v-model="selectedLanguage">
+      <select
+        v-model="selectedLanguage"
+        class="code-editor__language-select"
+      >
         <option v-for="(_, l) in languages" :key="l" :value="l">{{ l }}</option>
       </select>
     </div>
@@ -141,6 +144,27 @@ onMounted(initEditor)
 
   &:hover {
     opacity: 1;
+  }
+}
+
+.code-editor__language-select {
+  background-color: var(--color-field-bg);
+  -webkit-backdrop-filter: var(--backdrop-filter-field);
+  backdrop-filter: var(--backdrop-filter-field);
+  border: solid 1px var(--color-field-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  outline: none;
+  padding: 4px 6px;
+
+  &:focus {
+    border-color: var(--color-focus-ring);
+    box-shadow: inset 0 0 0 1px var(--color-focus-ring);
+  }
+
+  option {
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text);
   }
 }
 

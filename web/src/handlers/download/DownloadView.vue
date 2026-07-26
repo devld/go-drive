@@ -1,8 +1,18 @@
 <template>
-  <div class="download-view-page">
+  <div
+    class="download-view-page glass-surface"
+    data-ui="preview"
+    data-handler="download"
+    data-surface="glass"
+  >
     <h1 class="page-title">
       <span>{{ $t('hv.download.download') }}</span>
-      <button class="plain-button close-button" @click="emit('close')">
+      <button
+        class="plain-button close-button"
+        data-ui="button"
+        data-variant="plain"
+        @click="emit('close')"
+      >
         <Icon name="close" />
       </button>
     </h1>
@@ -18,7 +28,7 @@
           :href="fileUrl(singleEntry.path, singleEntry.meta)"
         >
           {{ $t('hv.download.download') }}
-          <span v-if="singleEntry.size >= 0" class="file-size">{{
+          <span v-if="singleEntry.size >= 0">{{
             formatBytes(singleEntry.size)
           }}</span>
         </a>
@@ -82,8 +92,8 @@ const downloadFiles = () => {
 .download-view-page {
   position: relative;
   width: 300px;
-  background-color: var(--secondary-bg-color);
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+  background-color: var(--color-bg-glass);
+  box-shadow: var(--shadow-elevated);
   padding: 16px 16px 20px;
 
   .page-title {
@@ -117,17 +127,18 @@ const downloadFiles = () => {
 
   .download-button {
     display: inline-block;
-    color: #fff;
-    background-color: #00bfa5;
+    color: var(--color-on-accent);
+    background-color: var(--color-accent-strong);
     text-decoration: none;
     padding: 10px 16px;
     margin-top: 16px;
-    transition: 0.3s;
+    transition: box-shadow var(--motion-duration-fast)
+      var(--motion-easing-standard);
     -webkit-user-select: none;
     user-select: none;
 
     &:hover {
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-control);
     }
   }
 

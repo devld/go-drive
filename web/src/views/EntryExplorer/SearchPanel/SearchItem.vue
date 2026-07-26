@@ -3,7 +3,7 @@
     <EntryLink :entry="entry" @click="itemClicked">
       <EntryIcon :entry="entry" :show-thumbnail="false" />
       <div class="search-panel__item-info">
-        <div class="search-panel__item-info-primary">
+        <div>
           <span class="search-panel__item-name">{{ entry.name }}</span>
           <span class="search-panel__item-size">{{
             formatBytes(entry.size)
@@ -51,7 +51,7 @@ const itemClicked = (e: EntryEventData) => emit('click', e)
 
   .entry-link {
     display: flex;
-    color: var(--primary-text-color);
+    color: var(--color-text);
     text-decoration: none;
     padding: 0 16px;
   }
@@ -63,7 +63,7 @@ const itemClicked = (e: EntryEventData) => emit('click', e)
 
   &:hover,
   &:focus {
-    background-color: var(--hover-bg-color);
+    background-color: var(--color-bg-hover);
   }
 }
 
@@ -96,6 +96,6 @@ const itemClicked = (e: EntryEventData) => emit('click', e)
 
 .search-panel__item-info-secondary {
   font-size: 12px;
-  color: var(--secondary-text-color);
+  color: var(--color-text-muted);
 }
 </style>

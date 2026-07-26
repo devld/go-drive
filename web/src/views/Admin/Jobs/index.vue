@@ -553,7 +553,7 @@ loadJobDefinitions()
   }
 
   .job-disabled {
-    color: #999;
+    color: var(--color-text-muted);
   }
 
   .job-triggers,
@@ -570,15 +570,15 @@ loadJobDefinitions()
   }
 
   .status-success {
-    color: var(--btn-bg-color-success);
+    color: var(--color-success);
   }
 
   .status-failed {
-    color: var(--btn-bg-color-danger);
+    color: var(--color-danger);
   }
 
   .status-running {
-    color: var(--btn-bg-color-warning);
+    color: var(--color-warning);
   }
 
   .job-log-text {

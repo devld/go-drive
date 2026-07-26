@@ -2,12 +2,14 @@
   <div
     ref="rootEl"
     class="simple-dropdown"
+    data-ui="dropdown"
     :class="{ active }"
     @focusout="onFocusOut"
   >
     <span
       ref="triggerEl"
       class="simple-dropdown__trigger"
+      data-ui="dropdown-trigger"
       role="button"
       tabindex="0"
       aria-haspopup="true"
@@ -17,20 +19,33 @@
     >
       <slot />
     </span>
-    <Transition :name="transition">
-      <div
-        v-show="active"
-        class="simple-dropdown__dropdown"
-        :class="`simple-dropdown__dropdown--${position}`"
-        @keydown="onDropdownKeydown"
-      >
-        <slot name="dropdown" />
-      </div>
-    </Transition>
+    <Teleport to="body">
+      <Transition :name="dropdownTransition">
+        <div
+          v-show="active"
+          ref="dropdownEl"
+          class="simple-dropdown__dropdown glass-surface"
+          data-ui="dropdown-panel"
+          data-surface="glass"
+          :style="dropdownStyle"
+          @keydown="onDropdownKeydown"
+        >
+          <slot name="dropdown" />
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch, watchEffect, PropType } from 'vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  ref,
+  watch,
+  watchEffect,
+  PropType,
+} from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -38,7 +53,7 @@ const props = defineProps({
   },
   transition: {
     type: String,
-    default: 'top-fade',
+    default: 'fade-slide-down',
   },
   position: {
     type: String as PropType<'bottom-left' | 'bottom-right'>,
@@ -50,6 +65,14 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 const active = ref(false)
 const rootEl = ref<HTMLElement | null>(null)
 const triggerEl = ref<HTMLElement | null>(null)
+const dropdownEl = ref<HTMLElement | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
+const dropdownPlacedAbove = ref(false)
+const dropdownTransition = computed(() =>
+  props.transition === 'fade-slide-down' && dropdownPlacedAbove.value
+    ? 'fade-slide-up'
+    : props.transition
+)
 
 watchEffect(() => {
   active.value = !!props.modelValue
@@ -97,14 +120,24 @@ const onFocusOut = (e: FocusEvent) => {
   const root = rootEl.value
   if (!root) return
   const next = e.relatedTarget as Node | null
-  if (next && root.contains(next)) return
+  if (
+    next &&
+    (root.contains(next) || dropdownEl.value?.contains(next))
+  ) {
+    return
+  }
   setActive(false)
 }
 
 // Close on pointer interactions outside the component.
 const onDocumentPointerDown = (e: Event) => {
   const root = rootEl.value
-  if (root && e.target instanceof Node && root.contains(e.target)) return
+  if (
+    e.target instanceof Node &&
+    (root?.contains(e.target) || dropdownEl.value?.contains(e.target))
+  ) {
+    return
+  }
   setActive(false)
 }
 
@@ -114,9 +147,63 @@ const bindOutside = (bind: boolean) => {
   document[fn]('touchstart', onDocumentPointerDown, true)
 }
 
-watch(active, (v) => bindOutside(v))
+const updateDropdownPosition = () => {
+  const trigger = triggerEl.value
+  const dropdown = dropdownEl.value
+  if (!trigger || !dropdown) return
 
-onBeforeUnmount(() => bindOutside(false))
+  const triggerRect = trigger.getBoundingClientRect()
+  const gap = 10
+  const viewportPadding = 8
+  const dropdownWidth = dropdown.offsetWidth
+  const dropdownHeight = dropdown.offsetHeight
+
+  let left =
+    props.position === 'bottom-left'
+      ? triggerRect.right - dropdownWidth
+      : triggerRect.left
+  left = Math.min(
+    Math.max(left, viewportPadding),
+    window.innerWidth - dropdownWidth - viewportPadding
+  )
+
+  let top = triggerRect.bottom + gap
+  const topWhenFlipped = triggerRect.top - dropdownHeight - gap
+  if (
+    top + dropdownHeight > window.innerHeight - viewportPadding &&
+    topWhenFlipped >= viewportPadding
+  ) {
+    top = topWhenFlipped
+    dropdownPlacedAbove.value = true
+  } else {
+    dropdownPlacedAbove.value = false
+  }
+
+  dropdownStyle.value = {
+    left: `${Math.round(left)}px`,
+    top: `${Math.round(top)}px`,
+  }
+}
+
+const bindPositionUpdates = (bind: boolean) => {
+  const fn = bind ? 'addEventListener' : 'removeEventListener'
+  window[fn]('resize', updateDropdownPosition)
+  document[fn]('scroll', updateDropdownPosition, true)
+}
+
+watch(active, async (v) => {
+  bindOutside(v)
+  bindPositionUpdates(v)
+  if (v) {
+    await nextTick()
+    updateDropdownPosition()
+  }
+})
+
+onBeforeUnmount(() => {
+  bindOutside(false)
+  bindPositionUpdates(false)
+})
 </script>
 <style lang="scss">
 .simple-dropdown {
@@ -132,20 +219,11 @@ onBeforeUnmount(() => bindOutside(false))
 }
 
 .simple-dropdown__dropdown {
-  position: absolute;
-  margin-top: 10px;
-  z-index: 999;
-  background-color: var(--secondary-bg-color);
-  box-shadow: var(--dialog-content-shadow);
-}
-
-.simple-dropdown__dropdown--bottom-left {
-  right: 0;
-  left: unset;
-}
-
-.simple-dropdown__dropdown--bottom-right {
-  right: unset;
-  left: 0;
+  position: fixed;
+  z-index: 1001;
+  border-radius: var(--radius-popover);
+  overflow: hidden;
+  background-color: var(--color-bg-glass);
+  box-shadow: var(--shadow-elevated);
 }
 </style>

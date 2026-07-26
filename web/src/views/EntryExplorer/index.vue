@@ -2,6 +2,7 @@
   <div
     class="entry-explorer"
     :class="{ 'search-disabled': !searchConfig?.enabled }"
+    data-ui="explorer"
   >
     <!-- search panel -->
     <div v-if="searchConfig?.enabled" class="search-panel-wrapper">
@@ -10,7 +11,11 @@
     <!-- search panel -->
 
     <!-- file list main area -->
-    <div class="files-list">
+    <div
+      class="files-list glass-surface"
+      data-ui="entry-panel"
+      data-surface="glass"
+    >
       <EntryListView
         ref="entryListEl"
         v-model:selection="selectedEntries"
@@ -34,7 +39,13 @@
     <!-- file list main area -->
 
     <!-- README -->
-    <ReadmeContent class="page-footer" :path="path" :entries="entries" />
+    <ReadmeContent
+      class="page-footer glass-surface"
+      data-ui="readme"
+      data-surface="glass"
+      :path="path"
+      :entries="entries"
+    />
     <!-- README -->
 
     <!-- entry menu -->
@@ -45,14 +56,16 @@
         @click.self="closeEntryMenu"
       >
         <Transition
-          name="top-fade"
+          name="fade-slide-down"
           appear
           @after-leave="entryMenuOverlayShowing = false"
         >
           <div
             v-if="entryMenuShowing"
             ref="entryMenuEl"
-            class="entry-menu-popup"
+            class="entry-menu-popup glass-surface"
+            data-ui="menu"
+            data-surface="glass"
             :style="entryMenuPosition"
           >
             <EntryMenu
@@ -477,17 +490,17 @@ window.addEventListener('keydown', onKeyDown)
 }
 
 .files-list {
-  background-color: var(--primary-bg-color);
+  background-color: var(--color-bg-glass);
   padding: 16px 0;
-  border-radius: 16px;
+  border-radius: var(--radius-glass);
 }
 
 .page-footer {
   box-sizing: border-box;
   margin: 42px 0;
-  background-color: var(--primary-bg-color);
+  background-color: var(--color-bg-glass);
   padding: 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-glass);
 }
 
 .entry-menu-overlay {
@@ -498,7 +511,9 @@ window.addEventListener('keydown', onKeyDown)
 
 .entry-menu-popup {
   position: fixed;
-  box-shadow: var(--dialog-content-shadow);
+  border-radius: var(--radius-popover);
+  overflow: hidden;
+  box-shadow: var(--shadow-elevated);
 }
 
 @media screen and (max-width: 900px) {
@@ -519,7 +534,7 @@ window.addEventListener('keydown', onKeyDown)
       .entry-item__meta {
         display: flex;
         font-size: 12px;
-        color: var(--secondary-text-color);
+        color: var(--color-text-muted);
         justify-content: space-between;
         margin-top: 4px;
       }

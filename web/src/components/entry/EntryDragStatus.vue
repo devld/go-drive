@@ -1,8 +1,10 @@
 <template>
   <div
     v-if="state.active"
-    class="entry-drag-status"
+    class="entry-drag-status glass-surface"
     :class="{ 'entry-drag-status--invalid': !!state.invalidReason }"
+    data-ui="entry-drag-status"
+    data-surface="glass"
     role="status"
     aria-live="polite"
   >
@@ -94,9 +96,9 @@ const targetLabel = computed(() => {
   gap: 3px;
   padding: 10px 14px;
   border-radius: 8px;
-  background-color: var(--secondary-bg-color);
-  color: var(--primary-text-color);
-  box-shadow: var(--dialog-content-shadow);
+  background-color: var(--color-bg-glass);
+  color: var(--color-text);
+  box-shadow: var(--shadow-elevated);
   pointer-events: none;
   white-space: nowrap;
 }
@@ -111,13 +113,13 @@ const targetLabel = computed(() => {
   .icon {
     width: 20px;
     height: 20px;
-    color: var(--btn-bg-color-default);
+    color: var(--color-accent);
     flex: none;
   }
 }
 
 .entry-drag-status--invalid .icon {
-  color: var(--btn-bg-color-danger);
+  color: var(--color-danger);
 }
 
 .entry-drag-status__action,
@@ -142,7 +144,7 @@ const targetLabel = computed(() => {
 }
 
 .entry-drag-status__arrow {
-  color: var(--secondary-text-color);
+  color: var(--color-text-muted);
 }
 
 @media screen and (max-width: 700px) {

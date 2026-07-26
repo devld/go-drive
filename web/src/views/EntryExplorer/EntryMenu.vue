@@ -1,5 +1,9 @@
 <template>
-  <div class="entry-menu" :class="{ 'entry-menu--compact': compact }">
+  <div
+    class="entry-menu"
+    :class="{ 'entry-menu--compact': compact }"
+    data-ui="menu-content"
+  >
     <h2 v-if="!multiple" class="entry-menu__entry">
       <EntryIcon :entry="(entry as Entry)" />
       <span class="entry-menu__entry-name">{{ (entry as Entry).name }}</span>
@@ -10,13 +14,15 @@
         :key="i"
         class="entry-menu__menu-item"
         :class="m.display.type && `entry-menu__menu-item-${m.display.type}`"
+        data-ui="menu-item"
+        :data-variant="m.display.type || 'default'"
         :title="s(m.display.description)"
         @click="emit('click', { entry, menu: m })"
       >
         <span class="entry-menu__icon">
           <Icon v-if="m.display.icon" :name="m.display.icon" />
         </span>
-        <span class="entry-menu__text">{{ m.display.name }}</span>
+        <span>{{ m.display.name }}</span>
       </li>
     </ul>
   </div>
@@ -47,7 +53,8 @@ const multiple = computed(() => Array.isArray(props.entry))
 </script>
 <style lang="scss">
 .entry-menu {
-  background-color: var(--secondary-bg-color);
+  border-radius: inherit;
+  background-color: transparent;
   padding: 20px 0;
   width: 280px;
   overflow: hidden;
@@ -96,10 +103,13 @@ const multiple = computed(() => Array.isArray(props.entry))
   list-style-type: none;
   padding: 0 20px;
   cursor: pointer;
-  transition: 0.1s;
+  transition:
+    color var(--motion-duration-fast) var(--motion-easing-standard),
+    background-color var(--motion-duration-fast)
+      var(--motion-easing-standard);
 
   &:hover {
-    background-color: var(--hover-bg-color);
+    background-color: var(--color-bg-hover);
   }
 }
 
@@ -114,15 +124,15 @@ const multiple = computed(() => Array.isArray(props.entry))
 
 .entry-menu__menu-item-danger {
   &:hover {
-    color: #fff;
-    background-color: #f56c6c;
+    color: var(--color-on-danger);
+    background-color: var(--color-danger-strong);
   }
 }
 
 .entry-menu--compact {
   width: 220px;
   padding: 8px 0;
-  border-radius: 8px;
+  border-radius: inherit;
 
   .entry-menu__entry {
     display: none;

@@ -16,6 +16,8 @@
       <div v-if="showToggles" class="entry-list__toggles">
         <button
           class="plain-button view-model-toggle"
+          data-ui="button"
+          data-variant="plain"
           :title="
             validViewMode === 'list'
               ? $t('app.toggle_to_thumbnail')
@@ -102,6 +104,8 @@
         <button
           v-if="showMenuButton"
           class="entry-list__menu-button plain-button"
+          data-ui="button"
+          data-variant="plain"
           type="button"
           :title="$t('app.entry_actions')"
           :aria-label="$t('app.entry_actions')"
@@ -406,21 +410,22 @@ defineExpose({
 <style lang="scss">
 .entry-list {
   .entry-link {
-    color: var(--primary-text-color);
+    color: var(--color-text);
     transition:
-      background-color 0.15s,
-      box-shadow 0.15s,
-      opacity 0.15s;
+      background-color var(--motion-duration-fast)
+        var(--motion-easing-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+      opacity var(--motion-duration-fast) var(--motion-easing-standard);
   }
 
   .entry-link--drop-valid {
-    background-color: var(--select-bg-color) !important;
-    box-shadow: inset 0 0 0 2px var(--btn-bg-color-default);
+    background-color: var(--color-bg-selected) !important;
+    box-shadow: inset 0 0 0 2px var(--color-accent);
   }
 
   .entry-link--drop-invalid {
-    background-color: var(--invalid-bg-color) !important;
-    box-shadow: inset 0 0 0 2px var(--btn-bg-color-danger);
+    background-color: var(--color-bg-invalid) !important;
+    box-shadow: inset 0 0 0 2px var(--color-danger);
     cursor: not-allowed;
   }
 
@@ -454,7 +459,7 @@ defineExpose({
   align-items: flex-start;
 
   .icon {
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
   }
 
   .view-model-toggle {
@@ -462,26 +467,27 @@ defineExpose({
     font-size: 16px;
   }
 
-  .sort-modes {
-    margin: 0;
-    padding: 0;
+}
+
+.sort-modes {
+  margin: 0;
+  padding: 0;
+}
+
+.sort-mode {
+  margin: 0;
+  list-style-type: none;
+  white-space: nowrap;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+
+  &:hover {
+    background-color: var(--color-bg-hover);
   }
 
-  .sort-mode {
-    margin: 0;
-    list-style-type: none;
-    white-space: nowrap;
-    padding: 6px 12px;
-    cursor: pointer;
-    font-size: 14px;
-
-    &:hover {
-      background-color: var(--hover-bg-color);
-    }
-
-    &.active {
-      background-color: var(--select-bg-color);
-    }
+  &.active {
+    background-color: var(--color-bg-selected);
   }
 }
 
@@ -540,16 +546,16 @@ defineExpose({
     text-decoration: none;
 
     &:focus {
-      background-color: var(--focus-bg-color);
+      background-color: var(--color-bg-focus);
     }
 
     &:hover {
-      background-color: var(--hover-bg-color);
+      background-color: var(--color-bg-hover);
     }
   }
 
   &.selected > .entry-link {
-    background-color: var(--select-bg-color);
+    background-color: var(--color-bg-selected);
   }
 
   &.dragging > .entry-link {
@@ -582,7 +588,7 @@ defineExpose({
   overflow: hidden;
   animation: none;
   border-radius: 8px;
-  background-color: var(--primary-bg-color);
+  background-color: var(--color-bg-surface);
 }
 
 .entry-list__menu-button {
@@ -594,7 +600,7 @@ defineExpose({
   padding: 0;
   transform: translateY(-50%);
   border-radius: 50%;
-  color: var(--secondary-text-color);
+  color: var(--color-text-muted);
   cursor: pointer;
   font-size: 18px;
   line-height: 0;
@@ -604,17 +610,17 @@ defineExpose({
 
   &:hover,
   &:focus-visible {
-    background-color: var(--hover-bg-color);
+    background-color: var(--color-bg-hover);
   }
 
   .icon {
     vertical-align: middle;
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
   }
 
   &:hover .icon,
   &:focus-visible .icon {
-    color: var(--primary-text-color);
+    color: var(--color-text);
   }
 }
 
@@ -642,6 +648,6 @@ defineExpose({
   user-select: none;
   text-align: center;
   padding: 32px 0;
-  color: var(--secondary-text-color);
+  color: var(--color-text-muted);
 }
 </style>

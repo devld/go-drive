@@ -118,7 +118,7 @@ function useDialogOptions() {
     state.confirmType = opts.confirmType
     state.cancelText = opts.cancelText
     state.cancelType = opts.cancelType || 'info'
-    state.transition = opts.transition || 'bottom-fade'
+    state.transition = opts.transition || 'fade-slide-up'
     state.closeable = opts.closeable ?? true
     state.escClose = opts.escClose ?? state.closeable
     state.overlayClose = !!opts.overlayClose

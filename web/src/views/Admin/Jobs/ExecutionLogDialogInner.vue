@@ -134,7 +134,7 @@ watch(logContent, scrollToBottom)
   &__executing-icon {
     width: 1em;
     height: 1em;
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
   }
 }
 </style>

@@ -1,10 +1,12 @@
 <template>
   <div class="app-wrapper">
-    <header class="app-header">
+    <header class="app-header" data-ui="app-header">
       <div class="user-area">
         <button
           v-if="!isLoggedIn"
-          class="plain-button small login-button"
+          class="plain-button small"
+          data-ui="button"
+          data-variant="plain"
           @click="login"
         >
           {{ $t('app.login') }}
@@ -14,6 +16,8 @@
           v-for="m in navMenus"
           :key="m.to"
           class="plain-button small nav-button"
+          data-ui="button"
+          data-variant="plain"
           :to="m.to"
         >
           {{ m.name }}
@@ -30,7 +34,12 @@
             "
             >{{ user!.username }}</span
           >
-          <button class="plain-button small logout-button" @click="logout">
+          <button
+            class="plain-button small"
+            data-ui="button"
+            data-variant="plain"
+            @click="logout"
+          >
             {{ $t('app.logout') }}
           </button>
         </span>
@@ -44,7 +53,6 @@
       v-model:show="loginDialogShowing"
       overlay-close
       esc-close
-      transition="scale-opacity"
       :title="$t('app.login')"
     >
       <LoginView @success="afterLogin" />

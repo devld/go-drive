@@ -95,7 +95,7 @@ const ext = computed(() => filenameExt(props.entry.name))
 <style lang="scss">
 .entry-item__name {
   i {
-    color: #999;
+    color: var(--color-text-muted);
   }
 }
 
@@ -165,7 +165,8 @@ const ext = computed(() => filenameExt(props.entry.name))
   }
 
   .entry-icon__thumbnail {
-    transition: 0.3s;
+    transition: transform var(--motion-duration-normal)
+      var(--motion-easing-standard);
   }
 
   &:hover {

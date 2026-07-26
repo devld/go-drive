@@ -2,6 +2,9 @@
   <button
     class="simple-button"
     :class="{ loading, [type!]: !!type, small }"
+    data-ui="button"
+    :data-variant="type || 'primary'"
+    :data-size="small ? 'compact' : 'default'"
     :disabled="!!loading || disabled"
     :type="nativeType"
     :aria-busy="loading ? 'true' : undefined"
@@ -46,21 +49,24 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
 .simple-button {
   font-size: 16px;
   border: none;
-  background-color: var(--btn-bg-color-default);
-  color: var(--btn-color-default);
+  background-color: var(--color-accent-strong);
+  color: var(--color-on-accent);
   padding: 4px 10px;
   cursor: pointer;
-  transition: 0.3s;
+  transition:
+    box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+    opacity var(--motion-duration-fast) var(--motion-easing-standard);
   -webkit-user-select: none;
   user-select: none;
   line-height: 20px;
+  border-radius: var(--radius-control);
 
   & + .simple-button {
     margin-left: 0.5em;
   }
 
   &:hover {
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-control);
   }
 
   &.small {
@@ -70,19 +76,14 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
 
   &[disabled] {
     cursor: not-allowed;
-    background-color: var(--btn-bg-color-disabled-default);
+    opacity: 0.58;
   }
 
   $types: ('info', 'success', 'warning', 'danger');
   @each $type in $types {
     &.#{$type} {
-      background-color: var(--btn-bg-color-#{$type});
-      color: var(--btn-color-#{$type});
-
-      &[disabled] {
-        background-color: var(--btn-bg-color-disabled-#{$type});
-        color: var(--btn-color-disabled-#{$type});
-      }
+      background-color: var(--color-#{$type}-strong);
+      color: var(--color-on-#{$type});
     }
   }
 }

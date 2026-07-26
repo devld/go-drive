@@ -1,5 +1,11 @@
 <template>
-  <div ref="el" class="text-edit-view" @keydown="onKeyDown">
+  <div
+    ref="el"
+    class="text-edit-view"
+    data-ui="preview"
+    data-handler="text"
+    @keydown="onKeyDown"
+  >
     <HandlerTitleBar :title="filename" @close="emit('close')">
       <template #actions>
         <SimpleButton v-if="!readonly" :loading="saving" @click="saveFile">
@@ -151,10 +157,10 @@ loadFile()
   width: 100vw;
   height: 100%;
   padding-top: 48px;
-  background-color: var(--secondary-bg-color);
+  background-color: var(--color-bg-elevated);
   overflow: hidden;
   box-sizing: border-box;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-elevated);
 
   .handler-title-bar {
     position: absolute;

@@ -184,8 +184,6 @@ defineExpose({ beforeConfirm })
       margin-bottom: 0;
       position: sticky;
       top: 0;
-      background-color: var(--secondary-bg-color);
-      box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
       z-index: 1;
     }
   }
@@ -193,10 +191,10 @@ defineExpose({ beforeConfirm })
   .open-dialog__selected-count {
     text-align: right;
     font-size: 12px;
-    color: #999;
+    color: var(--color-text-muted);
 
     a {
-      color: #999;
+      color: var(--color-text-muted);
       text-emphasis: none;
       margin-left: 1em;
     }

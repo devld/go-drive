@@ -24,7 +24,11 @@
       ]"
       @click="newButtonClicked"
     >
-      <span class="icon-new-item" :class="{ active: floatMenuShowing }">
+      <span
+        class="icon-new-item glass-surface"
+        :class="{ active: floatMenuShowing }"
+        data-surface="glass"
+      >
         <Icon name="plus" />
       </span>
       <template #new-file>
@@ -43,7 +47,6 @@
       :title="t('p.new_entry.upload_tasks')"
       esc-close
       overlay-close
-      transition="tm-dialog"
       @closed="taskManagerClosed"
     >
       <TaskManager
@@ -59,7 +62,10 @@
 
     <button
       v-if="taskManagerButtonShowing"
-      class="button-task-manager"
+      class="button-task-manager glass-surface"
+      data-ui="button"
+      data-variant="plain"
+      data-surface="glass"
       @click="showTaskManager"
     >
       {{
@@ -80,7 +86,11 @@
     />
 
     <div v-if="dropZoneActive" class="drop-zone-indicator">
-      <div class="drop-zone-indicator__content">
+      <div
+        class="drop-zone-indicator__content glass-surface"
+        data-ui="drop-zone"
+        data-surface="glass"
+      >
         <Icon name="upload-file" />
         <strong>
           {{
@@ -442,13 +452,14 @@ onBeforeMount(() => {
     box-sizing: border-box;
     border-radius: 50%;
     margin: 5px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    background-color: var(--secondary-bg-color);
+    box-shadow: var(--shadow-control);
+    background-color: var(--color-bg-glass);
 
     .icon {
       display: block;
-      transition: 0.3s;
-      fill: #546e7a;
+      transition: transform var(--motion-duration-normal)
+        var(--motion-easing-standard);
+      fill: var(--color-text-muted);
     }
 
     &.active {
@@ -465,11 +476,11 @@ onBeforeMount(() => {
 
     outline: none;
     padding: 10px 26px;
-    background-color: var(--secondary-bg-color);
-    color: var(--primary-text-color);
+    background-color: var(--color-bg-glass);
+    color: var(--color-text);
 
     border: none;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-control);
     cursor: pointer;
     -webkit-user-select: none;
     user-select: none;
@@ -488,10 +499,10 @@ onBeforeMount(() => {
     right: 8px;
     bottom: 8px;
     z-index: 1000;
-    border: solid 2px var(--btn-bg-color-default);
+    border: solid 2px var(--color-accent);
     border-radius: 10px;
     pointer-events: none;
-    background-color: rgba(64, 158, 255, 0.18);
+    background-color: var(--color-bg-selected);
 
     display: flex;
     justify-content: center;
@@ -507,9 +518,9 @@ onBeforeMount(() => {
     max-width: min(520px, calc(100vw - 64px));
     padding: 24px 32px;
     border-radius: 12px;
-    background-color: var(--secondary-bg-color);
-    color: var(--primary-text-color);
-    box-shadow: var(--dialog-content-shadow);
+    background-color: var(--color-bg-glass);
+    color: var(--color-text);
+    box-shadow: var(--shadow-elevated);
     text-align: center;
     font-size: 20px;
 
@@ -538,34 +549,4 @@ onBeforeMount(() => {
   }
 }
 
-@keyframes tm-dialog {
-  from {
-    right: calc(5vw + 100px);
-    transform: scale(0.25);
-    bottom: 0;
-    opacity: 0;
-  }
-
-  to {
-    right: 50vw;
-    bottom: 50vh;
-    bottom: 50dvh;
-    transform: translate(50%, 50%) scale(1);
-    opacity: 1;
-  }
-}
-
-.tm-dialog-enter-active {
-  position: fixed;
-  overflow: hidden;
-  transform-origin: right bottom;
-  animation: tm-dialog 0.3s;
-}
-
-.tm-dialog-leave-active {
-  position: fixed;
-  overflow: hidden;
-  transform-origin: right bottom;
-  animation: tm-dialog 0.3s reverse;
-}
 </style>

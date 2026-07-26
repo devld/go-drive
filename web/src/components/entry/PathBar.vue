@@ -1,8 +1,15 @@
 <template>
-  <ul class="path-bar">
-    <li v-for="s in segments" :key="s.path" class="path-bar__segment">
+  <ul class="path-bar" data-ui="path-bar">
+    <li
+      v-for="s in segments"
+      :key="s.path"
+      class="path-bar__segment"
+      data-ui="path-segment"
+      :data-root="!s.path ? true : undefined"
+    >
       <EntryLink
         class="path-bar__path"
+        data-ui="path-link"
         :class="getEntryDropTargetClass(dropState, s.path)"
         :path="s.path"
         :get-link="getLink"
@@ -83,7 +90,7 @@ const onDrop = (e: EntryEventData) => emit('drop', e)
     &::after {
       content: '>';
       margin: 0 0.5em;
-      color: #888;
+      color: var(--color-text-muted);
     }
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <h1 class="handler-title-bar">
+  <h1 class="handler-title-bar" data-ui="handler-header">
     <span v-if="$slots.actions" class="handler-title-bar-actions">
       <slot name="actions" />
     </span>
@@ -9,6 +9,8 @@
     <button
       v-if="closeable"
       class="handler-title-bar-close plain-button"
+      data-ui="button"
+      data-variant="plain"
       title="Close"
       @click="emit('close')"
     >

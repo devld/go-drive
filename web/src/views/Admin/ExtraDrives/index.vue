@@ -86,7 +86,11 @@
             </tr>
             <tr v-if="item.expanded">
               <td colspan="3">
-                <div v-markdown="item.description" class="markdown-body"></div>
+                <div
+                  v-markdown="item.description"
+                  class="markdown-body"
+                  data-ui="markdown"
+                ></div>
               </td>
             </tr>
           </template>
@@ -274,7 +278,7 @@ loadData()
     a {
       text-decoration: none;
       color: inherit;
-      color: var(--link-color);
+      color: var(--color-accent);
     }
   }
 

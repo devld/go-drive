@@ -21,7 +21,7 @@
         <Icon name="help" />
       </a>
 
-      <span v-if="slots['label-suffix']" class="form-item-suffix" @click.stop>
+      <span v-if="slots['label-suffix']" @click.stop>
         <slot name="label-suffix" />
       </span>
     </Component>
@@ -82,7 +82,10 @@
         :disabled="disabled || item.disabled"
         @input="checkboxInput"
       />
-      <div v-if="item.type === 'checkboxes'" class="value full-width form-item--checkboxes">
+      <div
+        v-if="item.type === 'checkboxes'"
+        class="value full-width form-item--checkboxes"
+      >
         <label
           v-for="o in item.options"
           :key="o.value"
@@ -135,6 +138,7 @@
         <button
           v-if="!(disabled || item.disabled)"
           class="form-item--type-path-select"
+          data-ui="button"
           :title="$t('form.select_path')"
           @click="selectPath"
         >
@@ -292,7 +296,7 @@ const checkboxesInput = (optionValue: string, checked: boolean) => {
   padding-bottom: 24px;
 
   .value {
-    border: solid 1px red;
+    border-color: var(--color-danger);
   }
 }
 
@@ -307,14 +311,14 @@ const checkboxesInput = (optionValue: string, checked: boolean) => {
 }
 
 .form-item-required {
-  color: red;
+  color: var(--color-danger);
 }
 
 .form-item-error {
   position: absolute;
   bottom: 0;
   right: 16px;
-  color: red;
+  color: var(--color-danger);
 }
 
 .form-item-help {
@@ -342,7 +346,24 @@ const checkboxesInput = (optionValue: string, checked: boolean) => {
     font-size: 16px;
     cursor: pointer;
     background-color: transparent;
+    color: var(--color-text-muted);
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
+
+    &:hover {
+      background-color: var(--color-bg-hover);
+      color: var(--color-text);
+    }
   }
+}
+
+.form-item .code-editor {
+  box-sizing: border-box;
+  background-color: var(--color-field-bg);
+  -webkit-backdrop-filter: var(--backdrop-filter-field);
+  backdrop-filter: var(--backdrop-filter-field);
+  border: solid 1px var(--color-field-border);
+  border-radius: var(--radius-control);
+  overflow: hidden;
 }
 
 .form-item.disabled .form-item--type-path {

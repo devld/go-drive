@@ -3,7 +3,7 @@
 </template>
 <style lang="scss">
 .component-loading {
-  background-color: var(--secondary-bg-color);
+  background-color: var(--color-bg-elevated);
   padding: 16px;
   -webkit-user-select: none;
   user-select: none;

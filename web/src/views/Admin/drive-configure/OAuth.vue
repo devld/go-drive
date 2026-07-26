@@ -78,7 +78,7 @@ onBeforeUnmount(() => {
   .oauth-principal {
     margin-top: 0.5em;
     font-size: 14px;
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
   }
 }
 </style>

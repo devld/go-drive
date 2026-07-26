@@ -127,9 +127,9 @@ defineExpose({ beforeConfirm })
 }
 
 .input-dialog__input {
-  background-color: var(--form-value-bg-color);
-  border: var(--form-value-border);
-  color: var(--primary-text-color);
+  background-color: var(--color-field-bg);
+  border: solid 1px var(--color-field-border);
+  color: var(--color-text);
   font-size: 16px;
   outline: none;
   padding: 6px;

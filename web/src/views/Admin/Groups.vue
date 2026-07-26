@@ -49,7 +49,7 @@
             : $t('p.admin.group.add_group')
         }}
       </div>
-      <div class="group-form">
+      <div>
         <SimpleForm ref="formEl" v-model="group" :form="groupForm" />
         <div class="form-item">
           <span class="label">{{ $t('p.admin.group.users') }}</span>
@@ -277,13 +277,13 @@ loadUsers()
     }
 
     .user-name.external {
-      color: var(--secondary-text-color);
+      color: var(--color-text-muted);
     }
   }
 
   .external-tips {
     margin: 8px 0 0;
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
     font-size: 13px;
   }
 

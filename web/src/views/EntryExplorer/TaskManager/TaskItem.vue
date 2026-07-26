@@ -36,7 +36,9 @@
     <span class="upload-task-item__ops">
       <button
         v-if="showStart"
-        class="upload-task-item__start plain-button"
+        class="plain-button"
+        data-ui="button"
+        data-variant="plain"
         :title="t('p.task.start')"
         @click="emit('start')"
       >
@@ -44,7 +46,9 @@
       </button>
       <button
         v-if="showPause"
-        class="upload-task-item__pause plain-button"
+        class="plain-button"
+        data-ui="button"
+        data-variant="plain"
         :title="t('p.task.pause')"
         @click="emit('pause')"
       >
@@ -52,7 +56,9 @@
       </button>
       <button
         v-if="showStop"
-        class="upload-task-item__stop plain-button"
+        class="plain-button"
+        data-ui="button"
+        data-variant="plain"
         :title="t('p.task.stop')"
         @click="emit('stop')"
       >
@@ -60,7 +66,9 @@
       </button>
       <button
         v-if="showRemove"
-        class="upload-task-item__remove plain-button"
+        class="plain-button"
+        data-ui="button"
+        data-variant="plain"
         :title="t('p.task.remove')"
         @click="emit('remove')"
       >
@@ -172,7 +180,7 @@ const showRemove = computed(() => !showStop.value)
 
   &.task-status-64 {
     .upload-task-item__status {
-      color: var(--btn-bg-color-danger);
+      color: var(--color-danger);
     }
   }
 }
@@ -183,14 +191,16 @@ const showRemove = computed(() => !showStop.value)
   left: 0;
   bottom: 0;
   right: 0;
-  transition: 0.4s;
-  background-color: #bcdffb;
-  background-color: var(--progress-bar-color);
+  transition:
+    width 400ms linear,
+    background-color var(--motion-duration-normal)
+      var(--motion-easing-standard);
+  background-color: var(--color-progress-track);
 }
 
 .task-status-1 {
   .upload-task-item__progress-bar {
-    background-color: #e2eeff;
+    background-color: var(--color-progress-track-paused);
   }
 }
 
@@ -225,7 +235,7 @@ const showRemove = computed(() => !showStop.value)
 
   a {
     text-decoration: none;
-    color: var(--link-color);
+    color: var(--color-accent);
   }
 }
 

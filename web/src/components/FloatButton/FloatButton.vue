@@ -11,10 +11,11 @@
       @mouseenter="mouseEnter"
       @mouseleave="mouseLeave"
     >
-      <Transition v-for="(b, i) in buttons" :key="i" name="scale-fade">
+      <Transition v-for="(b, i) in buttons" :key="i" name="fade-scale">
         <button
           v-show="modelValue"
           class="float-button__button"
+          data-ui="button"
           :title="s(b.title)"
           @click="buttonClicked(b, i)"
         >
@@ -27,6 +28,7 @@
     </div>
     <button
       class="float-button__trigger"
+      data-ui="button"
       :title="title"
       @click.capture.stop="triggerClicked"
       @mouseenter="mouseEnter"
@@ -118,16 +120,12 @@ const buttonClicked = (button: FloatButtonItem, index: number) => {
 .float-button__buttons {
   position: absolute;
   width: 100%;
-
-  &:hover {
-    .float-button__button {
-      transition: 0.4s;
-    }
-  }
 }
 
 .float-button__button {
   margin-bottom: 20px;
+  transition: transform var(--motion-duration-fast)
+    var(--motion-easing-standard);
 
   &:hover {
     transform: scale(1.2);

@@ -1,5 +1,10 @@
 <template>
-  <div class="audio-view-page">
+  <div
+    class="audio-view-page glass-surface"
+    data-ui="preview"
+    data-handler="audio"
+    data-surface="glass"
+  >
     <HandlerTitleBar :title="entry.name" @close="emit('close')" />
 
     <div class="audio-player">
@@ -48,6 +53,8 @@
         <div class="audio-player__controls-side audio-player__controls-left">
           <button
             class="audio-player__btn plain-button"
+            data-ui="button"
+            data-variant="plain"
             :class="{ 'is-active': shuffle }"
             :title="$t('handler.audio.shuffle')"
             @click="shuffle = !shuffle; if (shuffle) repeatOne = false"
@@ -69,6 +76,8 @@
           </button>
           <button
             class="audio-player__btn plain-button"
+            data-ui="button"
+            data-variant="plain"
             :class="{ 'is-active': repeatOne }"
             :title="$t('handler.audio.repeat_one')"
             @click="repeatOne = !repeatOne; if (repeatOne) shuffle = false"
@@ -85,6 +94,8 @@
         <div class="audio-player__controls-center">
           <button
             class="audio-player__btn plain-button"
+            data-ui="button"
+            data-variant="plain"
             :title="$t('handler.audio.prev')"
             @click="prev"
           >
@@ -98,6 +109,8 @@
 
           <button
             class="audio-player__btn audio-player__btn--play plain-button"
+            data-ui="button"
+            data-variant="plain"
             :title="
               playing ? $t('handler.audio.pause') : $t('handler.audio.play')
             "
@@ -113,6 +126,8 @@
 
           <button
             class="audio-player__btn plain-button"
+            data-ui="button"
+            data-variant="plain"
             :title="$t('handler.audio.next')"
             @click="next"
           >
@@ -125,6 +140,8 @@
         <div class="audio-player__volume audio-player__controls-side">
           <button
             class="audio-player__btn plain-button"
+            data-ui="button"
+            data-variant="plain"
             :title="muted ? $t('handler.audio.unmute') : $t('handler.audio.mute')"
             @click="toggleMute"
           >
@@ -437,8 +454,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding-top: 48px;
-  background-color: var(--secondary-bg-color);
-  color: var(--primary-text-color);
+  background-color: var(--color-bg-glass);
+  color: var(--color-text);
 
   .handler-title-bar {
     position: absolute;
@@ -459,11 +476,11 @@ onUnmounted(() => {
     height: 160px;
     border-radius: 12px;
     overflow: hidden;
-    background-color: var(--hover-bg-color);
+    background-color: var(--color-bg-hover);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-elevated);
   }
 
   &__cover-img {
@@ -475,7 +492,7 @@ onUnmounted(() => {
   &__cover-icon {
     width: 76px;
     height: 76px;
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
     opacity: 0.35;
   }
 
@@ -491,7 +508,7 @@ onUnmounted(() => {
     flex-shrink: 0;
     width: 40px;
     font-size: 12px;
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
 
     &:first-child {
@@ -510,7 +527,7 @@ onUnmounted(() => {
     position: relative;
     height: 4px;
     border-radius: 2px;
-    background-color: var(--border-color);
+    background-color: var(--color-border);
   }
 
   &__bar-loaded {
@@ -519,7 +536,7 @@ onUnmounted(() => {
     left: 0;
     height: 100%;
     border-radius: 2px;
-    background-color: var(--hover-bg-color);
+    background-color: var(--color-bg-hover);
   }
 
   &__bar-played {
@@ -528,7 +545,7 @@ onUnmounted(() => {
     left: 0;
     height: 100%;
     border-radius: 2px;
-    background-color: var(--link-color);
+    background-color: var(--color-accent);
   }
 
   &__bar-thumb {
@@ -537,11 +554,12 @@ onUnmounted(() => {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background-color: var(--link-color);
+    background-color: var(--color-accent);
     transform: translate(-50%, -50%);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-control);
     opacity: 0;
-    transition: opacity 0.15s;
+    transition: opacity var(--motion-duration-fast)
+      var(--motion-easing-standard);
   }
 
   &__bar:hover &__bar-thumb {
@@ -580,16 +598,19 @@ onUnmounted(() => {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    color: var(--primary-text-color);
+    color: var(--color-text);
     cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
+    transition:
+      background-color var(--motion-duration-fast)
+        var(--motion-easing-standard),
+      color var(--motion-duration-fast) var(--motion-easing-standard);
 
     &:hover {
-      background-color: var(--hover-bg-color);
+      background-color: var(--color-bg-hover);
     }
 
     &.is-active {
-      color: var(--link-color);
+      color: var(--color-accent);
     }
   }
 
@@ -601,8 +622,8 @@ onUnmounted(() => {
   &__btn--play {
     width: 52px;
     height: 52px;
-    background-color: var(--link-color);
-    color: #fff;
+    background-color: var(--color-accent-strong);
+    color: var(--color-on-accent);
 
     .audio-player__icon {
       width: 28px;
@@ -610,7 +631,7 @@ onUnmounted(() => {
     }
 
     &:hover {
-      background-color: var(--link-color);
+      background-color: var(--color-accent-strong);
       filter: brightness(1.08);
     }
   }
@@ -631,7 +652,7 @@ onUnmounted(() => {
     position: relative;
     height: 4px;
     border-radius: 2px;
-    background-color: var(--border-color);
+    background-color: var(--color-border);
   }
 
   &__volume-value {
@@ -640,7 +661,7 @@ onUnmounted(() => {
     left: 0;
     height: 100%;
     border-radius: 2px;
-    background-color: var(--link-color);
+    background-color: var(--color-accent);
   }
 
   &__volume-thumb {
@@ -649,7 +670,7 @@ onUnmounted(() => {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background-color: var(--link-color);
+    background-color: var(--color-accent);
     transform: translate(-50%, -50%);
   }
 
@@ -659,8 +680,8 @@ onUnmounted(() => {
     padding: 0;
     max-height: 220px;
     overflow-y: auto;
-    border-top: solid 1px var(--border-color);
-    background-color: var(--primary-bg-color);
+    border-top: solid 1px var(--color-border);
+    background-color: var(--color-bg-surface);
   }
 
   &__list-item {
@@ -669,23 +690,24 @@ onUnmounted(() => {
     gap: 10px;
     padding: 10px 20px;
     cursor: pointer;
-    border-bottom: solid 1px var(--border-color);
-    transition: background-color 0.15s;
+    border-bottom: solid 1px var(--color-border);
+    transition: background-color var(--motion-duration-fast)
+      var(--motion-easing-standard);
 
     &:last-child {
       border-bottom: none;
     }
 
     &:hover {
-      background-color: var(--hover-bg-color);
+      background-color: var(--color-bg-hover);
     }
 
     &.is-current {
-      background-color: var(--select-bg-color);
+      background-color: var(--color-bg-selected);
 
       .audio-player__list-name,
       .audio-player__list-index {
-        color: var(--link-color);
+        color: var(--color-accent);
         font-weight: 500;
       }
     }
@@ -696,14 +718,14 @@ onUnmounted(() => {
     width: 20px;
     text-align: center;
     font-size: 13px;
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
   }
 
   &__list-playing {
     width: 14px;
     height: 14px;
-    color: var(--link-color);
+    color: var(--color-accent);
   }
 
   &__list-name {

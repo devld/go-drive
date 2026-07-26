@@ -49,7 +49,7 @@
             : $t('p.admin.user.add_user')
         }}
       </div>
-      <div class="user-form">
+      <div>
         <SimpleForm ref="formEl" v-model="user" :form="userForm" />
         <div class="form-item">
           <span class="label">{{ $t('p.admin.user.groups') }}</span>
@@ -61,7 +61,7 @@
                 :value="g.name"
                 :disabled="isExternalUser"
               />
-              <span class="group-name">{{ g.name }}</span>
+              <span>{{ g.name }}</span>
             </span>
             <p v-if="isExternalUser" class="external-tips">
               {{ $t('p.admin.user.groups_managed_externally', { s: user.source }) }}
@@ -276,7 +276,7 @@ loadGroups()
 
   .external-tips {
     margin: 8px 0 0;
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
     font-size: 13px;
   }
 

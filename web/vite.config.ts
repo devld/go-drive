@@ -36,6 +36,8 @@ export default defineConfig(({ mode }) => ({
         },
       },
     }),
+
+    injectServerCustomizations(mode),
   ],
   resolve: {
     alias: {
@@ -59,6 +61,25 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }))
+
+// The Go server evaluates these template actions after Vite has built the
+// page. Running this transform after Vite's own HTML transforms keeps custom
+// CSS after the bundled stylesheet. The actions return complete elements so
+// Vite never parses the user-provided CSS or JavaScript.
+const injectServerCustomizations = (mode: string): Plugin => ({
+  name: 'inject-server-customizations',
+  apply: 'build',
+  transformIndexHtml: {
+    order: 'post',
+    handler(html) {
+      if (mode !== 'production') return
+
+      return html
+        .replace('</head>', '{{ .AppStyle }}</head>')
+        .replace('</body>', '{{ .AppScript }}</body>')
+    },
+  },
+})
 
 const servePublicHtml = (): Plugin => ({
   name: 'serve-public-html',

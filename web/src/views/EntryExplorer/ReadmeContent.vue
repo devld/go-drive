@@ -1,6 +1,10 @@
 <template>
-  <div v-if="readmeContent">
-    <div v-markdown="readmeContent" class="markdown-body"></div>
+  <div v-if="readmeContent" data-ui="readme-content">
+    <div
+      v-markdown="readmeContent"
+      class="markdown-body"
+      data-ui="markdown"
+    ></div>
   </div>
 </template>
 <script setup lang="ts">

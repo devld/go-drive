@@ -1,5 +1,10 @@
 <template>
-  <div class="permissions-view">
+  <div
+    class="permissions-view glass-surface"
+    data-ui="preview"
+    data-handler="permissions"
+    data-surface="glass"
+  >
     <HandlerTitleBar :title="filename" @close="emit('close')">
       <template #actions>
         <SimpleButton
@@ -73,8 +78,8 @@ const setSaveState = (saved: boolean) => {
   width: 340px;
   padding-top: 48px;
   height: 300px;
-  background-color: var(--secondary-bg-color);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background-color: var(--color-bg-glass);
+  box-shadow: var(--shadow-elevated);
 
   .handler-title-bar {
     position: absolute;

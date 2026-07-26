@@ -63,7 +63,7 @@ defineExpose({ show, hide })
 </script>
 <style lang="scss">
 .dialog-view.loading-dialog {
-  background-color: var(--loading-overlay-bg-color);
+  background-color: var(--color-loading-overlay);
   z-index: 9999;
 
   .dialog-view__content {
@@ -93,6 +93,6 @@ defineExpose({ show, hide })
 .icon.loading-dialog__icon {
   width: 5vw;
   height: 5vw;
-  color: var(--secondary-text-color);
+  color: var(--color-text-muted);
 }
 </style>

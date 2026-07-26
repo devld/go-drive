@@ -50,7 +50,7 @@ const emit = defineEmits<{
     height: 60px;
     line-height: 60px;
     text-align: center;
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
     -webkit-user-select: none;
     user-select: none;
   }

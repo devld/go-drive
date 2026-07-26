@@ -1,5 +1,11 @@
 <template>
-  <div ref="thisEl" class="search-panel" :class="{ active: showing }">
+  <div
+    ref="thisEl"
+    class="search-panel glass-surface"
+    data-ui="search-panel"
+    data-surface="glass"
+    :class="{ active: showing }"
+  >
     <div class="search-panel__search">
       <input
         ref="qEl"
@@ -180,14 +186,15 @@ defineExpose({ setActive })
 </script>
 <style lang="scss">
 .search-panel {
-  border-radius: 16px;
-  transition: 0.4s;
-  background-color: var(--primary-bg-color);
-  color: var(--primary-text-color);
+  border-radius: var(--radius-glass);
+  transition: box-shadow var(--motion-duration-normal)
+    var(--motion-easing-standard);
+  background-color: var(--color-bg-glass);
+  color: var(--color-text);
   overflow: hidden;
 
   &.active {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-elevated);
 
     .search-panel__search {
       padding-right: 16px;
@@ -207,6 +214,8 @@ defineExpose({ setActive })
 .search-panel__search {
   position: relative;
   padding: 0 36px 0 16px;
+  transition: padding-right var(--motion-duration-normal)
+    var(--motion-easing-standard);
 }
 
 .search-panel__search-input-key {
@@ -220,11 +229,11 @@ defineExpose({ setActive })
   line-height: 16px;
   text-align: center;
   font-size: 14px;
-  color: var(--secondary-text-color);
+  color: var(--color-text-muted);
   -webkit-user-select: none;
   user-select: none;
   border-radius: 2px;
-  border: solid 1px var(--secondary-text-color);
+  border: solid 1px var(--color-field-border);
 }
 
 .search-panel__search-input {
@@ -234,11 +243,11 @@ defineExpose({ setActive })
   background-color: transparent;
   outline: none;
   font-size: 16px;
-  color: var(--primary-text-color);
+  color: var(--color-text);
   padding: 16px 0;
 
   &::placeholder {
-    color: var(--secondary-text-color);
+    color: var(--color-text-muted);
   }
 }
 
@@ -256,7 +265,7 @@ defineExpose({ setActive })
   align-items: center;
   font-size: 14px;
   padding: 16px;
-  color: var(--secondary-text-color);
+  color: var(--color-text-muted);
   text-align: center;
 
   p {
@@ -267,7 +276,7 @@ defineExpose({ setActive })
   em {
     padding: 0 2px;
     font-style: normal;
-    border: solid 1px var(--secondary-text-color);
+    border: solid 1px var(--color-field-border);
     border-radius: 4px;
     margin: 0 6px 6px;
   }

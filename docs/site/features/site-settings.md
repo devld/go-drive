@@ -14,25 +14,24 @@ The web interface currently includes `en-US`, `zh-CN`, and `ko-KR`. It selects a
 ## Name, styles, and scripts
 
 - **Application name** changes the page title and branding text.
-- **Global CSS** provides theme overrides.
+- **Global CSS** provides theme overrides. See [Custom Themes](./custom-themes.html)
+  for the supported variables, selectors, and complete examples.
 - **Injected script** executes JavaScript on every visitor's page.
 
-A short CSS example:
+A minimal CSS example:
 
 ```css
-@media (prefers-color-scheme: light) {
-  :root {
-    --primary-bg-color: rgba(255, 255, 255, 0.9) !important;
-    --secondary-bg-color: rgba(255, 255, 255, 0.75) !important;
-  }
-
-  body {
-    background: #eef3f8;
-  }
+:root {
+  --color-accent: #2563eb;
+  --color-accent-strong: #2563eb;
+  --radius-control: 10px;
 }
 ```
 
-Internal class names and CSS variables are not a stable API. Check custom styles after upgrading. Injected scripts have the same browser privileges as the site and can read login state and page content; use only trusted code.
+Documented semantic variables and `data-ui` / `data-surface` selectors are the
+theme API. Internal class names are implementation details. Injected scripts
+have the same browser privileges as the site and can read login state and page
+content; use only trusted code.
 
 ## File preview
 

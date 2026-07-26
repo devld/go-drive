@@ -19,7 +19,6 @@
       <div class="base-dialog__footer">
         <SimpleButton
           v-if="cancelText"
-          class="base-dialog__button-cancel"
           :loading="loading === 'cancel'"
           :type="cancelType"
           :disabled="!!loading" 
@@ -28,7 +27,6 @@
         >
         <SimpleButton
           ref="confirmButton"
-          class="base-dialog__button-ok"
           :loading="loading === 'confirm'"
           :type="confirmType"
           :disabled="!!loading || confirmDisabled"

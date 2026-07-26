@@ -1,9 +1,9 @@
 .markdown-body {
-  color: var(--primary-text-color);
+  color: var(--color-text);
 
   h1,
   h2 {
-    border-bottom-color: var(--border-color);
+    border-bottom-color: var(--color-border);
   }
 
   h1,
@@ -21,26 +21,26 @@
 
   .highlight pre,
   pre {
-    background-color: var(--secondary-bg-color);
+    background-color: var(--color-bg-elevated);
   }
 
   kbd {
-    background-color: var(--secondary-bg-color);
-    color: var(--primary-text-color);
-    border-color: var(--border-color);
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text);
+    border-color: var(--color-border);
   }
 
   table td,
   table th {
-    background-color: var(--secondary-bg-color);
-    border-color: var(--border-color);
+    background-color: var(--color-bg-elevated);
+    border-color: var(--color-border);
   }
 
   blockquote {
-    border-left-color: var(--border-color);
+    border-left-color: var(--color-border);
   }
 
   hr {
-    background-color: var(--secondary-bg-color);
+    background-color: var(--color-bg-elevated);
   }
 }

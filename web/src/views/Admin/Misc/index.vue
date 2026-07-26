@@ -25,7 +25,7 @@ import SearchIndex from './SearchIndex.vue'
 
     &:not(:first-child) {
       border-top: solid 1px;
-      border-color: var(--border-color);
+      border-color: var(--color-border);
     }
   }
 
