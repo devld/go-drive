@@ -55,10 +55,10 @@ See the [drive overview](./drives/) for configuration details and capability lim
 
 > On macOS, `Ctrl` refers to the <kbd>⌃ Control</kbd> key (not <kbd>⌘ Command</kbd>), and `Alt` refers to the <kbd>⌥ Option</kbd> key.
 
-- `Ctrl` / `Shift` + click: select multiple entries.
+- Click the icon or thumbnail at the left of a row to toggle that entry's selection. `Ctrl` + click also toggles entries; `Shift` + click in a row selects a range from the most recently selected entry.
 - Copy files in your operating system and press `Ctrl+V`: paste-upload them.
 - `Alt` + click a file: download it directly.
-- Hold `Ctrl` while dragging an entry to copy it; hold `Shift` to create a path mount (administrators only).
+- Drag entries onto a writable folder to move them. If the source cannot be moved, they are copied instead. Hold `Ctrl` to copy; hold `Shift` to create a path mount (administrators only).
 - Use the file context menu (long-press on mobile) for permissions, mounts, rename, and other operations.
 
 ## Getting help

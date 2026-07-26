@@ -364,13 +364,25 @@
       "create_folder": "创建文件夹",
       "upload_tasks": "上传任务",
       "tasks_status": "上传 {p}",
-      "drop_tip": "拖放到这里以上传",
+      "drop_tip": "释放以上传到 {target}",
       "invalid_filename": "无效的文件名",
       "invalid_folder_name": "无效的文件夹名称",
       "confirm_stop_task": "确认停止该任务？",
       "confirm_remove_task": "确认移除该任务，不可恢复？",
       "resolve_file": "{n} 个文件/文件夹...",
       "upload_clipboard": "上传来自剪贴板的文件？"
+    },
+    "entry_drag": {
+      "dragging_action": "正在拖动",
+      "move_action": "移动",
+      "copy_action": "复制",
+      "link_action": "挂载",
+      "target_prompt": "选择目标文件夹",
+      "source_count": "等 {n} 项",
+      "not_directory": "只能放到文件夹中",
+      "target_readonly": "目标文件夹不可写",
+      "same_target": "项目已在这个文件夹中",
+      "descendant": "不能将文件夹放到自身内部"
     },
     "login": {
       "username": "用户名",

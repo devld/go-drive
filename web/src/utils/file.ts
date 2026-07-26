@@ -93,6 +93,7 @@ export function getFileEntries(
 }
 
 export function isDataTransferHasFiles(dt: DataTransfer) {
+  if (Array.from(dt.types).includes('Files')) return true
   for (let i = 0; i < dt.items.length; i++) {
     const item = dt.items[i]
     if (item.kind === 'file') return true
@@ -101,15 +102,21 @@ export function isDataTransferHasFiles(dt: DataTransfer) {
 }
 
 export function getDataTransferFiles(dt: DataTransfer) {
-  const items: FileSystemEntry[] = []
+  const entries: FileSystemEntry[] = []
+  const files: File[] = []
   for (let i = 0; i < dt.items.length; i++) {
     const item = dt.items[i]
     if (item.kind === 'file') {
       const entry = item.webkitGetAsEntry()
-      if (entry) items.push(entry)
+      if (entry) {
+        entries.push(entry)
+      } else {
+        const file = item.getAsFile()
+        if (file) files.push(file)
+      }
     }
   }
-  return items
+  return { entries, files }
 }
 
 export function triggerDownloadFile(url: string, filename: string) {

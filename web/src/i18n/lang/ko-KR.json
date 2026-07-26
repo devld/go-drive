@@ -364,13 +364,25 @@
       "create_folder": "폴더 만들기",
       "upload_tasks": "업로드 작업",
       "tasks_status": "작업 {p}",
-      "drop_tip": "여기에 파일을 놓으면 업로드됩니다",
+      "drop_tip": "{target}에 업로드하려면 놓으세요",
       "invalid_filename": "잘못된 파일 이름입니다",
       "invalid_folder_name": "잘못된 폴더 이름입니다",
       "confirm_stop_task": "이 작업을 중지하시겠습니까?",
       "confirm_remove_task": "이 작업을 제거하시겠습니까? 되돌릴 수 없습니다.",
       "resolve_file": "파일/디렉터리 {n}개...",
       "upload_clipboard": "클립보드의 파일을 업로드하시겠습니까?"
+    },
+    "entry_drag": {
+      "dragging_action": "드래그 중",
+      "move_action": "이동",
+      "copy_action": "복사",
+      "link_action": "마운트",
+      "target_prompt": "대상 폴더 선택",
+      "source_count": "등 총 {n}개 항목",
+      "not_directory": "항목은 폴더에만 놓을 수 있습니다",
+      "target_readonly": "대상 폴더가 읽기 전용입니다",
+      "same_target": "항목이 이미 이 폴더에 있습니다",
+      "descendant": "폴더를 자기 자신 안에 넣을 수 없습니다"
     },
     "login": {
       "username": "사용자 이름",

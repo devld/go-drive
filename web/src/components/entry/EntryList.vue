@@ -7,8 +7,10 @@
       <PathBar
         :path="path"
         :get-link="getLink"
+        :drop-state="dragState"
         @path-change="emit('update:path', $event)"
         @dragover="onDragOver"
+        @dragleave="onDragLeave"
         @drop="onDrop"
       />
       <div v-if="showToggles" class="entry-list__toggles">
@@ -50,9 +52,12 @@
           :entry="parentDirEntry"
           :get-link="getLink"
           :draggable="draggable"
+          :class="getEntryDropTargetClass(dragState, parentDirEntry.path)"
           @click="entryClicked"
           @dragstart="onDragStart"
+          @dragend="onDragEnd"
           @dragover="onDragOver"
+          @dragleave="onDragLeave"
           @drop="onDrop"
         >
           <EntryItem
@@ -68,7 +73,10 @@
         v-for="entry in sortedEntries"
         :key="entry.path"
         class="entry-list__item"
-        :class="{ selected: selectionMap[entry.path] }"
+        :class="{
+          selected: selectionMap[entry.path],
+          dragging: dragSourceMap[entry.path],
+        }"
       >
         <EntryLink
           :ref="addEntryRef"
@@ -76,9 +84,12 @@
           :get-link="getLink"
           :data-name="entry.name"
           :draggable="draggable"
+          :class="getEntryDropTargetClass(dragState, entry.path)"
           @click="entryClicked"
           @dragstart="onDragStart"
+          @dragend="onDragEnd"
           @dragover="onDragOver"
+          @dragleave="onDragLeave"
           @drop="onDrop"
         >
           <EntryItem
@@ -103,6 +114,7 @@
     <div v-if="sortedEntries.length === 0" class="entry-list__empty">
       {{ $t('app.empty_list') }}
     </div>
+    <EntryDragStatus :state="dragState" />
   </div>
 </template>
 <script setup lang="ts">
@@ -118,14 +130,22 @@ import {
   watch,
 } from 'vue'
 import type { EntryEventData, GetLinkFn, ListViewMode } from '.'
+import EntryDragStatus from './EntryDragStatus.vue'
 import EntryLink from './EntryLink.vue'
 import { SORTS_METHOD, sortModes } from './sort'
-import { useEntryDarg, EntryDragData } from './useDrag'
+import {
+  EntryDragData,
+  getEntryDropTargetClass,
+  useEntryDrag,
+} from './useDrag'
 
 const props = defineProps({
   path: {
     type: String,
     required: true,
+  },
+  currentEntry: {
+    type: Object as PropType<Entry>,
   },
   entries: {
     type: Array as PropType<Entry[]>,
@@ -212,6 +232,9 @@ const sortedEntries = computed(() => {
 const isRootPath = computed(() => isRootPathFn(props.path))
 const selectionMap = computed(() =>
   mapOf(selected.value, (entry) => entry.path)
+)
+const dragSourceMap = computed(() =>
+  mapOf(dragState.value.entries, (entry) => entry.path)
 )
 
 watch(
@@ -310,7 +333,11 @@ const iconClicked = (entry: Entry, e: MouseEvent) => {
   if (!props.selectable) return
   e.stopPropagation()
   e.preventDefault()
-  toggleSelect(entry)
+  if (e.shiftKey && selected.value.length > 0) {
+    toggleSelectRange(entry)
+  } else {
+    toggleSelect(entry)
+  }
 }
 
 const parentIconClicked = (e: MouseEvent) => {
@@ -336,10 +363,27 @@ const focusOnEntry = async (name: string) => {
   dom?.focus()
 }
 
-const { onDragStart, onDragOver, onDrop } = useEntryDarg(
+const {
+  dragState,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+} = useEntryDrag(
   computed(() => props.draggable),
   selected,
-  (d) => emit('drag-action', d)
+  computed(() => props.currentEntry),
+  (d) => emit('drag-action', d),
+  (entries) => emit('update:selection', entries),
+  (entries) =>
+    entries.flatMap((entry) => {
+      const link = entriesRef.find(
+        (element) => element.$el?.dataset.name === entry.name
+      )
+      const item = link?.$el?.closest('.entry-list__item')
+      return item instanceof HTMLElement ? [item] : []
+    })
 )
 
 useHotKey(toggleViewMode, 't')
@@ -363,6 +407,33 @@ defineExpose({
 .entry-list {
   .entry-link {
     color: var(--primary-text-color);
+    transition:
+      background-color 0.15s,
+      box-shadow 0.15s,
+      opacity 0.15s;
+  }
+
+  .entry-link--drop-valid {
+    background-color: var(--select-bg-color) !important;
+    box-shadow: inset 0 0 0 2px var(--btn-bg-color-default);
+  }
+
+  .entry-link--drop-invalid {
+    background-color: var(--invalid-bg-color) !important;
+    box-shadow: inset 0 0 0 2px var(--btn-bg-color-danger);
+    cursor: not-allowed;
+  }
+
+  .entry-link--drop-move {
+    cursor: move;
+  }
+
+  .entry-link--drop-copy {
+    cursor: copy;
+  }
+
+  .entry-link--drop-link {
+    cursor: alias;
   }
 }
 
@@ -480,6 +551,38 @@ defineExpose({
   &.selected > .entry-link {
     background-color: var(--select-bg-color);
   }
+
+  &.dragging > .entry-link {
+    opacity: 0.55;
+  }
+}
+
+.entry-drag-image {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.entry-drag-image__stack {
+  position: absolute;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.06));
+}
+
+.entry-drag-image__layer {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 8px;
+  opacity: 0.97;
+}
+
+.entry-drag-image__item {
+  position: relative;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  animation: none;
+  border-radius: 8px;
+  background-color: var(--primary-bg-color);
 }
 
 .entry-list__menu-button {

@@ -4,6 +4,7 @@
       v-if="!error"
       ref="entryListEl"
       :path="loadedPath"
+      :current-entry="currentEntry"
       :entries="filteredEntries"
       :sort="sort"
       :selection="selection"
@@ -91,6 +92,7 @@ const emit = defineEmits<{
 
 const currentPath = ref<string | null>(null)
 const loadedPath = ref('')
+const currentEntry = ref<Entry>()
 const entries = ref<Entry[]>([])
 const error = ref<HttpError | null>(null)
 const entryListEl = ref<InstanceType<EntryListType> | null>(null)
@@ -115,12 +117,14 @@ const setSortBy = (sort: string) => entryListEl.value!.setSortBy(sort)
 const loadEntries = async () => {
   if (task) task.cancel()
   error.value = null
+  currentEntry.value = undefined
   emit('loading', true)
   try {
     const path = currentPath.value
     task = listEntries(path!)
     const loadedEntries = await task
     const thisEntry = loadedEntries[0]
+    currentEntry.value = thisEntry
     entries.value = loadedEntries.slice(1)
     loadedPath.value = path!
     emit('entries-load', {

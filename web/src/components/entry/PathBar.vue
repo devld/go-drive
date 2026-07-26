@@ -3,12 +3,14 @@
     <li v-for="s in segments" :key="s.path" class="path-bar__segment">
       <EntryLink
         class="path-bar__path"
+        :class="getEntryDropTargetClass(dropState, s.path)"
         :path="s.path"
         :get-link="getLink"
         :draggable="draggable"
         @click="pathChange"
         @dragstart="onDragStart"
         @dragover="onDragOver"
+        @dragleave="onDragLeave"
         @drop="onDrop"
         >{{ s.name }}</EntryLink
       >
@@ -19,6 +21,10 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { EntryEventData, GetLinkFn } from '.'
+import {
+  EntryDragState,
+  getEntryDropTargetClass,
+} from './useDrag'
 
 const props = defineProps({
   path: {
@@ -31,6 +37,9 @@ const props = defineProps({
   draggable: {
     type: Boolean,
   },
+  dropState: {
+    type: Object as PropType<EntryDragState>,
+  },
 })
 
 const { t } = useI18n()
@@ -39,6 +48,7 @@ const emit = defineEmits<{
   (e: 'update:path', data: EntryEventData): void
   (e: 'dragstart', data: EntryEventData): void
   (e: 'dragover', data: EntryEventData): void
+  (e: 'dragleave', data: EntryEventData): void
   (e: 'drop', data: EntryEventData): void
 }>()
 
@@ -54,6 +64,7 @@ const segments = computed(() => {
 const pathChange = (e: EntryEventData) => emit('update:path', e)
 const onDragStart = (e: EntryEventData) => emit('dragstart', e)
 const onDragOver = (e: EntryEventData) => emit('dragover', e)
+const onDragLeave = (e: EntryEventData) => emit('dragleave', e)
 const onDrop = (e: EntryEventData) => emit('drop', e)
 </script>
 <style lang="scss">
@@ -81,5 +92,6 @@ const onDrop = (e: EntryEventData) => emit('drop', e)
   cursor: pointer;
   text-decoration: none;
   color: unset;
+  border-radius: 4px;
 }
 </style>

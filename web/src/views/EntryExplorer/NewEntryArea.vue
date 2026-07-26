@@ -80,7 +80,16 @@
     />
 
     <div v-if="dropZoneActive" class="drop-zone-indicator">
-      {{ t('p.new_entry.drop_tip') }}
+      <div class="drop-zone-indicator__content">
+        <Icon name="upload-file" />
+        <strong>
+          {{
+            t('p.new_entry.drop_tip', {
+              target: currentPathLabel,
+            })
+          }}
+        </strong>
+      </div>
     </div>
   </div>
 </template>
@@ -100,7 +109,7 @@ import {
   wrapFile,
 } from '@/utils/file'
 import { alert, confirm, input, loading } from '@/utils/ui-utils'
-import { onBeforeMount, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeMount, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TaskManager from './TaskManager/index.vue'
 
@@ -133,6 +142,9 @@ const uploadStatus = ref({ completed: 0, total: 0 })
 const tasks = ref<UploadTaskItem[]>([])
 
 const dropZoneActive = ref(false)
+const currentPathLabel = computed(() =>
+  props.path ? `/${props.path}` : t('app.root_path')
+)
 
 const fileEl = ref<HTMLInputElement | null>(null)
 
@@ -160,15 +172,20 @@ const handleDataTransfer = async (
   before?: () => Promise<void>
 ) => {
   try {
-    const files = getDataTransferFiles(dt)
-    if (files.length === 0) return
+    const droppedFiles = getDataTransferFiles(dt)
+    if (
+      droppedFiles.entries.length === 0 &&
+      droppedFiles.files.length === 0
+    ) {
+      return
+    }
 
     await before?.()
 
     loading(true)
     let p: Promise<void> = Promise.resolve()
 
-    const entries = await resolveEntries(files, (total) => {
+    const entries = await resolveEntries(droppedFiles.entries, (total) => {
       loading({
         text: t('p.new_entry.resolve_file', { n: total }),
         cancelType: 'warning',
@@ -179,7 +196,10 @@ const handleDataTransfer = async (
       return p
     })
 
-    submitUploadTasks(entries)
+    submitUploadTasks([
+      ...droppedFiles.files.map(wrapFile),
+      ...entries,
+    ])
   } catch {
     // ignore
   } finally {
@@ -323,35 +343,44 @@ const onWindowUnload = (e: BeforeUnloadEvent) => {
   }
 }
 
-let dragLeaveTimeout: number
-
 const onDragEnter = (e: DragEvent) => {
   if (props.readonly) return
+  if (!e.dataTransfer) return
+  if (!isDataTransferHasFiles(e.dataTransfer)) return
 
+  externalDragDepth += 1
+  toggleDropZoneActive(true)
+}
+
+const onDragOver = (e: DragEvent) => {
+  if (props.readonly) return
   if (!e.dataTransfer) return
   if (!isDataTransferHasFiles(e.dataTransfer)) return
 
   e.dataTransfer.dropEffect = 'copy'
-
   e.preventDefault()
-  clearTimeout(dragLeaveTimeout)
   toggleDropZoneActive(true)
 }
 
-const onDragLeave = (e: DragEvent) => {
-  e.preventDefault()
-  clearTimeout(dragLeaveTimeout)
-  dragLeaveTimeout = setTimeout(() => {
+let externalDragDepth = 0
+
+const onDragLeave = () => {
+  if (!dropZoneActive.value) return
+  externalDragDepth = Math.max(0, externalDragDepth - 1)
+  if (externalDragDepth === 0) {
     toggleDropZoneActive(false)
-  }, 100) as unknown as number
+  }
 }
 
 const onItemsDropped = (e: DragEvent) => {
+  externalDragDepth = 0
   toggleDropZoneActive(false)
-  if (e.dataTransfer) {
-    e.preventDefault()
-    handleDataTransfer(e.dataTransfer)
-  }
+  if (props.readonly) return
+  if (!e.dataTransfer) return
+  if (!isDataTransferHasFiles(e.dataTransfer)) return
+
+  e.preventDefault()
+  handleDataTransfer(e.dataTransfer)
 }
 
 const onPaste = (e: ClipboardEvent) => {
@@ -374,7 +403,8 @@ onBeforeUnmount(() => {
   uploadManager.off('taskChanged', onTasksChanged)
   window.removeEventListener('beforeunload', onWindowUnload)
 
-  window.removeEventListener('dragover', onDragEnter)
+  window.removeEventListener('dragenter', onDragEnter)
+  window.removeEventListener('dragover', onDragOver)
   window.removeEventListener('dragleave', onDragLeave)
   window.removeEventListener('drop', onItemsDropped)
 
@@ -388,7 +418,8 @@ onBeforeMount(() => {
 
   window.addEventListener('beforeunload', onWindowUnload)
 
-  window.addEventListener('dragover', onDragEnter)
+  window.addEventListener('dragenter', onDragEnter)
+  window.addEventListener('dragover', onDragOver)
   window.addEventListener('dragleave', onDragLeave)
   window.addEventListener('drop', onItemsDropped)
 
@@ -457,15 +488,35 @@ onBeforeMount(() => {
     right: 8px;
     bottom: 8px;
     z-index: 1000;
-    border: solid 2px #66ccff;
-    border-radius: 6px;
+    border: solid 2px var(--btn-bg-color-default);
+    border-radius: 10px;
     pointer-events: none;
-    background-color: rgba(102, 204, 255, 0.4);
+    background-color: rgba(64, 158, 255, 0.18);
 
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 24px;
+    padding: 24px;
+  }
+
+  .drop-zone-indicator__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    max-width: min(520px, calc(100vw - 64px));
+    padding: 24px 32px;
+    border-radius: 12px;
+    background-color: var(--secondary-bg-color);
+    color: var(--primary-text-color);
+    box-shadow: var(--dialog-content-shadow);
+    text-align: center;
+    font-size: 20px;
+
+    .icon {
+      width: 56px;
+      height: 56px;
+    }
   }
 
   @media screen and (max-width: 600px) {

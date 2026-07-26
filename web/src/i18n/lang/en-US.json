@@ -364,13 +364,25 @@
       "create_folder": "Create folder",
       "upload_tasks": "Upload Tasks",
       "tasks_status": "Tasks {p}",
-      "drop_tip": "Drop files here to upload",
+      "drop_tip": "Drop to upload to {target}",
       "invalid_filename": "Invalid filename",
       "invalid_folder_name": "Invalid folder name",
       "confirm_stop_task": "Stop this task?",
       "confirm_remove_task": "Remove this task, cannot be undone?",
       "resolve_file": "{n} files/directories...",
       "upload_clipboard": "Uploading files from the clipboard?"
+    },
+    "entry_drag": {
+      "dragging_action": "Dragging",
+      "move_action": "Move",
+      "copy_action": "Copy",
+      "link_action": "Mount",
+      "target_prompt": "Choose a destination",
+      "source_count": "and {n} items total",
+      "not_directory": "Items can only be dropped onto a folder",
+      "target_readonly": "The destination folder is read-only",
+      "same_target": "The items are already in this folder",
+      "descendant": "A folder cannot be placed inside itself"
     },
     "login": {
       "username": "Username",

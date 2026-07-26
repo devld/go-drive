@@ -4,7 +4,9 @@
     :href="href"
     :draggable="draggable ? 'true' : undefined"
     @dragstart="onDragStart"
+    @dragend="onDragEnd"
     @dragover="onDragOver"
+    @dragleave="onDragLeave"
     @drop="onDrop"
     @click="entryClicked"
   >
@@ -37,7 +39,9 @@ const router = useRouter()
 const emit = defineEmits<{
   (e: 'click', data: EntryEventData): void
   (e: 'dragstart', data: EntryEventData): void
+  (e: 'dragend', data: EntryEventData): void
   (e: 'dragover', data: EntryEventData): void
+  (e: 'dragleave', data: EntryEventData): void
   (e: 'drop', data: EntryEventData): void
 }>()
 
@@ -74,8 +78,24 @@ const onDragStart = (event: DragEvent) => {
   })
 }
 
+const onDragEnd = (event: DragEvent) => {
+  emit('dragend', {
+    entry: props.entry,
+    path: props.path,
+    event,
+  })
+}
+
 const onDragOver = (event: DragEvent) => {
   emit('dragover', {
+    entry: props.entry,
+    path: props.path,
+    event,
+  })
+}
+
+const onDragLeave = (event: DragEvent) => {
+  emit('dragleave', {
     entry: props.entry,
     path: props.path,
     event,
