@@ -3,7 +3,7 @@ title: 自定义主题
 description: 使用受支持的 CSS 主题接口定制 go-drive 的颜色、毛玻璃、圆角、动画、背景和组件细节。
 lang: zh-CN
 translation_key: custom-themes
-source_hash: 3f106313949b53b4a2bbfec3b5e087664057c87460a04e44782b02f460064993
+source_hash: c7bd85087ab97ad5e7d1810ce62d30bd390087daec13a243956eda9b9cdb8b5a
 ---
 
 # 自定义主题
@@ -167,60 +167,314 @@ source_hash: 3f106313949b53b4a2bbfec3b5e087664057c87460a04e44782b02f460064993
 [aria-expanded='true'] {}
 ```
 
-## 完整毛玻璃主题示例
+## 可直接使用的主题预设
 
-下面的示例增加固定装饰画布、半透明表面、更明显的毛玻璃、圆角控件和首页标记：
+以下预设同时支持自动明暗模式和显式 `data-theme="light"` / `"dark"`。展开预设后点击代码块右上角的复制按钮，再把完整样式粘贴到“全局 CSS”中。
+
+### 纸片风格
+
+使用暖色纸张、横线画布、小圆角、衬线字体、墨水强调色和错位硬阴影，形成多层文具纸片效果。
+
+::: details 展开完整纸片主题 CSS
 
 ```css
-@media (prefers-color-scheme: light) {
+:root {
+  --paper-canvas: #e8dec4;
+  --paper-surface: #fffaf0;
+  --paper-elevated: #fffdf7;
+  --paper-hover: #f2e7ce;
+  --paper-focus: #f7ecd3;
+  --paper-selected: #ead9b4;
+  --paper-invalid: #f2d4c8;
+  --paper-text: #332d24;
+  --paper-text-muted: #746957;
+  --paper-text-disabled: #9a907f;
+  --paper-border: #cbbd9c;
+  --paper-accent: #8b3f32;
+  --paper-accent-strong: #8b3f32;
+  --paper-rule: rgba(91, 112, 127, 0.16);
+  --paper-margin: rgba(173, 79, 70, 0.2);
+  --paper-shadow: rgba(76, 61, 39, 0.26);
+
+  --color-bg-canvas: var(--paper-canvas);
+  --color-bg-surface: var(--paper-surface);
+  --color-bg-elevated: var(--paper-elevated);
+  --color-bg-glass: var(--paper-surface);
+  --color-bg-hover: var(--paper-hover);
+  --color-bg-focus: var(--paper-focus);
+  --color-bg-selected: var(--paper-selected);
+  --color-bg-invalid: var(--paper-invalid);
+  --color-bg-table-header: var(--paper-hover);
+  --color-text: var(--paper-text);
+  --color-text-muted: var(--paper-text-muted);
+  --color-text-disabled: var(--paper-text-disabled);
+  --color-border: var(--paper-border);
+  --color-field-bg: var(--paper-elevated);
+  --color-field-bg-disabled: var(--paper-hover);
+  --color-field-border: var(--paper-border);
+  --color-glass-border: var(--paper-border);
+  --color-accent: var(--paper-accent);
+  --color-accent-strong: var(--paper-accent-strong);
+  --color-overlay: rgba(51, 45, 36, 0.48);
+  --color-loading-overlay: var(--paper-surface);
+  --color-focus-ring: var(--paper-accent);
+  --color-progress-track: var(--paper-hover);
+  --color-progress-track-paused: var(--paper-selected);
+  --color-progress-value: var(--paper-accent);
+
+  --radius-control: 3px;
+  --radius-popover: 4px;
+  --radius-dialog: 6px;
+  --radius-glass: 4px;
+  --radius-glass-compact: 3px;
+  --backdrop-filter-field: none;
+  --backdrop-filter-glass: none;
+  --shadow-control: 2px 2px 0 var(--paper-shadow);
+  --shadow-elevated: 6px 7px 0 var(--paper-shadow);
+}
+
+@media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --color-bg-canvas: transparent;
-    --color-bg-surface: rgba(255, 255, 255, 0.4);
-    --color-bg-elevated: rgba(255, 255, 255, 0.72);
-    --color-bg-glass: rgba(255, 255, 255, 0.58);
-    --color-bg-hover: rgba(255, 255, 255, 0.42);
-    --color-text-muted: rgb(61, 61, 61);
-    --color-text-disabled: #666;
-    --color-field-bg: transparent;
-    --color-glass-border: rgba(255, 255, 255, 0.82);
-    --backdrop-filter-field: blur(14px) saturate(150%);
-    --backdrop-filter-glass: blur(32px) saturate(180%);
-    --radius-control: 8px;
-    --radius-popover: 12px;
-    --radius-dialog: 16px;
+    --paper-canvas: #1d1a16;
+    --paper-surface: #29251f;
+    --paper-elevated: #302b24;
+    --paper-hover: #383127;
+    --paper-focus: #40372b;
+    --paper-selected: #51422f;
+    --paper-invalid: #50322c;
+    --paper-text: #eee2c8;
+    --paper-text-muted: #b8aa90;
+    --paper-text-disabled: #827866;
+    --paper-border: #665a47;
+    --paper-accent: #e48d72;
+    --paper-accent-strong: #9f4e3d;
+    --paper-rule: rgba(151, 174, 185, 0.1);
+    --paper-margin: rgba(220, 119, 101, 0.16);
+    --paper-shadow: rgba(0, 0, 0, 0.42);
   }
+}
+
+:root[data-theme='dark'] {
+  --paper-canvas: #1d1a16;
+  --paper-surface: #29251f;
+  --paper-elevated: #302b24;
+  --paper-hover: #383127;
+  --paper-focus: #40372b;
+  --paper-selected: #51422f;
+  --paper-invalid: #50322c;
+  --paper-text: #eee2c8;
+  --paper-text-muted: #b8aa90;
+  --paper-text-disabled: #827866;
+  --paper-border: #665a47;
+  --paper-accent: #e48d72;
+  --paper-accent-strong: #9f4e3d;
+  --paper-rule: rgba(151, 174, 185, 0.1);
+  --paper-margin: rgba(220, 119, 101, 0.16);
+  --paper-shadow: rgba(0, 0, 0, 0.42);
 }
 
 [data-ui='app-canvas'] {
-  background-color: rgb(0, 77, 101);
-  background-image: radial-gradient(
-    circle at left center,
-    rgba(64, 158, 255, 0.2),
-    rgba(103, 194, 58, 0.2)
-  );
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
+  background-color: var(--color-bg-canvas);
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      transparent 52px,
+      var(--paper-margin) 52px,
+      var(--paper-margin) 53px,
+      transparent 53px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 27px,
+      var(--paper-rule) 27px,
+      var(--paper-rule) 28px
+    );
   background-attachment: fixed;
 }
 
-@media (prefers-color-scheme: light) {
-  [data-ui='handler-header'] {
-    background-color: var(--color-bg-elevated);
-  }
-
-  [data-ui='admin-page'] {
-    background-color: rgba(255, 255, 255, 0.8);
-  }
-
+[data-ui='app'] {
+  font-family: Georgia, 'Noto Serif', 'Noto Serif CJK SC', serif;
 }
 
-[data-ui='path-segment'][data-root] [data-ui='path-link']::before {
-  content: '🏠';
+[data-ui='app-header'] {
+  border-bottom: 1px solid var(--paper-border);
+}
+
+[data-surface='glass'] {
+  outline: 1px solid var(--paper-border);
+  outline-offset: -1px;
+  box-shadow: var(--shadow-elevated);
+}
+
+[data-ui='button'] {
+  letter-spacing: 0.02em;
+}
+
+[data-ui='app-header'] [data-ui='button'] {
+  padding: 4px 8px;
+  border-bottom: 1px solid currentColor;
+}
+
+:is(
+  [data-ui='app-header'] [data-ui='button'],
+  [data-ui='button'][data-variant='primary'],
+  [data-ui='button'][data-variant='info'],
+  [data-ui='button'][data-variant='success'],
+  [data-ui='button'][data-variant='warning'],
+  [data-ui='button'][data-variant='danger']
+):active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
 }
 ```
 
-如果显式强制使用明亮主题，请把明亮主题变量块复制到 `:root[data-theme="light"]` 下。
+:::
+
+### 复古终端
+
+使用荧光屏配色、等宽字体、扫描线、方形面板和清晰边框，把文件管理器变成克制的命令终端显示界面。
+
+::: details 展开完整复古终端主题 CSS
+
+```css
+:root {
+  --terminal-canvas: #e7eadf;
+  --terminal-surface: #f4f6ed;
+  --terminal-elevated: #fbfcf6;
+  --terminal-hover: #dce5d4;
+  --terminal-focus: #d3e5cc;
+  --terminal-selected: #c7ddbd;
+  --terminal-invalid: #ead1cb;
+  --terminal-text: #17251a;
+  --terminal-muted: #526456;
+  --terminal-disabled: #879188;
+  --terminal-border: #66806a;
+  --terminal-accent: #226b36;
+  --terminal-accent-strong: #226b36;
+  --terminal-scanline: rgba(34, 107, 54, 0.07);
+  --terminal-glow: rgba(34, 107, 54, 0.18);
+
+  --color-bg-canvas: var(--terminal-canvas);
+  --color-bg-surface: var(--terminal-surface);
+  --color-bg-elevated: var(--terminal-elevated);
+  --color-bg-glass: var(--terminal-surface);
+  --color-bg-hover: var(--terminal-hover);
+  --color-bg-focus: var(--terminal-focus);
+  --color-bg-selected: var(--terminal-selected);
+  --color-bg-invalid: var(--terminal-invalid);
+  --color-bg-table-header: var(--terminal-hover);
+  --color-text: var(--terminal-text);
+  --color-text-muted: var(--terminal-muted);
+  --color-text-disabled: var(--terminal-disabled);
+  --color-border: var(--terminal-border);
+  --color-field-bg: var(--terminal-elevated);
+  --color-field-bg-disabled: var(--terminal-hover);
+  --color-field-border: var(--terminal-border);
+  --color-glass-border: var(--terminal-border);
+  --color-accent: var(--terminal-accent);
+  --color-accent-strong: var(--terminal-accent-strong);
+  --color-on-accent: #fff;
+  --color-overlay: rgba(23, 37, 26, 0.56);
+  --color-loading-overlay: var(--terminal-canvas);
+  --color-focus-ring: var(--terminal-accent);
+  --color-progress-track: var(--terminal-hover);
+  --color-progress-track-paused: var(--terminal-selected);
+  --color-progress-value: var(--terminal-accent);
+
+  --radius-control: 0;
+  --radius-popover: 0;
+  --radius-dialog: 0;
+  --radius-glass: 0;
+  --radius-glass-compact: 0;
+  --backdrop-filter-field: none;
+  --backdrop-filter-glass: none;
+  --shadow-control: 2px 2px 0 var(--terminal-border);
+  --shadow-elevated: 4px 4px 0 var(--terminal-border);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --terminal-canvas: #050b07;
+    --terminal-surface: #09130c;
+    --terminal-elevated: #0c1a10;
+    --terminal-hover: #102719;
+    --terminal-focus: #12321e;
+    --terminal-selected: #164326;
+    --terminal-invalid: #351718;
+    --terminal-text: #9df7a9;
+    --terminal-muted: #64ad70;
+    --terminal-disabled: #37643f;
+    --terminal-border: #2e8b45;
+    --terminal-accent: #72f28a;
+    --terminal-accent-strong: #287d3d;
+    --terminal-scanline: rgba(114, 242, 138, 0.055);
+    --terminal-glow: rgba(114, 242, 138, 0.28);
+  }
+}
+
+:root[data-theme='dark'] {
+  --terminal-canvas: #050b07;
+  --terminal-surface: #09130c;
+  --terminal-elevated: #0c1a10;
+  --terminal-hover: #102719;
+  --terminal-focus: #12321e;
+  --terminal-selected: #164326;
+  --terminal-invalid: #351718;
+  --terminal-text: #9df7a9;
+  --terminal-muted: #64ad70;
+  --terminal-disabled: #37643f;
+  --terminal-border: #2e8b45;
+  --terminal-accent: #72f28a;
+  --terminal-accent-strong: #287d3d;
+  --terminal-scanline: rgba(114, 242, 138, 0.055);
+  --terminal-glow: rgba(114, 242, 138, 0.28);
+}
+
+[data-ui='app-canvas'] {
+  background-color: var(--color-bg-canvas);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    var(--terminal-scanline) 3px,
+    var(--terminal-scanline) 4px
+  );
+  background-attachment: fixed;
+}
+
+[data-ui='app'] {
+  font-family: 'Cascadia Mono', 'SFMono-Regular', Consolas, monospace;
+  text-shadow: 0 0 8px var(--terminal-glow);
+}
+
+[data-surface='glass'] {
+  outline: 1px solid var(--terminal-border);
+  outline-offset: -1px;
+}
+
+[data-ui='app-header'] {
+  border-bottom: 3px double var(--terminal-border);
+}
+
+[data-ui='button'] {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+[data-ui='app-header'] [data-ui='button'] {
+  padding: 4px 8px;
+  border: 1px solid currentColor;
+  background-color: var(--color-bg-surface);
+}
+
+[data-ui='path-segment'][data-root] [data-ui='path-link']::before {
+  content: '> ';
+}
+```
+
+:::
 
 ## 故障排查
 
