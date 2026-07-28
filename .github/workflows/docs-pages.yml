@@ -1,11 +1,6 @@
 name: Deploy documentation to Pages
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - docs/site/**
   workflow_dispatch:
 
 permissions:
