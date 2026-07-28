@@ -53,12 +53,14 @@ See the [drive overview](./drives/) for configuration details and capability lim
 
 ## Useful shortcuts
 
-> On macOS, `Ctrl` refers to the <kbd>⌃ Control</kbd> key (not <kbd>⌘ Command</kbd>), and `Alt` refers to the <kbd>⌥ Option</kbd> key.
+> File-browser shortcuts use <kbd>⌘ Command</kbd> on macOS and <kbd>Ctrl</kbd> on other platforms. `Alt` refers to the <kbd>⌥ Option</kbd> key on macOS.
 
-- Click the icon or thumbnail at the left of a row to toggle that entry's selection. `Ctrl` + click also toggles entries; `Shift` + click in a row selects a range from the most recently selected entry.
-- Copy files in your operating system and press `Ctrl+V`: paste-upload them.
+- Press `Command+K` on macOS or `Ctrl+K` elsewhere to open file search.
+- Click the icon or thumbnail at the left of a row to toggle that entry's selection. `Command`/`Ctrl` + click also toggles entries; `Shift` + click in a row selects a range from the most recently selected entry.
+- Press `Command+A` on macOS or `Ctrl+A` elsewhere to select or clear all entries.
+- Copy files in your operating system and paste them with `Command+V` on macOS or `Ctrl+V` elsewhere to upload them.
 - `Alt` + click a file: download it directly.
-- Drag entries onto a writable folder to move them. If the source cannot be moved, they are copied instead. Hold `Ctrl` to copy; hold `Shift` to create a path mount (administrators only).
+- Drag entries onto a writable folder to move them. If the source cannot be moved, they are copied instead. Hold `Command` on macOS or `Ctrl` elsewhere to copy; hold `Shift` to create a path mount (administrators only).
 - Use the file context menu (long-press on mobile) for permissions, mounts, rename, and other operations.
 
 ## Getting help

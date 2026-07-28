@@ -4,7 +4,7 @@ titleTemplate: false
 description: 使用一台自托管 go-drive 服务器统一管理本地文件、S3、WebDAV、FTP、SFTP、OneDrive 和 Google Drive。
 lang: zh-CN
 translation_key: home
-source_hash: 67a89ae7a73193d381b3c0b720d888f7bbaba90603bfc9f50b2947d4181eb7a0
+source_hash: eca33cdda3533f2d5539f0f0c315870b01d9802919dd3c7ee42e3dd5d7f6afca
 ---
 
 # go-drive
@@ -54,12 +54,14 @@ docker run -d --name go-drive \
 
 ## 常用操作提示
 
-> macOS 上 `Ctrl` 指 <kbd>⌃ Control</kbd> 键（不是 <kbd>⌘ Command</kbd>），`Alt` 指 <kbd>⌥ Option</kbd> 键。
+> 文件浏览器快捷键在 macOS 上使用 <kbd>⌘ Command</kbd>，在其他平台上使用 <kbd>Ctrl</kbd>；macOS 上的 `Alt` 指 <kbd>⌥ Option</kbd> 键。
 
-- 单击条目左侧的图标或缩略图可切换该条目的选中状态。`Ctrl` + 单击也可切换选中；按住 `Shift` 单击，可从最近选中的条目开始范围选择。
-- 从系统复制文件后按 `Ctrl+V`：粘贴上传。
+- macOS 按 `Command+K`、其他平台按 `Ctrl+K`，可打开文件搜索。
+- 单击条目左侧的图标或缩略图可切换该条目的选中状态。`Command`/`Ctrl` + 单击也可切换选中；按住 `Shift` 单击，可从最近选中的条目开始范围选择。
+- macOS 按 `Command+A`、其他平台按 `Ctrl+A`，可全选或取消全选条目。
+- 从系统复制文件后，macOS 按 `Command+V`、其他平台按 `Ctrl+V`，可粘贴上传。
 - `Alt` + 单击文件：直接下载。
-- 将条目拖到可写文件夹中可执行移动；源位置不允许移动时会改为复制。拖拽时按 `Ctrl`：复制；按 `Shift`：创建路径挂载（管理员）。
+- 将条目拖到可写文件夹中可执行移动；源位置不允许移动时会改为复制。拖拽时，macOS 按 `Command`、其他平台按 `Ctrl`：复制；按 `Shift`：创建路径挂载（管理员）。
 - 文件右键菜单（移动端长按）：权限、挂载、重命名等操作。
 
 ## 获取帮助

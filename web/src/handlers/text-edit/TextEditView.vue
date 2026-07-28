@@ -42,6 +42,7 @@ import TextEditor from '@/components/TextEditor/index.vue'
 import { Entry } from '@/types'
 import { entryMatches, filename as filenameFn, filenameExt } from '@/utils'
 import { HttpError } from '@/utils/http'
+import { isPrimaryModifierPressed } from '@/utils/platform'
 import { alert } from '@/utils/ui-utils'
 import { computed, nextTick, ref, watch } from 'vue'
 import { EntryHandlerContext } from '../types'
@@ -136,7 +137,13 @@ const changeSaveState = (saved: boolean) => {
 }
 
 const onKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 's' && (e.ctrlKey || e.metaKey) && !readonly.value) {
+  if (
+    e.key === 's' &&
+    isPrimaryModifierPressed(e) &&
+    !e.altKey &&
+    !e.shiftKey &&
+    !readonly.value
+  ) {
     e.preventDefault()
     saveFile()
   }

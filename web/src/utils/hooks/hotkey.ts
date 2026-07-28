@@ -1,4 +1,5 @@
 import { onBeforeUnmount, onMounted } from 'vue'
+import { isMacOS } from '@/utils/platform'
 
 interface HotKey_ {
   handler: (this: HTMLElement, e: KeyboardEvent) => void
@@ -50,17 +51,31 @@ export const useHotKey = (
   key: string | string[] | Fn1<KeyboardEvent, boolean>,
   {
     ctrl,
+    meta,
+    primary,
     alt,
     shift,
     el,
   }: {
     ctrl?: boolean
+    meta?: boolean
+    primary?: boolean
     alt?: boolean
     shift?: boolean
     el?: HTMLElement | (() => HTMLElement)
   } = {}
 ) => {
+  if (primary && (ctrl || meta)) {
+    throw new Error('primary cannot be combined with ctrl or meta')
+  }
+
+  const macOS = isMacOS()
+  if (primary) {
+    ctrl = !macOS
+    meta = macOS
+  }
   ctrl = !!ctrl
+  meta = !!meta
   alt = !!alt
   shift = !!shift
 
@@ -81,6 +96,7 @@ export const useHotKey = (
     el_._hotkey.events.push({
       auxMatched: (e) =>
         !(+ctrl! ^ +e.ctrlKey) &&
+        !(+meta! ^ +e.metaKey) &&
         !(+alt! ^ +e.altKey!) &&
         !(+shift! ^ +e.shiftKey),
       keyMatched: genKeyMatched(key),

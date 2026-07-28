@@ -2,6 +2,7 @@ import { useAppStore } from '@/store'
 import { Entry } from '@/types'
 import { isParentPath, pathClean, pathJoin } from '@/utils'
 import { addEntryIntoDataTransfer, DATA_TYPE_ENTRY } from '@/utils/entry'
+import { isPrimaryModifierPressed } from '@/utils/platform'
 import { Ref, ref } from 'vue'
 import { EntryEventData } from '.'
 
@@ -66,7 +67,7 @@ const emptyDragState = (): EntryDragState => ({
 })
 
 const getModifiers = (event: DragEvent): EntryDragModifiers => ({
-  copy: event.ctrlKey,
+  copy: isPrimaryModifierPressed(event),
   link: event.shiftKey,
 })
 
