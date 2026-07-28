@@ -18,7 +18,6 @@
         @keydown.stop
         @focus="onInputFocus"
       />
-      <span class="search-panel__search-input-key">F</span>
     </div>
     <div v-if="showing" class="search-panel__result" @scroll="onResultScroll">
       <div v-if="result.length === 0" class="search-panel__tip">
@@ -158,7 +157,7 @@ const setActive = (active: boolean) => {
 useHotKey((e) => {
   e.preventDefault()
   setActive(true)
-}, 'f')
+}, 'k', { primary: true })
 
 useHotKey(
   () => {
@@ -195,14 +194,6 @@ defineExpose({ setActive })
 
   &.active {
     box-shadow: var(--shadow-elevated);
-
-    .search-panel__search {
-      padding-right: 16px;
-    }
-
-    .search-panel__search-input-key {
-      display: none;
-    }
   }
 }
 
@@ -212,28 +203,7 @@ defineExpose({ setActive })
 }
 
 .search-panel__search {
-  position: relative;
-  padding: 0 36px 0 16px;
-  transition: padding-right var(--motion-duration-normal)
-    var(--motion-easing-standard);
-}
-
-.search-panel__search-input-key {
-  position: absolute;
-  display: block;
-  top: 50%;
-  right: 16px;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  line-height: 16px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--color-text-muted);
-  -webkit-user-select: none;
-  user-select: none;
-  border-radius: 2px;
-  border: solid 1px var(--color-field-border);
+  padding: 0 16px;
 }
 
 .search-panel__search-input {

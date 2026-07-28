@@ -125,6 +125,7 @@
 import { Entry } from '@/types'
 import { isRootPath as isRootPathFn, mapOf, pathClean, pathJoin } from '@/utils'
 import { useHotKey } from '@/utils/hooks/hotkey'
+import { isPrimaryModifierPressed } from '@/utils/platform'
 import {
   ComponentPublicInstance,
   computed,
@@ -254,8 +255,8 @@ watch(sortedEntries, (entries) => emit('entries-change', entries))
 
 const entryClicked = (e: EntryEventData) => {
   const event = e.event as MouseEvent | undefined
-  if (event?.ctrlKey) {
-    // toggle selection if ctrl key is pressed
+  if (event && isPrimaryModifierPressed(event)) {
+    // Toggle selection with Command on macOS and Ctrl elsewhere.
     event.preventDefault()
     if (e.entry!.name === '..') return
     toggleSelect(e.entry!)
@@ -397,7 +398,7 @@ useHotKey(
     e.preventDefault()
   },
   'a',
-  { ctrl: true }
+  { primary: true }
 )
 
 defineExpose({
@@ -456,7 +457,7 @@ defineExpose({
   display: flex;
   gap: 8px;
   margin-left: auto;
-  align-items: flex-start;
+  align-items: center;
 
   .icon {
     color: var(--color-text-muted);
