@@ -163,15 +163,11 @@ func (m *Maker) createThumbnailEntry(entry types.IEntry) (ThumbnailEntry, error)
 	externalURL := m.apiPath
 
 	if entry.Type().IsDir() {
-		externalURL += "/entries/"
+		externalURL += "/list"
 	} else {
-		externalURL += "/content/"
+		externalURL += "/download"
 	}
-	pathURL, e := url.Parse(entry.Path())
-	if e != nil {
-		return nil, e
-	}
-	externalURL += pathURL.String()
+	query := url.Values{"path": []string{entry.Path()}}
 
 	ako, ok := entry.Meta().Props["accessKey"]
 	ak := ""
@@ -181,8 +177,9 @@ func (m *Maker) createThumbnailEntry(entry types.IEntry) (ThumbnailEntry, error)
 		}
 	}
 	if ak != "" {
-		externalURL += "?" + common.SignatureQueryKey + "=" + url.QueryEscape(ak)
+		query.Set(common.SignatureQueryKey, ak)
 	}
+	externalURL += "?" + query.Encode()
 
 	return &thumbnailEntry{
 		IEntry:           entry,

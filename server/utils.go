@@ -61,7 +61,12 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequ
 
 		var username string
 
-		path := utils.CleanPath(c.Param("path"))
+		path, e := getQueryPath(c, "path")
+		if e != nil {
+			_ = c.Error(e)
+			c.Abort()
+			return
+		}
 
 		parts := strings.Split(signature, ".")
 		signature = parts[0]
@@ -97,6 +102,14 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequ
 		SetPrincipal(c, principal)
 		c.Next()
 	}
+}
+
+func getQueryPath(c *gin.Context, key string) (string, error) {
+	path, exists := c.GetQuery(key)
+	if !exists {
+		return "", err.NewBadRequestError("missing query parameter: " + key)
+	}
+	return utils.CleanPath(path), nil
 }
 
 func MakeSignature(signer *utils.Signer, path, username string, ttl time.Duration) string {

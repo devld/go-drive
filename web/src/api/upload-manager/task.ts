@@ -119,8 +119,8 @@ export default abstract class UploadTask {
   }
 
   protected uploadCallback<T = any>(data: O<string>): Promise<T> {
-    return http.post(`/upload/${this.task.path}`, data, {
-      params: { override: true, size: this.task.size },
+    return http.post('/prepare-upload', data, {
+      params: { path: this.task.path, override: true, size: this.task.size },
     })
   }
 

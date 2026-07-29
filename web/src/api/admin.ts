@@ -24,19 +24,19 @@ export function getUsers() {
 }
 
 export function getUser(username: string) {
-  return http.get<User>(`/admin/user/${username}`)
+  return http.get<User>(`/admin/users/${username}`)
 }
 
 export function createUser(user: Partial<User>) {
-  return http.post<User>('/admin/user', user)
+  return http.post<User>('/admin/users', user)
 }
 
 export function updateUser(username: string, user: Partial<User>) {
-  return http.put<void>(`/admin/user/${username}`, user)
+  return http.put<void>(`/admin/users/${username}`, user)
 }
 
 export function deleteUser(username: string) {
-  return http.delete<void>(`/admin/user/${username}`)
+  return http.delete<void>(`/admin/users/${username}`)
 }
 
 export function getGroups() {
@@ -44,19 +44,19 @@ export function getGroups() {
 }
 
 export function getGroup(name: string) {
-  return http.get<Group>(`/admin/group/${name}`)
+  return http.get<Group>(`/admin/groups/${name}`)
 }
 
 export function createGroup(group: Partial<Group>) {
-  return http.post<Group>('/admin/group', group)
+  return http.post<Group>('/admin/groups', group)
 }
 
 export function updateGroup(name: string, group: Partial<Group>) {
-  return http.put<void>(`/admin/group/${name}`, group)
+  return http.put<void>(`/admin/groups/${name}`, group)
 }
 
 export function deleteGroup(name: string) {
-  return http.delete<void>(`/admin/group/${name}`)
+  return http.delete<void>(`/admin/groups/${name}`)
 }
 
 export function getDriveFactories() {
@@ -68,23 +68,23 @@ export function getDrives() {
 }
 
 export function createDrive(drive: Partial<Drive>) {
-  return http.post<Drive>('/admin/drive', drive)
+  return http.post<Drive>('/admin/drives', drive)
 }
 
 export function updateDrive(name: string, drive: Partial<Drive>) {
-  return http.put<void>(`/admin/drive/${name}`, drive)
+  return http.put<void>(`/admin/drives/${name}`, drive)
 }
 
 export function deleteDrive(name: string) {
-  return http.delete<void>(`/admin/drive/${name}`)
+  return http.delete<void>(`/admin/drives/${name}`)
 }
 
 export function getDriveInitConfig(name: string) {
-  return http.post<DriveInitConfig>(`/admin/drive/${name}/init-config`)
+  return http.post<DriveInitConfig>(`/admin/drives/${name}/init-config`)
 }
 
 export function initDrive(name: string, data: O<string>) {
-  return http.post(`/admin/drive/${name}/init`, data)
+  return http.post(`/admin/drives/${name}/init`, data)
 }
 
 export function reloadDrives() {
@@ -92,36 +92,41 @@ export function reloadDrives() {
 }
 
 export function getPermissions(path: string) {
-  return http.get<PathPermission[]>(`/admin/path-permissions/${path}`)
+  return http.get<PathPermission[]>('/admin/path-permissions', {
+    params: { path },
+  })
 }
 
 export function savePermissions(path: string, permissions: O[]) {
-  return http.put<void>(`/admin/path-permissions/${path}`, permissions)
+  return http.put<void>('/admin/path-permissions', permissions, {
+    params: { path },
+  })
 }
 
 export function getAllPathMeta() {
-  return http.get<PathMeta[]>('/admin/path-meta')
+  return http.get<PathMeta[]>('/admin/path-metadata')
 }
 
 export function savePathMeta(path: string, data: Partial<PathMeta>) {
-  return http.post<void>(`/admin/path-meta/${path}`, data)
+  return http.put<void>('/admin/path-metadata', data, { params: { path } })
 }
 
 export function deletePathMeta(path: string) {
-  return http.delete<void>(`/admin/path-meta/${path}`)
+  return http.delete<void>('/admin/path-metadata', { params: { path } })
 }
 
 export function mountPaths(pathTo: string, mounts: PathMountSource[]) {
-  const encodedPath = pathTo.split('/').map(encodeURIComponent).join('/')
-  return http.post<void>(`/admin/mount/${encodedPath}`, mounts)
+  return http.put<void>('/admin/path-mounts', mounts, {
+    params: { path: pathTo },
+  })
 }
 
 export function cleanPermissionsAndMounts() {
-  return http.post<number>('/admin/clean-permissions-mounts')
+  return http.post<number>('/admin/maintenance/path-rules/cleanup')
 }
 
 export function cleanDriveCache(name: string) {
-  return http.delete<void>(`/admin/drive-cache/${name}`)
+  return http.delete<void>(`/admin/drives/${name}/cache`)
 }
 
 export function loadStats() {
@@ -129,7 +134,9 @@ export function loadStats() {
 }
 
 export function searchIndex(path: string) {
-  return http.post<Task<void>>(`/admin/search/index/${path}`)
+  return http.put<Task<void>>('/admin/search-indexes', null, {
+    params: { path },
+  })
 }
 
 export function setOptions(options: O<string>) {
@@ -143,7 +150,7 @@ export function getOptions(...keys: string[]) {
 }
 
 export function getJobDefinitions() {
-  return http.get<JobDefinitions>('/admin/jobs/definitions')
+  return http.get<JobDefinitions>('/admin/job-definitions')
 }
 
 export function getJobs() {
@@ -163,14 +170,14 @@ export function deleteJob(id: number) {
 }
 
 export function getJobExecutions(jobId: number) {
-  return http.get<JobExecution[]>('/admin/jobs/executions', {
+  return http.get<JobExecution[]>('/admin/job-executions', {
     params: { jobId },
   })
 }
 
 export function executeJobSync(jobId: number) {
   return streamHttp.post<StreamHttpResponse<Task>>(
-    '/admin/jobs/execution',
+    '/admin/job-executions',
     null,
     { params: { jobId } }
   )
@@ -178,49 +185,47 @@ export function executeJobSync(jobId: number) {
 
 export function jobScriptEvalSync(code: string) {
   return streamHttp.post<StreamHttpResponse<Task>>(
-    '/admin/jobs/script-eval',
+    '/admin/job-script-evaluations',
     code,
     { headers: { 'content-type': 'text/plain' } }
   )
 }
 
 export function cancelJobExecution(id: number) {
-  return http.put<void>(`/admin/jobs/execution/${id}/cancel`)
+  return http.post<void>(`/admin/job-executions/${id}/cancel`)
 }
 
 export function deleteJobExecution(id: number) {
-  return http.delete<void>(`/admin/jobs/execution/${id}`)
+  return http.delete<void>(`/admin/job-executions/${id}`)
 }
 
 export function deleteJobExecutions(jobId: number) {
-  return http.delete<void>('/admin/jobs/execution', {
+  return http.delete<void>('/admin/job-executions', {
     params: { jobId },
   })
 }
 
 export function listAvailableDriveScripts(force?: boolean) {
-  return http.get<AvailableDriveScript[]>('/admin/scripts/available', {
+  return http.get<AvailableDriveScript[]>('/admin/drive-scripts/available', {
     params: { force },
   })
 }
 
 export function listInstalledDriveScripts() {
-  return http.get<InstalledDriveScript[]>('/admin/scripts/installed')
+  return http.get<InstalledDriveScript[]>('/admin/drive-scripts/installed')
 }
 
 export function installDriveScript(name: string) {
-  return http.post<void>(`/admin/scripts/install/${encodeURIComponent(name)}`)
+  return http.put<void>(`/admin/drive-scripts/${encodeURIComponent(name)}`)
 }
 
 export function uninstallDriveScript(name: string) {
-  return http.delete<void>(
-    `/admin/scripts/uninstall/${encodeURIComponent(name)}`
-  )
+  return http.delete<void>(`/admin/drive-scripts/${encodeURIComponent(name)}`)
 }
 
 export function getDriveScriptContent(name: string) {
   return http.get<DriveScriptContent>(
-    `/admin/scripts/content/${encodeURIComponent(name)}`
+    `/admin/drive-scripts/${encodeURIComponent(name)}/content`
   )
 }
 
@@ -228,7 +233,10 @@ export function saveDriveScriptContent(
   name: string,
   content: Partial<DriveScriptContent>
 ) {
-  return http.put(`/admin/scripts/content/${encodeURIComponent(name)}`, content)
+  return http.put(
+    `/admin/drive-scripts/${encodeURIComponent(name)}/content`,
+    content
+  )
 }
 
 export function getAllFileBuckets() {
@@ -236,13 +244,13 @@ export function getAllFileBuckets() {
 }
 
 export function createFileBucket(bucket: Partial<FileBucket>) {
-  return http.post<FileBucket>('/admin/file-bucket', bucket)
+  return http.post<FileBucket>('/admin/file-buckets', bucket)
 }
 
 export function updateFileBucket(name: string, bucket: Partial<FileBucket>) {
-  return http.put<void>(`/admin/file-bucket/${name}`, bucket)
+  return http.put<void>(`/admin/file-buckets/${name}`, bucket)
 }
 
 export function deleteFileBucket(name: string) {
-  return http.delete<void>(`/admin/file-bucket/${name}`)
+  return http.delete<void>(`/admin/file-buckets/${name}`)
 }

@@ -42,25 +42,25 @@ func InitAdminRoutes(
 	// list users
 	r.GET("/users", ur.listUsers)
 	// get user by username
-	r.GET("/user/:username", ur.getUser)
+	r.GET("/users/:username", ur.getUser)
 	// create user
-	r.POST("/user", ur.createUser)
+	r.POST("/users", ur.createUser)
 	// update user
-	r.PUT("/user/:username", ur.updateUser)
+	r.PUT("/users/:username", ur.updateUser)
 	// delete user
-	r.DELETE("/user/:username", ur.deleteUser)
+	r.DELETE("/users/:username", ur.deleteUser)
 
 	gr := &groupsRoute{groupDAO}
 	// list groups
 	r.GET("/groups", gr.listGroups)
 	// get group and it's users
-	r.GET("/group/:name", gr.getGroup)
+	r.GET("/groups/:name", gr.getGroup)
 	// create group
-	r.POST("/group", gr.createGroup)
+	r.POST("/groups", gr.createGroup)
 	// update group
-	r.PUT("/group/:name", gr.updateGroup)
+	r.PUT("/groups/:name", gr.updateGroup)
 	// delete group
-	r.DELETE("/group/:name", gr.deleteGroup)
+	r.DELETE("/groups/:name", gr.deleteGroup)
 
 	dr := &drivesRoute{config, driveDAO, driveDataDAO, rootDrive}
 	// get drive factories
@@ -68,15 +68,15 @@ func InitAdminRoutes(
 	// get drives
 	r.GET("/drives", dr.getDrives)
 	// add drive
-	r.POST("/drive", dr.createDrive)
+	r.POST("/drives", dr.createDrive)
 	// update drive
-	r.PUT("/drive/:name", dr.updateDrive)
+	r.PUT("/drives/:name", dr.updateDrive)
 	// delete drive
-	r.DELETE("/drive/:name", dr.deleteDrive)
+	r.DELETE("/drives/:name", dr.deleteDrive)
 	// get drive initialization information
-	r.POST("/drive/:name/init-config", dr.getDriveInitConfig)
+	r.POST("/drives/:name/init-config", dr.getDriveInitConfig)
 	// init drive
-	r.POST("/drive/:name/init", dr.doDriveInit)
+	r.POST("/drives/:name/init", dr.doDriveInit)
 	// reload drives
 	r.POST("/drives/reload", dr.reloadDrives)
 
@@ -90,16 +90,16 @@ func InitAdminRoutes(
 		bus:           bus,
 	}
 	// get by path
-	r.GET("/path-permissions/*path", cr.getPathPermissions)
+	r.GET("/path-permissions", cr.getPathPermissions)
 	// save path permissions
-	r.PUT("/path-permissions/*path", cr.savePathPermissions)
+	r.PUT("/path-permissions", cr.savePathPermissions)
 
-	// get all path meta
-	r.GET("/path-meta", cr.getAllPathMeta)
-	// create or add path meta
-	r.POST("/path-meta/*path", cr.savePathMeta)
-	// delete path meta by path
-	r.DELETE("/path-meta/*path", cr.deletePathMeta)
+	// get all path metadata
+	r.GET("/path-metadata", cr.getAllPathMeta)
+	// create or update path metadata
+	r.PUT("/path-metadata", cr.savePathMeta)
+	// delete path metadata by path
+	r.DELETE("/path-metadata", cr.deletePathMeta)
 
 	// save options
 	r.PUT("/options", cr.saveOptions)
@@ -107,39 +107,39 @@ func InitAdminRoutes(
 	r.GET("/options/:keys", cr.getOptions)
 
 	// save mounts
-	r.POST("/mount/*to", cr.savePathMounts)
+	r.PUT("/path-mounts", cr.savePathMounts)
 
 	mr := &miscRoute{access, permissionDAO, pathMountDAO, rootDrive, search, ch}
 	// index files
-	r.POST("/search/index/*path", mr.updateSearcherIndexes)
+	r.PUT("/search-indexes", mr.updateSearcherIndexes)
 	// clean all PathPermission and PathMount that is point to invalid path
-	r.POST("/clean-permissions-mounts", mr.cleanupInvalidPathPermissionsAndMounts)
+	r.POST("/maintenance/path-rules/cleanup", mr.cleanupInvalidPathPermissionsAndMounts)
 	// get service stats
 	r.GET("/stats", mr.getSystemStats)
 	// clean drive cache
-	r.DELETE("/drive-cache/:name", mr.clearDriveCache)
+	r.DELETE("/drives/:name/cache", mr.clearDriveCache)
 
 	// region script drives
 
-	scriptDriveRoutesGroup := r.Group("/scripts")
+	scriptDriveRoutesGroup := r.Group("/drive-scripts")
 	sdr := &scriptDrivesRoute{config: config}
 	// get available drives from repository
 	scriptDriveRoutesGroup.GET("/available", sdr.getAvailableDrives)
 	// get installed drives
 	scriptDriveRoutesGroup.GET("/installed", sdr.getInstalledDrives)
 	// install drive
-	scriptDriveRoutesGroup.POST("/install/:name", sdr.installDrive)
+	scriptDriveRoutesGroup.PUT("/:name", sdr.installDrive)
 	// uninstall drive
-	scriptDriveRoutesGroup.DELETE("/uninstall/:name", sdr.uninstallDrive)
+	scriptDriveRoutesGroup.DELETE("/:name", sdr.uninstallDrive)
 	// get drive script content
-	scriptDriveRoutesGroup.GET("/content/:name", sdr.getDriveScriptContent)
+	scriptDriveRoutesGroup.GET("/:name/content", sdr.getDriveScriptContent)
 	// update drive script content
-	scriptDriveRoutesGroup.PUT("/content/:name", sdr.saveDriveScriptContent)
+	scriptDriveRoutesGroup.PUT("/:name/content", sdr.saveDriveScriptContent)
 
 	jobsRoutesGroup := r.Group("/jobs")
 	jr := &jobsRoute{ch, runner, jobExecutor, jobDAO}
 	// get all job definitions
-	jobsRoutesGroup.GET("/definitions", jr.getJobsDefinitions)
+	r.GET("/job-definitions", jr.getJobsDefinitions)
 	// get all created jobs
 	jobsRoutesGroup.GET("", jr.getJobs)
 	// create job
@@ -149,27 +149,27 @@ func InitAdminRoutes(
 	// delete job
 	jobsRoutesGroup.DELETE("/:id", jr.deleteJob)
 	// get all executions
-	jobsRoutesGroup.GET("/executions", jr.getAllExecutions)
+	r.GET("/job-executions", jr.getAllExecutions)
 	// execute a job
-	jobsRoutesGroup.POST("/execution", jr.executeJob)
+	r.POST("/job-executions", jr.executeJob)
 	// cancel job execution
-	jobsRoutesGroup.PUT("/execution/:id/cancel", jr.cancelJobExecution)
+	r.POST("/job-executions/:id/cancel", jr.cancelJobExecution)
 	// delete job execution
-	jobsRoutesGroup.DELETE("/execution/:id", jr.deleteJobExecution)
+	r.DELETE("/job-executions/:id", jr.deleteJobExecution)
 	// delete job executions by jobId
-	jobsRoutesGroup.DELETE("/execution", jr.deleteJobExecutionsByJobId)
+	r.DELETE("/job-executions", jr.deleteJobExecutionsByJobId)
 	// execute job script code
-	jobsRoutesGroup.POST("/script-eval", jr.scriptEval)
+	r.POST("/job-script-evaluations", jr.scriptEval)
 
 	fbr := &fileBucketConfigRoute{fileBucketDAO}
 	// get all file buckets
 	r.GET("/file-buckets", fbr.getAllBuckets)
 	// create file bucket
-	r.POST("/file-bucket", fbr.createBucket)
+	r.POST("/file-buckets", fbr.createBucket)
 	// update file bucket
-	r.PUT("/file-bucket/:name", fbr.updateBucket)
+	r.PUT("/file-buckets/:name", fbr.updateBucket)
 	// delete file bucket
-	r.DELETE("/file-bucket/:name", fbr.deleteBucket)
+	r.DELETE("/file-buckets/:name", fbr.deleteBucket)
 
 	return nil
 }

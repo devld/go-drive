@@ -50,10 +50,14 @@ class DispatcherUploadTask extends UploadTask {
     let uploadConfig: any
     try {
       uploadConfig = await http.post(
-        `/upload/${this.task.path}`,
+        '/prepare-upload',
         {},
         {
-          params: { override: this.task.override, size: this.task.size },
+          params: {
+            path: this.task.path,
+            override: this.task.override,
+            size: this.task.size,
+          },
         }
       )
     } catch (e: any) {
