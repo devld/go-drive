@@ -29,9 +29,9 @@ func InitCommonRoutes(
 
 	authR := r.Group("/", TokenAuth(tokenStore))
 	// get task
-	authR.GET("/task/:id", cr.getTask)
+	authR.GET("/tasks/:id", cr.getTask)
 	// cancel and delete task
-	authR.DELETE("/task/:id", cr.cancelAndDeleteTask)
+	authR.DELETE("/tasks/:id", cr.cancelAndDeleteTask)
 
 	authAdmin := authR.Group("/", AdminGroupRequired())
 	// get tasks

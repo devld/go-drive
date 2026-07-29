@@ -16,8 +16,8 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
     const data: any = await this._request(
       {
         method: 'post',
-        url: '/chunk',
-        params: { size, chunkSize: 5 * 1024 * 1024 },
+        url: '/chunk-uploads',
+        data: { size, chunkSize: 5 * 1024 * 1024 },
       },
       http
     )
@@ -34,7 +34,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
     return this._request(
       {
         method: 'put',
-        url: `/chunk/${this._uploadId}/${seq}`,
+        url: `/chunk-uploads/${this._uploadId}/chunks/${seq}`,
         data: blob,
         headers: { 'Content-Type': 'application/octet-stream' },
         transformRequest: (d) => d,
@@ -52,8 +52,9 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
     this._mergeLock = true
     try {
       return await taskDone(
-        http.post<Task>(`/chunk-content/${this.task.path}`, null, {
-          params: { id: this._uploadId, override: this.task.override ? '1' : '' },
+        http.post<Task>(`/chunk-uploads/${this._uploadId}/completion`, {
+          path: this.task.path,
+          override: this.task.override,
         }),
         (task) => {
           this._mergeTask = task
@@ -90,7 +91,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
   override _cleanup() {
     super._cleanup()
     if (!this.isStatus(STATUS_COMPLETED)) {
-      http.delete(`/chunk/${this._uploadId}`)
+      http.delete(`/chunk-uploads/${this._uploadId}`)
     }
   }
 }

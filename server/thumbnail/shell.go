@@ -42,7 +42,8 @@ func init() {
 //
 // GO_DRIVE_ENTRY_MOD_TIME: timestamp, modTime of this entry
 //
-// GO_DRIVE_ENTRY_URL: URL of the file content or folder children (e.g. /content/a/a.txt or /entries/a)
+// GO_DRIVE_ENTRY_URL: URL of the file content or folder children
+// (e.g. /download?path=a/a.txt or /list?path=a)
 type shellThumbnailTypeHandler struct {
 	command string
 	args    []string

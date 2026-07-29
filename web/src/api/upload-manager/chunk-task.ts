@@ -195,8 +195,12 @@ export default abstract class ChunkUploadTask extends UploadTask {
     return this._request(
       {
         method: 'post',
-        url: `/upload/${this.task.path}`,
-        params: { override: true, size: this.task.size },
+        url: '/prepare-upload',
+        params: {
+          path: this.task.path,
+          override: true,
+          size: this.task.size,
+        },
         data,
       },
       http

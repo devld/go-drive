@@ -28,7 +28,11 @@ type configRoute struct {
 }
 
 func (cr *configRoute) getPathPermissions(c *gin.Context) {
-	path := utils.CleanPath(c.Param("path"))
+	path, e := getQueryPath(c, "path")
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	permissions, e := cr.permissionDAO.GetByPath(path)
 	if e != nil {
 		_ = c.Error(e)
@@ -38,7 +42,11 @@ func (cr *configRoute) getPathPermissions(c *gin.Context) {
 }
 
 func (cr *configRoute) savePathPermissions(c *gin.Context) {
-	path := utils.CleanPath(c.Param("path"))
+	path, e := getQueryPath(c, "path")
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	permissions := make([]types.PathPermission, 0)
 	if e := c.Bind(&permissions); e != nil {
 		_ = c.Error(e)
@@ -65,7 +73,11 @@ func (cr *configRoute) getAllPathMeta(c *gin.Context) {
 }
 
 func (cr *configRoute) savePathMeta(c *gin.Context) {
-	path := utils.CleanPath(c.Param("path"))
+	path, e := getQueryPath(c, "path")
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	data := types.PathMeta{}
 	if e := c.Bind(&data); e != nil {
 		_ = c.Error(e)
@@ -79,7 +91,11 @@ func (cr *configRoute) savePathMeta(c *gin.Context) {
 }
 
 func (cr *configRoute) deletePathMeta(c *gin.Context) {
-	path := utils.CleanPath(c.Param("path"))
+	path, e := getQueryPath(c, "path")
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	if e := cr.pathMetaDAO.Delete(path); e != nil {
 		_ = c.Error(e)
 		return
@@ -88,7 +104,11 @@ func (cr *configRoute) deletePathMeta(c *gin.Context) {
 
 func (cr *configRoute) savePathMounts(c *gin.Context) {
 	principal := GetPrincipal(c)
-	to := utils.CleanPath(c.Param("to"))
+	to, e := getQueryPath(c, "path")
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	src := make([]mountSource, 0)
 	if e := c.Bind(&src); e != nil {
 		_ = c.Error(e)

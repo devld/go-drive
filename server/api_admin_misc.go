@@ -4,7 +4,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/registry"
 	"go-drive/common/types"
-	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server/search"
 	"go-drive/storage"
@@ -23,7 +22,11 @@ type miscRoute struct {
 }
 
 func (mr *miscRoute) updateSearcherIndexes(c *gin.Context) {
-	root := utils.CleanPath(c.Param("path"))
+	root, e := getQueryPath(c, "path")
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
 	t, e := mr.search.TriggerIndexAll(root, true)
 	if e != nil {
 		_ = c.Error(e)

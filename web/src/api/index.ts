@@ -30,25 +30,27 @@ export interface FileURLParams {
 }
 
 export function listEntries(path: string) {
-  return http.get<Entry[]>(`/entries/${path}`, {
+  return http.get<Entry[]>('/list', {
     headers: pathPasswordHeaders(path),
+    params: { path },
   })
 }
 
 export function getEntry(path: string) {
-  return http.get<Entry>(`/entry/${path}`, {
+  return http.get<Entry>('/stat', {
     headers: pathPasswordHeaders(path),
+    params: { path },
   })
 }
 
 export function searchEntries(path: string, q: string, next?: number) {
-  return http.get<SearchResult>(`/search/${path}`, {
-    params: { q, next },
+  return http.get<SearchResult>('/search', {
+    params: { path, q, next },
   })
 }
 
 function _fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
-  const query = {} as O<any>
+  const query = { path } as O<any>
   if (meta?.accessKey) {
     query[ACCESS_KEY] = meta.accessKey
   }
@@ -72,11 +74,11 @@ function _fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
     }
   }
   if (params?.noCache) query.r = Math.random()
-  return buildURL(`/content/${path}`, query)!
+  return buildURL('/download', query)!
 }
 
 export function zipUrl() {
-  return `${API_PATH}/zip`
+  return `${API_PATH}/archive`
 }
 
 export function fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
@@ -84,11 +86,11 @@ export function fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
 }
 
 export function fileThumbnail(path: string, meta: EntryMeta) {
-  const query = {} as O<any>
+  const query = { path } as O<any>
   if (meta?.accessKey) {
     query[ACCESS_KEY] = meta.accessKey
   }
-  return buildURL(`${API_PATH}/thumbnail/${path}`, query)!
+  return buildURL(`${API_PATH}/thumbnail`, query)!
 }
 
 const textHttp = createHttp({
@@ -111,11 +113,11 @@ export function getContent(
 }
 
 export function makeDir(path: string) {
-  return http.post<Entry>(`/mkdir/${path}`)
+  return http.post<Entry>('/mkdir', null, { params: { path } })
 }
 
 export function deleteEntry(path: string) {
-  return http.delete<Task<void>>(`/entry/${path}`)
+  return http.post<Task<void>>('/delete', null, { params: { path } })
 }
 
 export function copyEntry(from: string, to: string, override?: boolean) {
@@ -137,11 +139,11 @@ export function getTasks<T>(group: string) {
 }
 
 export function getTask<T>(id: string) {
-  return http.get<Task<T>>(`/task/${id}`)
+  return http.get<Task<T>>(`/tasks/${id}`)
 }
 
 export function deleteTask(id: string) {
-  return http.delete<void>(`/task/${id}`)
+  return http.delete<void>(`/tasks/${id}`)
 }
 
 /// auth
