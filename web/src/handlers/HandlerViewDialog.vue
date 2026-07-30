@@ -1,5 +1,11 @@
 <template>
-  <DialogView class="entry-handler-dialog" eager :show="showing" :fullscreen="dialogStyle.fullscreen">
+  <DialogView
+    class="entry-handler-dialog"
+    eager
+    :show="showing"
+    :fullscreen="dialogStyle.fullscreen"
+    :accessible-label="dialogLabel"
+  >
     <HandlerView ref="view" v-bind="events" />
   </DialogView>
 </template>
@@ -30,6 +36,7 @@ const events = {
 
 const view = ref<InstanceType<typeof HandlerView> | null>(null)
 const showing = computed(() => view.value?.showing)
+const dialogLabel = ref('')
 
 const handle: EntryHandlerViewHandle = {
   get handler() {
@@ -52,6 +59,9 @@ const handle: EntryHandlerViewHandle = {
     handlerName = handlerName_
     opt = opt_
     data = data_
+    dialogLabel.value = Array.isArray(data_.entry)
+      ? data_.entry.map((entry) => entry.name).join(', ')
+      : data_.entry.name
 
     const handler = getHandler(handlerName)
     dialogStyle.fullscreen = handler?.style?.fullscreen ?? false

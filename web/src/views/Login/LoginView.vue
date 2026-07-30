@@ -36,6 +36,13 @@ const loginForm = computed<FormItem[]>(() => {
   const fields = (loginProvider.value?.form ?? []).map((item) => ({
     ...item,
     label: undefined,
+    ariaLabel: item.label,
+    autocomplete:
+      item.field === 'username'
+        ? 'username'
+        : item.field === 'password'
+          ? 'current-password'
+          : undefined,
     placeholder: item.placeholder || item.label,
     class: 'login-field',
   }))

@@ -25,22 +25,17 @@
       </template>
     </div>
     <div v-if="!disabled && addable">
-      <SimpleDropdown v-model="addDropdownShowing" position="bottom-right">
-        <SimpleButton icon="add" native-type="button">{{
-          forms.addText
-        }}</SimpleButton>
-        <template #dropdown>
-          <ul class="form-item__form-types">
-            <li
-              v-for="s in forms.forms"
-              :key="s.key"
-              class="form-item__form-type"
-              @click="addForm(s.key)"
-            >
-              {{ s.name }}
-            </li>
-          </ul>
-        </template>
+      <SimpleDropdown
+        position="bottom-right"
+        :aria-label="forms.addText?.toString()"
+        :items="forms.forms"
+        menu-max-height="100px"
+        @select="addForm"
+      >
+        <span class="form-item__form-add">
+          <Icon name="add" aria-hidden="true" />
+          <span>{{ forms.addText }}</span>
+        </span>
       </SimpleDropdown>
     </div>
   </div>
@@ -79,8 +74,6 @@ const emit = defineEmits<{
 
 const formsEl = ref<InstanceType<typeof SimpleForm>[]>([])
 
-const addDropdownShowing = ref(false)
-
 const value = ref<ValueItem[]>([])
 
 const forms = computed(() => props.item.forms || { forms: [] })
@@ -99,7 +92,6 @@ const addForm = (typeKey: string) => {
     typeKey,
     value: {},
   })
-  addDropdownShowing.value = false
   emitValue()
 }
 
@@ -194,27 +186,15 @@ defineExpose({ validate })
   }
 }
 
-.form-item__form-types {
-  margin: 0;
-  padding: 0;
-  max-height: 100px;
-  overflow-y: auto;
+.form-item__form-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--radius-control);
+  padding: 4px 10px;
+  background-color: var(--color-accent-strong);
+  color: var(--color-on-accent);
+  line-height: 20px;
 }
 
-.form-item__form-type {
-  margin: 0;
-  list-style-type: none;
-  white-space: nowrap;
-  padding: 6px 12px;
-  cursor: pointer;
-  font-size: 14px;
-
-  &:hover {
-    background-color: var(--color-bg-hover);
-  }
-
-  &.active {
-    background-color: var(--color-bg-selected);
-  }
-}
 </style>

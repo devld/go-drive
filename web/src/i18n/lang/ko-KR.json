@@ -32,7 +32,9 @@
     },
     "text": {
       "yes": "예",
-      "no": "아니오"
+      "no": "아니오",
+      "alert_title": "알림",
+      "confirm_title": "확인"
     },
     "loading": {
       "cancel": "취소"
@@ -43,6 +45,7 @@
     "logout": "로그아웃",
     "home": "홈",
     "admin": "관리자",
+    "skip_to_content": "주요 콘텐츠로 건너뛰기",
     "username": "사용자 이름",
     "groups": "그룹",
     "file": "파일",
@@ -55,6 +58,7 @@
     "toggle_to_thumbnail": "썸네일 모드로 전환 (T)",
     "toggle_sort": "정렬 방식 전환",
     "entry_actions": "파일 작업",
+    "loading": "로딩 중",
     "password_protected": "비밀번호 필요",
     "input_password": "비밀번호를 입력하세요",
     "sort": {
@@ -69,7 +73,8 @@
       "placeholder": "파일 검색...",
       "searching": "검색 중...",
       "search_help": "다음을 시도해 보세요:",
-      "no_result": "결과 없음"
+      "no_result": "결과 없음",
+      "results": "결과 {n}개"
     },
     "task_status_pending": "대기 중",
     "task_status_running": "실행 중",
@@ -448,6 +453,7 @@
       "next": "다음",
       "shuffle": "임의 재생",
       "repeat_one": "한 곡 반복",
+      "progress": "재생 위치",
       "volume": "볼륨",
       "mute": "음소거",
       "unmute": "음소거 해제",
@@ -458,6 +464,8 @@
       "desc": "동영상 재생",
       "play": "재생",
       "pause": "일시정지",
+      "progress": "재생 위치",
+      "volume": "볼륨",
       "mute": "음소거",
       "unmute": "음소거 해제",
       "fullscreen": "전체 화면",

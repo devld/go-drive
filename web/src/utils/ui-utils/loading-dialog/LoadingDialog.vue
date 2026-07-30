@@ -1,5 +1,10 @@
 <template>
-  <DialogView v-model:show="showing" class="loading-dialog" transition="none">
+  <DialogView
+    v-model:show="showing"
+    class="loading-dialog"
+    transition="none"
+    :accessible-label="text || t('app.loading')"
+  >
     <div class="loading-dialog__content">
       <Icon class="loading-dialog__icon loading-icon" name="loading" />
       <span class="loading-dialog__text">{{ text }}</span>

@@ -63,10 +63,13 @@ const currentMenu = computed(() => router.currentRoute.value.path)
 }
 
 .admin-page {
+  box-sizing: border-box;
   max-width: 1000px;
   margin: 16px auto 0;
   background-color: var(--color-bg-glass);
+  border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-dialog);
+  outline: none;
   display: flex;
   overflow: hidden;
 
@@ -102,7 +105,12 @@ const currentMenu = computed(() => router.currentRoute.value.path)
   // pc
   .menu-list {
     width: 120px;
-    padding: 16px 0 42px;
+    border-radius:
+      calc(var(--radius-dialog) - 1px)
+      0
+      0
+      calc(var(--radius-dialog) - 1px);
+    overflow: hidden;
     border-right: solid 1px;
     border-color: var(--color-border);
   }
@@ -112,6 +120,22 @@ const currentMenu = computed(() => router.currentRoute.value.path)
       border-bottom: solid 1px;
       border-color: var(--color-border);
     }
+  }
+
+  .menu-item:first-child .menu-link {
+    border-radius: calc(var(--radius-dialog) - 1px) 0 0 0;
+  }
+
+  .menu-item:last-child .menu-link {
+    border-radius: 0 0 0 calc(var(--radius-dialog) - 1px);
+  }
+
+  .menu-item:only-child .menu-link {
+    border-radius:
+      calc(var(--radius-dialog) - 1px)
+      0
+      0
+      calc(var(--radius-dialog) - 1px);
   }
 
   .menu-content {
@@ -128,6 +152,11 @@ const currentMenu = computed(() => router.currentRoute.value.path)
     .menu-list {
       display: flex;
       width: 100%;
+      border-radius:
+        calc(var(--radius-dialog) - 1px)
+        calc(var(--radius-dialog) - 1px)
+        0
+        0;
       overflow-x: auto;
       overflow-y: hidden;
       border-bottom: solid 1px;
@@ -144,6 +173,22 @@ const currentMenu = computed(() => router.currentRoute.value.path)
 
     .menu-link {
       padding: 10px 16px;
+    }
+
+    .menu-item:first-child .menu-link {
+      border-radius: calc(var(--radius-dialog) - 1px) 0 0 0;
+    }
+
+    .menu-item:last-child .menu-link {
+      border-radius: 0 calc(var(--radius-dialog) - 1px) 0 0;
+    }
+
+    .menu-item:only-child .menu-link {
+      border-radius:
+        calc(var(--radius-dialog) - 1px)
+        calc(var(--radius-dialog) - 1px)
+        0
+        0;
     }
   }
 }

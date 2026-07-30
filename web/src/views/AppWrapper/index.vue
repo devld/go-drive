@@ -1,5 +1,8 @@
 <template>
   <div class="app-wrapper">
+    <a class="skip-link" href="#main-content" @click.prevent="skipToContent">
+      {{ $t('app.skip_to_content') }}
+    </a>
     <header class="app-header" data-ui="app-header">
       <div class="user-area">
         <button
@@ -46,7 +49,10 @@
       </div>
     </header>
 
-    <RouterView />
+    <main id="main-content" ref="mainContentEl" tabindex="-1">
+      <h1 class="visually-hidden">{{ pageHeading }}</h1>
+      <RouterView />
+    </main>
 
     <!-- login dialog -->
     <DialogView
@@ -70,7 +76,7 @@ import LoginView from '@/views/Login/LoginView.vue'
 
 import { logout as logoutApi } from '@/api'
 import { alert, loading } from '@/utils/ui-utils'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store'
 import { useRouter } from 'vue-router'
@@ -79,6 +85,7 @@ import { EXPLORER_PATH_BASE } from '@/config'
 const router = useRouter()
 const store = useAppStore()
 const { t } = useI18n()
+const mainContentEl = ref<HTMLElement | null>(null)
 
 const loginDialogShowing = computed({
   get: () => store.showLogin,
@@ -89,6 +96,14 @@ const progressBarValue = computed(() => store.progressBar)
 
 const isLoggedIn = computed(() => !!user.value)
 const isAdmin = computed(() => store.isAdmin)
+const pageHeading = computed(() => {
+  const route = router.currentRoute.value
+  if (route.meta.title) return route.meta.title.toString()
+  if (typeof route.params.path === 'string' && route.params.path) {
+    return route.params.path
+  }
+  return window.___config___.appName || 'go-drive'
+})
 
 const navMenus = computed(() => {
   const menus = [{ name: t('app.home'), to: '/' }]
@@ -100,6 +115,10 @@ const navMenus = computed(() => {
 
 const login = () => {
   store.toggleLogin(true)
+}
+
+const skipToContent = () => {
+  mainContentEl.value?.focus()
 }
 
 const toIndexPage = () => {
@@ -154,6 +173,22 @@ const afterLogin = () => {
     .nav-button:not(:first-child) {
       margin-left: 16px;
     }
+  }
+}
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 10000;
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  transform: translateY(-150%);
+
+  &:focus {
+    transform: translateY(0);
   }
 }
 

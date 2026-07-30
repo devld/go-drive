@@ -14,7 +14,17 @@
       @close="emit('close')"
     />
 
-    <div class="video-player" @click="togglePlay" @dblclick="toggleFullscreen">
+    <div
+      class="video-player"
+      role="button"
+      tabindex="0"
+      :aria-label="
+        playing ? $t('handler.video.pause') : $t('handler.video.play')
+      "
+      @click="togglePlay"
+      @dblclick="toggleFullscreen"
+      @keydown.enter.stop.prevent="togglePlay"
+    >
       <video
         ref="videoEl"
         class="video-player__video"
@@ -33,7 +43,15 @@
       <div
         ref="progressEl"
         class="video-controls__bar"
+        role="slider"
+        tabindex="0"
+        :aria-label="$t('handler.video.progress')"
+        aria-valuemin="0"
+        :aria-valuemax="duration"
+        :aria-valuenow="currentTime"
+        :aria-valuetext="`${formatTime(currentTime)} / ${formatTime(duration)}`"
         @pointerdown="onProgressDown"
+        @keydown.stop="onProgressKeydown"
       >
         <div class="video-controls__bar-bg">
           <div
@@ -107,7 +125,15 @@
           <div
             ref="volumeEl"
             class="video-controls__volume-bar"
+            role="slider"
+            tabindex="0"
+            :aria-label="$t('handler.video.volume')"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-valuenow="Math.round((muted ? 0 : volume) * 100)"
+            :aria-valuetext="`${Math.round((muted ? 0 : volume) * 100)}%`"
             @pointerdown="onVolumeDown"
+            @keydown.stop="onVolumeKeydown"
           >
             <div class="video-controls__volume-bg">
               <div
@@ -267,6 +293,30 @@ const setVolumeByRatio = (ratio: number) => {
   applyVolume()
 }
 
+const onProgressKeydown = (e: KeyboardEvent) => {
+  if (duration.value <= 0) return
+  let value = currentTime.value
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') value -= seekStep.value
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+    value += seekStep.value
+  } else if (e.key === 'Home') value = 0
+  else if (e.key === 'End') value = duration.value
+  else return
+  e.preventDefault()
+  seekByRatio(Math.min(1, Math.max(0, value / duration.value)))
+}
+
+const onVolumeKeydown = (e: KeyboardEvent) => {
+  let value = muted.value ? 0 : volume.value
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') value -= 0.1
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') value += 0.1
+  else if (e.key === 'Home') value = 0
+  else if (e.key === 'End') value = 1
+  else return
+  e.preventDefault()
+  setVolumeByRatio(value)
+}
+
 const onProgressDown = createDrag(progressEl, seekByRatio)
 const onVolumeDown = createDrag(volumeEl, setVolumeByRatio)
 
@@ -419,6 +469,11 @@ onUnmounted(() => {
   min-height: 0;
   cursor: pointer;
 
+  &:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: -3px;
+  }
+
   &__video {
     max-width: 100%;
     max-height: 80vh;
@@ -495,8 +550,16 @@ onUnmounted(() => {
       var(--motion-easing-standard);
   }
 
-  &__bar:hover &__bar-thumb {
+  &__bar:hover &__bar-thumb,
+  &__bar:focus-visible &__bar-thumb {
     opacity: 1;
+  }
+
+  &__bar:focus-visible,
+  &__volume-bar:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   &__row {

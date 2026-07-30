@@ -29,7 +29,15 @@
         <div
           ref="progressEl"
           class="audio-player__bar"
+          role="slider"
+          tabindex="0"
+          :aria-label="$t('handler.audio.progress')"
+          aria-valuemin="0"
+          :aria-valuemax="duration"
+          :aria-valuenow="currentTime"
+          :aria-valuetext="`${formatTime(currentTime)} / ${formatTime(duration)}`"
           @pointerdown="onProgressDown"
+          @keydown="onProgressKeydown"
         >
           <div class="audio-player__bar-bg">
             <div
@@ -57,6 +65,7 @@
             data-variant="plain"
             :class="{ 'is-active': shuffle }"
             :title="$t('handler.audio.shuffle')"
+            :aria-pressed="shuffle"
             @click="shuffle = !shuffle; if (shuffle) repeatOne = false"
           >
             <svg viewBox="0 0 24 24" class="audio-player__icon">
@@ -80,6 +89,7 @@
             data-variant="plain"
             :class="{ 'is-active': repeatOne }"
             :title="$t('handler.audio.repeat_one')"
+            :aria-pressed="repeatOne"
             @click="repeatOne = !repeatOne; if (repeatOne) shuffle = false"
           >
             <svg viewBox="0 0 24 24" class="audio-player__icon">
@@ -165,7 +175,15 @@
           <div
             ref="volumeEl"
             class="audio-player__volume-bar"
+            role="slider"
+            tabindex="0"
+            :aria-label="$t('handler.audio.volume')"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-valuenow="Math.round((muted ? 0 : volume) * 100)"
+            :aria-valuetext="`${Math.round((muted ? 0 : volume) * 100)}%`"
             @pointerdown="onVolumeDown"
+            @keydown="onVolumeKeydown"
           >
             <div class="audio-player__volume-bg">
               <div
@@ -182,27 +200,33 @@
       </div>
     </div>
 
-    <ul class="audio-player__list">
+    <ul class="audio-player__list" :aria-label="$t('handler.audio.playlist')">
       <li
         v-for="(track, index) in tracks"
         :key="track.path"
         class="audio-player__list-item"
         :class="{ 'is-current': index === currentIndex }"
-        @click="switchTo(index, true)"
       >
-        <span class="audio-player__list-index">
-          <svg
-            v-if="index === currentIndex && playing"
-            viewBox="0 0 24 24"
-            class="audio-player__list-playing"
-          >
-            <path fill="currentColor" d="M8 5v14l11-7L8 5z" />
-          </svg>
-          <template v-else>{{ index + 1 }}</template>
-        </span>
-        <span class="audio-player__list-name" :title="track.name">{{
-          track.name
-        }}</span>
+        <button
+          type="button"
+          class="audio-player__list-button"
+          :aria-current="index === currentIndex ? 'true' : undefined"
+          @click="switchTo(index, true)"
+        >
+          <span class="audio-player__list-index">
+            <svg
+              v-if="index === currentIndex && playing"
+              viewBox="0 0 24 24"
+              class="audio-player__list-playing"
+            >
+              <path fill="currentColor" d="M8 5v14l11-7L8 5z" />
+            </svg>
+            <template v-else>{{ index + 1 }}</template>
+          </span>
+          <span class="audio-player__list-name" :title="track.name">{{
+            track.name
+          }}</span>
+        </button>
       </li>
     </ul>
 
@@ -417,6 +441,30 @@ const setVolumeByRatio = (ratio: number) => {
   applyVolume()
 }
 
+const onProgressKeydown = (e: KeyboardEvent) => {
+  if (duration.value <= 0) return
+  const step = Math.min(30, Math.max(1, duration.value * 0.02))
+  let value = currentTime.value
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') value -= step
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') value += step
+  else if (e.key === 'Home') value = 0
+  else if (e.key === 'End') value = duration.value
+  else return
+  e.preventDefault()
+  seekByRatio(Math.min(1, Math.max(0, value / duration.value)))
+}
+
+const onVolumeKeydown = (e: KeyboardEvent) => {
+  let value = muted.value ? 0 : volume.value
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') value -= 0.1
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') value += 0.1
+  else if (e.key === 'Home') value = 0
+  else if (e.key === 'End') value = 1
+  else return
+  e.preventDefault()
+  setVolumeByRatio(value)
+}
+
 const onProgressDown = createDrag(progressEl, seekByRatio)
 const onVolumeDown = createDrag(volumeEl, setVolumeByRatio)
 
@@ -562,8 +610,16 @@ onUnmounted(() => {
       var(--motion-easing-standard);
   }
 
-  &__bar:hover &__bar-thumb {
+  &__bar:hover &__bar-thumb,
+  &__bar:focus-visible &__bar-thumb {
     opacity: 1;
+  }
+
+  &__bar:focus-visible,
+  &__volume-bar:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   &__controls {
@@ -685,11 +741,6 @@ onUnmounted(() => {
   }
 
   &__list-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 20px;
-    cursor: pointer;
     border-bottom: solid 1px var(--color-border);
     transition: background-color var(--motion-duration-fast)
       var(--motion-easing-standard);
@@ -711,6 +762,20 @@ onUnmounted(() => {
         font-weight: 500;
       }
     }
+  }
+
+  &__list-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 20px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
 
   &__list-index {

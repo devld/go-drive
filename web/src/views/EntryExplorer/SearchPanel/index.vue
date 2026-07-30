@@ -5,6 +5,8 @@
     data-ui="search-panel"
     data-surface="glass"
     :class="{ active: showing }"
+    role="search"
+    @focusout="onFocusOut"
   >
     <div class="search-panel__search">
       <input
@@ -12,12 +14,19 @@
         v-model="queryInput"
         type="text"
         class="search-panel__search-input"
+        :aria-label="$t('app.search.placeholder')"
         :placeholder="$t('app.search.placeholder')"
         @input="onInput"
         @keydown.enter="triggerSearch"
         @keydown.stop
         @focus="onInputFocus"
       />
+      <span
+        class="visually-hidden"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >{{ searchStatus }}</span>
     </div>
     <div v-if="showing" class="search-panel__result" @scroll="onResultScroll">
       <div v-if="result.length === 0" class="search-panel__tip">
@@ -79,44 +88,69 @@ const searchError = ref('')
 const showing = ref(false)
 
 const searchExamples = computed(() => store.config?.search?.examples)
+const searchStatus = computed(() => {
+  if (searching.value) return t('app.search.searching')
+  if (searchError.value) return searchError.value
+  if (result.value.length > 0) {
+    return t('app.search.results', { n: result.value.length })
+  }
+  return ''
+})
+
+let searchGeneration = 0
+const pendingRequests = new Set<string>()
 
 const triggerSearch = () => {
+  const generation = ++searchGeneration
   result.value = []
+  searchError.value = ''
+  next.value = 0
   if (!q.value) {
+    searching.value = false
     return
   }
-  next.value = 0
-  doSearch()
+  void doSearch(generation)
 }
 
 const loadNextPage = debounce(() => {
-  if (next.value === -1) return
-  doSearch()
+  if (next.value === -1 || searching.value) return
+  void doSearch(searchGeneration)
 }, 100)
 
-const doSearch = async () => {
+const doSearch = async (generation: number) => {
+  const query = q.value
+  const cursor = next.value
+  const requestKey = `${generation}:${cursor}`
+  if (pendingRequests.has(requestKey)) return
+  pendingRequests.add(requestKey)
   searching.value = true
   searchError.value = ''
-  let res
   try {
-    res = await searchEntries(props.path, q.value, next.value)
+    const res = await searchEntries(props.path, query, cursor)
+    if (generation !== searchGeneration || query !== q.value) return
+    result.value.push(...res.items)
+    searchError.value =
+      res.items.length === 0 && result.value.length === 0
+        ? t('app.search.no_result')
+        : ''
+    next.value = res.next
   } catch (e: any) {
-    searchError.value = e.message
-    return
+    if (generation === searchGeneration && query === q.value) {
+      searchError.value = e.message
+    }
   } finally {
-    searching.value = false
+    pendingRequests.delete(requestKey)
+    if (generation === searchGeneration) searching.value = false
   }
-
-  result.value.push(...res.items)
-  searchError.value = res.items.length === 0 ? t('app.search.no_result') : ''
-  next.value = res.next
 }
 
 const reset = () => {
+  searchGeneration++
   queryInput.value = ''
   result.value = []
   next.value = 0
   searchError.value = ''
+  searching.value = false
 }
 
 const itemClicked = (e: EntryEventData) => {
@@ -132,9 +166,18 @@ const onInputFocus = () => {
   setActive(true)
 }
 
+const onFocusOut = (e: FocusEvent) => {
+  const next = e.relatedTarget as Node | null
+  if (next && thisEl.value?.contains(next)) return
+  if (result.value.length === 0) setActive(false)
+}
+
 const onResultScroll = (e: Event) => {
   const target = e.target as HTMLElement
-  if (target.scrollHeight - target.scrollTop - target.clientHeight < 100) {
+  if (
+    !searching.value &&
+    target.scrollHeight - target.scrollTop - target.clientHeight < 100
+  ) {
     loadNextPage()
   }
 }
@@ -146,11 +189,11 @@ const setActive = (active: boolean) => {
   else qEl.value?.blur()
   if (active && !eventAttached) {
     eventAttached = true
-    document.addEventListener('mousedown', onDocumentTouched)
+    document.addEventListener('pointerdown', onDocumentPointerDown)
   }
   if (!active && eventAttached) {
     eventAttached = false
-    document.removeEventListener('mousedown', onDocumentTouched)
+    document.removeEventListener('pointerdown', onDocumentPointerDown)
   }
 }
 
@@ -167,7 +210,7 @@ useHotKey(
   { el: () => qEl.value! }
 )
 
-const onDocumentTouched = (e: MouseEvent) => {
+const onDocumentPointerDown = (e: PointerEvent) => {
   let target = e.target as HTMLElement | null
   do {
     if (target === thisEl.value) break
@@ -178,6 +221,7 @@ const onDocumentTouched = (e: MouseEvent) => {
 }
 
 onUnmounted(() => {
+  searchGeneration++
   setActive(false)
 })
 
@@ -185,7 +229,10 @@ defineExpose({ setActive })
 </script>
 <style lang="scss">
 .search-panel {
+  box-sizing: border-box;
+  border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-glass);
+  outline: none;
   transition: box-shadow var(--motion-duration-normal)
     var(--motion-easing-standard);
   background-color: var(--color-bg-glass);

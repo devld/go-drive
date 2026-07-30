@@ -83,6 +83,9 @@ const props = defineProps({
   title: {
     type: [String, Object] as PropType<I18nText>,
   },
+  accessibleLabel: {
+    type: [String, Object] as PropType<I18nText>,
+  },
   transition: {
     type: String,
     default: 'fade-scale-up',
@@ -121,7 +124,13 @@ const contentEl = ref<HTMLElement | null>(null)
 let scrollLocked = false
 let lastFocused: HTMLElement | null = null
 
-const ariaLabel = computed(() => (props.title ? s(props.title) : undefined))
+const ariaLabel = computed(() =>
+  props.accessibleLabel
+    ? s(props.accessibleLabel)
+    : props.title
+      ? s(props.title)
+      : undefined
+)
 const closeLabel = computed(() => s(T('dialog.base.close')))
 
 const overlayClicked = (e: MouseEvent) => {

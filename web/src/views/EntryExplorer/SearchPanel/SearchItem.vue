@@ -45,7 +45,7 @@ const itemClicked = (e: EntryEventData) => emit('click', e)
 <style lang="scss">
 .search-panel__item {
   margin: 0;
-  padding: 8px 0;
+  padding: 0;
   list-style-type: none;
   overflow: hidden;
 
@@ -53,7 +53,7 @@ const itemClicked = (e: EntryEventData) => emit('click', e)
     display: flex;
     color: var(--color-text);
     text-decoration: none;
-    padding: 0 16px;
+    padding: 8px 16px;
   }
 
   .entry-icon {

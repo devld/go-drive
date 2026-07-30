@@ -10,9 +10,12 @@ import { LocationQuery } from 'vue-router'
 export const IS_DEBUG = process.env.NODE_ENV === 'development'
 
 export function setTitle(title?: I18nText) {
-  if (title) title += ' - ' + window.___config___.appName
-  else title = window.___config___.appName
-  document.title = title.toString()
+  const pageTitle = title?.toString().trim() ?? ''
+  const appName = window.___config___.appName?.trim() ?? ''
+  document.title =
+    pageTitle && appName
+      ? `${pageTitle} - ${appName}`
+      : pageTitle || appName || 'go-drive'
 }
 
 export function formatTime(d: any) {

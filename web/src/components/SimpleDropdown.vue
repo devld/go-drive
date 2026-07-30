@@ -6,19 +6,19 @@
     :class="{ active }"
     @focusout="onFocusOut"
   >
-    <span
+    <button
       ref="triggerEl"
+      type="button"
       class="simple-dropdown__trigger"
       data-ui="dropdown-trigger"
-      role="button"
-      tabindex="0"
-      aria-haspopup="true"
+      aria-haspopup="menu"
+      :aria-label="ariaLabel"
       :aria-expanded="active"
       @click="triggerClicked"
       @keydown="onTriggerKeydown"
     >
       <slot />
-    </span>
+    </button>
     <Teleport to="body">
       <Transition :name="dropdownTransition">
         <div
@@ -27,10 +27,33 @@
           class="simple-dropdown__dropdown glass-surface"
           data-ui="dropdown-panel"
           data-surface="glass"
+          role="menu"
           :style="dropdownStyle"
           @keydown="onDropdownKeydown"
         >
-          <slot name="dropdown" />
+          <ul
+            class="simple-dropdown__menu"
+            :style="menuMaxHeight ? { maxHeight: menuMaxHeight } : undefined"
+          >
+            <li
+              v-for="item in items"
+              :key="item.key"
+              class="simple-dropdown__item"
+              :class="{
+                active: item.key === selectedKey,
+                disabled: item.disabled,
+              }"
+              :role="hasSelection ? 'menuitemradio' : 'menuitem'"
+              tabindex="-1"
+              :aria-checked="hasSelection ? item.key === selectedKey : undefined"
+              :aria-disabled="item.disabled || undefined"
+              @click="selectItem(item)"
+              @keydown.enter.prevent="selectItem(item)"
+              @keydown.space.prevent="selectItem(item)"
+            >
+              <slot name="item" :item="item">{{ item.name }}</slot>
+            </li>
+          </ul>
         </div>
       </Transition>
     </Teleport>
@@ -47,6 +70,12 @@ import {
   PropType,
 } from 'vue'
 
+interface SimpleDropdownItem {
+  key: string
+  name?: I18nText
+  disabled?: boolean
+}
+
 const props = defineProps({
   modelValue: {
     type: Boolean,
@@ -59,8 +88,24 @@ const props = defineProps({
     type: String as PropType<'bottom-left' | 'bottom-right'>,
     default: 'bottom-left',
   },
+  ariaLabel: {
+    type: String,
+  },
+  items: {
+    type: Array as PropType<SimpleDropdownItem[]>,
+    default: () => [],
+  },
+  selectedKey: {
+    type: String,
+  },
+  menuMaxHeight: {
+    type: String,
+  },
 })
-const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
+const emit = defineEmits<{
+  (e: 'update:modelValue', v: boolean): void
+  (e: 'select', key: string, item: SimpleDropdownItem): void
+}>()
 
 const active = ref(false)
 const rootEl = ref<HTMLElement | null>(null)
@@ -68,6 +113,8 @@ const triggerEl = ref<HTMLElement | null>(null)
 const dropdownEl = ref<HTMLElement | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
 const dropdownPlacedAbove = ref(false)
+const focusMenuOnOpen = ref(false)
+const hasSelection = computed(() => props.selectedKey !== undefined)
 const dropdownTransition = computed(() =>
   props.transition === 'fade-slide-down' && dropdownPlacedAbove.value
     ? 'fade-slide-up'
@@ -85,6 +132,7 @@ const setActive = (v: boolean) => {
 }
 
 const triggerClicked = () => {
+  focusMenuOnOpen.value = false
   setActive(!active.value)
 }
 
@@ -93,13 +141,38 @@ const close = (focusTrigger = false) => {
   if (focusTrigger) triggerEl.value?.focus()
 }
 
+const focusInitialMenuItem = async () => {
+  await nextTick()
+  const items = getMenuItems()
+  const selected = items.find(
+    (item) => item.getAttribute('aria-checked') === 'true'
+  )
+  const itemToFocus = selected ?? items[0]
+  itemToFocus?.focus()
+  focusMenuOnOpen.value = false
+}
+
+const selectItem = (item: SimpleDropdownItem) => {
+  if (item.disabled) return
+  emit('select', item.key, item)
+  close(true)
+}
+
 const onTriggerKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
     e.preventDefault()
-    setActive(!active.value)
+    if (active.value) close(true)
+    else {
+      focusMenuOnOpen.value = true
+      setActive(true)
+    }
   } else if (e.key === 'ArrowDown') {
     e.preventDefault()
-    setActive(true)
+    if (active.value) void focusInitialMenuItem()
+    else {
+      focusMenuOnOpen.value = true
+      setActive(true)
+    }
   } else if (e.key === 'Escape' && active.value) {
     e.preventDefault()
     close(true)
@@ -110,8 +183,34 @@ const onDropdownKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     e.preventDefault()
     close(true)
+    return
+  }
+
+  const items = getMenuItems()
+  if (!items.length) return
+  const activeIndex = items.indexOf(document.activeElement as HTMLElement)
+  let nextIndex: number | undefined
+  if (e.key === 'ArrowDown') nextIndex = (activeIndex + 1) % items.length
+  else if (e.key === 'ArrowUp') {
+    nextIndex = (activeIndex - 1 + items.length) % items.length
+  } else if (e.key === 'Home') nextIndex = 0
+  else if (e.key === 'End') nextIndex = items.length - 1
+  else if (e.key === 'Tab') {
+    close()
+    return
+  }
+  if (nextIndex !== undefined) {
+    e.preventDefault()
+    items[nextIndex].focus()
   }
 }
+
+const getMenuItems = () =>
+  Array.from(
+    dropdownEl.value?.querySelectorAll<HTMLElement>(
+      '[role="menuitem"],[role="menuitemradio"],[role="menuitemcheckbox"]'
+    ) ?? []
+  ).filter((el) => el.getAttribute('aria-disabled') !== 'true')
 
 // Close when focus moves outside the component (e.g. keyboard Tab).
 // Clicking a non-focusable item keeps focus on the trigger, so this does
@@ -143,8 +242,7 @@ const onDocumentPointerDown = (e: Event) => {
 
 const bindOutside = (bind: boolean) => {
   const fn = bind ? 'addEventListener' : 'removeEventListener'
-  document[fn]('mousedown', onDocumentPointerDown, true)
-  document[fn]('touchstart', onDocumentPointerDown, true)
+  document[fn]('pointerdown', onDocumentPointerDown, true)
 }
 
 const updateDropdownPosition = () => {
@@ -155,7 +253,15 @@ const updateDropdownPosition = () => {
   const triggerRect = trigger.getBoundingClientRect()
   const gap = 10
   const viewportPadding = 8
-  const dropdownWidth = dropdown.offsetWidth
+  const availableWidth = Math.max(
+    window.innerWidth - viewportPadding * 2,
+    0
+  )
+  const minWidth = Math.min(triggerRect.width, availableWidth)
+  const dropdownWidth = Math.min(
+    Math.max(dropdown.offsetWidth, minWidth),
+    availableWidth
+  )
   const dropdownHeight = dropdown.offsetHeight
 
   let left =
@@ -182,6 +288,8 @@ const updateDropdownPosition = () => {
   dropdownStyle.value = {
     left: `${Math.round(left)}px`,
     top: `${Math.round(top)}px`,
+    minWidth: `${Math.round(minWidth)}px`,
+    maxWidth: `${Math.round(availableWidth)}px`,
   }
 }
 
@@ -197,6 +305,7 @@ watch(active, async (v) => {
   if (v) {
     await nextTick()
     updateDropdownPosition()
+    if (focusMenuOnOpen.value) await focusInitialMenuItem()
   }
 })
 
@@ -215,15 +324,84 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
+  padding: 0;
+  border: 0;
   border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
 }
 
 .simple-dropdown__dropdown {
   position: fixed;
   z-index: 1001;
+  box-sizing: border-box;
+  width: max-content;
+  border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-popover);
+  outline: none;
   overflow: hidden;
   background-color: var(--color-bg-glass);
   box-shadow: var(--shadow-elevated);
+}
+
+.simple-dropdown__menu {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-y: auto;
+}
+
+.simple-dropdown__item {
+  margin: 0;
+  box-sizing: border-box;
+  width: 100%;
+  list-style-type: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--color-bg-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+    box-shadow: inset 0 0 0 2px var(--color-focus-ring);
+  }
+
+  &.active {
+    background-color: var(--color-bg-selected);
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &:first-child {
+    border-radius:
+      calc(var(--radius-popover) - 1px)
+      calc(var(--radius-popover) - 1px)
+      0
+      0;
+  }
+
+  &:last-child {
+    border-radius:
+      0
+      0
+      calc(var(--radius-popover) - 1px)
+      calc(var(--radius-popover) - 1px);
+  }
+
+  &:only-child {
+    border-radius: calc(var(--radius-popover) - 1px);
+  }
 }
 </style>

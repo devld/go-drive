@@ -53,7 +53,7 @@
       <div
         v-if="entryMenuOverlayShowing"
         class="entry-menu-overlay"
-        @click.self="closeEntryMenu"
+        @click.self="closeEntryMenu()"
       >
         <Transition
           name="fade-slide-down"
@@ -67,6 +67,8 @@
             data-ui="menu"
             data-surface="glass"
             :style="entryMenuPosition"
+            @keydown="onEntryMenuKeydown"
+            @focusout="onEntryMenuFocusout"
           >
             <EntryMenu
               v-if="entryMenuData"
@@ -164,6 +166,7 @@ const entryMenuShowing = ref(false)
 const entryMenuOverlayShowing = ref(false)
 const entryMenuEl = ref<HTMLElement | null>(null)
 const entryMenuPosition = ref({ left: '0px', top: '0px' })
+let entryMenuTrigger: HTMLElement | null = null
 
 const { viewMode, sortBy, onViewModeChange, onSortByChange, filterFn } =
   useEntriesListState(currentDirEntry, user)
@@ -297,12 +300,56 @@ const onEntryClicked = ({ entry, event }: EntryEventData) => {
 }
 
 const onEntryMenuClicked = ({ entry, menu }: EntryMenuClickData) => {
-  closeEntryMenu()
+  closeEntryMenu(false)
   executeHandler(menu.name, entry)
 }
 
-const closeEntryMenu = () => {
+const closeEntryMenu = (restoreFocus = true) => {
   entryMenuShowing.value = false
+  if (restoreFocus) {
+    const trigger = entryMenuTrigger
+    nextTick(() => {
+      if (trigger && document.contains(trigger)) trigger.focus()
+    })
+  }
+}
+
+const getEntryMenuItems = () =>
+  Array.from(
+    entryMenuEl.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []
+  )
+
+const onEntryMenuKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    e.stopPropagation()
+    closeEntryMenu()
+    return
+  }
+  const items = getEntryMenuItems()
+  if (!items.length) return
+  const activeIndex = items.indexOf(document.activeElement as HTMLElement)
+  let nextIndex: number | undefined
+  if (e.key === 'ArrowDown') nextIndex = (activeIndex + 1) % items.length
+  else if (e.key === 'ArrowUp') {
+    nextIndex = (activeIndex - 1 + items.length) % items.length
+  } else if (e.key === 'Home') nextIndex = 0
+  else if (e.key === 'End') nextIndex = items.length - 1
+  if (nextIndex !== undefined) {
+    e.preventDefault()
+    items[nextIndex].focus()
+  }
+}
+
+const onEntryMenuFocusout = (e: FocusEvent) => {
+  const next = e.relatedTarget
+  if (
+    next instanceof Node &&
+    entryMenuEl.value?.contains(next)
+  ) {
+    return
+  }
+  closeEntryMenu(false)
 }
 
 const positionEntryMenu = async (target: HTMLElement) => {
@@ -330,6 +377,7 @@ const positionEntryMenu = async (target: HTMLElement) => {
   top = Math.max(margin, top)
 
   entryMenuPosition.value = { left: `${left}px`, top: `${top}px` }
+  getEntryMenuItems()[0]?.focus()
 }
 
 const showEntryMenu = ({ entry, event }: EntryEventData) => {
@@ -355,6 +403,7 @@ const showEntryMenu = ({ entry, event }: EntryEventData) => {
   entryMenuShowing.value = true
   const target = event?.currentTarget
   if (target instanceof HTMLElement) {
+    entryMenuTrigger = target
     void positionEntryMenu(target)
   }
 }
@@ -511,7 +560,10 @@ window.addEventListener('keydown', onKeyDown)
 
 .entry-menu-popup {
   position: fixed;
+  box-sizing: border-box;
+  border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-popover);
+  outline: none;
   overflow: hidden;
   box-shadow: var(--shadow-elevated);
 }

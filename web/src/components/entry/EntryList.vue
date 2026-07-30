@@ -27,22 +27,17 @@
         >
           <Icon :name="validViewMode === 'list' ? 'grid' : 'list'" />
         </button>
-        <SimpleDropdown v-model="sortDropdownShowing">
+        <SimpleDropdown
+          :aria-label="$t('app.toggle_sort')"
+          :items="sortModes"
+          :selected-key="validSort"
+          @select="setSortBy"
+        >
           <span :title="$t('app.toggle_sort')">
             <Icon name="sort" />
           </span>
-          <template #dropdown>
-            <ul class="sort-modes">
-              <li
-                v-for="s in sortModes"
-                :key="s.key"
-                class="sort-mode"
-                :class="{ active: validSort === s.key }"
-                @click="setSortBy(s.key)"
-              >
-                {{ $t(s.name) }}
-              </li>
-            </ul>
+          <template #item="{ item }">
+            {{ $t(item.name?.toString() ?? '') }}
           </template>
         </SimpleDropdown>
       </div>
@@ -197,7 +192,6 @@ const emit = defineEmits<{
 }>()
 
 const selected = ref<Entry[]>([])
-const sortDropdownShowing = ref(false)
 
 const validViewMode = computed(
   () =>
@@ -355,7 +349,6 @@ const parentIconClicked = (e: MouseEvent) => {
 
 const setSortBy = (sort: string) => {
   emit('update:sort', sort)
-  sortDropdownShowing.value = false
 }
 
 const focusOnEntry = async (name: string) => {
@@ -468,28 +461,6 @@ defineExpose({
     font-size: 16px;
   }
 
-}
-
-.sort-modes {
-  margin: 0;
-  padding: 0;
-}
-
-.sort-mode {
-  margin: 0;
-  list-style-type: none;
-  white-space: nowrap;
-  padding: 6px 12px;
-  cursor: pointer;
-  font-size: 14px;
-
-  &:hover {
-    background-color: var(--color-bg-hover);
-  }
-
-  &.active {
-    background-color: var(--color-bg-selected);
-  }
 }
 
 .entry-list--view-thumbnail {
