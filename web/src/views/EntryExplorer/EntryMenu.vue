@@ -8,21 +8,27 @@
       <EntryIcon :entry="(entry as Entry)" />
       <span class="entry-menu__entry-name">{{ (entry as Entry).name }}</span>
     </h2>
-    <ul class="entry-menu__menus">
+    <ul class="entry-menu__menus" role="menu">
       <li
         v-for="(m, i) in menus"
         :key="i"
-        class="entry-menu__menu-item"
-        :class="m.display.type && `entry-menu__menu-item-${m.display.type}`"
-        data-ui="menu-item"
-        :data-variant="m.display.type || 'default'"
-        :title="s(m.display.description)"
-        @click="emit('click', { entry, menu: m })"
+        role="none"
       >
-        <span class="entry-menu__icon">
-          <Icon v-if="m.display.icon" :name="m.display.icon" />
-        </span>
-        <span>{{ m.display.name }}</span>
+        <button
+          type="button"
+          class="entry-menu__menu-item"
+          :class="m.display.type && `entry-menu__menu-item-${m.display.type}`"
+          data-ui="menu-item"
+          :data-variant="m.display.type || 'default'"
+          role="menuitem"
+          :title="s(m.display.description)"
+          @click="emit('click', { entry, menu: m })"
+        >
+          <span class="entry-menu__icon">
+            <Icon v-if="m.display.icon" :name="m.display.icon" />
+          </span>
+          <span>{{ m.display.name }}</span>
+        </button>
       </li>
     </ul>
   </div>
@@ -95,13 +101,22 @@ const multiple = computed(() => Array.isArray(props.entry))
   user-select: none;
   overflow-x: hidden;
   overflow-y: auto;
+
+  > li {
+    list-style: none;
+  }
 }
 
 .entry-menu__menu-item {
   display: flex;
   align-items: center;
-  list-style-type: none;
+  width: 100%;
+  border: 0;
   padding: 0 20px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
   transition:
     color var(--motion-duration-fast) var(--motion-easing-standard),
@@ -131,7 +146,7 @@ const multiple = computed(() => Array.isArray(props.entry))
 
 .entry-menu--compact {
   width: 220px;
-  padding: 8px 0;
+  padding: 0;
   border-radius: inherit;
 
   .entry-menu__entry {
@@ -145,6 +160,26 @@ const multiple = computed(() => Array.isArray(props.entry))
   .entry-menu__menu-item {
     min-height: 40px;
     padding: 0 12px;
+  }
+
+  .entry-menu__menus > li:first-child > .entry-menu__menu-item {
+    border-radius:
+      calc(var(--radius-popover) - 1px)
+      calc(var(--radius-popover) - 1px)
+      0
+      0;
+  }
+
+  .entry-menu__menus > li:last-child > .entry-menu__menu-item {
+    border-radius:
+      0
+      0
+      calc(var(--radius-popover) - 1px)
+      calc(var(--radius-popover) - 1px);
+  }
+
+  .entry-menu__menus > li:only-child > .entry-menu__menu-item {
+    border-radius: calc(var(--radius-popover) - 1px);
   }
 }
 

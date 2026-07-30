@@ -73,5 +73,7 @@ export interface FormItem extends BaseFormItem {
   slot?: string
   labelSuffixSlot?: string
   placeholder?: I18nText
+  ariaLabel?: I18nText
+  autocomplete?: string
   validate?: (v: any) => PromiseValue<true | I18nText | undefined>
 }

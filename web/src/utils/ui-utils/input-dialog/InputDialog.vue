@@ -6,6 +6,9 @@
       v-focus
       class="input-dialog__input"
       :placeholder="s(placeholder)"
+      :aria-label="inputLabel"
+      :aria-invalid="validationError ? 'true' : undefined"
+      :aria-describedby="validationError ? validationId : undefined"
       :disabled="!!loading"
     ></textarea>
     <input
@@ -15,9 +18,17 @@
       :type="opts.type || 'text'"
       class="input-dialog__input"
       :placeholder="s(placeholder)"
+      :aria-label="inputLabel"
+      :aria-invalid="validationError ? 'true' : undefined"
+      :aria-describedby="validationError ? validationId : undefined"
       :disabled="!!loading"
     />
-    <div v-if="validationError" class="input-dialog__validation">
+    <div
+      v-if="validationError"
+      :id="validationId"
+      class="input-dialog__validation"
+      role="alert"
+    >
       {{ validationError }}
     </div>
   </div>
@@ -25,7 +36,7 @@
 <script setup lang="ts">
 import { s } from '@/i18n'
 import { val } from '@/utils'
-import { ref, unref, watch } from 'vue'
+import { computed, ref, unref, watch } from 'vue'
 import { InputDialogOptions, InputDialogValidateFunc } from '.'
 
 const props = defineProps({
@@ -43,6 +54,10 @@ const emit = defineEmits<{ (e: 'loading', v?: boolean): void }>()
 
 const text = ref(props.opts.text || '')
 const placeholder = ref(props.opts.placeholder || '')
+const validationId = `input-dialog-validation-${Math.round(Math.random() * 1000000)}`
+const inputLabel = computed(() =>
+  s(props.opts.title || placeholder.value)
+)
 const multipleLine = ref(val(props.opts.multipleLine, false))
 const validationError = ref<string | null>('')
 

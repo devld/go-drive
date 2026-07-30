@@ -98,7 +98,11 @@
       </table>
     </div>
 
-    <DialogView v-model:show="edit.showing" fullscreen>
+    <DialogView
+      v-model:show="edit.showing"
+      fullscreen
+      :accessible-label="edit.name || $t('routes.title.extra_drives')"
+    >
       <div class="drive-script-editor-wrapper">
         <DriveCodeEditor
           v-if="edit.name"

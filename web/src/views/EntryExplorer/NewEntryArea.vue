@@ -543,9 +543,7 @@ onBeforeMount(() => {
   }
 
   .hidden-input-file {
-    position: fixed;
-    top: -200px;
-    left: -200px;
+    display: none;
   }
 }
 

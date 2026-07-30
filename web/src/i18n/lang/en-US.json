@@ -32,7 +32,9 @@
     },
     "text": {
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "alert_title": "Notice",
+      "confirm_title": "Confirmation"
     },
     "loading": {
       "cancel": "Cancel"
@@ -43,6 +45,7 @@
     "logout": "Logout",
     "home": "Home",
     "admin": "Admin",
+    "skip_to_content": "Skip to main content",
     "username": "Username",
     "groups": "Groups",
     "file": "File",
@@ -55,6 +58,7 @@
     "toggle_to_thumbnail": "Toggle to thumbnail mode (T)",
     "toggle_sort": "Toggle sort mode",
     "entry_actions": "File actions",
+    "loading": "Loading",
     "password_protected": "Password Required",
     "input_password": "Please input the password",
     "sort": {
@@ -69,7 +73,8 @@
       "placeholder": "Search Files...",
       "searching": "Searching...",
       "search_help": "Try:",
-      "no_result": "No result"
+      "no_result": "No result",
+      "results": "{n} results"
     },
     "task_status_pending": "Pending",
     "task_status_running": "Running",
@@ -448,6 +453,7 @@
       "next": "Next",
       "shuffle": "Shuffle",
       "repeat_one": "Repeat One",
+      "progress": "Playback position",
       "volume": "Volume",
       "mute": "Mute",
       "unmute": "Unmute",
@@ -458,6 +464,8 @@
       "desc": "Play video",
       "play": "Play",
       "pause": "Pause",
+      "progress": "Playback position",
+      "volume": "Volume",
       "mute": "Mute",
       "unmute": "Unmute",
       "fullscreen": "Fullscreen",

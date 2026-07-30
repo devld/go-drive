@@ -5,19 +5,42 @@
       `float-button__posi-${position}`,
       modelValue ? 'float-button--active' : '',
     ]"
+    @focusout="onFocusOut"
   >
+    <button
+      ref="triggerEl"
+      type="button"
+      class="float-button__trigger"
+      data-ui="button"
+      :title="title"
+      aria-haspopup="menu"
+      :aria-expanded="modelValue"
+      @click.capture.stop="triggerClicked"
+      @keydown.down.prevent="openFromKeyboard"
+      @keydown.esc.prevent="closeFromKeyboard"
+      @mouseenter="mouseEnter"
+      @mouseleave="mouseLeave"
+    >
+      <slot />
+    </button>
     <div
       class="float-button__buttons"
+      :role="modelValue ? 'menu' : undefined"
+      @keydown="onMenuKeydown"
       @mouseenter="mouseEnter"
       @mouseleave="mouseLeave"
     >
       <Transition v-for="(b, i) in buttons" :key="i" name="fade-scale">
         <button
+          ref="buttonEls"
+          type="button"
           v-show="modelValue"
           class="float-button__button"
           data-ui="button"
+          role="menuitem"
           :title="s(b.title)"
           @click="buttonClicked(b, i)"
+          @keydown.esc.prevent="closeFromKeyboard"
         >
           <slot v-if="$slots[b.slot]" :name="b.slot"></slot>
           <template v-else>
@@ -26,20 +49,11 @@
         </button>
       </Transition>
     </div>
-    <button
-      class="float-button__trigger"
-      data-ui="button"
-      :title="title"
-      @click.capture.stop="triggerClicked"
-      @mouseenter="mouseEnter"
-      @mouseleave="mouseLeave"
-    >
-      <slot />
-    </button>
   </div>
 </template>
 <script setup lang="ts">
 import type { FloatButtonItem, FloatButtonClickEventData } from '.'
+import { nextTick, ref } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -68,10 +82,14 @@ const emit = defineEmits<{
 }>()
 
 let leaveTimer: number | undefined
+let enterTimer: number | undefined
+const triggerEl = ref<HTMLButtonElement>()
+const buttonEls = ref<HTMLButtonElement[]>([])
 
 const mouseEnter = () => {
   clearTimeout(leaveTimer)
-  setTimeout(() => {
+  clearTimeout(enterTimer)
+  enterTimer = window.setTimeout(() => {
     const show = true
     emit('update:modelValue', show)
   }, 0)
@@ -79,21 +97,66 @@ const mouseEnter = () => {
 
 const mouseLeave = () => {
   clearTimeout(leaveTimer)
+  clearTimeout(enterTimer)
   leaveTimer = setTimeout(() => {
     const show = false
     emit('update:modelValue', show)
   }, 100) as unknown as number
 }
 
-const triggerClicked = () => {
+const triggerClicked = (e: MouseEvent) => {
   clearTimeout(leaveTimer)
+  clearTimeout(enterTimer)
   const show = !props.modelValue
   emit('update:modelValue', show)
+  if (show && e.detail === 0) {
+    nextTick(() => buttonEls.value[0]?.focus())
+  }
 }
 
 const buttonClicked = (button: FloatButtonItem, index: number) => {
+  clearTimeout(enterTimer)
   emit('update:modelValue', false)
   emit('click', { button, index })
+}
+
+const openFromKeyboard = () => {
+  clearTimeout(enterTimer)
+  emit('update:modelValue', true)
+  nextTick(() => buttonEls.value[0]?.focus())
+}
+
+const closeFromKeyboard = () => {
+  clearTimeout(enterTimer)
+  clearTimeout(leaveTimer)
+  emit('update:modelValue', false)
+  nextTick(() => triggerEl.value?.focus())
+}
+
+const onMenuKeydown = (e: KeyboardEvent) => {
+  const items = buttonEls.value.filter((button) => !button.disabled)
+  if (!items.length) return
+  const activeIndex = items.indexOf(document.activeElement as HTMLButtonElement)
+  let nextIndex: number | undefined
+  if (e.key === 'ArrowDown') nextIndex = (activeIndex + 1) % items.length
+  else if (e.key === 'ArrowUp') {
+    nextIndex = (activeIndex - 1 + items.length) % items.length
+  } else if (e.key === 'Home') nextIndex = 0
+  else if (e.key === 'End') nextIndex = items.length - 1
+  if (nextIndex !== undefined) {
+    e.preventDefault()
+    items[nextIndex].focus()
+  }
+}
+
+const onFocusOut = (e: FocusEvent) => {
+  const next = e.relatedTarget
+  if (next instanceof Node && triggerEl.value?.parentElement?.contains(next)) {
+    return
+  }
+  clearTimeout(enterTimer)
+  clearTimeout(leaveTimer)
+  emit('update:modelValue', false)
 }
 </script>
 <style lang="scss">

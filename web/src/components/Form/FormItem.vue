@@ -52,8 +52,12 @@
         :name="item.field"
         :value="modelValue"
         :placeholder="s(item.placeholder)"
+        :aria-label="s(item.ariaLabel)"
+        :autocomplete="item.autocomplete"
         :required="item.required"
         :disabled="disabled || item.disabled"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error ? errorId : undefined"
         rows="4"
         @input="textInput"
       />
@@ -65,8 +69,12 @@
         :name="item.field"
         :value="modelValue"
         :placeholder="s(item.placeholder)"
+        :aria-label="s(item.ariaLabel)"
+        :autocomplete="item.autocomplete"
         :required="item.required"
         :disabled="disabled || item.disabled"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error ? errorId : undefined"
         @input="textInput"
       />
       <input
@@ -77,8 +85,12 @@
         :name="item.field"
         :value="modelValue"
         :placeholder="s(item.placeholder)"
+        :aria-label="s(item.ariaLabel)"
+        :autocomplete="item.autocomplete"
         :required="item.required"
         :disabled="disabled || item.disabled"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error ? errorId : undefined"
         @input="textInput"
       />
       <input
@@ -90,6 +102,8 @@
         :checked="!!modelValue"
         :required="item.required"
         :disabled="disabled || item.disabled"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error ? errorId : undefined"
         @input="checkboxInput"
       />
       <div
@@ -121,6 +135,8 @@
         :value="modelValue"
         :required="item.required"
         :disabled="disabled || item.disabled"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error ? errorId : undefined"
         @input="selectInput"
       >
         <option
@@ -143,6 +159,8 @@
           :placeholder="s(item.placeholder)"
           :required="item.required"
           :disabled="disabled || item.disabled"
+          :aria-invalid="error ? 'true' : undefined"
+          :aria-describedby="error ? errorId : undefined"
           @input="textInput"
         />
         <button
@@ -172,7 +190,12 @@
         @update:model-value="stringInput"
       />
     </div>
-    <span v-if="error" class="form-item-error">{{ error }}</span>
+    <span
+      v-if="error"
+      :id="errorId"
+      class="form-item-error"
+      role="alert"
+    >{{ error }}</span>
   </div>
 </template>
 <script setup lang="ts">
@@ -273,6 +296,9 @@ const valueId = computed(() => {
   if (props.item.type === 'form' || props.item.type === 'code' || props.item.type === 'checkboxes') return
   return props.id
 })
+const errorId = computed(() =>
+  props.id ? `${props.id}-error` : undefined
+)
 
 const checkboxesSelectedSet = computed(() => {
   if (props.item.type !== 'checkboxes') return new Set<string>()

@@ -1,5 +1,14 @@
 <template>
-  <div class="progress-bar">
+  <div
+    class="progress-bar"
+    :role="typeof progress === 'number' ? 'progressbar' : undefined"
+    :aria-label="
+      typeof progress === 'number' ? $t('app.loading') : undefined
+    "
+    :aria-valuemin="typeof progress === 'number' ? 0 : undefined"
+    :aria-valuemax="typeof progress === 'number' ? 100 : undefined"
+    :aria-valuenow="typeof progress === 'number' ? progress : undefined"
+  >
     <div
       v-if="typeof progress === 'number'"
       class="progress-bar__inner"
