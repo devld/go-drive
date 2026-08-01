@@ -29,6 +29,11 @@ export interface AuthConfig {
   providers: AuthProvider[]
 }
 
+export interface WOPIConfig {
+  enabled: boolean
+  extensions: Record<string, { view: boolean; edit: boolean }>
+}
+
 export interface Config {
   auth: AuthConfig
   version: VersionConfig
@@ -36,6 +41,7 @@ export interface Config {
   options: O
 
   search?: SearchConfig
+  wopi?: WOPIConfig
 }
 
 export interface RawConfig extends Omit<Config, 'artifact'> {
