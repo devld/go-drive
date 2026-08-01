@@ -444,6 +444,15 @@
       "name": "미리보기",
       "desc": "이 파일 미리보기"
     },
+    "office": {
+      "name": "Office에서 열기",
+      "desc": "구성된 Office 서비스에서 이 문서를 엽니다",
+      "edit": "편집 중",
+      "view": "보는 중",
+      "loading": "Office 편집기 로드 중...",
+      "load_failed": "Office 편집기를 불러올 수 없습니다",
+      "frame_title": "Office 문서 편집기"
+    },
     "audio": {
       "name": "재생",
       "desc": "음악 재생",

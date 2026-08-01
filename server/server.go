@@ -18,8 +18,10 @@ import (
 	"go-drive/storage"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -105,6 +107,12 @@ func InitServer(config common.Config,
 		return nil, e
 	}
 
+	if config.WOPI.DiscoveryURL != "" {
+		if e := InitWOPIRoutes(router, config, driveAccess, tokenStore, userDAO, ch); e != nil {
+			return nil, e
+		}
+	}
+
 	if config.WebDav.Enabled {
 		if e := InitWebdavAccess(engine, config, driveAccess, userAuth); e != nil {
 			return nil, e
@@ -170,7 +178,26 @@ func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v any) {
 }
 
 func Logger() gin.HandlerFunc {
-	logger := gin.Logger()
+	logger := gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		var statusColor, methodColor, resetColor string
+		if param.IsOutputColor() {
+			statusColor = param.StatusCodeColor()
+			methodColor = param.MethodColor()
+			resetColor = param.ResetColor()
+		}
+		if param.Latency > time.Minute {
+			param.Latency = param.Latency.Truncate(time.Second)
+		}
+		return fmt.Sprintf("[GIN] %v |%s %3d %s| %13v | %15s |%s %-7s %s %#v\n%s",
+			param.TimeStamp.Format("2006/01/02 - 15:04:05"),
+			statusColor, param.StatusCode, resetColor,
+			param.Latency,
+			param.ClientIP,
+			methodColor, param.Method, resetColor,
+			redactWOPIAccessToken(param.Path),
+			param.ErrorMessage,
+		)
+	})
 	return func(c *gin.Context) {
 		if c.FullPath() == "" {
 			// NoRoute static files
@@ -179,6 +206,22 @@ func Logger() gin.HandlerFunc {
 		}
 		logger(c)
 	}
+}
+
+func redactWOPIAccessToken(requestPath string) string {
+	i := strings.IndexByte(requestPath, '?')
+	if i < 0 {
+		return requestPath
+	}
+	query, e := url.ParseQuery(requestPath[i+1:])
+	if e != nil {
+		return requestPath[:i]
+	}
+	if _, exists := query["access_token"]; !exists {
+		return requestPath
+	}
+	query.Set("access_token", "[REDACTED]")
+	return requestPath[:i] + "?" + query.Encode()
 }
 
 type runtimeStat struct {
