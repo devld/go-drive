@@ -1,3 +1,5 @@
+import type { FormItem } from '..'
+
 export interface SearchConfig {
   enabled: boolean
   examples: string[]
@@ -13,7 +15,19 @@ export interface VersionConfig {
   version: string
 }
 
+export interface AuthProvider {
+  provider: string
+  displayName: string
+  type: 'form'
+  form: FormItem[]
+}
+
+export interface AuthConfig {
+  providers: AuthProvider[]
+}
+
 export interface Config {
+  auth: AuthConfig
   version: VersionConfig
   thumbnail: ThumbnailConfig
   options: O

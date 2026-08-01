@@ -1,54 +1,53 @@
 <template>
   <div class="login-view">
-    <form action="" @submit="onSubmit">
-      <span class="form-item username">
-        <input
-          v-model="username"
-          v-focus
-          class="value"
-          type="text"
-          required
-          :placeholder="$t('p.login.username')"
-        />
-      </span>
-      <span class="form-item password">
-        <input
-          v-model="password"
-          class="value"
-          type="password"
-          required
-          :placeholder="$t('p.login.password')"
-        />
-      </span>
-      <span class="form-item submit">
-        <SimpleButton native-type="submit" class="submit" :loading="loading">
+    <SimpleForm
+      v-if="loginProvider"
+      :key="loginProvider.provider"
+      v-model="formData"
+      :form="loginForm"
+      @submit="onSubmit"
+    >
+      <template #submit>
+        <SimpleButton native-type="submit" :loading="loading">
           {{ $t('p.login.login') }}
         </SimpleButton>
-      </span>
-    </form>
+      </template>
+    </SimpleForm>
   </div>
 </template>
 <script setup lang="ts">
 import { login } from '@/api'
 import { useAppStore } from '@/store'
-import { User } from '@/types'
+import { AuthProvider, FormItem, User } from '@/types'
 import { alert } from '@/utils/ui-utils'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const emit = defineEmits<{ (e: 'success', v?: User): void }>()
 
 const store = useAppStore()
 
-const username = ref('')
-const password = ref('')
+const loginProvider = computed<AuthProvider | undefined>(() =>
+  store.config?.auth.providers.find((provider) => provider.type === 'form')
+)
+const formData = ref<Record<string, string>>()
 const loading = ref(false)
 
-const onSubmit = async (e: Event) => {
-  e.preventDefault()
-  if (loading.value) return
+const loginForm = computed<FormItem[]>(() => {
+  const fields = (loginProvider.value?.form ?? []).map((item) => ({
+    ...item,
+    label: undefined,
+    placeholder: item.placeholder || item.label,
+    class: 'login-field',
+  }))
+  return [...fields, { slot: 'submit', class: 'submit' }]
+})
+
+const onSubmit = async () => {
+  const provider = loginProvider.value
+  if (!provider || loading.value) return
   loading.value = true
   try {
-    await login(username.value, password.value)
+    await login(provider.provider, formData.value ?? {})
     const user = await store.getUser()
     emit('success', user)
   } catch (e: any) {
@@ -60,30 +59,27 @@ const onSubmit = async (e: Event) => {
 </script>
 <style lang="scss">
 .login-view {
+  box-sizing: border-box;
   width: 300px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 16px 0;
+  padding: 16px;
 
-  .form-item {
+  .simple-form {
     display: block;
   }
 
-  .username {
-    margin-bottom: 0 !important;
+  .login-field,
+  .submit {
+    width: 100%;
+    padding-right: 0;
   }
 
-  .username input {
-    border-bottom: none !important;
-  }
-
-  .password {
-    margin-bottom: 16px;
+  .login-field {
+    margin-bottom: 8px;
   }
 
   .submit {
     text-align: right;
+    margin: 16px 0 0;
   }
 }
 </style>

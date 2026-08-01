@@ -65,7 +65,10 @@ const idPrefix = `form-${Math.round(Math.random() * 1000000)}-`
 const data = ref<O>({})
 let fields: InstanceType<typeof FormItem>[] = []
 
-const emit = defineEmits<{ (e: 'update:modelValue', v: O): void }>()
+const emit = defineEmits<{
+  (e: 'update:modelValue', v: O): void
+  (e: 'submit', event: Event): void
+}>()
 
 const addFieldsRef = (el: Element | ComponentPublicInstance | null) => {
   if (el) fields.push(el as InstanceType<typeof FormItem>)
@@ -95,7 +98,10 @@ const clearError = () => {
 
 defineExpose({ validate, clearError })
 
-const onSubmit = (e: Event) => e.preventDefault()
+const onSubmit = (e: Event) => {
+  e.preventDefault()
+  emit('submit', e)
+}
 
 const emitInput = () => emit('update:modelValue', data.value)
 

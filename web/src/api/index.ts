@@ -151,12 +151,12 @@ export interface LoginResult {
   expiresAt: number
 }
 
-export function login(username: string, password: string) {
+export function login(provider: string, formData: Record<string, string>) {
   return http
-    .post<LoginResult>('/auth/identity/callback', {
-      username,
-      password,
-    })
+    .post<LoginResult>(
+      `/auth/${encodeURIComponent(provider)}/callback`,
+      formData
+    )
     .then((res) => {
       setToken(res.token)
       return res
