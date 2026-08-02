@@ -64,8 +64,9 @@ const currentMenu = computed(() => router.currentRoute.value.path)
 
 .admin-page {
   box-sizing: border-box;
+  width: min(1000px, calc(100vw - 32px));
   max-width: 1000px;
-  margin: 16px auto 0;
+  margin: 0 auto;
   background-color: var(--color-bg-glass);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-dialog);

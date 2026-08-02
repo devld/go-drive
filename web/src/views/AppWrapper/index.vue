@@ -49,7 +49,12 @@
       </div>
     </header>
 
-    <main id="main-content" ref="mainContentEl" tabindex="-1">
+    <main
+      id="main-content"
+      ref="mainContentEl"
+      class="main-content"
+      tabindex="-1"
+    >
       <h1 class="visually-hidden">{{ pageHeading }}</h1>
       <RouterView />
     </main>
@@ -149,7 +154,7 @@ const afterLogin = () => {
 </script>
 <style lang="scss">
 .app-header {
-  padding: 16px;
+  padding: 16px 16px 32px;
   overflow: hidden;
 
   .user-area {
@@ -189,6 +194,24 @@ const afterLogin = () => {
 
   &:focus {
     transform: translateY(0);
+  }
+}
+
+.main-content {
+  display: flow-root;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 72px;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    border-radius: var(--radius-glass);
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
   }
 }
 

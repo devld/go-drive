@@ -143,8 +143,11 @@ svg {
 }
 
 .simple-table {
-  border: none;
+  box-sizing: border-box;
+  border: solid 1px var(--color-border);
   border-spacing: 0;
+  border-radius: var(--radius-control);
+  overflow: hidden;
   table-layout: fixed;
 
   th,
@@ -159,6 +162,7 @@ svg {
     -webkit-user-select: none;
     user-select: none;
     background-color: var(--color-bg-table-header);
+    border-bottom: solid 1px var(--color-border);
   }
 
   tr {
@@ -171,19 +175,7 @@ svg {
       background-color: var(--color-bg-hover);
     }
 
-    td:first-child {
-      border-left: solid 1px;
-      border-color: var(--color-border);
-    }
-
-    td:last-child {
-      border-right: solid 1px;
-      border-color: var(--color-border);
-    }
-
     td {
-      border-bottom: solid 1px;
-      border-color: var(--color-border);
       overflow-wrap: break-word;
     }
   }

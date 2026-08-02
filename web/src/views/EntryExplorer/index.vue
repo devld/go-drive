@@ -521,7 +521,8 @@ window.addEventListener('keydown', onKeyDown)
 <style lang="scss">
 .entry-explorer {
   position: relative;
-  margin: 0 auto 40px;
+  width: min(900px, 100vw);
+  margin: 0 auto;
   max-width: 900px;
   padding-top: 72px;
 
@@ -546,7 +547,7 @@ window.addEventListener('keydown', onKeyDown)
 
 .page-footer {
   box-sizing: border-box;
-  margin: 42px 0;
+  margin: 42px 0 0;
   background-color: var(--color-bg-glass);
   padding: 16px;
   border-radius: var(--radius-glass);
@@ -570,6 +571,7 @@ window.addEventListener('keydown', onKeyDown)
 
 @media screen and (max-width: 900px) {
   .entry-explorer {
+    width: calc(100vw - 32px);
     margin: 16px;
 
     .entry-item--view-list {

@@ -737,7 +737,7 @@ onUnmounted(() => {
     max-height: 220px;
     overflow-y: auto;
     border-top: solid 1px var(--color-border);
-    background-color: var(--color-bg-surface);
+    background-color: transparent;
   }
 
   &__list-item {
