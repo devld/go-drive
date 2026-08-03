@@ -29,7 +29,11 @@
       />
     </template>
     <ErrorView v-else :status="error.status" :message="error.message" />
-    <div v-if="!inited" class="loading-tips">Loading...</div>
+    <LoadingState
+      v-if="!inited"
+      variant="overlay"
+      :text="$t('app.loading')"
+    />
   </div>
 </template>
 <script setup lang="ts">
@@ -44,6 +48,7 @@ import { entryMatches, filename as filenameFn, filenameExt } from '@/utils'
 import { HttpError } from '@/utils/http'
 import { isPrimaryModifierPressed } from '@/utils/platform'
 import { alert } from '@/utils/ui-utils'
+import LoadingState from '@/components/LoadingState.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { EntryHandlerContext } from '../types'
 
@@ -188,22 +193,9 @@ loadFile()
     height: 100%;
   }
 
-  .loading-tips {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 300px;
-    font-weight: bold;
-    font-size: 24px;
-    text-transform: uppercase;
-    -webkit-user-select: none;
-    user-select: none;
+  > .loading-state {
+    top: 48px;
   }
+
 }
 </style>

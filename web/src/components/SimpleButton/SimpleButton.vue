@@ -10,16 +10,20 @@
     :aria-busy="loading ? 'true' : undefined"
     @click="emit('click', $event)"
   >
-    <Icon v-if="loading" class="loading-icon" name="loading" aria-hidden="true" />
-    <template v-else>
+    <LoadingIndicator
+      v-if="loading"
+      class="simple-button__loading-indicator"
+    />
+    <span class="simple-button__content" :class="{ hidden: loading }">
       <Icon v-if="icon" :name="icon" aria-hidden="true" />
       <slot />
-    </template>
+    </span>
   </button>
 </template>
 <script setup lang="ts">
 import type { SimpleButtonType, SimpleButtonNativeType } from '.'
 import type { IconName } from '@/components/icons'
+import LoadingIndicator from '@/components/LoadingIndicator.vue'
 
 defineProps({
   loading: {
@@ -47,6 +51,7 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
 </script>
 <style lang="scss">
 .simple-button {
+  position: relative;
   font-size: 16px;
   border: none;
   background-color: var(--color-accent-strong);
@@ -79,6 +84,10 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
     opacity: 0.58;
   }
 
+  &.loading[disabled] {
+    opacity: 0.86;
+  }
+
   $types: ('info', 'success', 'warning', 'danger');
   @each $type in $types {
     &.#{$type} {
@@ -86,5 +95,18 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
       color: var(--color-on-#{$type});
     }
   }
+}
+
+.simple-button__content.hidden {
+  visibility: hidden;
+}
+
+.simple-button__loading-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1em;
+  height: 1em;
+  margin: -0.5em 0 0 -0.5em;
 }
 </style>

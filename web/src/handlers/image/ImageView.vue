@@ -3,7 +3,13 @@
     ref="psEl"
     class="image-view-page"
     :class="{ loading: isCurrentImageSizeLoading }"
-  ></div>
+  >
+    <LoadingState
+      v-if="isCurrentImageSizeLoading"
+      class="image-view-page__loading"
+      variant="overlay"
+    />
+  </div>
 </template>
 <script setup lang="ts">
 import { fileUrl } from '@/api'
@@ -12,6 +18,7 @@ import { filenameExt, filename as filenameFn, dir, pathJoin } from '@/utils'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Entry } from '@/types'
 import { EntryHandlerContext } from '../types'
+import LoadingState from '@/components/LoadingState.vue'
 
 const props = defineProps({
   entry: {
@@ -114,6 +121,7 @@ onUnmounted(() => {
 <style lang="scss">
 @import url('photoswipe/dist/photoswipe.css');
 .image-view-page {
+  position: relative;
   width: 100vw;
   height: 100%;
 
@@ -121,6 +129,12 @@ onUnmounted(() => {
     .pswp__img {
       visibility: hidden;
     }
+  }
+
+  &__loading {
+    z-index: 100001;
+    background-color: rgba(0, 0, 0, 0.54);
+    color: rgba(255, 255, 255, 0.86);
   }
 }
 </style>

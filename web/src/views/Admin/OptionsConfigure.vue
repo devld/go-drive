@@ -10,7 +10,7 @@
       <summary>
         <h3 class="options-group-title">
           {{ form.title }}
-          <Icon v-if="loading" class="loading-icon" name="loading" />
+          <LoadingIndicator v-if="loading" />
         </h3>
       </summary>
 
@@ -32,6 +32,7 @@
 import { getOptions, setOptions } from '@/api/admin'
 import { FormItem } from '@/types'
 import { alert } from '@/utils/ui-utils'
+import LoadingIndicator from '@/components/LoadingIndicator.vue'
 import { ComponentPublicInstance, onUpdated, ref, watch } from 'vue'
 
 export interface OptionsForm {

@@ -4,10 +4,7 @@
       {{ logContent }}
     </div>
     <div v-if="executing" class="execution-log-dialog__executing">
-      <Icon
-        class="execution-log-dialog__executing-icon loading-icon"
-        name="loading"
-      />
+      <LoadingIndicator class="execution-log-dialog__executing-icon" />
     </div>
   </div>
 </template>
@@ -20,6 +17,7 @@ import type { StreamHttpResponse } from '@/api/http'
 import type { RequestTask } from '@/utils/http'
 import type { BaseDialogOptionsData } from '@/utils/ui-utils/base-dialog'
 import type { Task } from '@/types'
+import LoadingIndicator from '@/components/LoadingIndicator.vue'
 
 const { t } = useI18n()
 

@@ -30,7 +30,11 @@
     </div>
     <div v-if="showing" class="search-panel__result" @scroll="onResultScroll">
       <div v-if="result.length === 0" class="search-panel__tip">
-        <template v-if="searching">{{ $t('app.search.searching') }}</template>
+        <LoadingState
+          v-if="searching"
+          variant="inline"
+          :text="$t('app.search.searching')"
+        />
         <template v-else-if="result.length === 0">
           <p>{{ searchError }}</p>
           <div v-if="searchExamples?.length" class="search-panel__help">
@@ -61,6 +65,7 @@ import { useHotKey } from '@/utils/hooks/hotkey'
 import { computed, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchItem from './SearchItem.vue'
+import LoadingState from '@/components/LoadingState.vue'
 
 export default { name: 'SearchPanel' }
 </script>
@@ -284,6 +289,10 @@ defineExpose({ setActive })
   padding: 16px;
   color: var(--color-text-muted);
   text-align: center;
+
+  .loading-state {
+    min-height: 48px;
+  }
 
   p {
     margin: 0;

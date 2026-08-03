@@ -9,7 +9,11 @@
         <option v-for="(_, l) in languages" :key="l" :value="l">{{ l }}</option>
       </select>
     </div>
-    <div v-if="loading" class="code-editor__loading">Editor loading...</div>
+    <LoadingState
+      v-if="loading"
+      variant="overlay"
+      :text="$t('app.loading')"
+    />
   </div>
 </template>
 <script setup lang="ts">
@@ -22,6 +26,7 @@ import { getEnv } from './js-script-env'
 import { useEditorSetup, useEditorTheme } from './utils'
 import { languages } from './mapping'
 import { stringSplitN } from '@/utils'
+import LoadingState from '@/components/LoadingState.vue'
 
 const props = defineProps({
   modelValue: {
@@ -168,16 +173,4 @@ onMounted(initEditor)
   }
 }
 
-.code-editor__loading {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  -webkit-user-select: none;
-  user-select: none;
-}
 </style>

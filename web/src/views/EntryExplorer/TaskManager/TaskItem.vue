@@ -2,9 +2,13 @@
   <div class="upload-task-item" :class="`task-status-${task.status}`">
     <div
       v-if="progress && progress !== 1"
-      class="upload-task-item__progress-bar"
-      :style="{ width: `${progress * 100}%` }"
-    ></div>
+      class="upload-task-item__progress-track"
+    >
+      <div
+        class="upload-task-item__progress-bar"
+        :style="{ width: `${progress * 100}%` }"
+      ></div>
+    </div>
     <span class="upload-task-item__filename" :title="filename">
       <EntryIcon
         class="upload-task-item__icon"
@@ -170,7 +174,7 @@ const showRemove = computed(() => !showStop.value)
   position: relative;
   display: flex;
   align-items: center;
-  padding: 8px;
+  padding: 8px 8px 11px;
   font-size: 14px;
   overflow: hidden;
 
@@ -185,22 +189,31 @@ const showRemove = computed(() => !showStop.value)
   }
 }
 
-.upload-task-item__progress-bar {
+.upload-task-item__progress-track {
   position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
+  right: 8px;
+  left: 8px;
+  bottom: 4px;
+  height: 3px;
+  border-radius: 999px;
+  z-index: 2;
+  overflow: hidden;
+  background-color: var(--color-progress-track-paused);
+}
+
+.upload-task-item__progress-bar {
+  height: 100%;
+  border-radius: inherit;
   transition:
     width 400ms linear,
     background-color var(--motion-duration-normal)
       var(--motion-easing-standard);
-  background-color: var(--color-progress-track);
+  background-color: var(--color-progress-value);
 }
 
 .task-status-1 {
   .upload-task-item__progress-bar {
-    background-color: var(--color-progress-track-paused);
+    background-color: var(--color-text-muted);
   }
 }
 

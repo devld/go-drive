@@ -3,8 +3,17 @@ import {
   Component,
   ComponentPublicInstance,
   defineAsyncComponent,
+  defineComponent,
+  h,
 } from 'vue'
-import LoadingComponent from './LoadingComponent.vue'
+import { useI18n } from 'vue-i18n'
+import LoadingState from '@/components/LoadingState.vue'
+
+const AsyncLoadingState = defineComponent(() => {
+  const { t } = useI18n()
+
+  return () => h(LoadingState, { variant: 'panel', text: t('app.loading') })
+})
 
 export function wrapAsyncComponent<
   T extends Component = {
@@ -13,6 +22,6 @@ export function wrapAsyncComponent<
 >(loader: AsyncComponentLoader<T>) {
   return defineAsyncComponent({
     loader,
-    loadingComponent: LoadingComponent,
+    loadingComponent: AsyncLoadingState,
   })
 }

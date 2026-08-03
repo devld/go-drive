@@ -1,6 +1,13 @@
 <template>
-  <div v-if="readmeContent" data-ui="readme-content">
+  <div v-if="readmeLoading || readmeContent" data-ui="readme-content">
+    <LoadingState
+      v-if="readmeLoading"
+      variant="panel"
+      :surface="false"
+      :text="$t('p.home.readme_loading')"
+    />
     <div
+      v-else
       v-markdown="readmeContent"
       class="markdown-body"
       data-ui="markdown"
@@ -14,6 +21,7 @@ import { Entry } from '@/types'
 import { getContent } from '@/api'
 import { dir } from '@/utils'
 import { useI18n } from 'vue-i18n'
+import LoadingState from '@/components/LoadingState.vue'
 
 const README_FILENAME = 'readme.md'
 
@@ -45,22 +53,25 @@ const readmeEntry = computed<Entry | undefined>(() => {
 let readmeTask: RequestTask<any> | undefined
 
 const readmeContent = ref('')
+const readmeLoading = ref(false)
 
 const loadReadme = async (entry: Entry) => {
   readmeTask?.cancel()
-  readmeTask = getContent(entry.path, entry.meta)
+  const task = getContent(entry.path, entry.meta)
+  readmeTask = task
 
   let content
-  readmeContent.value = `<p style="text-align: center">${t(
-    'p.home.readme_loading'
-  )}</p>`
+  readmeLoading.value = true
   try {
-    content = await readmeTask
+    content = await task
   } catch (e: any) {
     if (e.isCancel) return
     content = `<p style="text-align: center;">${t('p.home.readme_failed')}</p>`
   } finally {
-    readmeTask = undefined
+    if (readmeTask === task) {
+      readmeTask = undefined
+      readmeLoading.value = false
+    }
   }
   if (props.path === dir(entry.path)) {
     readmeContent.value = content
@@ -74,6 +85,7 @@ watch(
       loadReadme(readmeEntry.value)
     } else {
       readmeContent.value = ''
+      readmeLoading.value = false
       readmeTask?.cancel()
       readmeTask = undefined
     }

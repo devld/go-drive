@@ -6,16 +6,16 @@
     :accessible-label="text || t('app.loading')"
   >
     <div class="loading-dialog__content">
-      <Icon class="loading-dialog__icon loading-icon" name="loading" />
-      <span class="loading-dialog__text">{{ text }}</span>
-      <SimpleButton
-        v-if="cancelText"
-        class="loading-dialog__cancel"
-        :type="cancelType"
-        :loading="cancelLoading"
-        @click="cancel"
-        >{{ cancelText }}</SimpleButton
-      >
+      <LoadingState variant="dialog" :text="text">
+        <SimpleButton
+          v-if="cancelText"
+          class="loading-dialog__cancel"
+          :type="cancelType"
+          :loading="cancelLoading"
+          @click="cancel"
+          >{{ cancelText }}</SimpleButton
+        >
+      </LoadingState>
     </div>
   </DialogView>
 </template>
@@ -24,6 +24,7 @@ import { SimpleButtonType } from '@/components/SimpleButton'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { LoadingOptions } from '.'
+import LoadingState from '@/components/LoadingState.vue'
 
 const showing = ref(false)
 const text = ref<I18nText>('')
@@ -79,25 +80,11 @@ defineExpose({ show, hide })
 
 .loading-dialog__content {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
 }
 
-.loading-dialog__text {
-  max-width: 50vw;
-  -webkit-user-select: none;
-  user-select: none;
-  margin-top: 1em;
-  word-break: break-all;
-}
-
 .loading-dialog__cancel {
-  margin-top: 1em;
-}
-
-.icon.loading-dialog__icon {
-  width: 5vw;
-  height: 5vw;
-  color: var(--color-text-muted);
+  margin-top: 4px;
 }
 </style>
