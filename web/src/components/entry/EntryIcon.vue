@@ -4,12 +4,17 @@
     :class="`entry-icon-${entry.type}`"
     @click="emit('click', $event)"
   >
-    <Icon :name="icon || entryIcon" />
+    <Icon
+      v-show="entry.type === 'dir' || !thumbnailLoaded"
+      :name="icon || entryIcon"
+    />
     <img
       v-if="showThumbnail && thumbnail && !err"
       v-lazy-src="thumbnail"
       class="entry-icon__thumbnail"
+      :class="{ 'entry-icon__thumbnail--loaded': thumbnailLoaded }"
       :alt="entry.name"
+      @load="onLoad"
       @error="onError"
     />
   </span>
@@ -18,7 +23,7 @@
 import { getEntryIcon } from './file-icon'
 import { fileThumbnail } from '@/api'
 import { filenameExt } from '@/utils'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Entry } from '@/types'
 import { useAppStore } from '@/store'
 import type { IconName } from '@/components/icons'
@@ -40,6 +45,7 @@ const props = defineProps({
 const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
 
 const err = ref<Event | null>(null)
+const thumbnailLoaded = ref(false)
 
 const store = useAppStore()
 
@@ -59,7 +65,16 @@ const thumbnail = computed(() => {
   return undefined
 })
 
-const onError = (e: Event) => (err.value = e)
+watch(thumbnail, () => {
+  err.value = null
+  thumbnailLoaded.value = false
+})
+
+const onLoad = () => (thumbnailLoaded.value = true)
+const onError = (e: Event) => {
+  thumbnailLoaded.value = false
+  err.value = e
+}
 </script>
 <style lang="scss">
 .entry-icon {
@@ -84,6 +99,11 @@ const onError = (e: Event) => (err.value = e)
   width: 100%;
   height: 100%;
   object-fit: cover;
+  visibility: hidden;
+}
+
+.entry-icon__thumbnail--loaded {
+  visibility: visible;
 }
 
 .entry-icon-dir {

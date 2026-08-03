@@ -24,16 +24,21 @@ function loadImage(img: HTMLImageElement) {
 
 export default {
   mounted(el, { value }) {
-    el.src =
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAAtJREFUGFdjYAACAAAFAAGq1chRAAAAAElFTkSuQmCC'
     el.dataset.src = value
     if (value) {
       observer.observe(el)
     }
   },
-  updated(el, { value }) {
+  updated(el, { value, oldValue }) {
+    if (value === oldValue) return
+
     observer.unobserve(el)
-    el.dataset.src = value
+    el.removeAttribute('src')
+    if (value) {
+      el.dataset.src = value
+    } else {
+      delete el.dataset.src
+    }
     if (value) {
       observer.observe(el)
     }
