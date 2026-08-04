@@ -376,7 +376,7 @@ Log only inside a `DEBUG` branch, and redact arguments before constructing the l
 
 ### Forms
 
-Supported types are `md`, `textarea`, `text`, `password`, `checkbox`, `checkboxes`, `select`, `path`, `form`, and `code`. Drive credentials normally need only text/password/select/checkbox. Use `Type: "password"` for secrets.
+Supported types are `md`, `textarea`, `text`, `password`, `checkbox`, `checkboxes`, `select`, `path`, `form`, and `code`. Drive credentials normally need only text/password/select/checkbox. Use `Type: "password"` for secrets. When an existing secret is returned through `DriveInitConfiguration.Value`, the admin API replaces it with a reserved placeholder; submitting that unchanged placeholder preserves the stored secret.
 
 Common fields are `Label/Type/Field/Required/Description/Disabled/DefaultValue`. A select uses `Options`, a path uses `PathOptions`, a nested form uses `Forms`, and a code editor uses `Code`. Use the capitalized Go-bridge field names declared in the `.d.ts` files.
 

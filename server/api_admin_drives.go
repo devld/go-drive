@@ -111,6 +111,7 @@ func (dr *drivesRoute) getDriveInitConfig(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
+	escapeDriveInitConfigSecrets(data)
 	SetResult(c, data)
 }
 
@@ -118,6 +119,10 @@ func (dr *drivesRoute) doDriveInit(c *gin.Context) {
 	name := c.Param("name")
 	data := make(types.SM, 0)
 	if e := c.Bind(&data); e != nil {
+		_ = c.Error(e)
+		return
+	}
+	if e := restoreDriveInitSecrets(data, dr.driveDataDAO.GetDataStore(name)); e != nil {
 		_ = c.Error(e)
 		return
 	}
@@ -240,14 +245,61 @@ func (sdr *scriptDrivesRoute) saveDriveScriptContent(c *gin.Context) {
 	}
 }
 
-const escapedPassword = "YOU CAN'T SEE ME"
+const (
+	secretPlaceholder = "__go-drive_secret__"
+)
+
+func isSecretPlaceholder(value string) bool {
+	return value == secretPlaceholder
+}
+
+// escapeDriveInitConfigSecrets replaces persisted initialization values before
+// the configuration is returned to the browser. Initialization forms use the
+// shared marker even when a form item has a custom Secret value, because the
+// marker can be restored on submission without evaluating InitConfig again.
+func escapeDriveInitConfigSecrets(config *driveutil.DriveInitConfig) {
+	if config == nil || config.Value == nil {
+		return
+	}
+	for _, f := range config.Form {
+		if (f.Type == "password" || f.Secret != "") && config.Value[f.Field] != "" {
+			config.Value[f.Field] = secretPlaceholder
+		}
+	}
+}
+
+// restoreDriveInitSecrets restores unchanged initialization values from the
+// drive's private data store. The submitted marker is intentionally handled
+// without the form: InitConfig may have side effects such as rotating OAuth
+// state, so it must not be called a second time just to recover field metadata.
+func restoreDriveInitSecrets(data types.SM, store driveutil.DriveDataStore) error {
+	keys := make([]string, 0)
+	for key, value := range data {
+		if isSecretPlaceholder(value) {
+			keys = append(keys, key)
+		}
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	sort.Strings(keys)
+
+	saved, e := store.Load(keys...)
+	if e != nil {
+		return e
+	}
+	for _, key := range keys {
+		data[key] = saved[key]
+	}
+	return nil
+}
 
 func escapeDriveConfigSecrets(form []types.FormItem, config string) string {
 	val := types.SM{}
 	_ = json.Unmarshal([]byte(config), &val)
 	for _, f := range form {
 		if (f.Type == "password" || f.Secret != "") && val[f.Field] != "" {
-			val[f.Field] = escapedPassword
+			val[f.Field] = secretPlaceholder
 			if f.Secret != "" {
 				val[f.Field] = f.Secret
 			}
@@ -264,7 +316,7 @@ func unescapeDriveConfigSecrets(form []types.FormItem, savedConfig string, confi
 	_ = json.Unmarshal([]byte(config), &val)
 	for _, f := range form {
 		if (f.Type == "password" || f.Secret != "") &&
-			(val[f.Field] == escapedPassword || (f.Secret != "" && val[f.Field] == f.Secret)) {
+			(isSecretPlaceholder(val[f.Field]) || (f.Secret != "" && val[f.Field] == f.Secret)) {
 			val[f.Field] = savedVal[f.Field]
 		}
 	}

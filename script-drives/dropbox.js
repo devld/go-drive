@@ -94,10 +94,20 @@ defineInitConfig(function (ctx, config, utils) {
 
 defineInit(function (ctx, data, config, utils) {
   var cred = utils.Data.Load("client_id", "client_secret", "_id");
-  if (!cred.client_id || !cred.client_secret) {
-    utils.Data.Save(data);
-    return;
+
+  // The form submits credentials, while the OAuth callback only submits
+  // code/state. Persist credentials before handling either path, but never
+  // persist OAuth callback fields as drive configuration.
+  if (data.client_id && data.client_secret) {
+    utils.Data.Save({
+      client_id: data.client_id,
+      client_secret: data.client_secret,
+    });
+    cred.client_id = data.client_id;
+    cred.client_secret = data.client_secret;
   }
+
+  if (!cred.client_id || !cred.client_secret) return;
 
   if (!cred._id) {
     var id = (Math.random() * 1000000).toFixed(0);

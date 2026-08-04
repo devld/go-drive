@@ -47,19 +47,15 @@ defineInitConfig(function (ctx, config, utils) {
 });
 
 defineInit(function (ctx, data, config, utils) {
-    var data = utils.Data.Load("some_field", "_id");
-    if (!data.some_field) {
-        // if the configuration data not saved, just save it
-        utils.Data.Save(data);
-        return;
-    }
+    var saved = utils.Data.Load("_id");
 
     // we generate an unique drive id here
     // the id is to identify the Entry is ours in Copy/Move
-    if (!data._id) {
+    if (!saved._id) {
         var id = (Math.random() * 1000000).toFixed(0);
-        utils.Data.Save({ _id: id });
+        data._id = id;
     }
+    utils.Data.Save(data);
 });
 
 /**
