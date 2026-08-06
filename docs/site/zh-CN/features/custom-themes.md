@@ -3,7 +3,7 @@ title: 自定义主题
 description: 使用受支持的 CSS 主题接口定制 go-drive 的颜色、毛玻璃、圆角、动画、背景和组件细节。
 lang: zh-CN
 translation_key: custom-themes
-source_hash: c7bd85087ab97ad5e7d1810ce62d30bd390087daec13a243956eda9b9cdb8b5a
+source_hash: 2a910c47a209cc92e7bed767f0e44de8db87120465ee02856350a5b64c581073
 ---
 
 # 自定义主题
@@ -151,6 +151,7 @@ source_hash: c7bd85087ab97ad5e7d1810ce62d30bd390087daec13a243956eda9b9cdb8b5a
 | `[data-ui="handler-header"]` | 预览或编辑器标题栏 |
 | `[data-ui="preview"]` | 预览或编辑器根节点 |
 | `[data-ui="entry-drag-status"]` | 拖放状态浮层 |
+| `[data-ui="drop-zone-indicator"]` | 全屏上传拖放提示 |
 | `[data-ui="drop-zone"]` | 上传拖放目标 |
 | `[data-surface="glass"]` | 任意内置毛玻璃表面 |
 

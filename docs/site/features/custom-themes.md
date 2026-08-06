@@ -161,6 +161,7 @@ The following attributes are the supported structural theme hooks.
 | `[data-ui="handler-header"]` | Preview or editor title bar |
 | `[data-ui="preview"]` | Preview/editor root |
 | `[data-ui="entry-drag-status"]` | Drag status popup |
+| `[data-ui="drop-zone-indicator"]` | Full-screen upload drop indicator |
 | `[data-ui="drop-zone"]` | Upload drop target |
 | `[data-surface="glass"]` | Any built-in glass surface |
 

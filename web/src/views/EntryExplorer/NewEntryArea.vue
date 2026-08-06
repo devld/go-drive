@@ -85,7 +85,11 @@
       @change="onFilesChosen"
     />
 
-    <div v-if="dropZoneActive" class="drop-zone-indicator">
+    <div
+      v-if="dropZoneActive"
+      class="drop-zone-indicator"
+      data-ui="drop-zone-indicator"
+    >
       <div
         class="drop-zone-indicator__content glass-surface"
         data-ui="drop-zone"
@@ -494,15 +498,10 @@ onBeforeMount(() => {
 
   .drop-zone-indicator {
     position: fixed;
-    top: 8px;
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
+    inset: 0;
     z-index: 1000;
-    border: solid 2px var(--color-accent);
-    border-radius: 10px;
     pointer-events: none;
-    background-color: var(--color-bg-selected);
+    background-color: var(--color-overlay);
 
     display: flex;
     justify-content: center;
