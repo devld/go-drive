@@ -100,6 +100,9 @@ func (w *DriveFS) ReadDir(name string) ([]fs.DirEntry, error) {
 
 func (w *DriveFS) Mkdir(ctx context.Context, name string, _ os.FileMode) error {
 	_, e := w.drive.MakeDir(ctx, utils.CleanPath(name))
+	if err.IsPermissionDeniedNotFoundError(e) {
+		return os.ErrPermission
+	}
 	return mapError(e)
 }
 

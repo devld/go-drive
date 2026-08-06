@@ -8,6 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go-drive/common/driveutil"
+	"go-drive/common/types"
+	"go-drive/common/utils"
+	"go-drive/drive"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -258,6 +262,56 @@ func TestEscapeXML(t *testing.T) {
 }
 
 type permissionFileSystem struct{}
+
+type permissionDrive struct {
+	types.IDrive
+}
+
+type permissionDriveFileSystem struct {
+	*driveutil.DriveFS
+}
+
+func (fs permissionDriveFileSystem) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (File, error) {
+	return fs.DriveFS.OpenFile(ctx, name, flag, perm)
+}
+
+func TestMKCOLPathPermissionReturnsForbidden(t *testing.T) {
+	root := ""
+	permissions := utils.NewPermMap([]types.PathPermission{{
+		Path:       &root,
+		Subject:    types.AnySubject,
+		Permission: types.PermissionRead,
+		Policy:     types.PolicyAccept,
+	}})
+	d := drive.NewPermissionWrapperDrive(&permissionDrive{}, permissions)
+	fs, e := driveutil.NewDriveFS(d, t.TempDir(), nil)
+	if e != nil {
+		t.Fatalf("NewDriveFS: %v", e)
+	}
+
+	h := &Handler{
+		FileSystem: permissionDriveFileSystem{fs},
+		LockSystem: NewMemLS(),
+	}
+	req := httptest.NewRequest("MKCOL", "http://example.com/new-dir", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if got := w.Code; got != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", got, http.StatusForbidden)
+	}
+}
+
+func TestMKCOLWithoutParentReturnsConflict(t *testing.T) {
+	h := &Handler{FileSystem: NewMemFS(), LockSystem: NewMemLS()}
+	req := httptest.NewRequest("MKCOL", "http://example.com/missing/new-dir", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if got := w.Code; got != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", got, http.StatusConflict)
+	}
+}
 
 func (permissionFileSystem) Mkdir(context.Context, string, os.FileMode) error {
 	return os.ErrPermission

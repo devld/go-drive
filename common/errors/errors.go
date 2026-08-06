@@ -53,7 +53,8 @@ func (b UnauthorizedError) Name() string {
 
 // NotFoundError 404
 type NotFoundError struct {
-	msg string
+	msg              string
+	permissionDenied bool
 }
 
 func (d NotFoundError) Error() string {
@@ -159,6 +160,14 @@ func IsNotFoundError(e error) bool {
 	return ok
 }
 
+// IsPermissionDeniedNotFoundError reports a not-found error that intentionally
+// hides a path permission failure from callers that should not learn whether
+// the path exists.
+func IsPermissionDeniedNotFoundError(e error) bool {
+	d, ok := e.(NotFoundError)
+	return ok && d.permissionDenied
+}
+
 func IsNotAllowedError(e error) bool {
 	_, ok := e.(NotAllowedError)
 	return ok
@@ -173,11 +182,15 @@ func NewUnauthorizedError(msg string) UnauthorizedError {
 }
 
 func NewNotFoundError() NotFoundError {
-	return NotFoundError{i18n.T("error.not_found")}
+	return NotFoundError{msg: i18n.T("error.not_found")}
 }
 
 func NewNotFoundMessageError(msg string) NotFoundError {
-	return NotFoundError{msg}
+	return NotFoundError{msg: msg}
+}
+
+func NewPermissionDeniedNotFoundError(msg string) NotFoundError {
+	return NotFoundError{msg: msg, permissionDenied: true}
 }
 
 func NewNotAllowedError() NotAllowedError {

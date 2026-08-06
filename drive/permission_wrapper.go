@@ -169,7 +169,7 @@ func (p *PermissionWrapperDrive) requirePathAndParentWritable(path string) (type
 func (p *PermissionWrapperDrive) requirePermission(path string, require types.Permission) (types.Permission, error) {
 	resolved := p.pm.ResolvePath(path)
 	if resolved&require != require {
-		return resolved, err.NewNotFoundMessageError(i18n.T("error.permission_denied"))
+		return resolved, err.NewPermissionDeniedNotFoundError(i18n.T("error.permission_denied"))
 	}
 	return resolved, nil
 }
