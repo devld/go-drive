@@ -110,6 +110,7 @@ const enSidebar = [
     items: [
       { text: 'Search', link: '/features/search' },
       { text: 'WebDAV Access', link: '/features/webdav' },
+      { text: 'Office Editing with WOPI', link: '/features/wopi' },
       { text: 'File Buckets', link: '/features/file-buckets' },
       { text: 'Site Settings', link: '/features/site-settings' },
       { text: 'Custom Themes', link: '/features/custom-themes' },
@@ -171,6 +172,7 @@ const zhSidebar = [
     items: [
       { text: '搜索与索引', link: '/zh-CN/features/search' },
       { text: 'WebDAV 访问', link: '/zh-CN/features/webdav' },
+      { text: 'WOPI Office 编辑', link: '/zh-CN/features/wopi' },
       { text: '文件桶', link: '/zh-CN/features/file-buckets' },
       { text: '站点设置', link: '/zh-CN/features/site-settings' },
       { text: '自定义主题', link: '/zh-CN/features/custom-themes' },

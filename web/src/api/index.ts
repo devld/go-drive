@@ -183,3 +183,18 @@ export function getConfig(optKeys: string[]) {
     },
   })
 }
+
+export interface WOPISession {
+  actionUrl: string
+  accessToken: string
+  accessTokenTtl: number
+  mode: 'view' | 'edit'
+  userId: string
+  ownerId: string
+}
+
+export function createWOPISession(path: string) {
+  return http.post<WOPISession>(`/wopi/session/${path}`, undefined, {
+    headers: pathPasswordHeaders(path),
+  })
+}

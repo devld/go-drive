@@ -104,6 +104,7 @@ type Config struct {
 	SignatureTTL time.Duration `yaml:"signature-ttl"`
 
 	WebDav WebDavConfig `yaml:"web-dav"`
+	WOPI   WOPIConfig   `yaml:"wopi"`
 
 	Search SearchConfig `yaml:"search"`
 
@@ -160,6 +161,12 @@ type WebDavConfig struct {
 	Prefix         string `yaml:"prefix"`
 	AllowAnonymous bool   `yaml:"allow-anonymous"`
 	MaxCacheItems  int    `yaml:"max-cache-items"`
+}
+
+// WOPIConfig configures the WOPI client discovery endpoint. WOPI support is
+// disabled when DiscoveryURL is empty.
+type WOPIConfig struct {
+	DiscoveryURL string `yaml:"discovery-url"`
 }
 
 type SearchConfig struct {
