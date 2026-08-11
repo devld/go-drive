@@ -444,6 +444,15 @@
       "name": "Preview",
       "desc": "Preview this file"
     },
+    "office": {
+      "name": "Open in Office",
+      "desc": "Open this document in the configured Office service",
+      "edit": "Editing",
+      "view": "Viewing",
+      "loading": "Loading Office editor...",
+      "load_failed": "Unable to load Office editor",
+      "frame_title": "Office document editor"
+    },
     "audio": {
       "name": "Play",
       "desc": "Play music",
