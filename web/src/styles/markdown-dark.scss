@@ -19,28 +19,4 @@
     }
   }
 
-  .highlight pre,
-  pre {
-    background-color: var(--color-bg-elevated);
-  }
-
-  kbd {
-    background-color: var(--color-bg-elevated);
-    color: var(--color-text);
-    border-color: var(--color-border);
-  }
-
-  table td,
-  table th {
-    background-color: var(--color-bg-elevated);
-    border-color: var(--color-border);
-  }
-
-  blockquote {
-    border-left-color: var(--color-border);
-  }
-
-  hr {
-    background-color: var(--color-bg-elevated);
-  }
 }

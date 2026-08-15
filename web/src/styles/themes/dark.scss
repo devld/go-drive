@@ -4,21 +4,23 @@ $theme-dark: (
   color-bg-surface: #1d2026,
   color-bg-elevated: #252931,
   color-bg-glass: rgba(37, 41, 49, 0.58),
-  color-bg-hover: #2d333b,
-  color-bg-focus: #343b45,
-  color-bg-selected: #183f65,
-  color-bg-invalid: #4c2429,
-  color-bg-table-header: #282c34,
+  // Interaction backgrounds are overlays so custom page backgrounds remain visible.
+  color-bg-hover: rgba(255, 255, 255, 0.08),
+  color-bg-focus: rgba(88, 166, 255, 0.18),
+  color-bg-selected: rgba(31, 111, 235, 0.28),
+  color-bg-attention: rgba(227, 179, 65, 0.22),
+  color-bg-invalid: rgba(218, 54, 51, 0.22),
+  color-bg-table-header: rgba(255, 255, 255, 0.04),
 
   // Content and separators.
   color-text: #f0f3f6,
   color-text-muted: #a8b3c2,
   color-text-disabled: #8c959f,
-  color-border: #3d444d,
+  color-border: rgba(255, 255, 255, 0.16),
   color-field-bg: rgba(37, 41, 49, 0.48),
   color-field-bg-disabled: rgba(48, 54, 61, 0.64),
-  color-field-border: #57606a,
-  color-glass-border: rgba(255, 255, 255, 0.2),
+  color-field-border: rgba(255, 255, 255, 0.28),
+  color-glass-border: rgba(255, 255, 255, 0.22),
 
   // Interactive and status colors. Filled controls deliberately use darker
   // variants so their foreground contrast remains stable in the dark theme.

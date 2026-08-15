@@ -3,17 +3,19 @@
     <div v-for="(f, i) in value" :key="i" class="form-item__form-item">
       <template v-if="formsMapByKey[f.typeKey]">
         <div class="form-item__form-item-title">
-          <span class="title-text"
-            >{{ i + 1 }}. {{ formsMapByKey[f.typeKey].name }}</span
-          >
-          <button
-            class="close-button plain-button small"
-            data-ui="button"
-            data-variant="plain"
+          <span class="title-text">
+            {{ i + 1 }}<template v-if="formsMapByKey[f.typeKey].name"
+              >. {{ formsMapByKey[f.typeKey].name }}</template
+            >
+          </span>
+          <SimpleButton
+            class="close-button"
+            variant="plain"
+            small
+            icon="close"
+            :aria-label="t('dialog.base.close')"
             @click="removeItem(i)"
-          >
-            <Icon name="close" />
-          </button>
+          />
         </div>
         <Form
           ref="formsEl"
@@ -24,19 +26,29 @@
         />
       </template>
     </div>
-    <div v-if="!disabled && addable">
+    <div v-if="!disabled && addable && forms.forms.length">
       <SimpleDropdown
+        v-if="forms.forms.length > 1"
         position="bottom-right"
         :aria-label="forms.addText?.toString()"
         :items="forms.forms"
         menu-max-height="100px"
+        trigger-class="simple-button small outline"
         @select="addForm"
       >
-        <span class="form-item__form-add">
-          <Icon name="add" aria-hidden="true" />
-          <span>{{ forms.addText }}</span>
-        </span>
+        <Icon name="add" aria-hidden="true" />
+        <span>{{ forms.addText }}</span>
       </SimpleDropdown>
+      <SimpleButton
+        v-else
+        small
+        variant="outline"
+        icon="add"
+        :aria-label="forms.addText?.toString()"
+        @click="addForm(forms.forms[0].key)"
+      >
+        {{ forms.addText }}
+      </SimpleButton>
     </div>
   </div>
 </template>
@@ -181,20 +193,9 @@ defineExpose({ validate })
     flex: 1;
   }
 
-  .close-button {
+  .close-button.simple-button {
     margin-left: auto;
   }
-}
-
-.form-item__form-add {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: var(--radius-control);
-  padding: 4px 10px;
-  background-color: var(--color-accent-strong);
-  color: var(--color-on-accent);
-  line-height: 20px;
 }
 
 </style>

@@ -61,6 +61,92 @@
 
 .markdown-body {
   background-color: transparent;
+  color: var(--color-text);
+
+  h1,
+  h2 {
+    border-bottom-color: var(--color-border);
+  }
+
+  mark {
+    background-color: var(--color-bg-attention);
+    color: var(--color-text);
+  }
+
+  code,
+  tt {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text);
+  }
+
+  .highlight pre,
+  pre {
+    background-color: var(--color-field-bg);
+    border: solid 1px var(--color-border);
+    color: var(--color-text);
+    -webkit-backdrop-filter: var(--backdrop-filter-field);
+    backdrop-filter: var(--backdrop-filter-field);
+  }
+
+  pre code,
+  pre tt {
+    background-color: transparent;
+    border: 0;
+  }
+
+  kbd {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text);
+    border-color: var(--color-border);
+    box-shadow: inset 0 -1px 0 var(--color-border);
+  }
+
+  table {
+    background-color: transparent;
+  }
+
+  table tr {
+    background-color: transparent;
+    border-top-color: var(--color-border);
+  }
+
+  table tr:nth-child(2n) {
+    background-color: var(--color-bg-hover);
+  }
+
+  table td,
+  table th {
+    background-color: transparent;
+    border-color: var(--color-border);
+  }
+
+  table th {
+    background-color: var(--color-bg-table-header);
+  }
+
+  blockquote {
+    border-left-color: var(--color-border);
+  }
+
+  hr {
+    background-color: var(--color-border);
+  }
+
+  span.frame {
+    border-color: var(--color-border);
+  }
+
+  .csv-data .blob-num {
+    background-color: transparent;
+  }
+
+  .csv-data th {
+    background-color: var(--color-bg-table-header);
+  }
+
+  .footnotes {
+    border-top-color: var(--color-border);
+  }
 }
 
 // Nicer keyboard-focus ring for buttons and links using the theme primary

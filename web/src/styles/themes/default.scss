@@ -4,21 +4,23 @@ $theme-default: (
   color-bg-surface: #ffffff,
   color-bg-elevated: #ffffff,
   color-bg-glass: rgba(255, 255, 255, 0.62),
-  color-bg-hover: #f0f2f5,
-  color-bg-focus: #e9eef5,
-  color-bg-selected: #dbeafe,
-  color-bg-invalid: #fee2e2,
-  color-bg-table-header: #eef1f4,
+  // Interaction backgrounds are overlays so custom page backgrounds remain visible.
+  color-bg-hover: rgba(31, 35, 40, 0.08),
+  color-bg-focus: rgba(9, 105, 218, 0.1),
+  color-bg-selected: rgba(9, 105, 218, 0.16),
+  color-bg-attention: rgba(154, 103, 0, 0.18),
+  color-bg-invalid: rgba(207, 34, 46, 0.1),
+  color-bg-table-header: rgba(31, 35, 40, 0.04),
 
   // Content and separators.
   color-text: #1f2328,
   color-text-muted: #59636e,
   color-text-disabled: #6e7781,
-  color-border: #d8dee6,
+  color-border: rgba(31, 35, 40, 0.16),
   color-field-bg: rgba(255, 255, 255, 0.46),
   color-field-bg-disabled: rgba(240, 242, 245, 0.62),
-  color-field-border: #b8c0cc,
-  color-glass-border: rgba(255, 255, 255, 0.92),
+  color-field-border: rgba(31, 35, 40, 0.28),
+  color-glass-border: rgba(255, 255, 255, 0.72),
 
   // Interactive and status colors. The "strong" variants are intended for
   // filled controls; the base variants work as text/icon colors.

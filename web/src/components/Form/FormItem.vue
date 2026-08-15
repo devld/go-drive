@@ -163,15 +163,16 @@
           :aria-describedby="error ? errorId : undefined"
           @input="textInput"
         />
-        <button
+        <SimpleButton
           v-if="!(disabled || item.disabled)"
           class="form-item--type-path-select"
-          data-ui="button"
+          variant="plain"
+          small
+          icon="folder"
           :title="$t('form.select_path')"
+          :aria-label="$t('form.select_path')"
           @click="selectPath"
-        >
-          <Icon name="folder" />
-        </button>
+        />
       </div>
       <FormItemForm
         v-if="item.type === 'form'"
@@ -432,7 +433,7 @@ const checkboxesInput = (optionValue: string, checked: boolean) => {
     padding-right: 28px !important;
   }
 
-  &-select {
+  &-select.simple-button.plain {
     position: absolute;
     top: 0;
     bottom: 0;
