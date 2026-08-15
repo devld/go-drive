@@ -69,16 +69,20 @@ script-drives/<name>-uploader.js
 Use a stable, short, lowercase identifier for `<name>`. Files with the same base name form one extension. A server script must begin with consecutive `//` metadata lines:
 
 ```js
-// Example Cloud
-// Example Cloud REST API adapter.
+// @name Example Cloud
+// @version 1.0.0
+// @description Example Cloud REST API adapter.
 //
 // Create an API token with file read/write permissions.
 
 /// <reference path="../docs/scripts/env/drive.d.ts"/>
 ```
 
-- The first line is the display name shown in the UI.
-- Following `//` lines, up to the empty comment line, are the Markdown description.
+- `// @name Example Cloud` is the display name shown in the UI.
+- `// @version 1.0.0` is required. The main server script version is the version of the extension; bump it when the uploader changes.
+- Scripts without `@name` or `@version` are ignored when listing installed scripts or syncing the repository.
+- An optional `// @uploader example-uploader.js` line names the browser uploader in the same repository.
+- `// @description` starts the Markdown description. Following `//` lines that are not `@` directives continue the description until a blank non-comment line.
 - The `reference` directive provides editor completion only; it does not change runtime behavior.
 - After saving a script, create or reload the Drive from the administration UI.
 
@@ -394,8 +398,10 @@ This example assumes the remote service provides:
 It demonstrates the interface contract and does not represent a real service:
 
 ```js
-// Example REST Drive
-// Example of a complete HTTP API based adapter.
+// @name Example REST Drive
+// @version 1.0.0
+// @uploader example-uploader.js
+// @description Example of a complete HTTP API based adapter.
 //
 // Enter the API endpoint and a token with file read/write permissions.
 

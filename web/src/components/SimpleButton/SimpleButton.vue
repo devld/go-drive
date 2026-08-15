@@ -10,10 +10,12 @@
     :aria-busy="loading ? 'true' : undefined"
     @click="emit('click', $event)"
   >
-    <LoadingIndicator
-      v-if="loading"
-      class="simple-button__loading-indicator"
-    />
+    <span v-if="loading" class="simple-button__loading">
+      <LoadingIndicator class="simple-button__loading-indicator" />
+      <span v-if="$slots.loading" class="simple-button__loading-text">
+        <slot name="loading" />
+      </span>
+    </span>
     <span class="simple-button__content" :class="{ hidden: loading }">
       <Icon v-if="icon" :name="icon" aria-hidden="true" />
       <slot />
@@ -146,12 +148,26 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
   visibility: hidden;
 }
 
-.simple-button__loading-indicator {
+.simple-button__loading {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  padding: inherit;
+}
+
+.simple-button__loading-indicator {
   width: 1em;
   height: 1em;
-  margin: -0.5em 0 0 -0.5em;
+  flex-shrink: 0;
+}
+
+.simple-button__loading-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

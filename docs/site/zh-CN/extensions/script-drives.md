@@ -3,7 +3,7 @@ title: 脚本 Drive 开发与安装
 description: 安装第三方脚本 Drive，或使用 JavaScript 开发 go-drive 存储适配器和浏览器直传集成。
 lang: zh-CN
 translation_key: script-drives
-source_hash: 22245c0b56314dd215cb21cc5940e240d8b8297e041d50f846899d9237165854
+source_hash: 5a241c5dee8d7acd05e6b76314f46e3ad933a9952da47e50239ac9bc9c1d01cf
 ---
 
 # 脚本 Drive 开发与安装
@@ -17,7 +17,7 @@ JavaScript Drive 可以在不重新编译 go-drive 的情况下添加存储后�
 进入“管理员 → 其他盘”，刷新仓库后选择扩展安装。一个扩展通常包含：
 
 - `<name>.js`：服务器端 Drive 实现。
-- `<name>-uploader.js`：可选的浏览器上传适配器。
+- 可选的浏览器上传适配器，由 `@uploader` 声明，安装时复制到 `drive-uploaders/<name>.js`。
 
 默认仓库：
 
@@ -33,7 +33,7 @@ drive-uploaders-dir: drive-uploaders
 drive-repository-url: https://example.com/my-drives.json
 ```
 
-自定义仓库返回 GitHub Contents API 风格数组，至少包含 `name` 和 `download_url`：
+自定义仓库返回 GitHub Contents API 风格数组，包含 `name` 和 `download_url`。只会下载 `.js` 条目：
 
 ```json
 [
@@ -41,6 +41,17 @@ drive-repository-url: https://example.com/my-drives.json
   { "name": "example-uploader.js", "download_url": "https://example.com/example-uploader.js" }
 ]
 ```
+
+服务器端脚本在开头注释中声明元数据：
+
+```js
+// @name Example Cloud
+// @version 1.0.0
+// @uploader example-uploader.js
+// @description Example Cloud REST API adapter.
+```
+
+刷新仓库会作为后台任务运行。go-drive 会下载 listing 中的每个 `.js`，然后只保留同时声明了 `@name` 和 `@version` 的脚本。上传器仅在 Drive 脚本通过 `@uploader` 引用时保留。文件先写入 `script-drives/.repo/`，安装/更新时再复制到 `script-drives/` 和 `drive-uploaders/`。管理页会根据版本号提供更新按钮，无需先卸载脚本 Drive。如果上传器发生变化，也需要同步提升服务器端脚本版本号。已安装但缺少 `@name` 或 `@version` 的脚本不会出现在列表中。
 
 安装后在 Drive 管理页创建对应类型并重新加载。
 

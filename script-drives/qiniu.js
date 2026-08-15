@@ -1,5 +1,7 @@
-// Qiniu
-// Qiniu Kodo
+// @name Qiniu
+// @version 1.0.0
+// @uploader qiniu-uploader.js
+// @description Qiniu Kodo
 
 /// <reference path="../docs/scripts/env/drive.d.ts"/>
 

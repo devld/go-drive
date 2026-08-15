@@ -1,19 +1,16 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"go-drive/common"
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/task"
 	"go-drive/common/types"
-	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/drive/script"
 	"go-drive/storage"
-	"os"
-	"path/filepath"
 	"sort"
 	"sync"
 
@@ -139,47 +136,14 @@ func (dr *drivesRoute) reloadDrives(c *gin.Context) {
 }
 
 type scriptDrivesRoute struct {
-	config   common.Config
-	repoLock sync.Mutex
+	config     common.Config
+	runner     task.Runner
+	repoLock   sync.Mutex
+	syncTaskID string
 }
 
-func (sdr *scriptDrivesRoute) _loadAvailableDriveScripts(ctx context.Context, forceLoad bool) ([]script.AvailableDriveScript, error) {
-	sdr.repoLock.Lock()
-	defer sdr.repoLock.Unlock()
-
-	cacheFile := filepath.Join(sdr.config.TempDir, "drives-repository-cache.json")
-
-	var result []script.AvailableDriveScript = nil
-
-	if !forceLoad {
-		if data, e := os.ReadFile(cacheFile); e == nil {
-			temp := make([]script.AvailableDriveScript, 0)
-			if e := json.Unmarshal(data, &temp); e == nil {
-				result = temp
-			}
-		}
-	}
-
-	if result == nil {
-		scripts, e := script.ListAvailableScriptsFromRepository(ctx, sdr.config.DriveRepositoryURL)
-		if e != nil {
-			return result, e
-		}
-		result = scripts
-
-		data, e := json.Marshal(scripts)
-		if e != nil {
-			return result, e
-		}
-		if e := os.WriteFile(cacheFile, data, 0644); e != nil {
-			return result, e
-		}
-	}
-	return result, nil
-}
-
-func (sdr *scriptDrivesRoute) getAvailableDrives(c *gin.Context) {
-	result, e := sdr._loadAvailableDriveScripts(c.Request.Context(), utils.ToBool(c.Query("force")))
+func (sdr *scriptDrivesRoute) listDriveScripts(c *gin.Context) {
+	result, e := script.ListAllDriveScripts(sdr.config)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -187,30 +151,36 @@ func (sdr *scriptDrivesRoute) getAvailableDrives(c *gin.Context) {
 	SetResult(c, result)
 }
 
-func (sdr *scriptDrivesRoute) getInstalledDrives(c *gin.Context) {
-	scripts, e := script.ListDriveScripts(sdr.config)
+func (sdr *scriptDrivesRoute) syncAvailableDrives(c *gin.Context) {
+	if sdr.runner == nil {
+		_ = c.Error(err.NewNotAllowedError())
+		return
+	}
+
+	sdr.repoLock.Lock()
+	defer sdr.repoLock.Unlock()
+
+	if sdr.syncTaskID != "" {
+		existing, e := sdr.runner.GetTask(sdr.syncTaskID)
+		if e == nil && !existing.Finished() {
+			SetResult(c, existing)
+			return
+		}
+	}
+
+	created, e := sdr.runner.Execute(func(ctx types.TaskCtx) (any, error) {
+		return script.SyncDriveScriptsFromRepository(ctx, sdr.config, sdr.config.DriveRepositoryURL)
+	}, task.WithNameGroup(sdr.config.DriveRepositoryURL, "admin/drive-scripts"))
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, scripts)
+	sdr.syncTaskID = created.Id
+	SetResult(c, created)
 }
 
 func (sdr *scriptDrivesRoute) installDrive(c *gin.Context) {
-	name := c.Param("name")
-	scripts, e := sdr._loadAvailableDriveScripts(c.Request.Context(), false)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
-
-	ads, ok := utils.ArrayFind(scripts, func(item script.AvailableDriveScript, _ int) bool { return item.Name == name })
-	if !ok {
-		_ = c.Error(err.NewNotFoundError())
-		return
-	}
-
-	if e := script.InstallDriveScript(c.Request.Context(), sdr.config, ads); e != nil {
+	if e := script.InstallDriveScript(sdr.config, c.Param("name")); e != nil {
 		_ = c.Error(e)
 		return
 	}

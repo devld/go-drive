@@ -1,4 +1,7 @@
-// My Drive
+// @name My Drive
+// @version 1.0.0
+// @uploader my-drive-uploader.js
+// @description
 // > Here and below is the drive's description
 // > It supports `markdown`
 // > It will be shown above the configuration form

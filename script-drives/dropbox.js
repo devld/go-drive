@@ -1,5 +1,6 @@
-// Dropbox
-// Dropbox drive
+// @name Dropbox
+// @version 1.0.0
+// @description Dropbox drive
 
 /// <reference path="../docs/scripts/env/drive.d.ts"/>
 

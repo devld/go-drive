@@ -122,11 +122,11 @@ func InitAdminRoutes(
 	// region script drives
 
 	scriptDriveRoutesGroup := r.Group("/drive-scripts")
-	sdr := &scriptDrivesRoute{config: config}
-	// get available drives from repository
-	scriptDriveRoutesGroup.GET("/available", sdr.getAvailableDrives)
-	// get installed drives
-	scriptDriveRoutesGroup.GET("/installed", sdr.getInstalledDrives)
+	sdr := &scriptDrivesRoute{config: config, runner: runner}
+	// list repository and installed drive scripts
+	scriptDriveRoutesGroup.GET("", sdr.listDriveScripts)
+	// sync available drives from repository
+	scriptDriveRoutesGroup.POST("/sync", sdr.syncAvailableDrives)
 	// install drive
 	scriptDriveRoutesGroup.PUT("/:name", sdr.installDrive)
 	// uninstall drive

@@ -16,7 +16,7 @@ They are intended for storage services with HTTP/HTTPS APIs that can map files a
 Open **Admin → Other Drives**, refresh the repository, and select an extension to install. An extension usually contains:
 
 - `<name>.js`: the server-side Drive implementation.
-- `<name>-uploader.js`: an optional browser upload adapter.
+- an optional browser upload adapter, declared with `@uploader` and copied to `drive-uploaders/<name>.js` on install.
 
 Default repository:
 
@@ -32,7 +32,7 @@ drive-uploaders-dir: drive-uploaders
 drive-repository-url: https://example.com/my-drives.json
 ```
 
-A custom repository returns an array in the style of the GitHub Contents API, with at least `name` and `download_url`:
+A custom repository returns an array in the style of the GitHub Contents API, with `name` and `download_url`. Only `.js` entries are downloaded:
 
 ```json
 [
@@ -40,6 +40,17 @@ A custom repository returns an array in the style of the GitHub Contents API, wi
   { "name": "example-uploader.js", "download_url": "https://example.com/example-uploader.js" }
 ]
 ```
+
+The server script declares metadata in its leading comments:
+
+```js
+// @name Example Cloud
+// @version 1.0.0
+// @uploader example-uploader.js
+// @description Example Cloud REST API adapter.
+```
+
+Refreshing the repository runs as a background task. go-drive downloads every `.js` listing entry, then keeps scripts that declare both `@name` and `@version`. Uploaders are kept only when a drive script references them with `@uploader`. Files are stored under `script-drives/.repo/` until install/update copies them into `script-drives/` and `drive-uploaders/`. The management page uses the version to offer an update without uninstalling the script Drive. If the uploader changes, also bump the server script version. Installed scripts without `@name` or `@version` are not listed.
 
 After installation, create the corresponding type on the Drive management page and reload the Drives.
 
