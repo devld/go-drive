@@ -90,7 +90,7 @@ export default class LocalChunkUploadTask extends ChunkUploadTask {
 
   override _cleanup() {
     super._cleanup()
-    if (!this.isStatus(STATUS_COMPLETED)) {
+    if (!this.isStatus(STATUS_COMPLETED) && this._uploadId) {
       http.delete(`/chunk-uploads/${this._uploadId}`)
     }
   }

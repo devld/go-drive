@@ -89,6 +89,7 @@ function useCustomProvider(uploader, data) {
     Provider: "custom",
     Config: Object.assign({}, data, {
       uploader: uploader,
+      uploaderVersion: __driveScriptVersion,
     }),
   };
 }

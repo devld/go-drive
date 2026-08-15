@@ -210,6 +210,8 @@ func TestDriveRoutesUseRPCOperations(t *testing.T) {
 		"PUT /chunk-uploads/:id/chunks/:seq",
 		"POST /chunk-uploads/:id/completion",
 		"DELETE /chunk-uploads/:id",
+		"GET /drive-uploader/:name",
+		"HEAD /drive-uploader/:name",
 	)
 	assertRoutesNotRegistered(t, router,
 		"GET /entry/*path",

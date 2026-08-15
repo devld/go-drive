@@ -77,17 +77,18 @@ export default abstract class ChunkUploadTask extends UploadTask {
     this._onChange(STATUS_UPLOADING, this._sumProgress())
     try {
       this._chunks = await this._prepare()
+      if (
+        typeof this._chunks !== 'number' ||
+        isNaN(this._chunks) ||
+        this._chunks <= 0
+      ) {
+        throw new Error('invalid chunk size: ' + this._chunks)
+      }
     } catch (e: any) {
       this._prepareFailed = true
       this._abort(e)
+      this._cleanup()
       return
-    }
-    if (
-      typeof this._chunks !== 'number' ||
-      isNaN(this._chunks) ||
-      this._chunks <= 0
-    ) {
-      throw new Error('invalid chunk size: ' + this._chunks)
     }
     this._queue.splice(0)
     for (let i = 0; i < this._chunks; i++) {
