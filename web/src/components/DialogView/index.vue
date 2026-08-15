@@ -34,18 +34,15 @@
           <slot name="header">
             <span>{{ title }}</span>
           </slot>
-          <button
+          <SimpleButton
             v-if="closeable"
-            type="button"
-            class="dialog-view__close-button plain-button"
-            data-ui="button"
-            data-variant="plain"
+            class="dialog-view__close-button"
+            variant="plain"
+            icon="close"
             :title="closeLabel"
             :aria-label="closeLabel"
             @click="closeButtonClicked"
-          >
-            <Icon name="close" aria-hidden="true" />
-          </button>
+          />
         </div>
         <div class="dialog-view__body" data-ui="dialog-body">
           <slot />
@@ -329,7 +326,7 @@ onBeforeUnmount(() => {
   padding: 16px 48px 16px 16px;
 }
 
-.dialog-view__close-button {
+.dialog-view__close-button.simple-button {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);

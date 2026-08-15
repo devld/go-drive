@@ -38,46 +38,38 @@
       >{{ statusText }}</span
     >
     <span class="upload-task-item__ops">
-      <button
+      <SimpleButton
         v-if="showStart"
-        class="plain-button"
-        data-ui="button"
-        data-variant="plain"
+        variant="plain"
+        icon="play"
         :title="t('p.task.start')"
+        :aria-label="t('p.task.start')"
         @click="emit('start')"
-      >
-        <Icon name="play" />
-      </button>
-      <button
+      />
+      <SimpleButton
         v-if="showPause"
-        class="plain-button"
-        data-ui="button"
-        data-variant="plain"
+        variant="plain"
+        icon="pause"
         :title="t('p.task.pause')"
+        :aria-label="t('p.task.pause')"
         @click="emit('pause')"
-      >
-        <Icon name="pause" />
-      </button>
-      <button
+      />
+      <SimpleButton
         v-if="showStop"
-        class="plain-button"
-        data-ui="button"
-        data-variant="plain"
+        variant="plain"
+        icon="stop"
         :title="t('p.task.stop')"
+        :aria-label="t('p.task.stop')"
         @click="emit('stop')"
-      >
-        <Icon name="stop" />
-      </button>
-      <button
+      />
+      <SimpleButton
         v-if="showRemove"
-        class="plain-button"
-        data-ui="button"
-        data-variant="plain"
+        variant="plain"
+        icon="close"
         :title="t('p.task.remove')"
+        :aria-label="t('p.task.remove')"
         @click="emit('remove')"
-      >
-        <Icon name="close" />
-      </button>
+      />
     </span>
   </div>
 </template>
@@ -260,7 +252,7 @@ const showRemove = computed(() => !showStop.value)
   width: 60px;
   white-space: nowrap;
   text-align: right;
-  .plain-button {
+  .simple-button.plain {
     font-size: 18px;
   }
 }

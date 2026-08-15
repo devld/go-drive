@@ -5,15 +5,14 @@
     </a>
     <header class="app-header" data-ui="app-header">
       <div class="user-area">
-        <button
+        <SimpleButton
           v-if="!isLoggedIn"
-          class="plain-button small"
-          data-ui="button"
-          data-variant="plain"
+          variant="plain"
+          small
           @click="login"
         >
           {{ $t('app.login') }}
-        </button>
+        </SimpleButton>
 
         <RouterLink
           v-for="m in navMenus"
@@ -37,14 +36,13 @@
             "
             >{{ user!.username }}</span
           >
-          <button
-            class="plain-button small"
-            data-ui="button"
-            data-variant="plain"
+          <SimpleButton
+            variant="plain"
+            small
             @click="logout"
           >
             {{ $t('app.logout') }}
-          </button>
+          </SimpleButton>
         </span>
       </div>
     </header>

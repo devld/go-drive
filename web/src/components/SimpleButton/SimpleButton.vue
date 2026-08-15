@@ -1,9 +1,9 @@
 <template>
   <button
     class="simple-button"
-    :class="{ loading, [type!]: !!type, small }"
+    :class="{ loading, [type!]: !!type, [variant!]: !!variant, small }"
     data-ui="button"
-    :data-variant="type || 'primary'"
+    :data-variant="variant === 'plain' ? 'plain' : type || 'primary'"
     :data-size="small ? 'compact' : 'default'"
     :disabled="!!loading || disabled"
     :type="nativeType"
@@ -21,7 +21,11 @@
   </button>
 </template>
 <script setup lang="ts">
-import type { SimpleButtonType, SimpleButtonNativeType } from '.'
+import type {
+  SimpleButtonType,
+  SimpleButtonVariant,
+  SimpleButtonNativeType,
+} from '.'
 import type { IconName } from '@/components/icons'
 import LoadingIndicator from '@/components/LoadingIndicator.vue'
 
@@ -31,6 +35,10 @@ defineProps({
   },
   type: {
     type: String as PropType<SimpleButtonType>,
+  },
+  variant: {
+    type: String as PropType<SimpleButtonVariant>,
+    default: 'solid',
   },
   small: {
     type: Boolean,
@@ -88,11 +96,48 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
     opacity: 0.86;
   }
 
+  &.outline {
+    border: 1px solid var(--color-accent);
+    background-color: transparent;
+    color: var(--color-accent);
+  }
+
+  &.plain {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background-color: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-size: 28px;
+    text-decoration: none;
+  }
+
+  &.plain.small {
+    font-size: 16px;
+  }
+
+  &.plain:hover {
+    box-shadow: none;
+  }
+
   $types: ('info', 'success', 'warning', 'danger');
   @each $type in $types {
     &.#{$type} {
       background-color: var(--color-#{$type}-strong);
       color: var(--color-on-#{$type});
+    }
+
+    &.#{$type}.outline {
+      border-color: var(--color-#{$type}-strong);
+      background-color: transparent;
+      color: var(--color-#{$type}-strong);
+    }
+
+    &.#{$type}.plain {
+      background-color: transparent;
+      color: var(--color-#{$type}-strong);
     }
   }
 }

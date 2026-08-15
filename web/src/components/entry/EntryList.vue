@@ -14,19 +14,23 @@
         @drop="onDrop"
       />
       <div v-if="showToggles" class="entry-list__toggles">
-        <button
-          class="plain-button view-model-toggle"
-          data-ui="button"
-          data-variant="plain"
+        <SimpleButton
+          class="view-model-toggle"
+          variant="plain"
+          small
+          :icon="validViewMode === 'list' ? 'grid' : 'list'"
           :title="
             validViewMode === 'list'
               ? $t('app.toggle_to_thumbnail')
               : $t('app.toggle_to_list')
           "
+          :aria-label="
+            validViewMode === 'list'
+              ? $t('app.toggle_to_thumbnail')
+              : $t('app.toggle_to_list')
+          "
           @click="toggleViewMode"
-        >
-          <Icon :name="validViewMode === 'list' ? 'grid' : 'list'" />
-        </button>
+        />
         <SimpleDropdown
           :aria-label="$t('app.toggle_sort')"
           :items="sortModes"
@@ -96,18 +100,15 @@
             @icon-click="iconClicked(entry, $event)"
           />
         </EntryLink>
-        <button
+        <SimpleButton
           v-if="showMenuButton"
-          class="entry-list__menu-button plain-button"
-          data-ui="button"
-          data-variant="plain"
-          type="button"
+          class="entry-list__menu-button"
+          variant="plain"
+          icon="menu-dots"
           :title="$t('app.entry_actions')"
           :aria-label="$t('app.entry_actions')"
           @click="entryMenuClicked(entry, $event)"
-        >
-          <Icon name="menu-dots" />
-        </button>
+        />
       </li>
     </ul>
     <div v-if="sortedEntries.length === 0" class="entry-list__empty">
@@ -456,7 +457,7 @@ defineExpose({
     color: var(--color-text-muted);
   }
 
-  .view-model-toggle {
+  .view-model-toggle.simple-button {
     cursor: pointer;
     font-size: 16px;
   }
@@ -563,7 +564,7 @@ defineExpose({
   background-color: var(--color-bg-surface);
 }
 
-.entry-list__menu-button {
+.entry-list__menu-button.simple-button.plain {
   position: absolute;
   right: 12px;
   top: 50%;

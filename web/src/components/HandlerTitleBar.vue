@@ -6,16 +6,15 @@
     <span class="handler-title-bar-text" :title="props.title"
       ><slot>{{ props.title }}</slot></span
     >
-    <button
+    <SimpleButton
       v-if="closeable"
-      class="handler-title-bar-close plain-button"
-      data-ui="button"
-      data-variant="plain"
+      class="handler-title-bar-close"
+      variant="plain"
+      icon="close"
       title="Close"
+      aria-label="Close"
       @click="emit('close')"
-    >
-      <Icon name="close" />
-    </button>
+    />
   </h1>
 </template>
 <script setup lang="ts">
@@ -61,7 +60,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
   align-items: center;
 }
 
-.handler-title-bar-close {
+.handler-title-bar-close.simple-button {
   margin-left: auto;
 }
 </style>

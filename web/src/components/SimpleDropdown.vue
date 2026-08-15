@@ -9,7 +9,7 @@
     <button
       ref="triggerEl"
       type="button"
-      class="simple-dropdown__trigger"
+      :class="['simple-dropdown__trigger', triggerClass]"
       data-ui="dropdown-trigger"
       aria-haspopup="menu"
       :aria-label="ariaLabel"
@@ -99,6 +99,9 @@ const props = defineProps({
     type: String,
   },
   menuMaxHeight: {
+    type: String,
+  },
+  triggerClass: {
     type: String,
   },
 })
@@ -324,6 +327,9 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
+}
+
+.simple-dropdown__trigger:not(.simple-button) {
   padding: 0;
   border: 0;
   border-radius: 2px;

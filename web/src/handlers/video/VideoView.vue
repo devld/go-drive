@@ -70,10 +70,9 @@
       </div>
 
       <div class="video-controls__row">
-        <button
-          class="video-controls__btn plain-button"
-          data-ui="button"
-          data-variant="plain"
+        <SimpleButton
+          class="video-controls__btn"
+          variant="plain"
           :title="
             playing ? $t('handler.video.pause') : $t('handler.video.play')
           "
@@ -85,7 +84,7 @@
           <svg v-else viewBox="0 0 24 24" class="video-controls__icon">
             <path fill="currentColor" d="M8 5v14l11-7L8 5z" />
           </svg>
-        </button>
+        </SimpleButton>
 
         <span class="video-controls__time">
           {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
@@ -94,10 +93,9 @@
         <span class="video-controls__spacer" />
 
         <div class="video-controls__volume">
-          <button
-            class="video-controls__btn plain-button"
-            data-ui="button"
-            data-variant="plain"
+          <SimpleButton
+            class="video-controls__btn"
+            variant="plain"
             :title="
               muted
                 ? $t('handler.video.unmute')
@@ -121,7 +119,7 @@
                 d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 00-2.5-4v8a4.5 4.5 0 002.5-4zM14 3.2v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z"
               />
             </svg>
-          </button>
+          </SimpleButton>
           <div
             ref="volumeEl"
             class="video-controls__volume-bar"
@@ -148,11 +146,10 @@
           </div>
         </div>
 
-        <button
+        <SimpleButton
           v-if="supportsPip"
-          class="video-controls__btn plain-button"
-          data-ui="button"
-          data-variant="plain"
+          class="video-controls__btn"
+          variant="plain"
           :title="$t('handler.video.pip')"
           @click="togglePip"
         >
@@ -162,12 +159,11 @@
               d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"
             />
           </svg>
-        </button>
+        </SimpleButton>
 
-        <button
-          class="video-controls__btn plain-button"
-          data-ui="button"
-          data-variant="plain"
+        <SimpleButton
+          class="video-controls__btn"
+          variant="plain"
           :title="
             isFullscreen
               ? $t('handler.video.exit_fullscreen')
@@ -191,7 +187,7 @@
               d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
             />
           </svg>
-        </button>
+        </SimpleButton>
       </div>
     </div>
   </div>
@@ -444,7 +440,7 @@ onUnmounted(() => {
     .handler-title-bar-text {
       color: #fff;
     }
-    .handler-title-bar-close {
+    .handler-title-bar-close.simple-button.plain {
       color: #fff;
     }
   }
@@ -569,7 +565,7 @@ onUnmounted(() => {
     margin-top: 2px;
   }
 
-  &__btn {
+  &__btn.simple-button.plain {
     display: flex;
     align-items: center;
     justify-content: center;

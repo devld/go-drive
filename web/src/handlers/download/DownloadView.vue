@@ -7,14 +7,13 @@
   >
     <h1 class="page-title">
       <span>{{ $t('hv.download.download') }}</span>
-      <button
-        class="plain-button close-button"
-        data-ui="button"
-        data-variant="plain"
+      <SimpleButton
+        class="close-button"
+        variant="plain"
+        icon="close"
+        :aria-label="$t('dialog.base.close')"
         @click="emit('close')"
-      >
-        <Icon name="close" />
-      </button>
+      />
     </h1>
     <div class="page-content">
       <template v-if="singleEntry">

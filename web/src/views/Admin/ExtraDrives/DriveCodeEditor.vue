@@ -15,14 +15,13 @@
       <SimpleButton :loading="saving" :disabled="loading" @click="onSave">{{
         $t('p.admin.extra_drive.save')
       }}</SimpleButton>
-      <button
-        class="plain-button close-button"
-        data-ui="button"
-        data-variant="plain"
+      <SimpleButton
+        class="close-button"
+        variant="plain"
+        icon="close"
+        :aria-label="$t('dialog.base.close')"
         @click="emit('close')"
-      >
-        <Icon name="close" />
-      </button>
+      />
     </div>
     <div class="drive-code-editors">
       <CodeEditor

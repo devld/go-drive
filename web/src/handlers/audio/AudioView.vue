@@ -59,10 +59,9 @@
 
       <div class="audio-player__controls">
         <div class="audio-player__controls-side audio-player__controls-left">
-          <button
-            class="audio-player__btn plain-button"
-            data-ui="button"
-            data-variant="plain"
+          <SimpleButton
+            class="audio-player__btn"
+            variant="plain"
             :class="{ 'is-active': shuffle }"
             :title="$t('handler.audio.shuffle')"
             :aria-pressed="shuffle"
@@ -82,11 +81,10 @@
                 d="M18.5 4.5 22 7l-3.5 2.5zM18.5 14.5 22 17l-3.5 2.5z"
               />
             </svg>
-          </button>
-          <button
-            class="audio-player__btn plain-button"
-            data-ui="button"
-            data-variant="plain"
+          </SimpleButton>
+          <SimpleButton
+            class="audio-player__btn"
+            variant="plain"
             :class="{ 'is-active': repeatOne }"
             :title="$t('handler.audio.repeat_one')"
             :aria-pressed="repeatOne"
@@ -98,14 +96,13 @@
                 d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"
               />
             </svg>
-          </button>
+          </SimpleButton>
         </div>
 
         <div class="audio-player__controls-center">
-          <button
-            class="audio-player__btn plain-button"
-            data-ui="button"
-            data-variant="plain"
+          <SimpleButton
+            class="audio-player__btn"
+            variant="plain"
             :title="$t('handler.audio.prev')"
             @click="prev"
           >
@@ -115,12 +112,11 @@
                 d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z"
               />
             </svg>
-          </button>
+          </SimpleButton>
 
-          <button
-            class="audio-player__btn audio-player__btn--play plain-button"
-            data-ui="button"
-            data-variant="plain"
+          <SimpleButton
+            class="audio-player__btn audio-player__btn--play"
+            variant="plain"
             :title="
               playing ? $t('handler.audio.pause') : $t('handler.audio.play')
             "
@@ -132,26 +128,24 @@
             <svg v-else viewBox="0 0 24 24" class="audio-player__icon">
               <path fill="currentColor" d="M8 5v14l11-7L8 5z" />
             </svg>
-          </button>
+          </SimpleButton>
 
-          <button
-            class="audio-player__btn plain-button"
-            data-ui="button"
-            data-variant="plain"
+          <SimpleButton
+            class="audio-player__btn"
+            variant="plain"
             :title="$t('handler.audio.next')"
             @click="next"
           >
             <svg viewBox="0 0 24 24" class="audio-player__icon">
               <path fill="currentColor" d="M16 6h2v12h-2V6zM6 6l8.5 6L6 18V6z" />
             </svg>
-          </button>
+          </SimpleButton>
         </div>
 
         <div class="audio-player__volume audio-player__controls-side">
-          <button
-            class="audio-player__btn plain-button"
-            data-ui="button"
-            data-variant="plain"
+          <SimpleButton
+            class="audio-player__btn"
+            variant="plain"
             :title="muted ? $t('handler.audio.unmute') : $t('handler.audio.mute')"
             @click="toggleMute"
           >
@@ -171,7 +165,7 @@
                 d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 00-2.5-4v8a4.5 4.5 0 002.5-4zM14 3.2v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z"
               />
             </svg>
-          </button>
+          </SimpleButton>
           <div
             ref="volumeEl"
             class="audio-player__volume-bar"
@@ -647,7 +641,7 @@ onUnmounted(() => {
     gap: 6px;
   }
 
-  &__btn {
+  &__btn.simple-button.plain {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -675,7 +669,7 @@ onUnmounted(() => {
     height: 22px;
   }
 
-  &__btn--play {
+  &__btn--play.simple-button.plain {
     width: 52px;
     height: 52px;
     background-color: var(--color-accent-strong);
