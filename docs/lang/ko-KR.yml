@@ -5,6 +5,15 @@ error:
   fail_ban_message: 실패 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요
 util:
   request_failed: "[{{ 1 }}] 요청이 실패했습니다"
+request_headers:
+  add: 요청 헤더 추가
+  name: 이름
+  value: 값
+  invalid_format: "요청 헤더 형식이 잘못되었습니다: {{ 1 }}"
+  invalid_name: "{{ 1 }}번째 항목의 요청 헤더 이름이 잘못되었습니다: '{{ 2 }}'"
+  unsupported: "요청 헤더 '{{ 1 }}'은(는) 설정할 수 없습니다"
+  invalid_value: "요청 헤더 '{{ 1 }}'의 값이 잘못되었습니다"
+  duplicate: "요청 헤더 '{{ 1 }}'이(가) 중복되었습니다"
 oauth:
   state_mismatch: state 값이 일치하지 않습니다
 search:
@@ -167,6 +176,9 @@ drive:
       proxy_out:
         label: 다운로드 프록시
         description: 서버 프록시를 통해 파일을 다운로드합니다
+      request_headers:
+        label: 사용자 지정 요청 헤더
+        description: go-drive 서버가 보내는 요청에 추가할 헤더입니다. 브라우저 직접 업로드 및 다운로드에는 포함되지 않습니다. 스토리지 서비스가 파일 전송에 이 헤더를 요구하면 해당 프록시 옵션을 활성화하세요. 설정값은 기존 헤더를 덮어쓰지만 S3 서명 과정에서 관리하는 헤더는 다시 대체될 수 있습니다.
       cache_ttl:
         label: 캐시 TTL
         description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
@@ -184,6 +196,9 @@ drive:
       password:
         label: 비밀번호
         description: ""
+      request_headers:
+        label: 사용자 지정 요청 헤더
+        description: 원격 WebDAV 서버로 보내는 모든 요청에 추가할 헤더입니다. 설정값은 작업별 헤더를 덮어쓰며, 설정된 Basic Auth는 마지막에 Authorization을 대체합니다.
       cache_ttl:
         label: 캐시 TTL
         description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."

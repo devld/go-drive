@@ -5,6 +5,15 @@ error:
   fail_ban_message: Too many failures, please try again later
 util:
   request_failed: "[{{ 1 }}] Request failed"
+request_headers:
+  add: Add Header
+  name: Name
+  value: Value
+  invalid_format: "Invalid request headers: {{ 1 }}"
+  invalid_name: "Invalid request header name at item {{ 1 }}: '{{ 2 }}'"
+  unsupported: "Request header '{{ 1 }}' is not configurable"
+  invalid_value: "Invalid value for request header '{{ 1 }}'"
+  duplicate: "Duplicate request header '{{ 1 }}'"
 oauth:
   state_mismatch: state does not match
 search:
@@ -167,6 +176,9 @@ drive:
       proxy_out:
         label: Proxy Download
         description: Download files through server proxy
+      request_headers:
+        label: Request Headers
+        description: Headers added to requests sent by the go-drive server. Direct browser uploads and downloads do not include them; enable the corresponding proxy option if the storage service requires these headers for file transfers. Configured values override existing headers, while S3 signing may replace headers it controls.
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
@@ -184,6 +196,9 @@ drive:
       password:
         label: Password
         description: ""
+      request_headers:
+        label: Request Headers
+        description: Headers added to requests sent to the remote WebDAV server. Configured values override operation-specific headers; configured Basic Auth replaces Authorization last.
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.

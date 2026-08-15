@@ -48,7 +48,7 @@ type FormItemPathOptions struct {
 
 type FormItemForm struct {
 	Key  string     `json:"key"`
-	Name string     `json:"name" i18n:""`
+	Name string     `json:"name,omitempty" i18n:""`
 	Form []FormItem `json:"form"`
 }
 

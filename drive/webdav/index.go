@@ -30,6 +30,10 @@ func init() {
 			{Field: "url", Label: davT("form.url.label"), Type: "text", Required: true, Description: davT("form.url.description")},
 			{Field: "username", Label: davT("form.username.label"), Type: "text", Description: davT("form.username.description")},
 			{Field: "password", Label: davT("form.password.label"), Type: "password", Description: davT("form.password.description")},
+			req.RequestHeadersForm(
+				davT("form.request_headers.label"),
+				davT("form.request_headers.description"),
+			),
 			{Field: "cache_ttl", Label: davT("form.cache_ttl.label"), Type: "text", Description: davT("form.cache_ttl.description")},
 		},
 		Factory: driveutil.DriveFactory{Create: NewDrive},
@@ -42,6 +46,10 @@ func NewDrive(ctx context.Context, config types.SM,
 	u := config["url"]
 	username := config["username"]
 	password := config["password"]
+	requestHeaders, e := req.ParseRequestHeaders(config[req.RequestHeadersField])
+	if e != nil {
+		return nil, e
+	}
 
 	cacheTtl := config.GetDuration("cache_ttl", -1)
 
@@ -52,7 +60,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	pathPrefix := uu.Path
 
 	w := &Drive{
-		username: username, password: password,
+		username: username, password: password, requestHeaders: requestHeaders,
 		cacheTTL: cacheTtl, pathPrefix: strings.TrimRight(pathPrefix, "/"),
 	}
 
@@ -79,9 +87,10 @@ func NewDrive(ctx context.Context, config types.SM,
 var _ types.IDrive = (*Drive)(nil)
 
 type Drive struct {
-	pathPrefix string
-	username   string
-	password   string
+	pathPrefix     string
+	username       string
+	password       string
+	requestHeaders http.Header
 
 	cacheTTL time.Duration
 	cache    driveutil.DriveCache
@@ -247,6 +256,12 @@ func (w *Drive) Upload(ctx context.Context, path string, size int64,
 }
 
 func (w *Drive) beforeRequest(req *http.Request) error {
+	for name, values := range w.requestHeaders {
+		req.Header.Del(name)
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
 	if w.username != "" {
 		req.SetBasicAuth(w.username, w.password)
 	}

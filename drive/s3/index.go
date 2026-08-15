@@ -7,6 +7,7 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/req"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -41,6 +42,10 @@ func init() {
 			{Field: "endpoint", Label: s3T("form.endpoint.label"), Type: "text", Description: s3T("form.endpoint.description")},
 			{Field: "proxy_upload", Label: s3T("form.proxy_in.label"), Type: "checkbox", Description: s3T("form.proxy_in.description")},
 			{Field: "proxy_download", Label: s3T("form.proxy_out.label"), Type: "checkbox", Description: s3T("form.proxy_out.description")},
+			req.RequestHeadersForm(
+				s3T("form.request_headers.label"),
+				s3T("form.request_headers.description"),
+			),
 			{Field: "cache_ttl", Label: s3T("form.cache_ttl.label"), Type: "text", Description: s3T("form.cache_ttl.description")},
 		},
 		Factory: driveutil.DriveFactory{Create: NewDrive},
@@ -70,6 +75,10 @@ func NewDrive(ctx context.Context, config types.SM,
 	region := config["region"]
 	endpoint := config["endpoint"]
 	cacheTtl := config.GetDuration("cache_ttl", -1)
+	requestHeaders, e := req.ParseRequestHeaders(config[req.RequestHeadersField])
+	if e != nil {
+		return nil, e
+	}
 
 	s3Cfg, e := awsCfg.LoadDefaultConfig(ctx,
 		awsCfg.WithRegion(region),
@@ -79,6 +88,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	if e != nil {
 		return nil, e
 	}
+	s3Cfg.APIOptions = append(s3Cfg.APIOptions, withRequestHeaders(requestHeaders))
 	client := s3.NewFromConfig(s3Cfg, func(o *s3.Options) { o.UsePathStyle = pathStyle != "" })
 
 	d := &Drive{
@@ -442,7 +452,11 @@ func (s *Drive) Upload(ctx context.Context, path string, size int64,
 }
 
 func (s *Drive) newPresign() *s3.PresignClient {
-	return s3.NewPresignClient(s.c, s3.WithPresignExpires(2*time.Hour))
+	return s3.NewPresignClient(
+		s.c,
+		s3.WithPresignExpires(2*time.Hour),
+		s3.WithPresignClientFromClientOptions(withoutRequestHeaders),
+	)
 }
 
 func buildCompleteUploadBody(etag string) []awsType.CompletedPart {
