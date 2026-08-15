@@ -91,10 +91,10 @@ export default class S3UploadTask extends ChunkUploadTask {
 
   _cleanup() {
     super._cleanup()
-    if (!this.isStatus(STATUS_COMPLETED)) {
+    if (!this.isStatus(STATUS_COMPLETED) && this._uploadId) {
       this.uploadCallback({
         action: 'AbortMultipartUpload',
-        uploadId: this._uploadId!,
+        uploadId: this._uploadId,
       }).catch(() => {
         // ignore
       })

@@ -31,6 +31,21 @@ func TestFindNonExistsEntryNameWithReservedReservesBatchNames(t *testing.T) {
 	}
 }
 
+func TestDriveUploaderName(t *testing.T) {
+	ok := []string{"qiniu", "my-drive", "a_b"}
+	for _, name := range ok {
+		if !driveUploaderNameRegexp.MatchString(name) {
+			t.Fatalf("%q should be allowed", name)
+		}
+	}
+	bad := []string{"", ".js", "foo.js", "foo.JS", "../qiniu", "a/b", "qiniu.js"}
+	for _, name := range bad {
+		if driveUploaderNameRegexp.MatchString(name) {
+			t.Fatalf("%q should be rejected", name)
+		}
+	}
+}
+
 type mountNameTestDrive struct {
 	existing map[string]bool
 }

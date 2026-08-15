@@ -1,8 +1,14 @@
 import http from '@/utils/http'
 import http_ from '@/api/http'
 import { API_PATH } from '@/api/http'
+import { transformErrorResponse, transformTextResponse } from '@/utils/http/transformers'
 import ChunkUploadTask from '../chunk-task'
 import { UploadProgress } from '../task'
+
+const UPLOADER_NAME_RE = /^[A-Za-z0-9_-]+$/
+const MAX_CONCURRENT = 16
+
+const scriptCache = new Map<string, Promise<string>>()
 
 interface CustomUploader {
   prepare?(): Promise<number>
@@ -17,18 +23,74 @@ interface CustomUploader {
   onCleanup?(): void
 }
 
+function loadUploaderScript(name: string, version?: string): Promise<string> {
+  const key = version ? `${name}@${version}` : name
+  let pending = scriptCache.get(key)
+  if (!pending) {
+    const query = version ? `?v=${encodeURIComponent(version)}` : ''
+    pending = http
+      .get(`${API_PATH}/drive-uploader/${name}${query}`, {
+        transformResponse: [transformTextResponse([]), transformErrorResponse],
+      })
+      .then((resp) => {
+        const scriptContent =
+          typeof resp === 'string'
+            ? resp
+            : typeof resp?.data === 'string'
+              ? resp.data
+              : ''
+        if (!scriptContent) throw new Error('invalid uploader code')
+        return scriptContent.replace(/};+$/, '}')
+      })
+    scriptCache.set(key, pending)
+    pending.catch(() => {
+      scriptCache.delete(key)
+    })
+  }
+  return pending
+}
+
+function createUploaderFactory(scriptContent: string): (ctx: unknown) => unknown {
+  let factory: unknown
+  try {
+    factory = new Function(`return (${scriptContent})`)()
+  } catch {
+    throw new Error('invalid uploader code')
+  }
+  if (typeof factory !== 'function') {
+    throw new Error('uploader factory is not a function')
+  }
+  return factory as (ctx: unknown) => unknown
+}
+
+function isCustomUploader(value: unknown): value is CustomUploader {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as CustomUploader).upload === 'function'
+  )
+}
+
 export default class CustomUploadTask extends ChunkUploadTask {
   private uploader?: CustomUploader
   private singleUploadResult: any
+  private cleanedUp = false
 
   protected async _prepare(): Promise<number> {
+    this.cleanedUp = false
     const uploaderName = this._config?.uploader
-    if (!uploaderName) throw new Error('invalid upload config')
+    if (
+      typeof uploaderName !== 'string' ||
+      !UPLOADER_NAME_RE.test(uploaderName)
+    ) {
+      throw new Error('invalid upload config')
+    }
 
-    const resp = await http.get(API_PATH + `/drive-uploader/${uploaderName}.js`)
-    let scriptContent: string = resp.data
-    if (!scriptContent) throw new Error('invalid uploader code')
-    scriptContent = scriptContent.replace(/};+$/, '}')
+    const scriptContent = await loadUploaderScript(
+      uploaderName,
+      this._config?.uploaderVersion
+    )
+    const factory = createUploaderFactory(scriptContent)
 
     const scriptThis = Object.defineProperties(
       {},
@@ -37,7 +99,11 @@ export default class CustomUploadTask extends ChunkUploadTask {
         request: { value: this._request.bind(this) },
         maxConcurrent: {
           get: () => this._maxConcurrent,
-          set: (v: number) => (this._maxConcurrent = v),
+          set: (v: number) => {
+            const n = Math.floor(Number(v))
+            if (!Number.isFinite(n)) return
+            this._maxConcurrent = Math.min(MAX_CONCURRENT, Math.max(1, n))
+          },
         },
         http: { value: http_ },
         task: { value: this.task },
@@ -45,16 +111,16 @@ export default class CustomUploadTask extends ChunkUploadTask {
       }
     )
 
-    this.uploader = new Function(`return (${scriptContent})`)().call(
-      undefined,
-      scriptThis
-    )
+    const uploader = factory.call(undefined, scriptThis)
+    if (!isCustomUploader(uploader)) {
+      throw new Error('uploader must provide an upload function')
+    }
+    this.uploader = uploader
 
-    if (this.uploader!.prepare) {
-      return this.uploader!.prepare()
+    if (this.uploader.prepare) {
+      return this.uploader.prepare()
     }
 
-    // upload directly
     return 1
   }
 
@@ -85,8 +151,13 @@ export default class CustomUploadTask extends ChunkUploadTask {
   }
 
   protected _cleanup(): void {
-    if (this.uploader!.onCleanup) {
-      this.uploader!.onCleanup()
+    if (!this.cleanedUp) {
+      this.cleanedUp = true
+      try {
+        this.uploader?.onCleanup?.()
+      } catch {
+        // ignore cleanup errors so they do not mask the original failure
+      }
     }
     super._cleanup()
   }

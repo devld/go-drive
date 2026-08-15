@@ -18,6 +18,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +31,8 @@ const (
 	maxProxySizeKey = "proxy.maxSize"
 	maxZipSizeKey   = "zip.maxSize"
 )
+
+var driveUploaderNameRegexp = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 func InitDriveRoutes(
 	router gin.IRouter,
@@ -46,11 +50,8 @@ func InitDriveRoutes(
 
 	dr := driveRoute{config, access, searcher, tokenStore, chunkUploader, thumbnail, runner, signer, optionsDAO, pathMetaDAO}
 
-	scriptsDir, _ := config.GetDir(config.DriveUploadersDir, false)
-	router.Group("/", func(c *gin.Context) {
-		c.Header("Cache-Control", "no-cache")
-		c.Next()
-	}).Static("/drive-uploader", scriptsDir)
+	router.GET("/drive-uploader/:name", dr.getDriveUploader)
+	router.HEAD("/drive-uploader/:name", dr.getDriveUploader)
 
 	signatureAuthRoute := router.Group("/", SignatureAuth(signer, userDAO, true))
 
@@ -109,6 +110,27 @@ type driveRoute struct {
 
 	options  *storage.OptionsDAO
 	pathMeta *storage.PathMetaDAO
+}
+
+func (dr *driveRoute) getDriveUploader(c *gin.Context) {
+	name := c.Param("name")
+	if !driveUploaderNameRegexp.MatchString(name) {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	dir, e := dr.config.GetDir(dr.config.DriveUploadersDir, false)
+	if e != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("Content-Type", "text/javascript; charset=utf-8")
+	if c.Query("v") != "" {
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		c.Header("Cache-Control", "no-cache")
+	}
+	c.File(filepath.Join(dir, name+".js"))
 }
 
 func (dr *driveRoute) _getDrive(c *gin.Context) {

@@ -325,9 +325,23 @@ func createVm(ctx context.Context, config common.Config, script string) (*s.VM, 
 	}
 
 	vm := baseVM.Fork()
+	meta, ok, e := parseDriveScriptMeta(scriptBytes, script)
+	if e != nil {
+		_ = vm.Dispose()
+		return nil, e
+	}
+	if ok {
+		vm.Set("__driveScriptVersion", meta.Version)
+	} else {
+		vm.Set("__driveScriptVersion", "")
+	}
 
 	_, e = vm.Run(ctx, scriptBytes)
-	return vm, e
+	if e != nil {
+		_ = vm.Dispose()
+		return nil, e
+	}
+	return vm, nil
 }
 
 // wrapReader adapts an io.Reader into an io.ReadCloser. If reader already is a

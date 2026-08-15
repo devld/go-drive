@@ -198,6 +198,7 @@ declare function defineInitConfig(fn: DriveInitConfig): void;
 declare function defineInit(fn: DriveInit): void;
 
 declare function useLocalProvider(size: number): DriveUploadConfig;
+/** `uploader` is the installed name without `.js` (copied to `drive-uploaders/<name>.js`). */
 declare function useCustomProvider(
   uploader: string,
   config?: Record<string, string>
