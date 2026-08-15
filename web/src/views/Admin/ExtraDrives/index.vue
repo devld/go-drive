@@ -1,16 +1,17 @@
 <template>
   <div class="extra-drives-manager">
     <div class="page-actions">
-      <SimpleButton :loading="loading" @click="loadData(true)">{{
-        $t('p.admin.extra_drive.refresh_repository')
-      }}</SimpleButton>
+      <SimpleButton :loading="loading" @click="loadData(true)">
+        {{ $t('p.admin.extra_drive.refresh_repository') }}
+        <template v-if="syncProgress" #loading>{{ syncProgress }}</template>
+      </SimpleButton>
     </div>
     <div class="extra-drives-table">
       <table class="simple-table full-width">
         <colgroup>
           <col style="min-width: 100px" />
           <col style="min-width: 100px" />
-          <col style="width: 110px" />
+          <col style="width: 140px" />
         </colgroup>
         <thead>
           <tr>
@@ -25,38 +26,49 @@
               <td>
                 <a
                   class="script-drive-name"
-                  :class="{ 'has-description': !!item.description }"
+                  :class="{ 'has-description': !!scriptDescription(item) }"
                   href="javascript:;"
                   @click="showScriptDetail(item)"
                   >{{ formatName(item) }}</a
                 >
+                <div v-if="versionText(item)" class="script-drive-version">
+                  {{ versionText(item) }}
+                </div>
               </td>
               <td>
-                <template v-if="item.script">
+                <template v-if="item.driveUrl">
                   <div class="script-drive-url">
                     <a
                       target="_blank"
                       rel="nofollow noopener noreferrer"
-                      :href="item.script.driveUrl"
-                      :title="item.script.driveUrl"
-                      >{{ item.script.driveUrl }}</a
+                      :href="item.driveUrl"
+                      :title="item.driveUrl"
+                      >{{ item.driveUrl }}</a
                     >
                   </div>
                   <div
-                    v-if="item.script.driveUploaderUrl"
+                    v-if="item.driveUploaderUrl"
                     class="script-drive-url"
                   >
                     <a
                       target="_blank"
                       rel="nofollow noopener noreferrer"
-                      :href="item.script.driveUploaderUrl"
-                      :title="item.script.driveUploaderUrl"
-                      >{{ item.script.driveUploaderUrl }}</a
+                      :href="item.driveUploaderUrl"
+                      :title="item.driveUploaderUrl"
+                      >{{ item.driveUploaderUrl }}</a
                     >
                   </div>
                 </template>
               </td>
-              <td class="line center">
+              <td class="line right">
+                <SimpleButton
+                  v-if="item.updateAvailable"
+                  icon="refresh"
+                  :loading="item.loading"
+                  :disabled="loading"
+                  :title="$t('p.admin.extra_drive.update')"
+                  @click="doInstall(item)"
+                />
                 <SimpleButton
                   v-if="item.installed"
                   icon="edit"
@@ -87,7 +99,7 @@
             <tr v-if="item.expanded">
               <td colspan="3">
                 <div
-                  v-markdown="item.description"
+                  v-markdown="scriptDescription(item)"
                   class="markdown-body"
                   data-ui="markdown"
                 ></div>
@@ -116,28 +128,21 @@
 </template>
 <script lang="ts" setup>
 import DriveCodeEditor from './DriveCodeEditor.vue'
-import { AvailableDriveScript } from '@/types'
+import { DriveScript } from '@/types'
 import {
-  listAvailableDriveScripts,
-  listInstalledDriveScripts,
+  listDriveScripts,
   installDriveScript,
   uninstallDriveScript,
+  syncDriveScriptsRepository,
 } from '@/api/admin'
 import { alert, confirm } from '@/utils/ui-utils'
 import { reactive, ref } from 'vue'
-import { mapOf } from '@/utils'
+import { taskDone } from '@/utils'
 import { useI18n } from 'vue-i18n'
 
-interface DriveScript {
-  name: string
-  installed: boolean
-
+interface DriveScriptRow extends DriveScript {
   loading?: boolean
   expanded?: boolean
-
-  displayName?: string
-  description?: string
-  script?: AvailableDriveScript
 }
 
 const emit = defineEmits<{
@@ -147,58 +152,49 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const loading = ref(false)
-const data = ref<DriveScript[]>([])
+const data = ref<DriveScriptRow[]>([])
+const syncProgress = ref('')
 
 const edit = reactive({
   showing: false,
   name: '',
 })
 
+const syncRepository = async () => {
+  syncProgress.value = ''
+  await taskDone(syncDriveScriptsRepository(), (task) => {
+    const loaded = task.progress?.loaded || 0
+    const total = task.progress?.total || 0
+    syncProgress.value = t('p.admin.extra_drive.sync_progress', {
+      loaded,
+      total: total || '-',
+    })
+  })
+  syncProgress.value = ''
+}
+
 const loadData = async (force?: boolean) => {
-  data.value = []
   loading.value = true
   try {
-    const [available, installed] = await Promise.all([
-      listAvailableDriveScripts(force),
-      listInstalledDriveScripts(),
-    ])
-    const availableMap = mapOf(available, (e) => e.name)
-    const installedMap = mapOf(installed, (e) => e.name)
-
-    const result: DriveScript[] = []
-
-    installed.forEach((e) => {
-      result.push({
-        name: e.name,
-        displayName: e.displayName,
-        description: e.description,
-        installed: true,
-        script: availableMap[e.name],
-      })
-    })
-
-    available.forEach((e) => {
-      if (installedMap[e.name]) return
-      result.push({
-        name: e.name,
-        installed: false,
-        script: e,
-      })
-    })
-
-    data.value = result
+    let repo = await listDriveScripts()
+    if (force || !repo.ready) {
+      await syncRepository()
+      repo = await listDriveScripts()
+    }
+    data.value = repo.scripts || []
   } catch (e: any) {
     alert(e.message)
   } finally {
     loading.value = false
+    syncProgress.value = ''
   }
 }
 
-const doInstall = async (item: DriveScript) => {
+const doInstall = async (item: DriveScriptRow) => {
   item.loading = true
   try {
-    await installDriveScript(item.script!.name)
-    loadData()
+    await installDriveScript(item.name)
+    await loadData()
   } catch (e: any) {
     alert(e.message)
   } finally {
@@ -206,7 +202,7 @@ const doInstall = async (item: DriveScript) => {
   }
 }
 
-const doUninstall = async (item: DriveScript) => {
+const doUninstall = async (item: DriveScriptRow) => {
   try {
     await confirm({
       message: t('p.admin.extra_drive.uninstall_confirm'),
@@ -226,23 +222,36 @@ const doUninstall = async (item: DriveScript) => {
   }
 }
 
-const showScriptDetail = (item: DriveScript) => {
+const showScriptDetail = (item: DriveScriptRow) => {
   if (item.expanded) {
     item.expanded = false
     return
   }
-  if (!item.description) return
+  if (!scriptDescription(item)) return
   item.expanded = true
 }
 
-const formatName = (item: DriveScript) => {
-  if (item.displayName) {
-    return `${item.displayName} (${item.name})`
+const scriptDescription = (item: DriveScriptRow) => {
+  return item.installed?.description || item.description
+}
+
+const formatName = (item: DriveScriptRow) => {
+  const displayName = item.installed?.displayName || item.displayName
+  if (displayName && displayName !== item.name) {
+    return `${displayName} (${item.name})`
   }
   return item.name
 }
 
-const editDrive = (item: DriveScript) => {
+const versionText = (item: DriveScriptRow) => {
+  if (item.updateAvailable) {
+    return `v${item.installed?.version || '?'} → v${item.version}`
+  }
+  const version = item.installed?.version || item.version
+  return version ? `v${version}` : ''
+}
+
+const editDrive = (item: DriveScriptRow) => {
   edit.name = item.name
   edit.showing = true
   emit('timer', false)
@@ -271,6 +280,11 @@ loadData()
     &.has-description {
       cursor: pointer;
     }
+  }
+
+  .script-drive-version {
+    color: var(--color-text-secondary);
+    font-size: 0.85em;
   }
 
   .script-drive-url {

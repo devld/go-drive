@@ -159,11 +159,13 @@
         "scripts": "Scripts",
         "ops": "Operations",
         "install": "Install",
+        "update": "Update",
         "uninstall": "Remove",
         "edit": "Edit",
         "uninstall_confirm": "Confirm deletion？",
         "save": "Save",
-        "refresh_repository": "Re-pull from Repository"
+        "refresh_repository": "Re-pull from Repository",
+        "sync_progress": "{loaded} / {total}"
       },
       "user": {
         "username": "Username",

@@ -1,12 +1,11 @@
 import {
-  AvailableDriveScript,
   Drive,
   DriveFactoryConfig,
   DriveInitConfig,
   DriveScriptContent,
+  DriveScriptList,
   FileBucket,
   Group,
-  InstalledDriveScript,
   Job,
   JobDefinitions,
   JobExecution,
@@ -205,14 +204,12 @@ export function deleteJobExecutions(jobId: number) {
   })
 }
 
-export function listAvailableDriveScripts(force?: boolean) {
-  return http.get<AvailableDriveScript[]>('/admin/drive-scripts/available', {
-    params: { force },
-  })
+export function listDriveScripts() {
+  return http.get<DriveScriptList>('/admin/drive-scripts')
 }
 
-export function listInstalledDriveScripts() {
-  return http.get<InstalledDriveScript[]>('/admin/drive-scripts/installed')
+export function syncDriveScriptsRepository() {
+  return http.post<Task<void>>('/admin/drive-scripts/sync')
 }
 
 export function installDriveScript(name: string) {

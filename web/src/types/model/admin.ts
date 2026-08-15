@@ -127,15 +127,26 @@ export interface JobExecution {
   errorMsg?: string
 }
 
-export interface AvailableDriveScript {
+export interface DriveScript {
   name: string
   driveUrl: string
+  displayName?: string
+  description?: string
+  version?: string
   driveUploaderUrl?: string
+  installed: InstalledDriveScript | null
+  updateAvailable: boolean
+}
+
+export interface DriveScriptList {
+  scripts: DriveScript[]
+  ready: boolean
 }
 
 export interface InstalledDriveScript {
   name: string
   displayName: string
+  version?: string
   description?: string
 }
 

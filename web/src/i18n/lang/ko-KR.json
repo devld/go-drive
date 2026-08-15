@@ -159,11 +159,13 @@
         "scripts": "스크립트",
         "ops": "작업",
         "install": "설치",
+        "update": "업데이트",
         "uninstall": "제거",
         "edit": "편집",
         "uninstall_confirm": "삭제하시겠습니까?",
         "save": "저장",
-        "refresh_repository": "저장소에서 다시 가져오기"
+        "refresh_repository": "저장소에서 다시 가져오기",
+        "sync_progress": "{loaded} / {total}"
       },
       "user": {
         "username": "사용자 이름",
