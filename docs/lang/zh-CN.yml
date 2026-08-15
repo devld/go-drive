@@ -5,6 +5,15 @@ error:
   fail_ban_message: 失败次数过多，请稍后再试
 util:
   request_failed: "[{{ 1 }}] 请求失败"
+request_headers:
+  add: 添加请求头
+  name: 名称
+  value: 值
+  invalid_format: "自定义请求头格式无效: {{ 1 }}"
+  invalid_name: "第 {{ 1 }} 项的请求头名称无效: '{{ 2 }}'"
+  unsupported: "不支持配置请求头 '{{ 1 }}'"
+  invalid_value: "请求头 '{{ 1 }}' 的值无效"
+  duplicate: "请求头 '{{ 1 }}' 重复"
 oauth:
   state_mismatch: state 不匹配
 search:
@@ -167,6 +176,9 @@ drive:
       proxy_out:
         label: 下载代理
         description: 下载时是否经过服务器代理
+      request_headers:
+        label: 自定义请求头
+        description: 添加到 go-drive 服务端所发请求的请求头。浏览器直传和直下不会携带这些请求头；如果存储服务要求文件传输请求必须携带它们，请开启对应的代理选项。配置值会覆盖已有请求头，但 S3 签名流程可能再次覆盖其控制的请求头。
       cache_ttl:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
@@ -184,6 +196,9 @@ drive:
       password:
         label: 密码
         description: ""
+      request_headers:
+        label: 自定义请求头
+        description: 添加到发往远端 WebDAV 服务的全部请求。配置值会覆盖具体操作生成的请求头；已配置的 Basic Auth 最后覆盖 Authorization。
       cache_ttl:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存

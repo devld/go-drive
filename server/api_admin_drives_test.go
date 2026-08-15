@@ -1,12 +1,39 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"go-drive/common/driveutil"
 	"go-drive/common/types"
 	"reflect"
 	"testing"
 )
+
+func TestEscapeDriveConfigLeavesRequestHeadersVisible(t *testing.T) {
+	requestHeaders := `[{"$key":"header","name":"User-Agent","value":"rclone/v1.68.0"}]`
+	config, e := json.Marshal(types.SM{
+		"password":        "password value",
+		"request_headers": requestHeaders,
+	})
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	escaped := escapeDriveConfigSecrets([]types.FormItem{
+		{Field: "password", Type: "password"},
+		{Field: "request_headers", Type: "form"},
+	}, string(config))
+	got := types.SM{}
+	if e = json.Unmarshal([]byte(escaped), &got); e != nil {
+		t.Fatal(e)
+	}
+	if got["password"] != secretPlaceholder {
+		t.Fatalf("password = %q", got["password"])
+	}
+	if got["request_headers"] != requestHeaders {
+		t.Fatalf("request_headers = %q", got["request_headers"])
+	}
+}
 
 func TestEscapeDriveInitConfigSecrets(t *testing.T) {
 	config := &driveutil.DriveInitConfig{
