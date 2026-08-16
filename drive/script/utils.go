@@ -69,23 +69,60 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.D
 	}
 
 	d := &ScriptDrive{
-		baseVM: vm,
-		data:   make(map[string]json.RawMessage),
+		baseVM:   vm,
+		data:     make(map[string]json.RawMessage),
+		writable: true,
 	}
+	d.cache = driveUtils.CreateCache(d.deserializeEntry)
 
 	vm.Set("setData", s.WrapVmCall(vm, d.setData))
 	vm.Set("getData", s.WrapVmCall(vm, d.getData))
 
-	_, e = vm.Call(ctx, "__driveCreate", s.NewContext(vm, ctx), config, newScriptDriveUtils(driveUtils))
+	scriptUtils := newScriptDriveUtils(driveUtils)
+	scriptUtils.cache = &scriptDriveCache{d.cache}
+
+	createdVal, e := vm.Call(ctx, "__driveCreate", s.NewContext(vm, ctx), config, scriptUtils)
 
 	if e != nil {
 		_ = d.Dispose()
 		return nil, e
 	}
+	var created struct {
+		Writable      bool
+		EntryCacheTTL string
+	}
+	if createdVal != nil && !createdVal.IsNil() {
+		createdVal.ParseInto(&created)
+		d.writable = created.Writable
+		ttl := types.SV(created.EntryCacheTTL).Duration(0)
+		if ttl > 0 {
+			d.cacheTTL = ttl
+		}
+	}
+	d.inspectMethods(vm)
 	vm.Set("selfDrive", s.NewDrive(d))
 	d.pool = s.NewVMPool(vm, poolConfig)
 
 	return d, nil
+}
+
+func (sd *ScriptDrive) hasMethod(vm *s.VM, name string) bool {
+	v, e := vm.GetValue("__drive_" + name)
+	return e == nil && v != nil && !v.IsNil()
+}
+
+func (sd *ScriptDrive) inspectMethods(vm *s.VM) {
+	sd.has.meta = sd.hasMethod(vm, "meta")
+	sd.has.save = sd.hasMethod(vm, "save")
+	sd.has.makeDir = sd.hasMethod(vm, "makeDir")
+	sd.has.copy = sd.hasMethod(vm, "copy")
+	sd.has.move = sd.hasMethod(vm, "move")
+	sd.has.delete = sd.hasMethod(vm, "delete")
+	sd.has.upload = sd.hasMethod(vm, "upload")
+	sd.has.getReader = sd.hasMethod(vm, "getReader")
+	sd.has.getURL = sd.hasMethod(vm, "getURL")
+	sd.has.hasThumbnail = sd.hasMethod(vm, "hasThumbnail")
+	sd.has.getThumbnail = sd.hasMethod(vm, "getThumbnail")
 }
 
 func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
@@ -228,17 +265,21 @@ func parsePoolConfig(arg string) (*s.VMPoolConfig, error) {
 }
 
 func newScriptDriveUtils(utils driveutil.DriveUtils) *scriptDriveUtils {
-	return &scriptDriveUtils{utils.CreateCache, driveDataStore{utils.Data}, utils.Config}
+	return &scriptDriveUtils{utils.CreateCache, nil, driveDataStore{utils.Data}, utils.Config}
 }
 
 type scriptDriveUtils struct {
 	createCache driveutil.DriveCacheFactory
+	cache       *scriptDriveCache
 
 	Data   driveDataStore
 	Config common.Config
 }
 
 func (sdu *scriptDriveUtils) CreateCache() *scriptDriveCache {
+	if sdu.cache != nil {
+		return sdu.cache
+	}
 	return &scriptDriveCache{sdu.createCache(nil)}
 }
 
@@ -335,6 +376,8 @@ func createVm(ctx context.Context, config common.Config, script string) (*s.VM, 
 	} else {
 		vm.Set("__driveScriptVersion", "")
 	}
+	vm.Set("__driveUploaderName", strings.TrimSuffix(script, ".js"))
+	vm.Set("__ownEntry", s.WrapVmCall(vm, ownEntry))
 
 	_, e = vm.Run(ctx, scriptBytes)
 	if e != nil {
@@ -342,6 +385,35 @@ func createVm(ctx context.Context, config common.Config, script string) (*s.VM, 
 		return nil, e
 	}
 	return vm, nil
+}
+
+func ownEntry(vm *s.VM, args s.Values) any {
+	from := s.GetEntry(args.Get(0).Raw())
+	if from == nil {
+		return nil
+	}
+	selfVal, e := vm.GetValue("selfDrive")
+	if e != nil || selfVal.IsNil() {
+		return nil
+	}
+	self := s.GetDrive(selfVal.Raw())
+	if self == nil {
+		return nil
+	}
+	owned := driveutil.GetSelfEntry(self, from)
+	if owned == nil {
+		return nil
+	}
+	result := map[string]any{
+		"Path":    owned.Path(),
+		"IsDir":   owned.Type().IsDir(),
+		"Size":    owned.Size(),
+		"ModTime": owned.ModTime(),
+	}
+	if ce, ok := owned.(driveutil.CacheableEntry); ok {
+		result["Data"] = ce.EntryData()
+	}
+	return result
 }
 
 // wrapReader adapts an io.Reader into an io.ReadCloser. If reader already is a

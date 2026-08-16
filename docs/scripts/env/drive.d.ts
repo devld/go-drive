@@ -36,6 +36,9 @@ declare interface DriveUploadConfig {
 
 /** Drive interface that should be implemented */
 declare interface Drive {
+  cache: DriveCache;
+  /** `from` if it belongs to this Drive instance, otherwise `null`. */
+  own(from: DriveEntry): Entry | null;
   meta(ctx: Context): DriveMeta;
   get(ctx: Context, path: string): Entry;
   save?(
@@ -46,8 +49,8 @@ declare interface Drive {
     reader: Reader
   ): Entry;
   makeDir?(ctx: Context, path: string): Entry;
-  copy?(ctx: TaskCtx, from: DriveEntry, to: string, override: boolean): Entry;
-  move?(ctx: TaskCtx, from: DriveEntry, to: string, override: boolean): Entry;
+  copy?(ctx: TaskCtx, from: Entry, to: string, override: boolean): Entry;
+  move?(ctx: TaskCtx, from: Entry, to: string, override: boolean): Entry;
   list(ctx: Context, path: string): Entry[];
   delete?(ctx: TaskCtx, path: string): void;
   upload?(
@@ -171,35 +174,119 @@ declare interface DriveUtils {
   OAuthGet(req: OAuthRequest, cred: OAuthCredentials): OAuthResponse;
 }
 
-declare type DriveCreate = (
-  ctx: Context,
-  config: SM,
-  utils: DriveUtils
-) => Drive;
+declare interface DriveOAuthRequestPair {
+  request: OAuthRequest;
+  credentials: OAuthCredentials;
+}
 
-declare type DriveInitConfig = (
-  ctx: Context,
-  config: SM,
-  utils: DriveUtils
-) => DriveInitConfiguration;
+/**
+ * Cross-VM shared fields on the instance. Names must start with `$`.
+ * Values must be JSON-serializable. Nested mutation is not persisted;
+ * reassign the complete property (see `setData` / `getData`).
+ */
+declare type DriveSharedState = {
+  [key: `$${string}`]: JSONValue | undefined;
+};
 
-declare type DriveInit = (
-  ctx: Context,
-  data: SM,
-  config: SM,
-  utils: DriveUtils
-) => void;
+declare interface DriveInstanceState extends DriveSharedState {
+  /**
+   * Raw duration string from the configuration form (e.g. `"2h"`).
+   * Parsed by the runtime; empty / invalid / `<= 0` disables entry caching.
+   */
+  entryCacheTTL?: string;
+  /** `meta().Writable`. Defaults to `true` when omitted. */
+  writable?: boolean;
+}
 
-/** Define the function used to create the Drive instance. This is required. */
-declare function defineCreate(fn: DriveCreate): void;
-/** Define the function used to get the initialization data of this Drive. This is optional. */
-declare function defineInitConfig(fn: DriveInitConfig): void;
-/** Define the function used to initialize this Drive. This is optional if `defineInitConfig` is not present. */
-declare function defineInit(fn: DriveInit): void;
+declare type DriveConfigProps<T> = {
+  readonly [K in keyof T as K extends `$${string}` ? never : K]: T[K];
+};
+
+declare type DriveSharedProps<T> = {
+  [K in keyof T as K extends `$${string}` ? K : never]: T[K];
+};
+
+/**
+ * Runtime `this` in Drive methods: `createInstance` fields, `cache` / `own`,
+ * and Drive operations. Non-`$` fields are frozen; `$` fields stay assignable
+ * and are synchronized across VMs.
+ */
+declare type DriveThis<T extends DriveInstanceState = DriveInstanceState> =
+  DriveConfigProps<T> & DriveSharedProps<T> & Drive;
+
+declare interface DriveSetup<T extends DriveInstanceState = DriveInstanceState> {
+  /** Admin configuration form. Required fields must be saved before OAuth or create. */
+  configForm?: FormItem[];
+  /** Called with submitted form data before it is saved. */
+  validateConfig?(data: SM): void;
+  /** Return OAuth endpoint and credentials built from saved form data. */
+  oauthRequest?(config: RootConfig, data: SM): DriveOAuthRequestPair;
+  /** Display name of the authorized account. */
+  oauthPrincipal?(ctx: Context, oauth: OAuthResponse): string;
+  /** Build runtime instance state from saved form data. */
+  createInstance(data: SM, utils: DriveUtils): T;
+}
+
+declare interface DriveMethods {
+  meta?(ctx: Context): DriveMeta;
+  get(ctx: Context, path: string): Entry;
+  list(ctx: Context, path: string): Entry[];
+  save?(
+    ctx: TaskCtx,
+    path: string,
+    size: number,
+    override: boolean,
+    reader: Reader
+  ): void;
+  makeDir?(ctx: Context, path: string): void;
+  copy?(ctx: TaskCtx, from: Entry, to: string, override: boolean): void;
+  move?(ctx: TaskCtx, from: Entry, to: string, override: boolean): void;
+  delete?(ctx: TaskCtx, path: string): void;
+  upload?(
+    ctx: Context,
+    path: string,
+    size: number,
+    override: boolean,
+    config: SM
+  ): DriveUploadConfig | undefined;
+  getReader?(
+    ctx: Context,
+    entry: Entry,
+    start: number,
+    size: number
+  ): ReadCloser;
+  getURL?(ctx: Context, entry: Entry): ContentURL;
+  hasThumbnail?(entry: Entry): boolean;
+  getThumbnail?(
+    ctx: Context,
+    entry: Entry
+  ): ReadCloser | ContentURL;
+}
+
+/** Prevent `methods` from widening `T`; `this` comes from `createInstance`. */
+declare type DriveNoInfer<T> = [T][T extends unknown ? 0 : never];
+
+/**
+ * Define a script Drive. `setup` runs before the instance exists;
+ * `methods` run on the created instance. `this` is inferred from
+ * `createInstance`'s return type (`DriveThis<T>`).
+ * The Go runtime supplies entry caching (cache hits do not enter the JS VM),
+ * write-path eviction, root `get("")`, copy/move ownership checks, and
+ * default `meta` / `upload` / `getReader`.
+ */
+declare function defineDrive<T extends DriveInstanceState>(
+  setup: DriveSetup<T>,
+  methods: DriveMethods & ThisType<DriveThis<DriveNoInfer<T>>>
+): void;
+
+/** Standard `cache_ttl` form item. Include it in `configForm` to let users set the TTL. */
+declare function entryCacheTTLFormItem(defaultValue?: string): FormItem;
 
 declare function useLocalProvider(size: number): DriveUploadConfig;
-/** `uploader` is the installed name without `.js` (copied to `drive-uploaders/<name>.js`). */
+/**
+ * Direct browser upload using this Drive's installed uploader.
+ * Do not pass an uploader name; it is taken from the Drive script.
+ */
 declare function useCustomProvider(
-  uploader: string,
   config?: Record<string, string>
 ): DriveUploadConfig;

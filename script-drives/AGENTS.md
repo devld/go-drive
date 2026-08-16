@@ -45,7 +45,7 @@ Check these sources in order. Do not rely only on old adapter examples:
 1. `docs/scripts/env/drive.d.ts` — Drive lifecycle, interfaces, and Drive-specific APIs.
 2. `docs/scripts/global.d.ts` — global HTTP, IO, error, encoding, path, and form APIs.
 3. `drive/script/helper.js` — required methods, method binding, and the actual behavior of `$` shared properties.
-4. `drive/script/index.go` and `drive/script/utils.go` — Go/JavaScript value conversion and resource ownership.
+4. `drive/script/index.go` and `drive/script/utils.go` — Go/JavaScript value conversion, entry cache, write-path eviction, and resource ownership.
 5. `script-drives/dropbox.js` — OAuth, pagination, streaming uploads, and temporary download URLs.
 6. `script-drives/qiniu.js` and `qiniu-uploader.js` — HMAC signing, object storage, and direct browser uploads.
 7. `docs/drive-uploaders/types.d.ts` — required when implementing direct browser uploads.
@@ -106,7 +106,7 @@ Browser uploader scripts have a separate runtime and may use modern JavaScript, 
 
 - `http()` is synchronous. A method occupies one VM until it returns.
 - go-drive maintains a VM pool and may call one Drive concurrently. Do not assume call order or use ordinary mutable globals as shared state.
-- The object returned by `defineCreate` is frozen. Ordinary properties assigned by its constructor should be treated as read-only configuration.
+- The object returned by `createInstance` is frozen after methods are bound. Ordinary properties assigned there should be treated as read-only configuration.
 - Only instance properties whose names begin with `$` are synchronized between VMs through go-drive shared storage.
 - A `$` value must be JSON-serializable. Objects and arrays are read as copies. Mutating a nested value does not persist it; reassign the complete `$` property.
 - A single shared-property read or write is protected, but a read-modify-write sequence is not atomic. `newLocker()` protects only its current VM and is not a cross-VM lock. Prefer concurrency control provided by the remote API.
@@ -134,12 +134,12 @@ Administrators may configure the VM pool as `MaxTotal,MaxIdle,MinIdle,IdleTime`;
 
 - The root path is always the empty string `""`. Other paths never start with `/`.
 - Return normalized `/`-separated paths. Use `pathUtils.join/parent/base/clean`, not operating-system path rules.
-- `get("")` must return the root-directory Entry.
+- `get("")` is served by the runtime as a directory Entry. Do not special-case the root in `get`.
 - `list(path)` returns direct children only. It neither includes the listed directory nor recurses.
 - File `Size` is in bytes; use `-1` when unknown. Directory size is normally `-1`.
 - `ModTime` is Unix time in milliseconds; use `-1` when unknown. Do not return seconds.
 - Omitting `Meta` defaults to `{Readable: true, Writable: true}`. A read-only Drive or Entry must explicitly set `Writable: false`.
-- Store only small string values needed by native copy/move in `Data`. At minimum, mark instance ownership with a persistent instance ID. Never store tokens or signed URLs there.
+- Store only small string values needed by native copy/move in `Data` (remote file ids, revisions). Never store tokens or signed URLs there. Instance ownership is detected by the runtime; do not put a drive id in `Data`.
 
 A normal Entry looks like:
 
@@ -150,7 +150,7 @@ A normal Entry looks like:
   Size: 123,
   ModTime: 1710000000000,
   Meta: { Readable: true, Writable: true },
-  Data: { d: this._instanceID, id: "remote-id" }
+  Data: { id: "remote-id" }
 }
 ```
 
@@ -168,42 +168,27 @@ Use the matching `isBadRequestErr`, `isNotFoundErr`, `isNotAllowedErr`, `isUnsup
 
 ## 5. Lifecycle
 
-### `defineInitConfig(fn)` — build configuration steps (optional)
+Define the adapter with `defineDrive(setup, methods)`.
 
-Signature:
+`setup` is evaluated before any Drive instance exists (`configForm`, `validateConfig`, OAuth, `createInstance`). `methods` run on the created instance; `this` is inferred from the object returned by `createInstance` (`DriveThis<T>`). `$` properties on that object are typed as cross-VM shared JSON state.
 
-```js
-function (ctx, config, utils) -> DriveInitConfiguration
-```
+### `configForm` / `validateConfig`
 
-- Load saved values with `utils.Data.Load(...)`.
-- Return `Configured`, `Form`, and optional `Value` and `OAuth` fields.
-- This stage may be called repeatedly and must be idempotent.
-- Do not create long-lived connections or depend on in-memory side effects here.
+`configForm` is the admin form. Required fields must be saved first. `validateConfig(data)` runs on submit before those fields are saved.
 
-Without this function, go-drive displays only the script description and the initial state remains unconfigured. Define it explicitly for most adapters.
+If `oauthRequest` is set, `Configured` is true only when the form is complete **and** an OAuth token exists. Without OAuth, `Configured` is true when every `Required` field has a saved value.
 
-### `defineInit(fn)` — validate and persist configuration (optional)
+Include `entryCacheTTLFormItem("2h")` when users should set the entry cache TTL. Pass the raw form value through as `entryCacheTTL` from `createInstance`; the Go runtime parses `ms`/`s`/`m`/`h`. Empty, invalid, or `<= 0` disables caching. The form item is not inserted automatically.
 
-Signature:
+### `oauthRequest` / `oauthPrincipal` (optional)
 
-```js
-function (ctx, data, config, utils) -> void
-```
+Return `{ request, credentials }`. The runtime runs `OAuthInitConfig` / `OAuthInit` / `OAuthGet`. `oauthPrincipal(ctx, oauth)` supplies the account label shown in the admin UI.
 
-Validate submitted data, perform an OAuth code exchange or other initialization, and persist values with `utils.Data.Save(data)`. `Save` merges keys; it does not remove omitted fields automatically.
+### `createInstance(data, utils)` (required)
 
-Generate and persist an `_id` for each Drive instance. This ID determines whether an Entry passed to copy/move belongs to the same remote account.
+Return instance state: credentials, clients, `entryCacheTTL: data.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
 
-### `defineCreate(fn)` — create the runtime instance (required)
-
-Signature:
-
-```js
-function (ctx, config, utils) -> Drive
-```
-
-Load credentials from `utils.Data`, verify that configuration is complete, and construct read-only fields, a cache, and any required `$` shared state. The returned object must implement `meta`, `get`, `list`, and `getReader`; otherwise Drive creation fails.
+Required methods: `get` and `list`, plus `getReader` or `getURL`. `upload` defaults to `useLocalProvider`. `getReader` defaults to `ErrUnsupported()` when `getURL` exists. `meta` defaults to `{ Writable: this.writable !== false }`.
 
 ## 6. Drive method contracts
 
@@ -211,11 +196,11 @@ Load credentials from `utils.Data`, verify that configuration is complete, and c
 
 #### `meta(ctx) -> DriveMeta`
 
-Return capabilities for the whole Drive. A writable Drive returns `{Writable: true}`; a read-only Drive returns `{Writable: false}`. Do not rely on implicit conversion of an empty return value.
+Optional. Defaults to `{ Writable: instance.writable !== false }`.
 
 #### `get(ctx, path) -> Entry`
 
-Return the Entry at one path. Construct the root locally. A missing non-root path must throw `ErrNotFound()`. A cache lookup may happen first; store the Entry after a successful remote request.
+Return the Entry at one non-root path. The Go runtime serves `get("")` and caches successful results (including `Data`) using `entryCacheTTL` without entering the JS VM on hit. A missing path must throw `ErrNotFound()`.
 
 #### `list(ctx, path) -> Entry[]`
 
@@ -223,11 +208,11 @@ Return all direct children. Handle every remote page, marker, or cursor rather t
 
 #### `getReader(ctx, entry, start, size) -> ReadCloser`
 
-Read file content. `start === -1 && size === -1` means the complete content. For range reads, send an appropriate Range header and validate the response status. If a working `getURL` is implemented, this method may always throw `ErrUnsupported()` because downloads and generic copies prefer the URL. The function itself is still required.
+Read file content. `start === -1 && size === -1` means the complete content. For range reads, send an appropriate Range header and validate the response status. If `getURL` is implemented, omit `getReader`; the runtime throws `ErrUnsupported()`.
 
 ### Write methods
 
-#### `save(ctx, path, size, override, reader) -> Entry`
+#### `save(ctx, path, size, override, reader)`
 
 Stream the Reader to the remote service and report total size and progress:
 
@@ -236,45 +221,34 @@ ctx.Total(size, true);
 var body = reader.ProgressReader(ctx);
 ```
 
-Honor `override`. Prefer a conditional remote write over a check-then-write sequence that introduces a race. On success, evict the target and parent-directory caches, then call `get` and return the final Entry.
+Honor `override`. Prefer a conditional remote write over a check-then-write sequence that introduces a race. Do not evict caches or return `get`; the runtime evicts the target and parent, then re-gets.
 
-#### `makeDir(ctx, path) -> Entry`
+#### `makeDir(ctx, path)`
 
-Create one directory. The dispatcher ensures that parents exist. Object storage may create a zero-byte object with a trailing `/`; if the service has implicit directories, follow its native semantics. Evict the parent cache on success.
+Create one directory. The dispatcher ensures that parents exist. Object storage may create a zero-byte object with a trailing `/`; if the service has implicit directories, follow its native semantics.
 
 #### `delete(ctx, path) -> void`
 
-Delete the path and all descendants. If remote directory deletion is not recursive, enumerate with `buildEntriesTree` and `flattenEntriesTree`, then delete depth-first. Evict the target including descendants and its parent on success.
+Delete the path and all descendants. If remote directory deletion is not recursive, enumerate with `buildEntriesTree` and `flattenEntriesTree`, then delete depth-first.
 
 ### Native copy and move
 
-#### `copy(ctx, from, to, override) -> Entry`
+#### `copy(ctx, from, to, override)`
 
-Perform native copy only when the source Entry belongs to this Drive instance and the remote API supports server-side copy:
+The runtime calls this only when `from` belongs to this Drive instance. `from` is a plain Entry (`Path`, `IsDir`, `Size`, `ModTime`, `Data`). Throw `ErrUnsupported()` when native copy is unavailable (for example directories). The dispatcher will fall back to reading the source and calling destination `save`. Never disguise an actual remote failure as Unsupported.
 
-```js
-var source = from.Unwrap();
-var data = source.Data();
-if (!data || data.d !== this._instanceID) throw ErrUnsupported();
-```
+#### `move(ctx, from, to, override)`
 
-Throw `ErrUnsupported()` when native copy is unavailable. The dispatcher will fall back to reading the source and calling destination `save`, recursively for directories. Never disguise an actual remote failure as Unsupported.
-
-#### `move(ctx, from, to, override) -> Entry`
-
-Likewise, call `Unwrap()` and verify instance ownership first. On success, evict the source, target, and both parent-directory caches.
-
-Important: `ErrUnsupported()` from `move` does **not** trigger automatic copy-and-delete. It reports that cross-Drive move is unsupported. Implement native move when the product needs it. Do not implement recursive copy-and-delete inside the adapter unless partial failures and data-loss risks are handled explicitly.
+Same ownership wrapping as `copy`. `ErrUnsupported()` from `move` does **not** trigger automatic copy-and-delete.
 
 ### Upload strategy
 
 #### `upload(ctx, path, size, override, config) -> DriveUploadConfig | undefined`
 
-This method chooses the frontend upload strategy; it does not replace `save`:
+Chooses the frontend upload strategy; it does not replace `save`. Defaults to `useLocalProvider(size)`.
 
-- Normally return `useLocalProvider(size)`. Small files stream through go-drive; large files are first uploaded to go-drive in chunks and then passed to `save`.
-- Return `useCustomProvider("name", safeConfig)` for direct browser uploads.
-- A browser uploader can call `uploadCallback(data)` to invoke this method again. Handle `config.action` to finish a multipart upload, evict caches, or return the result.
+- Return `useCustomProvider(safeConfig)` for direct browser uploads (no uploader name).
+- After a successful browser upload the runtime calls this again with `config.action === "Completed"` and evicts the target and parent. Return immediately for that action unless the Drive must finish a server-side commit.
 - `Config` sent to the browser is fully visible to the user. Include only short-lived, least-privilege upload credentials, never a long-lived secret.
 
 ### Downloads and thumbnails
@@ -310,7 +284,8 @@ The following runtime surface is safe to depend on. Refer to the two `.d.ts` fil
 
 - `utils.Config`: `OAuthRedirectURI`, `Version`, `RevHash`, and `BuildAt`.
 - `utils.Data.Load(...keys)` / `utils.Data.Save(map)`: persistent string configuration.
-- `utils.CreateCache()`: create the current Drive's Entry cache.
+- `this.cache`: entry cache created for the instance. Use it only for extra invalidation; `get`/`list` and write methods are wrapped automatically.
+- `parseDuration(str)`: parse a Go duration string (`ms`/`s`/`m`/`h`).
 - `DriveCache.PutEntry`, `PutEntries`, and `PutChildren`.
 - `DriveCache.GetEntry` and `GetChildren`; a miss returns `null`.
 - `DriveCache.Evict(path, descendants)` and `EvictAll()`.
@@ -407,51 +382,113 @@ It demonstrates the interface contract and does not represent a real service:
 
 /// <reference path="../docs/scripts/env/drive.d.ts"/>
 
-function form() {
-  return [
-    { Label: "API URL", Field: "base_url", Type: "text", Required: true },
-    { Label: "Token", Field: "token", Type: "password", Required: true }
-  ];
-}
+defineDrive(
+  {
+    configForm: [
+      { Label: "API URL", Field: "base_url", Type: "text", Required: true },
+      { Label: "Token", Field: "token", Type: "password", Required: true },
+      entryCacheTTLFormItem("5m")
+    ],
 
-defineInitConfig(function (ctx, config, utils) {
-  var data = utils.Data.Load("base_url", "token");
-  return {
-    Configured: !!(data.base_url && data.token),
-    Form: form(),
-    Value: data
-  };
-});
+    validateConfig: function (data) {
+      if (!/^https:\/\/[^/]+(?:\/.*)?$/.test(data.base_url || "")) {
+        throw ErrBadRequest("API URL must use HTTPS");
+      }
+      data.base_url = data.base_url.replace(/\/+$/, "");
+    },
 
-defineInit(function (ctx, data, config, utils) {
-  if (!/^https:\/\/[^/]+(?:\/.*)?$/.test(data.base_url || "")) {
-    throw ErrBadRequest("API URL must use HTTPS");
+    createInstance: function (data) {
+      return {
+        entryCacheTTL: data.cache_ttl,
+        baseURL: data.base_url,
+        token: data.token
+      };
+    }
+  },
+  {
+    get: function (ctx, path) {
+      var result = requestJSON(
+        this,
+        ctx,
+        "GET",
+        "/v1/entries?path=" + encodeURIComponent(path)
+      );
+      return toEntry(result.entry);
+    },
+
+    list: function (ctx, path) {
+      var all = [];
+      var cursor = "";
+      do {
+        ctx.Err();
+        var route = "/v1/children?path=" + encodeURIComponent(path);
+        if (cursor) route += "&cursor=" + encodeURIComponent(cursor);
+        var page = requestJSON(this, ctx, "GET", route);
+        for (var i = 0; i < page.items.length; i++) {
+          all.push(toEntry(page.items[i]));
+        }
+        cursor = page.nextCursor || "";
+      } while (cursor);
+      return all;
+    },
+
+    save: function (ctx, path, size, override, reader) {
+      ctx.Total(size, true);
+      var route = "/v1/content?path=" + encodeURIComponent(path) +
+        "&override=" + (override ? "true" : "false");
+      var resp = http(
+        ctx,
+        "PUT",
+        this.baseURL + route,
+        {
+          Authorization: "Bearer " + this.token,
+          "Content-Type": "application/octet-stream"
+        },
+        reader.ProgressReader(ctx)
+      );
+      var status = resp.Status;
+      var message = resp.Text();
+      if (status === 409) throw ErrNotAllowed("destination already exists");
+      if (status < 200 || status >= 300) throw ErrRemoteApi(status, message);
+    },
+
+    makeDir: function (ctx, path) {
+      requestJSON(this, ctx, "POST", "/v1/directories", { path: path });
+    },
+
+    copy: function (ctx, from, to, override) {
+      throw ErrUnsupported();
+    },
+
+    move: function (ctx, from, to, override) {
+      throw ErrUnsupported();
+    },
+
+    delete: function (ctx, path) {
+      requestJSON(
+        this,
+        ctx,
+        "DELETE",
+        "/v1/entries?recursive=true&path=" + encodeURIComponent(path)
+      );
+    },
+
+    getURL: function (ctx, entry) {
+      var data = requestJSON(
+        this,
+        ctx,
+        "GET",
+        "/v1/download-url?path=" + encodeURIComponent(entry.Path)
+      );
+      return { URL: data.url };
+    }
   }
-  data.base_url = data.base_url.replace(/\/+$/, "");
-  var saved = utils.Data.Load("_id");
-  if (!saved._id) data._id = String(Math.round(Math.random() * 1000000000));
-  utils.Data.Save(data);
-});
+);
 
-defineCreate(function (ctx, config, utils) {
-  var data = utils.Data.Load("base_url", "token", "_id");
-  if (!data.base_url || !data.token || !data._id) {
-    throw ErrNotAllowed("drive not configured");
-  }
-  return new ExampleDrive(data, utils.CreateCache());
-});
-
-function ExampleDrive(data, cache) {
-  this._baseURL = data.base_url;
-  this._token = data.token;
-  this._instanceID = data._id;
-  this._cache = cache;
-  this._cacheTTL = ms(5 * 60 * 1000);
-}
 
 function requestJSON(drive, ctx, method, route, body) {
   var headers = {
-    Authorization: "Bearer " + drive._token,
+    Authorization: "Bearer " + drive.token,
     Accept: "application/json"
   };
   var payload;
@@ -459,7 +496,7 @@ function requestJSON(drive, ctx, method, route, body) {
     headers["Content-Type"] = "application/json";
     payload = JSON.stringify(body);
   }
-  var resp = http(ctx, method, drive._baseURL + route, headers, payload);
+  var resp = http(ctx, method, drive.baseURL + route, headers, payload);
   var status = resp.Status;
   var text = resp.Text();
   var data = {};
@@ -478,132 +515,15 @@ function requestJSON(drive, ctx, method, route, body) {
   return data;
 }
 
-function toEntry(drive, remote) {
+function toEntry(remote) {
   return {
     IsDir: remote.type === "dir",
     Path: pathUtils.clean(remote.path),
     Size: remote.type === "dir" ? -1 : remote.size,
     ModTime: remote.modified_at ? dayjs(remote.modified_at).valueOf() : -1,
-    Data: { d: drive._instanceID, id: String(remote.id) }
+    Data: { id: String(remote.id) }
   };
 }
-
-function cacheEntry(item) {
-  return {
-    IsDir: item.Type === "dir",
-    Path: item.Path,
-    Size: item.Size,
-    ModTime: item.ModTime,
-    Data: item.Data
-  };
-}
-
-ExampleDrive.prototype.meta = function (ctx) {
-  return { Writable: true };
-};
-
-ExampleDrive.prototype.get = function (ctx, path) {
-  if (pathUtils.isRoot(path)) {
-    return { IsDir: true, Path: "", Size: -1, ModTime: -1 };
-  }
-  var cached = this._cache.GetEntry(path);
-  if (cached) return cacheEntry(cached);
-  var result = requestJSON(
-    this,
-    ctx,
-    "GET",
-    "/v1/entries?path=" + encodeURIComponent(path)
-  );
-  var entry = toEntry(this, result.entry);
-  this._cache.PutEntry(entry, this._cacheTTL);
-  return entry;
-};
-
-ExampleDrive.prototype.list = function (ctx, path) {
-  var cached = this._cache.GetChildren(path);
-  if (cached) return cached.map(cacheEntry);
-  var all = [];
-  var cursor = "";
-  do {
-    ctx.Err();
-    var route = "/v1/children?path=" + encodeURIComponent(path);
-    if (cursor) route += "&cursor=" + encodeURIComponent(cursor);
-    var page = requestJSON(this, ctx, "GET", route);
-    for (var i = 0; i < page.items.length; i++) {
-      all.push(toEntry(this, page.items[i]));
-    }
-    cursor = page.nextCursor || "";
-  } while (cursor);
-  this._cache.PutChildren(path, all, this._cacheTTL);
-  return all;
-};
-
-ExampleDrive.prototype.save = function (ctx, path, size, override, reader) {
-  ctx.Total(size, true);
-  var route = "/v1/content?path=" + encodeURIComponent(path) +
-    "&override=" + (override ? "true" : "false");
-  var resp = http(
-    ctx,
-    "PUT",
-    this._baseURL + route,
-    {
-      Authorization: "Bearer " + this._token,
-      "Content-Type": "application/octet-stream"
-    },
-    reader.ProgressReader(ctx)
-  );
-  var status = resp.Status;
-  var message = resp.Text();
-  if (status === 409) throw ErrNotAllowed("destination already exists");
-  if (status < 200 || status >= 300) throw ErrRemoteApi(status, message);
-  this._cache.Evict(path, false);
-  this._cache.Evict(pathUtils.parent(path), false);
-  return this.get(ctx, path);
-};
-
-ExampleDrive.prototype.makeDir = function (ctx, path) {
-  requestJSON(this, ctx, "POST", "/v1/directories", { path: path });
-  this._cache.Evict(path, false);
-  this._cache.Evict(pathUtils.parent(path), false);
-  return this.get(ctx, path);
-};
-
-ExampleDrive.prototype.copy = function (ctx, from, to, override) {
-  throw ErrUnsupported(); // The dispatcher falls back to a streamed copy.
-};
-
-ExampleDrive.prototype.move = function (ctx, from, to, override) {
-  throw ErrUnsupported(); // Move has no automatic fallback.
-};
-
-ExampleDrive.prototype.delete = function (ctx, path) {
-  requestJSON(
-    this,
-    ctx,
-    "DELETE",
-    "/v1/entries?recursive=true&path=" + encodeURIComponent(path)
-  );
-  this._cache.Evict(path, true);
-  this._cache.Evict(pathUtils.parent(path), false);
-};
-
-ExampleDrive.prototype.upload = function (ctx, path, size, override, config) {
-  return useLocalProvider(size);
-};
-
-ExampleDrive.prototype.getReader = function (ctx, entry, start, size) {
-  throw ErrUnsupported(); // Content remains available through getURL.
-};
-
-ExampleDrive.prototype.getURL = function (ctx, entry) {
-  var data = requestJSON(
-    this,
-    ctx,
-    "GET",
-    "/v1/download-url?path=" + encodeURIComponent(entry.Path)
-  );
-  return { URL: data.url };
-};
 ```
 
 A real adapter must add service-specific pagination, upload behavior, redacted errors, and native copy/move where available. Do not blindly replace the example URLs.
@@ -615,24 +535,36 @@ Add an uploader only when all of these are true: the remote service supports bro
 The server-side `upload` method returns:
 
 ```js
-return useCustomProvider("example", {
+return useCustomProvider({
   uploadURL: signed.url,
   token: signed.shortLivedToken
 });
 ```
 
-The complete `example-uploader.js` file must evaluate to a callable factory function. The factory receives an UploadFactoryContext and returns:
+`example-uploader.js` must call `defineUploader`:
 
-- required `upload(blob, seq, onProgress)`;
-- optional `prepare() -> chunk count`;
-- optional `getChunk(seq)`;
-- optional `complete()`;
-- optional `onCleanup()` to cancel a remote multipart upload;
-- writable `ctx.maxConcurrent`;
-- HTTP through `ctx.request(...)`, allowing go-drive to track and cancel it;
-- optional `ctx.uploadCallback({action: "Completed"})` after completion so the server can confirm the upload and evict caches.
+```js
+defineUploader({
+  chunkSize: 5 * 1024 * 1024,
+  async start(ctx) {
+    if (ctx.chunks === 1) return null;
+    var res = await ctx.request({ method: "post", url: ctx.config.initURL });
+    return { uploadId: res.data.uploadId };
+  },
+  async upload(ctx, args) {
+    return ctx.request({
+      method: "put",
+      url: ctx.config.uploadURL,
+      data: args.blob,
+      onUploadProgress: args.onProgress
+    });
+  },
+  async complete(ctx, args) { /* commit multipart if args.session is set */ },
+  async abort(ctx, args) { /* delete remote upload if args.session is set */ }
+});
+```
 
-Follow `qiniu-uploader.js`. Verify CORS preflight, failed requests, cancellation cleanup, empty files, a non-full final chunk, and expired credentials. Long-lived access keys or secret keys must never enter browser configuration.
+The runtime slices the file, calls `abort` on failure/cancel (not after success), and notifies the Drive with `{ action: "Completed" }` after `complete`. Use `ctx.request` so pause/cancel abort in-flight uploads. Follow `qiniu-uploader.js`. Verify CORS preflight, failed requests, cancellation cleanup, empty files, a non-full final chunk, and expired credentials. Long-lived access keys or secret keys must never enter browser configuration.
 
 ## 10. Implementation and acceptance workflow
 
@@ -642,7 +574,7 @@ An agent must proceed in this order:
 2. Perform the suitability assessment first. If the service is unsuitable, explain why it needs a Go Drive instead of generating a plausible-looking placeholder script.
 3. Define one unambiguous remote-object-to-Entry mapping, including root path, directory emulation, and time units.
 4. Implement the configuration lifecycle and least-privilege credentials.
-5. Implement `meta/get/list/getReader` and downloads, then write methods.
+5. Implement `get`/`list` and downloads (`getURL` or `getReader`), then write methods.
 6. Implement native copy/move only when the remote service truly supports them.
 7. Review pagination, status handling, response disposal, cache invalidation, and cancellation paths.
 8. Implement and review a browser uploader separately when required.

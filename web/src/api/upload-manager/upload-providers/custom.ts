@@ -1,5 +1,4 @@
 import http from '@/utils/http'
-import http_ from '@/api/http'
 import { API_PATH } from '@/api/http'
 import { transformErrorResponse, transformTextResponse } from '@/utils/http/transformers'
 import ChunkUploadTask from '../chunk-task'
@@ -10,17 +9,37 @@ const MAX_CONCURRENT = 16
 
 const scriptCache = new Map<string, Promise<string>>()
 
-interface CustomUploader {
-  prepare?(): Promise<number>
-  getChunk?(seq: number): Blob
+interface UploaderSpec {
+  chunkSize?: number
+  maxConcurrent?: number
+  start?(ctx: UploaderRuntimeContext): Promise<unknown>
   upload(
-    data: Blob,
-    seq: number,
-    onProgress: (p: UploadProgress) => void
-  ): Promise<any>
-  complete?(): Promise<any>
+    ctx: UploaderRuntimeContext,
+    args: {
+      blob: Blob
+      seq: number
+      session: unknown
+      onProgress: (p: UploadProgress) => void
+    }
+  ): Promise<unknown>
+  complete?(
+    ctx: UploaderRuntimeContext,
+    args: { session: unknown; parts: unknown[] }
+  ): Promise<unknown>
+  abort?(
+    ctx: UploaderRuntimeContext,
+    args: { session: unknown }
+  ): void | Promise<void>
+  getChunk?(ctx: UploaderRuntimeContext, seq: number): Blob
+}
 
-  onCleanup?(): void
+interface UploaderRuntimeContext {
+  readonly config: Record<string, string>
+  readonly request: ChunkUploadTask['_request']
+  maxConcurrent: number
+  readonly task: ChunkUploadTask['task']
+  readonly uploadCallback: ChunkUploadTask['uploadCallback']
+  chunks: number
 }
 
 function loadUploaderScript(name: string, version?: string): Promise<string> {
@@ -40,7 +59,7 @@ function loadUploaderScript(name: string, version?: string): Promise<string> {
               ? resp.data
               : ''
         if (!scriptContent) throw new Error('invalid uploader code')
-        return scriptContent.replace(/};+$/, '}')
+        return scriptContent
       })
     scriptCache.set(key, pending)
     pending.catch(() => {
@@ -50,30 +69,41 @@ function loadUploaderScript(name: string, version?: string): Promise<string> {
   return pending
 }
 
-function createUploaderFactory(scriptContent: string): (ctx: unknown) => unknown {
-  let factory: unknown
+function loadUploaderSpec(scriptContent: string): UploaderSpec {
+  let spec: unknown
   try {
-    factory = new Function(`return (${scriptContent})`)()
+    spec = new Function(
+      `'use strict';
+      var __uploaderSpec;
+      function defineUploader(s) { __uploaderSpec = s; }
+      ${scriptContent}
+      return __uploaderSpec;`
+    )()
   } catch {
     throw new Error('invalid uploader code')
   }
-  if (typeof factory !== 'function') {
-    throw new Error('uploader factory is not a function')
+  if (
+    !spec ||
+    typeof spec !== 'object' ||
+    typeof (spec as UploaderSpec).upload !== 'function'
+  ) {
+    throw new Error('uploader must call defineUploader with an upload function')
   }
-  return factory as (ctx: unknown) => unknown
-}
-
-function isCustomUploader(value: unknown): value is CustomUploader {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    typeof (value as CustomUploader).upload === 'function'
-  )
+  return spec as UploaderSpec
 }
 
 export default class CustomUploadTask extends ChunkUploadTask {
-  private uploader?: CustomUploader
-  private singleUploadResult: any
+  private uploader?: {
+    prepare(): Promise<number>
+    getChunk(seq: number): Blob
+    upload(
+      data: Blob,
+      seq: number,
+      onProgress: (p: UploadProgress) => void
+    ): Promise<unknown>
+    complete(): Promise<unknown>
+    onCleanup(): void
+  }
   private cleanedUp = false
 
   protected async _prepare(): Promise<number> {
@@ -90,10 +120,10 @@ export default class CustomUploadTask extends ChunkUploadTask {
       uploaderName,
       this._config?.uploaderVersion
     )
-    const factory = createUploaderFactory(scriptContent)
+    const spec = loadUploaderSpec(scriptContent)
 
-    const scriptThis = Object.defineProperties(
-      {},
+    const ctx: UploaderRuntimeContext = Object.defineProperties(
+      { chunks: 1 } as UploaderRuntimeContext,
       {
         config: { value: this._config },
         request: { value: this._request.bind(this) },
@@ -105,49 +135,86 @@ export default class CustomUploadTask extends ChunkUploadTask {
             this._maxConcurrent = Math.min(MAX_CONCURRENT, Math.max(1, n))
           },
         },
-        http: { value: http_ },
         task: { value: this.task },
         uploadCallback: { value: this.uploadCallback.bind(this) },
+        chunks: { writable: true, value: 1 },
       }
     )
 
-    const uploader = factory.call(undefined, scriptThis)
-    if (!isCustomUploader(uploader)) {
-      throw new Error('uploader must provide an upload function')
-    }
-    this.uploader = uploader
-
-    if (this.uploader.prepare) {
-      return this.uploader.prepare()
+    if (spec.maxConcurrent != null) {
+      ctx.maxConcurrent = spec.maxConcurrent
     }
 
-    return 1
+    const file = this.task.file
+    const chunkSize = spec.chunkSize
+    const chunks =
+      !file || !chunkSize || chunkSize <= 0
+        ? 1
+        : Math.max(1, Math.ceil(file.size / chunkSize))
+    ctx.chunks = chunks
+
+    let session: unknown
+    let completed = false
+    const parts: unknown[] = []
+
+    this.uploader = {
+      prepare: async () => {
+        if (spec.start) {
+          session = await spec.start(ctx)
+        }
+        return chunks
+      },
+      getChunk: (seq) => {
+        if (spec.getChunk) return spec.getChunk(ctx, seq)
+        if (!file || !chunkSize || chunks === 1) return file!
+        return file.slice(seq * chunkSize, (seq + 1) * chunkSize)
+      },
+      upload: async (blob, seq, onProgress) => {
+        const res = await spec.upload(ctx, {
+          blob,
+          seq,
+          session,
+          onProgress,
+        })
+        parts[seq] = res
+        return res
+      },
+      complete: async () => {
+        let res: unknown
+        if (spec.complete) {
+          res = await spec.complete(ctx, { session, parts })
+        }
+        completed = true
+        await this.uploadCallback({ action: 'Completed' })
+        return res
+      },
+      onCleanup: () => {
+        if (completed) return
+        try {
+          Promise.resolve(spec.abort?.(ctx, { session })).catch(() => undefined)
+        } catch {
+          // ignore cleanup errors so they do not mask the original failure
+        }
+      },
+    }
+
+    return this.uploader.prepare()
   }
 
   protected async _chunkUpload(
     seq: number,
     blob: Blob,
     onProgress: (p: UploadProgress) => void
-  ): Promise<any> {
-    const res = await this.uploader!.upload(blob, seq, onProgress)
-    if (this.uploader!.complete) {
-      this.singleUploadResult = res
-    }
-    return res
+  ): Promise<unknown> {
+    return this.uploader!.upload(blob, seq, onProgress)
   }
 
-  protected _completeUpload(): Promise<any> {
-    if (this.uploader!.complete) {
-      return this.uploader!.complete()
-    }
-    return this.singleUploadResult
+  protected _completeUpload(): Promise<unknown> {
+    return this.uploader!.complete()
   }
 
   protected _getChunk(seq: number): Blob {
-    if (this.uploader!.getChunk) {
-      return this.uploader!.getChunk(seq)
-    }
-    return this.task.file!
+    return this.uploader!.getChunk(seq)
   }
 
   protected _cleanup(): void {

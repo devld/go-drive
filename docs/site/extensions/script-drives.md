@@ -67,7 +67,7 @@ Start with the current templates and definitions:
 The template uses TypeScript references for editor completion, but the runtime is still server-side JavaScript. An implementation should:
 
 - Define a unique type name, display name, description, and configuration form.
-- Implement the required `meta`, `get`, `list`, and `getReader` methods, then the write, upload, download, and thumbnail methods supported by the service.
+- Implement `defineDrive` with `get` and `list`, plus `getURL` or `getReader`, then the write, upload, download, and thumbnail methods supported by the service.
 - Return Unsupported from unavailable native `copy` operations so the dispatcher can stream-copy; note that `move` does not have a copy-and-delete fallback.
 - Use the provided context and propagate cancellation through cancellable operations.
 - Promptly close response bodies, readers, and remote connections.

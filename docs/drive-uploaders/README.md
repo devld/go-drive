@@ -1,18 +1,12 @@
 ## Implementing Drive's uploader
 
-In general, drives implemented in JavaScript can be uploaded via `go-drive`'s local uploader, in which case the upload will be relayed through `go-drive`.
+JavaScript drives can upload through go-drive's local uploader (the file is relayed by the server).
 
-If you want to upload directly through the front-end. Then you need to implement a custom uploader.
+For a direct browser upload, add a sibling uploader script and point to it with `// @uploader <filename>.js` on the Drive script. After install it is served as `/drive-uploader/<drive-name>`.
 
-This script, unlike the Drive script, will be executed in the browser environment and you can use any API supported by the browser.
+The uploader runs in the browser. Call `defineUploader({ ... })` with:
 
-In this script, you need to define a method, the name of the method doesn't matter.
-All variables, code need to be declared in this method (closure).
+- optional `chunkSize` / `maxConcurrent` / `start` / `complete` / `abort` / `getChunk`
+- required `upload(ctx, { blob, seq, session, onProgress })`
 
-This method will eventually need to return a [`CustomUploader`](https://github.com/devld/go-drive/blob/d5c3246b68355a76c358c8ea25139b0612f7b7fb/docs/drive-uploaders/types.d.ts#L51-L62).
-
-Once you finish, put the uploader `.js` next to the Drive script (any filename) and point to it with `// @uploader <filename>.js` on the Drive script. After install, go-drive copies it to `drive-uploaders/<DRIVE_NAME>.js`.
-
-You can see examples of existing implementations in [`script-drives`](https://github.com/devld/go-drive/tree/master/script-drives).
-
-
+The runtime slices the file, aborts on failure/cancel, and notifies the Drive with `{ action: "Completed" }` after `complete`. Types: [`types.d.ts`](./types.d.ts). Example: [`script-drives/qiniu-uploader.js`](https://github.com/devld/go-drive/blob/master/script-drives/qiniu-uploader.js).

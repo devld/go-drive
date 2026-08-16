@@ -1,6 +1,8 @@
 package script
 
-import "go-drive/common/utils"
+import (
+	"go-drive/common/utils"
+)
 
 func initVarsForVm(v *VM) {
 	v.o.Set("DEBUG", utils.IsDebugOn)
@@ -11,6 +13,8 @@ func initVarsForVm(v *VM) {
 	v.o.Set("http", WrapVmCall(v, vm_http))
 
 	v.o.Set("sleep", WrapVmCall(v, vm_sleep))
+
+	v.o.Set("parseDuration", WrapVmCall(v, vm_parseDuration))
 
 	v.o.Set("newContext", WrapVmCall(v, vm_newContext))
 	v.o.Set("newContextWithTimeout", WrapVmCall(v, vm_newContextWithTimeout))

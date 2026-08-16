@@ -1,102 +1,95 @@
 /// <reference path="../docs/drive-uploaders/types.d.ts"/>
 
-/**
- * @param {UploadFactoryContext} ctx
- * @returns {CustomUploader}
- */
-function qiniuUploader(ctx) {
-  const chunkSize = 5 * 1024 * 1024; // 5MB
-  const chunks = Math.ceil(ctx.task.file.size / chunkSize);
+defineUploader({
+  chunkSize: 5 * 1024 * 1024,
 
-  let res;
-  let uploadId;
-  let parts;
+  async start(ctx) {
+    if (ctx.chunks === 1) return null;
 
-  const multipartURL =
-    ctx.config.baseURL +
-    "/buckets/" +
-    ctx.config.bucket +
-    "/objects/" +
-    ctx.config.encodedKey +
-    "/uploads";
-  const commonHeaders = { Authorization: "UpToken " + ctx.config.token };
+    const res = await ctx.request({
+      method: "post",
+      url:
+        ctx.config.baseURL +
+        "/buckets/" +
+        ctx.config.bucket +
+        "/objects/" +
+        ctx.config.encodedKey +
+        "/uploads",
+      headers: { Authorization: "UpToken " + ctx.config.token },
+    });
+    return { uploadId: res.data.uploadId };
+  },
 
-  return {
-    async prepare() {
-      if (chunks === 1) return chunks;
-
-      const res = await ctx.request({
+  async upload(ctx, { blob, seq, session, onProgress }) {
+    if (!session) {
+      const form = new FormData();
+      form.append("key", ctx.config.key);
+      form.append("token", ctx.config.token);
+      form.append("file", blob, `${Math.random()}`);
+      return ctx.request({
         method: "post",
-        url: multipartURL,
-        headers: commonHeaders,
-      });
-      uploadId = res.data.uploadId;
-      parts = Array(chunks).fill("");
-
-      return chunks;
-    },
-    async upload(data, seq, onProgress) {
-      if (chunks === 1) {
-        const form = new FormData();
-        form.append("key", ctx.config.key);
-        form.append("token", ctx.config.token);
-        form.append("file", data, `${Math.random()}`);
-
-        res = await ctx.request({
-          method: "post",
-          url: ctx.config.baseURL,
-          data: form,
-          onUploadProgress: onProgress,
-        });
-        return res;
-      }
-
-      res = await ctx.request({
-        method: "put",
-        url: multipartURL + "/" + uploadId + "/" + (seq + 1),
-        headers: {
-          ...commonHeaders,
-          "Content-Type": "application/octet-stream",
-        },
-        data: data,
+        url: ctx.config.baseURL,
+        data: form,
         onUploadProgress: onProgress,
       });
+    }
 
-      parts[seq] = res.data;
-      return res;
-    },
-    async complete() {
-      if (chunks > 1) {
-        res = (
-          await ctx.request({
-            method: "post",
-            url: multipartURL + "/" + uploadId,
-            headers: commonHeaders,
-            data: {
-              parts: parts.map((e, i) => ({ partNumber: i + 1, etag: e.etag })),
-            },
-          })
-        ).data;
-      }
+    return ctx.request({
+      method: "put",
+      url:
+        ctx.config.baseURL +
+        "/buckets/" +
+        ctx.config.bucket +
+        "/objects/" +
+        ctx.config.encodedKey +
+        "/uploads/" +
+        session.uploadId +
+        "/" +
+        (seq + 1),
+      headers: {
+        Authorization: "UpToken " + ctx.config.token,
+        "Content-Type": "application/octet-stream",
+      },
+      data: blob,
+      onUploadProgress: onProgress,
+    });
+  },
 
-      await ctx.uploadCallback({ action: "Completed" });
-      return res;
-    },
-    onCleanup() {
-      if (res) return;
-      if (!uploadId) return;
-      ctx
-        .request({
-          method: "delete",
-          url: multipartURL + "/" + uploadId,
-          headers: commonHeaders,
-        })
-        .catch(() => {
-          // ignore
-        });
-    },
-    getChunk(seq) {
-      return ctx.task.file.slice(seq * chunkSize, (seq + 1) * chunkSize);
-    },
-  };
-}
+  async complete(ctx, { session, parts }) {
+    if (!session) return;
+    await ctx.request({
+      method: "post",
+      url:
+        ctx.config.baseURL +
+        "/buckets/" +
+        ctx.config.bucket +
+        "/objects/" +
+        ctx.config.encodedKey +
+        "/uploads/" +
+        session.uploadId,
+      headers: { Authorization: "UpToken " + ctx.config.token },
+      data: {
+        parts: parts.map((e, i) => ({
+          partNumber: i + 1,
+          etag: e.data.etag,
+        })),
+      },
+    });
+  },
+
+  async abort(ctx, { session }) {
+    if (!session) return;
+    await ctx.request({
+      method: "delete",
+      url:
+        ctx.config.baseURL +
+        "/buckets/" +
+        ctx.config.bucket +
+        "/objects/" +
+        ctx.config.encodedKey +
+        "/uploads/" +
+        session.uploadId,
+      headers: { Authorization: "UpToken " + ctx.config.token },
+    }).catch(() => undefined);
+  },
+});
