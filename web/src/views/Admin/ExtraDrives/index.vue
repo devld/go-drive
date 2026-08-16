@@ -300,13 +300,15 @@ loadData()
     }
   }
 
-  .drive-script-editor-wrapper {
-    width: 100vw;
-    height: 100%;
-  }
-
   .extra-drives-table .markdown-body {
     background-color: transparent;
   }
+}
+
+.drive-script-editor-wrapper {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
 }
 </style>

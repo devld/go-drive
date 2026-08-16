@@ -1,65 +1,72 @@
 <template>
-  <div
-    v-if="eager || overlayShowing"
-    v-show="overlayShowing"
-    ref="overlayEl"
-    class="dialog-view dialog-view__overlay"
-    data-ui="dialog-overlay"
-    :class="{ 'dialog-view--fullscreen': fullscreen }"
-    @click="overlayClicked"
-  >
-    <Transition
-      :name="transition"
-      @after-enter="focusInitial"
-      @after-leave="onDialogClosed"
+  <Teleport to="body">
+    <div
+      v-if="eager || overlayShowing"
+      v-show="overlayShowing"
+      ref="overlayEl"
+      v-bind="$attrs"
+      class="dialog-view dialog-view__overlay"
+      data-ui="dialog-overlay"
+      :class="{
+        'dialog-view--fullscreen': fullscreen,
+        'dialog-view--open': overlayOpen,
+        'dialog-view--instant': instantMotion,
+      }"
+      @click="overlayClicked"
     >
-      <div
-        v-if="eager || contentShowing"
-        v-show="contentShowing"
-        ref="contentEl"
-        class="dialog-view__content glass-surface"
-        data-ui="dialog"
-        data-surface="glass"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="ariaLabel"
-        tabindex="-1"
-        @keydown="onContentKeyDown"
+      <Transition
+        :name="transition"
+        @after-enter="focusInitial"
+        @after-leave="onDialogClosed"
       >
         <div
-          v-if="$slots.header || title"
-          class="dialog-view__header"
-          data-ui="dialog-header"
+          v-if="eager || contentShowing"
+          v-show="contentShowing"
+          ref="contentEl"
+          class="dialog-view__content glass-surface"
+          data-ui="dialog"
+          data-surface="glass"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="ariaLabel"
+          tabindex="-1"
+          @keydown="onContentKeyDown"
         >
-          <slot name="header">
-            <span>{{ title }}</span>
-          </slot>
-          <SimpleButton
-            v-if="closeable"
-            class="dialog-view__close-button"
-            variant="plain"
-            icon="close"
-            :title="closeLabel"
-            :aria-label="closeLabel"
-            @click="closeButtonClicked"
-          />
+          <div
+            v-if="$slots.header || title"
+            class="dialog-view__header"
+            data-ui="dialog-header"
+          >
+            <slot name="header">
+              <span>{{ title }}</span>
+            </slot>
+            <SimpleButton
+              v-if="closeable"
+              class="dialog-view__close-button"
+              variant="plain"
+              icon="close"
+              :title="closeLabel"
+              :aria-label="closeLabel"
+              @click="closeButtonClicked"
+            />
+          </div>
+          <div class="dialog-view__body" data-ui="dialog-body">
+            <slot />
+          </div>
+          <div
+            v-if="$slots.footer"
+            class="dialog-view__footer"
+            data-ui="dialog-footer"
+          >
+            <slot name="footer" />
+          </div>
         </div>
-        <div class="dialog-view__body" data-ui="dialog-body">
-          <slot />
-        </div>
-        <div
-          v-if="$slots.footer"
-          class="dialog-view__footer"
-          data-ui="dialog-footer"
-        >
-          <slot name="footer" />
-        </div>
-      </div>
-    </Transition>
-  </div>
+      </Transition>
+    </div>
+  </Teleport>
 </template>
 <script lang="ts">
-export default { name: 'DialogView' }
+export default { name: 'DialogView', inheritAttrs: false }
 </script>
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
@@ -115,9 +122,11 @@ const emit = defineEmits<{
 }>()
 
 const overlayShowing = ref(false)
+const overlayOpen = ref(false)
 const contentShowing = ref(false)
 const overlayEl = ref(null)
 const contentEl = ref<HTMLElement | null>(null)
+const instantMotion = computed(() => props.transition === 'none')
 let scrollLocked = false
 let lastFocused: HTMLElement | null = null
 
@@ -125,8 +134,8 @@ const ariaLabel = computed(() =>
   props.accessibleLabel
     ? s(props.accessibleLabel)
     : props.title
-      ? s(props.title)
-      : undefined
+    ? s(props.title)
+    : undefined
 )
 const closeLabel = computed(() => s(T('dialog.base.close')))
 
@@ -251,19 +260,31 @@ const onDialogVisibleChanged = (showing: boolean) => {
   }
 }
 
+const revealDialog = () => {
+  overlayOpen.value = true
+  contentShowing.value = true
+  focusInitialDeferred()
+}
+
 watch(
   () => props.show,
   (val) => {
     if (val) {
       lastFocused = document.activeElement as HTMLElement | null
       overlayShowing.value = true
-      nextTick(() => {
-        contentShowing.value = true
-        focusInitialDeferred()
-      })
+      overlayOpen.value = false
+      if (instantMotion.value) {
+        nextTick(revealDialog)
+      } else {
+        // Paint the dim layer at opacity 0 first, then open so the fade runs.
+        nextTick(() => {
+          requestAnimationFrame(revealDialog)
+        })
+      }
     } else {
+      overlayOpen.value = false
       contentShowing.value = false
-      if (props.transition === 'none') {
+      if (instantMotion.value) {
         overlayShowing.value = false
         restoreFocus()
       }
@@ -301,12 +322,33 @@ onBeforeUnmount(() => {
   min-height: -webkit-fill-available;
   max-height: -webkit-fill-available;
   overflow: hidden;
-  background-color: var(--color-overlay);
+  background-color: transparent;
   z-index: 1000;
 
   display: flex;
   justify-content: center;
   align-items: center;
+
+  // Dim on a pseudo-element so fading the overlay does not fade dialog content.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--color-overlay);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--motion-duration-fast) var(--motion-easing-exit);
+  }
+
+  &.dialog-view--open::before {
+    opacity: 1;
+    transition-duration: var(--motion-duration-normal);
+    transition-timing-function: var(--motion-easing-standard);
+  }
+
+  &.dialog-view--instant::before {
+    transition: none;
+  }
 }
 
 .dialog-view__content {
@@ -340,6 +382,10 @@ onBeforeUnmount(() => {
 }
 
 .dialog-view--fullscreen {
+  &::before {
+    content: none;
+  }
+
   .dialog-view__content {
     width: 100%;
     height: 100%;
