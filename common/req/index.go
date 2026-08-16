@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"regexp"
 	"sync"
+	"time"
 )
 
 const maxReadableBodySize int64 = 10 * 1024 * 1024 // 10MB
@@ -102,7 +103,9 @@ func (h *Client) newRequest(method string, requestUrl string, headers types.SM,
 		req.Header.Set(k, v)
 	}
 	if body != nil {
-		req.Header.Set("Content-Type", body.ContentType())
+		if ct := body.ContentType(); ct != "" {
+			req.Header.Set("Content-Type", ct)
+		}
 		req.ContentLength = body.ContentLength()
 	}
 	if h.before != nil {
@@ -124,6 +127,7 @@ func (h *Client) request(req *http.Request) (Response, error) {
 	if utils.IsDebugOn {
 		log.Printf("[HttpClient  req] %s %s", req.Method, req.URL.String())
 	}
+	start := time.Now()
 	r, e := h.client().Do(req)
 	if utils.IsDebugOn {
 		var v any = nil
@@ -132,7 +136,7 @@ func (h *Client) request(req *http.Request) (Response, error) {
 		} else {
 			v = e
 		}
-		log.Printf("[HttpClient resp] %s %s %v", req.Method, req.URL.String(), v)
+		log.Printf("[HttpClient resp] %s %s %v %s", req.Method, req.URL.String(), v, time.Since(start))
 	}
 	if e != nil {
 		return nil, e

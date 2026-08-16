@@ -9,9 +9,24 @@ import (
 	"net/http"
 )
 
-var httpClient = &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
-	return http.ErrUseLastResponse
-}}
+var httpClient, _ = gReq.NewClient("", nil, nil, nil)
+
+type httpRequestBody struct {
+	r   io.Reader
+	n   int64
+	typ string
+}
+
+func (b *httpRequestBody) ContentType() string  { return b.typ }
+func (b *httpRequestBody) ContentLength() int64 { return b.n }
+func (b *httpRequestBody) Reader() io.Reader    { return b.r }
+
+func newHTTPRequestBody(r io.Reader, n int64, typ string) gReq.RequestBody {
+	if n < 0 {
+		n = -1
+	}
+	return &httpRequestBody{r: r, n: n, typ: typ}
+}
 
 // vm_http: (ctx Context, method, url string, headers types.SM, body any) *httpResponse
 func vm_http(vm *VM, args Values) any {
@@ -21,44 +36,29 @@ func vm_http(vm *VM, args Values) any {
 	headers := args.Get(3).SM()
 	body := args.Get(4).Raw()
 
-	var bodyReader io.Reader
-	var contentType string
+	var reqBody gReq.RequestBody
 	var errChan chan error
 
 	if body != nil {
 		if str, ok := body.(string); ok {
-			bodyReader = bytes.NewReader([]byte((str)))
+			b := []byte(str)
+			reqBody = newHTTPRequestBody(bytes.NewReader(b), int64(len(b)), "")
 		} else if vr := GetReader(body); vr != nil {
-			bodyReader = vr
+			reqBody = newHTTPRequestBody(vr, -1, "")
 		} else if b := GetBytes(body); b != nil {
-			bodyReader = bytes.NewReader(b)
+			reqBody = newHTTPRequestBody(bytes.NewReader(b), int64(len(b)), "")
 		} else if fd, ok := body.(*formData); ok {
 			r, w := io.Pipe()
 			errChan = make(chan error, 1)
-			bodyReader = r
-			contentType = fd.prepare(w)
+			reqBody = newHTTPRequestBody(r, -1, fd.prepare(w))
 			go func() {
 				defer func() { _ = w.Close() }()
 				errChan <- fd.write()
 			}()
 		}
 	}
-	var req *http.Request
-	var e error
 
-	req, e = http.NewRequestWithContext(GetContext(ctx), method, url, bodyReader)
-	if e != nil {
-		vm.ThrowError(e)
-	}
-
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	}
-	req.Header.Set("User-Agent", gReq.DefaultUserAgent)
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	resp, e := httpClient.Do(req)
+	resp, e := httpClient.Request(GetContext(ctx), method, url, headers, reqBody)
 	var wErr error
 	if errChan != nil {
 		wErr = <-errChan
@@ -70,7 +70,7 @@ func vm_http(vm *VM, args Values) any {
 		vm.ThrowError(e)
 	}
 
-	return newHttpResponse(vm, resp)
+	return newHttpResponse(vm, resp.Response())
 }
 
 // vm_newFormData: () *formData
