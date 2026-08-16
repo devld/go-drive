@@ -199,7 +199,7 @@ func TestDriveRoutesUseRPCOperations(t *testing.T) {
 		"POST /copy",
 		"POST /move",
 		"POST /delete",
-		"POST /prepare-upload",
+		"POST /upload",
 		"POST /write",
 		"GET /download",
 		"HEAD /download",
