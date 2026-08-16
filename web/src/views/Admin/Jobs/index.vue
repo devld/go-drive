@@ -14,7 +14,7 @@
             <col style="min-width: 100px" />
             <col style="width: 150px" />
             <col style="width: 150px" />
-            <col style="width: 142px" />
+            <col style="width: 180px" />
           </colgroup>
           <thead>
             <tr>
@@ -37,7 +37,7 @@
               <td class="center job-triggers-info">
                 {{ formatTriggersInfo(j.triggersInfo) }}
               </td>
-              <td class="center">
+              <td class="center job-ops">
                 <SimpleButton
                   :title="$t('p.admin.jobs.view_log')"
                   small
@@ -554,6 +554,10 @@ loadJobDefinitions()
 
   .job-disabled {
     color: var(--color-text-muted);
+  }
+
+  .job-ops {
+    white-space: nowrap;
   }
 
   .job-triggers,

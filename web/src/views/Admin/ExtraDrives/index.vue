@@ -63,6 +63,7 @@
               <td class="line right">
                 <SimpleButton
                   v-if="item.updateAvailable"
+                  small
                   icon="refresh"
                   :loading="item.loading"
                   :disabled="loading"
@@ -71,6 +72,7 @@
                 />
                 <SimpleButton
                   v-if="item.installed"
+                  small
                   icon="edit"
                   :loading="item.loading"
                   :disabled="loading"
@@ -80,6 +82,7 @@
                 <SimpleButton
                   v-if="item.installed"
                   type="danger"
+                  small
                   icon="delete"
                   :loading="item.loading"
                   :disabled="loading"
@@ -88,6 +91,7 @@
                 />
                 <SimpleButton
                   v-else
+                  small
                   icon="add"
                   :loading="item.loading"
                   :disabled="loading"

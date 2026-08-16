@@ -438,12 +438,8 @@ const checkboxesInput = (optionValue: string, checked: boolean) => {
     top: 0;
     bottom: 0;
     right: 0;
-    border: 0;
-    outline: none;
     padding: 0 6px;
     font-size: 16px;
-    cursor: pointer;
-    background-color: transparent;
     color: var(--color-text-muted);
     border-radius: 0 var(--radius-control) var(--radius-control) 0;
 

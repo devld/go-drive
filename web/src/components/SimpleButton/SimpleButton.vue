@@ -1,7 +1,13 @@
 <template>
   <button
     class="simple-button"
-    :class="{ loading, [type!]: !!type, [variant!]: !!variant, small }"
+    :class="{
+      loading,
+      [type!]: !!type,
+      [variant!]: !!variant,
+      small,
+      'icon-only': !!icon && !$slots.default,
+    }"
     data-ui="button"
     :data-variant="variant === 'plain' ? 'plain' : type || 'primary'"
     :data-size="small ? 'compact' : 'default'"
@@ -61,19 +67,30 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
 </script>
 <style lang="scss">
 .simple-button {
+  --simple-button-pad-y: 4px;
+  --simple-button-pad-x: 10px;
+  --simple-button-line-height: 20px;
+  --simple-button-size: calc(
+    var(--simple-button-line-height) + 2 * var(--simple-button-pad-y) + 2px
+  );
+
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   font-size: 16px;
-  border: none;
+  border: 1px solid transparent;
   background-color: var(--color-accent-strong);
   color: var(--color-on-accent);
-  padding: 4px 10px;
+  padding: var(--simple-button-pad-y) var(--simple-button-pad-x);
   cursor: pointer;
   transition:
     box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
     opacity var(--motion-duration-fast) var(--motion-easing-standard);
   -webkit-user-select: none;
   user-select: none;
-  line-height: 20px;
+  line-height: var(--simple-button-line-height);
   border-radius: var(--radius-control);
 
   & + .simple-button {
@@ -85,8 +102,17 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
   }
 
   &.small {
+    --simple-button-pad-x: 6px;
+    --simple-button-pad-y: 3px;
+    --simple-button-line-height: 16px;
     font-size: 14px;
-    padding: 4px 6px;
+  }
+
+  &:not(.plain).icon-only {
+    padding: var(--simple-button-pad-y);
+    line-height: 0;
+    width: var(--simple-button-size);
+    height: var(--simple-button-size);
   }
 
   &[disabled] {
@@ -99,7 +125,7 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
   }
 
   &.outline {
-    border: 1px solid var(--color-accent);
+    border-color: var(--color-accent);
     background-color: transparent;
     color: var(--color-accent);
   }
@@ -113,6 +139,7 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
     color: var(--color-text);
     font: inherit;
     font-size: 28px;
+    line-height: 0;
     text-decoration: none;
   }
 
@@ -141,6 +168,30 @@ const emit = defineEmits<{ (e: 'click', event: MouseEvent): void }>()
       background-color: transparent;
       color: var(--color-#{$type}-strong);
     }
+  }
+}
+
+.simple-button__content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  min-width: 0;
+  line-height: inherit;
+
+  .icon,
+  svg {
+    display: block;
+    flex-shrink: 0;
+  }
+}
+
+.simple-button.plain .simple-button__content {
+  line-height: normal;
+
+  &:has(> .icon:only-child),
+  &:has(> svg:only-child) {
+    line-height: 0;
   }
 }
 

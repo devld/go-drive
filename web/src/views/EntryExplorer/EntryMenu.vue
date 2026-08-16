@@ -96,7 +96,7 @@ const multiple = computed(() => Array.isArray(props.entry))
 .entry-menu__menus {
   max-height: 40vh;
   margin: 0;
-  padding: 0;
+  padding: 4px;
   -webkit-user-select: none;
   user-select: none;
   overflow-x: hidden;
@@ -112,6 +112,7 @@ const multiple = computed(() => Array.isArray(props.entry))
   align-items: center;
   width: 100%;
   border: 0;
+  border-radius: var(--radius-control);
   padding: 0 20px;
   background: transparent;
   color: inherit;
@@ -160,26 +161,6 @@ const multiple = computed(() => Array.isArray(props.entry))
   .entry-menu__menu-item {
     min-height: 40px;
     padding: 0 12px;
-  }
-
-  .entry-menu__menus > li:first-child > .entry-menu__menu-item {
-    border-radius:
-      calc(var(--radius-popover) - 1px)
-      calc(var(--radius-popover) - 1px)
-      0
-      0;
-  }
-
-  .entry-menu__menus > li:last-child > .entry-menu__menu-item {
-    border-radius:
-      0
-      0
-      calc(var(--radius-popover) - 1px)
-      calc(var(--radius-popover) - 1px);
-  }
-
-  .entry-menu__menus > li:only-child > .entry-menu__menu-item {
-    border-radius: calc(var(--radius-popover) - 1px);
   }
 }
 

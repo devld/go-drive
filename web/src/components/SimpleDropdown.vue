@@ -319,14 +319,23 @@ onBeforeUnmount(() => {
 </script>
 <style lang="scss">
 .simple-dropdown {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   position: relative;
+  line-height: 0;
 }
 
 .simple-dropdown__trigger {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
+
+  &.simple-button:not(.plain):has(> .icon):not(:has(> span:not(:empty))) {
+    padding: var(--simple-button-pad-y, 4px);
+    line-height: 0;
+    width: var(--simple-button-size, 30px);
+    height: var(--simple-button-size, 30px);
+  }
 }
 
 .simple-dropdown__trigger:not(.simple-button) {
@@ -336,6 +345,11 @@ onBeforeUnmount(() => {
   background: transparent;
   color: inherit;
   font: inherit;
+  line-height: 0;
+
+  .icon {
+    display: block;
+  }
 }
 
 .simple-dropdown__dropdown {
@@ -343,6 +357,7 @@ onBeforeUnmount(() => {
   z-index: 1001;
   box-sizing: border-box;
   width: max-content;
+  padding: 4px;
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-popover);
   outline: none;
@@ -354,19 +369,19 @@ onBeforeUnmount(() => {
 .simple-dropdown__menu {
   margin: 0;
   padding: 0;
-  width: 100%;
   overflow-y: auto;
 }
 
 .simple-dropdown__item {
   margin: 0;
   box-sizing: border-box;
-  width: 100%;
+  display: block;
   list-style-type: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 6px 12px;
+  border-radius: var(--radius-control);
   cursor: pointer;
   font-size: 14px;
 
@@ -388,26 +403,6 @@ onBeforeUnmount(() => {
   &.disabled {
     cursor: not-allowed;
     opacity: 0.5;
-  }
-
-  &:first-child {
-    border-radius:
-      calc(var(--radius-popover) - 1px)
-      calc(var(--radius-popover) - 1px)
-      0
-      0;
-  }
-
-  &:last-child {
-    border-radius:
-      0
-      0
-      calc(var(--radius-popover) - 1px)
-      calc(var(--radius-popover) - 1px);
-  }
-
-  &:only-child {
-    border-radius: calc(var(--radius-popover) - 1px);
   }
 }
 </style>

@@ -40,6 +40,9 @@ const emit = defineEmits<{
 </script>
 <style lang="scss">
 .upload-task-manager {
+  box-sizing: border-box;
+  width: min(700px, calc(100vw - 32px));
+  min-width: 0;
   padding: 16px;
   max-height: 60vh;
   overflow-x: hidden;
@@ -53,6 +56,12 @@ const emit = defineEmits<{
     color: var(--color-text-muted);
     -webkit-user-select: none;
     user-select: none;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .upload-task-manager {
+    width: calc(100vw - 24px);
   }
 }
 </style>

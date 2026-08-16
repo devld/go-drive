@@ -164,14 +164,19 @@ const showRemove = computed(() => !showStop.value)
 <style lang="scss">
 .upload-task-item {
   position: relative;
-  display: flex;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px 88px 72px max-content;
   align-items: center;
+  column-gap: 8px;
+  min-width: 0;
   padding: 8px 8px 11px;
   font-size: 14px;
   overflow: hidden;
 
   & > * {
     z-index: 1;
+    min-width: 0;
   }
 
   &.task-status-64 {
@@ -210,50 +215,93 @@ const showRemove = computed(() => !showStop.value)
 }
 
 .entry-icon.upload-task-item__icon {
+  flex: 0 0 auto;
   width: 26px;
   height: 26px;
   margin-right: 0.5em;
-  vertical-align: middle;
 }
 
 .upload-task-item__filename {
-  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.upload-task__name {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-task-item__size {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.upload-task__name {
-  vertical-align: middle;
-}
-
-.upload-task-item__size {
-  width: 60px;
-  white-space: nowrap;
-}
-
 .upload-task-item__location {
-  width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 
   a {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
     text-decoration: none;
     color: var(--color-accent);
   }
 }
 
 .upload-task-item__status {
-  width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .upload-task-item__ops {
-  width: 60px;
   white-space: nowrap;
   text-align: right;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+
   .simple-button.plain {
     font-size: 18px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .upload-task-item {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-areas:
+      'name ops'
+      'size status';
+    row-gap: 4px;
+  }
+
+  .upload-task-item__filename {
+    grid-area: name;
+  }
+
+  .upload-task-item__ops {
+    grid-area: ops;
+  }
+
+  .upload-task-item__size {
+    grid-area: size;
+  }
+
+  .upload-task-item__status {
+    grid-area: status;
+  }
+
+  .upload-task-item__location {
+    display: none;
   }
 }
 </style>

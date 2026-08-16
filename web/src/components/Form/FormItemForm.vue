@@ -37,7 +37,7 @@
         @select="addForm"
       >
         <Icon name="add" aria-hidden="true" />
-        <span>{{ forms.addText }}</span>
+        <span v-if="forms.addText">{{ forms.addText }}</span>
       </SimpleDropdown>
       <SimpleButton
         v-else
@@ -47,7 +47,7 @@
         :aria-label="forms.addText?.toString()"
         @click="addForm(forms.forms[0].key)"
       >
-        {{ forms.addText }}
+        <template v-if="forms.addText">{{ forms.addText }}</template>
       </SimpleButton>
     </div>
   </div>

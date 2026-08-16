@@ -131,6 +131,7 @@ const downloadFiles = () => {
     text-decoration: none;
     padding: 10px 16px;
     margin-top: 16px;
+    border-radius: var(--radius-control);
     transition: box-shadow var(--motion-duration-fast)
       var(--motion-easing-standard);
     -webkit-user-select: none;

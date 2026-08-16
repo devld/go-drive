@@ -107,10 +107,14 @@ const onEnter = (e: KeyboardEvent) => {
 
 .base-dialog__footer {
   padding: 16px;
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
 
-  button:not(:last-child) {
-    margin-right: 10px;
+  .simple-button,
+  .simple-button + .simple-button {
+    margin: 0;
   }
 }
 </style>

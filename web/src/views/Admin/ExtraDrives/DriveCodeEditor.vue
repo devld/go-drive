@@ -130,6 +130,8 @@ loadData()
   .header {
     display: flex;
     align-items: center;
+    gap: 8px;
+    padding: 0 12px;
   }
 }
 

@@ -76,7 +76,7 @@ const setSaveState = (saved: boolean) => {
   overflow-x: hidden;
   overflow-y: auto;
   width: 340px;
-  padding-top: 48px;
+  padding: 48px 16px 16px;
   height: 300px;
   background-color: var(--color-bg-glass);
   box-shadow: var(--shadow-elevated);

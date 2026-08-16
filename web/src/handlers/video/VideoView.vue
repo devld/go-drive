@@ -566,14 +566,10 @@ onUnmounted(() => {
   }
 
   &__btn.simple-button.plain {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 36px;
     height: 36px;
     border-radius: 50%;
     color: #fff;
-    cursor: pointer;
     transition: background-color var(--motion-duration-fast)
       var(--motion-easing-standard);
 

@@ -517,6 +517,7 @@ defineExpose({
   & > .entry-link {
     display: block;
     text-decoration: none;
+    border-radius: var(--radius-control);
 
     &:focus {
       background-color: var(--color-bg-focus);
@@ -570,16 +571,10 @@ defineExpose({
   top: 50%;
   width: 32px;
   height: 32px;
-  padding: 0;
   transform: translateY(-50%);
   border-radius: 50%;
   color: var(--color-text-muted);
-  cursor: pointer;
   font-size: 18px;
-  line-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 
   &:hover,
   &:focus-visible {
@@ -587,7 +582,6 @@ defineExpose({
   }
 
   .icon {
-    vertical-align: middle;
     color: var(--color-text-muted);
   }
 
@@ -602,10 +596,11 @@ defineExpose({
 }
 
 .entry-list--view-thumbnail {
-  .entry-list__menu-button {
+  .entry-list__menu-button.simple-button.plain {
     top: auto;
-    right: 12px;
-    bottom: 8px;
+    right: 8px;
+    bottom: 4px;
+    margin-top: 0;
     transform: none;
     font-size: 16px;
   }

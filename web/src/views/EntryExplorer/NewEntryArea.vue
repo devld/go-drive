@@ -50,7 +50,6 @@
       @closed="taskManagerClosed"
     >
       <TaskManager
-        class="task-manager"
         :tasks="tasks"
         @navigate="hideTaskManager"
         @start="startTask"
@@ -490,12 +489,6 @@ onBeforeMount(() => {
     user-select: none;
   }
 
-  .task-manager {
-    width: 50vw;
-    max-width: 700px;
-    min-width: 600px;
-  }
-
   .drop-zone-indicator {
     position: fixed;
     inset: 0;
@@ -529,21 +522,8 @@ onBeforeMount(() => {
     }
   }
 
-  @media screen and (max-width: 600px) {
-    .task-manager {
-      width: calc(100vw - 64px);
-      max-width: unset;
-      min-width: unset;
-    }
-
-    .upload-task-item__location {
-      display: none;
-    }
-  }
-
   .hidden-input-file {
     display: none;
   }
 }
-
 </style>
