@@ -1,17 +1,12 @@
 name: Nightly Build
 
 on:
-  push:
-    branches:
-      - master
-    paths-ignore:
-      - docs/site/**
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# Only keep the newest nightly run; cancel any in-flight one when master moves.
+# Only keep the newest nightly run; cancel an in-flight one if another is started.
 concurrency:
   group: nightly
   cancel-in-progress: true
@@ -65,7 +60,7 @@ jobs:
           if [ -n "${latest_stable_tag}" ]; then
             compare_url="https://github.com/${GH_REPO}/compare/${latest_stable_tag}...${GITHUB_SHA}"
             cat > notes.md <<EOF
-          Automated nightly build from the latest \`master\` commit \`${GITHUB_SHA}\`.
+          Nightly build from commit \`${GITHUB_SHA}\`.
 
           Changes since the latest stable release \`${latest_stable_tag}\`: ${compare_url}
 
@@ -73,7 +68,7 @@ jobs:
           EOF
           else
             cat > notes.md <<EOF
-          Automated nightly build from the latest \`master\` commit \`${GITHUB_SHA}\`.
+          Nightly build from commit \`${GITHUB_SHA}\`.
 
           No stable release was found to compare against.
 
