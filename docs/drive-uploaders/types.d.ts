@@ -59,23 +59,6 @@ declare interface Http<T = any> {
   delete: <DT = T>(url: string, config?: HttpRequestConfig) => Promise<DT>;
 }
 
-declare interface CustomUploader {
-  /** Returns the number of chunks to upload. Omit to upload the file as a single request. */
-  prepare?(): Promise<number>;
-  /** Returns the blob for chunk `seq` (0-based). Omit to use the whole file. */
-  getChunk?(seq: number): Blob;
-  /** Uploads one chunk. `onProgress` reports this chunk's uploaded bytes. */
-  upload(
-    data: Blob,
-    seq: number,
-    onProgress: (p: HttpUploadProgress) => void
-  ): Promise<any>;
-  /** Called after every chunk succeeds. Use it to commit a multipart upload. */
-  complete?(): Promise<any>;
-  /** Called after success, cancel, or prepare/upload failure. Abort remote multipart state here. */
-  onCleanup?(): void;
-}
-
 declare interface TaskDef {
   /** Destination path on the Drive. */
   path: string;
@@ -98,27 +81,56 @@ declare interface UploadFactoryContext {
    */
   readonly config: Record<string, string>;
   /**
-   * HTTP helper used for requests to the storage service.
-   * Requests are tracked by the upload task so pause/cancel can abort them.
-   * Pass `http` as the second argument to use go-drive's authenticated API client instead.
+   * HTTP helper for the storage service. Requests are tracked so pause/cancel abort them.
    */
-  readonly request: <T>(config: HttpRequestConfig, http?: Http) => Promise<T>;
+  readonly request: <T>(config: HttpRequestConfig) => Promise<T>;
   /**
    * Maximum number of chunks uploaded in parallel. Writable; values are clamped.
    */
   maxConcurrent: number;
-  /**
-   * Authenticated HTTP client for the go-drive API (same origin, current user).
-   * Prefer `request` for storage uploads and `uploadCallback` for Drive notifications.
-   */
-  readonly http: Http;
   /** The current upload task (path, file blob, size, override). */
   readonly task: TaskDef;
+  /** Chunk count computed from `chunkSize` and `task.file.size`. */
+  chunks: number;
   /**
-   * Calls the Drive script's `upload()` again (POST /prepare-upload) with extra data,
-   * e.g. `{ action: "Completed" }`, so the server can confirm the object and evict caches.
+   * Calls the Drive script's `upload()` again (POST /prepare-upload).
+   * After a successful `complete`, the runtime already sends `{ action: "Completed" }`.
    */
   readonly uploadCallback: UploadCallback;
 }
 
-declare type UploadFactory = (ctx: UploadFactoryContext) => CustomUploader;
+declare interface UploaderUploadArgs {
+  blob: Blob;
+  /** 0-based chunk index. */
+  seq: number;
+  /** Value returned by `start`, or `null`/`undefined` for a single-request upload. */
+  session: any;
+  onProgress: (p: HttpUploadProgress) => void;
+}
+
+declare interface UploaderCompleteArgs {
+  session: any;
+  /** `upload` return values, indexed by `seq`. */
+  parts: any[];
+}
+
+declare interface UploaderAbortArgs {
+  session: any;
+}
+
+declare interface UploaderSpec {
+  /** When set, the runtime slices the file and sets `ctx.chunks`. Omit to upload in one request. */
+  chunkSize?: number;
+  maxConcurrent?: number;
+  /** Create remote multipart state. Return session data, or `null` for a simple upload. */
+  start?(ctx: UploadFactoryContext): Promise<any>;
+  upload(ctx: UploadFactoryContext, args: UploaderUploadArgs): Promise<any>;
+  /** Commit a multipart upload. The runtime then notifies the Drive with `action: "Completed"`. */
+  complete?(ctx: UploadFactoryContext, args: UploaderCompleteArgs): Promise<any>;
+  /** Abort remote multipart state after cancel or failure. Not called after a successful complete. */
+  abort?(ctx: UploadFactoryContext, args: UploaderAbortArgs): void | Promise<void>;
+  /** Override default `file.slice`. Rarely needed. */
+  getChunk?(ctx: UploadFactoryContext, seq: number): Blob;
+}
+
+declare function defineUploader(spec: UploaderSpec): void;

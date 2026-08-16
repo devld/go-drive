@@ -363,6 +363,12 @@ declare type Duration = number;
 /** millisecond to time.Duration of Go */
 declare function ms(ms: number): Duration;
 
+/**
+ * Parse a Go duration string (`ms`, `s`, `m`, `h`, optional `d` prefix).
+ * Empty input is `0`. Invalid input is `-1`.
+ */
+declare function parseDuration(value?: string): Duration;
+
 /** time.Duration of Go to Date */
 declare function toDate(goTime: GoTime): Date;
 

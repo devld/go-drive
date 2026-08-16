@@ -68,7 +68,7 @@ drive-repository-url: https://example.com/my-drives.json
 模板通过 TypeScript reference 提供编辑器补全，但运行时仍是服务器端 JavaScript。实现应：
 
 - 定义唯一类型名、显示名、说明和配置表单。
-- 实现必选的 `meta`、`get`、`list`、`getReader`，再按服务能力实现写入、上传、下载和缩略图方法。
+- 用 `defineDrive` 实现 `get`、`list`，以及 `getURL` 或 `getReader`，再按服务能力实现写入、上传、下载和缩略图方法。
 - 原生 `copy` 不可用时返回 Unsupported，调度层会流式复制；`move` 没有 copy-and-delete 回退。
 - 使用传入的 context，并在可中止操作中传播取消。
 - 及时关闭响应体、reader 和远端连接。

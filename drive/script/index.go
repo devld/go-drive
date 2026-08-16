@@ -13,6 +13,7 @@ import (
 	"io"
 	"maps"
 	"sync"
+	"time"
 )
 
 func init() {
@@ -40,9 +41,19 @@ func init() {
 
 var _ types.IDrive = (*ScriptDrive)(nil)
 
+type scriptDriveHas struct {
+	meta, save, makeDir, copy, move, delete, upload bool
+	getReader, getURL, hasThumbnail, getThumbnail   bool
+}
+
 type ScriptDrive struct {
-	baseVM *s.VM
-	pool   *s.VMPool
+	baseVM   *s.VM
+	pool     *s.VMPool
+	cache    driveutil.DriveCache
+	cacheTTL time.Duration
+	writable bool
+	has      scriptDriveHas
+	load     flightGroup
 
 	// data is the place where the data of the script instance is stored
 	data map[string]json.RawMessage
@@ -95,126 +106,252 @@ func (sd *ScriptDrive) call(ctx context.Context, vm *s.VM, fn string, args ...an
 	return vm.Call(ctx, fn, args...)
 }
 
-func (sd *ScriptDrive) Meta(ctx context.Context) (types.DriveMeta, error) {
+func (sd *ScriptDrive) withVM(ctx context.Context, fn func(vm *s.VM) (*s.Value, error)) (*s.Value, error) {
 	vm, e := sd.pool.Get(ctx)
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
+	return fn(vm)
+}
+
+func (sd *ScriptDrive) rootEntry() *scriptDriveEntry {
+	return &scriptDriveEntry{
+		d: sd,
+		s: &scriptEntryStruct{
+			Path:    "",
+			IsDir:   true,
+			Size:    -1,
+			ModTime: -1,
+			Meta:    types.EntryMeta{Readable: true, Writable: sd.writable},
+		},
+	}
+}
+
+func (sd *ScriptDrive) Meta(ctx context.Context) (types.DriveMeta, error) {
+	if !sd.has.meta {
+		return types.DriveMeta{Writable: sd.writable}, nil
+	}
+	v, e := sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+		return sd.call(ctx, vm, "meta", s.NewContext(vm, ctx))
+	})
 	if e != nil {
 		return types.DriveMeta{}, e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "meta", s.NewContext(vm, ctx))
 	r := types.DriveMeta{}
-	if e != nil {
-		return r, nil
-	}
 	v.ParseInto(&r)
 	return r, nil
 }
 
 func (sd *ScriptDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
-	vm, e := sd.pool.Get(ctx)
+	if utils.IsRootPath(path) {
+		return sd.rootEntry(), nil
+	}
+	if sd.cacheTTL > 0 {
+		cached, e := sd.cache.GetEntry(path)
+		if e != nil {
+			return nil, e
+		}
+		if cached != nil {
+			return cached, nil
+		}
+	}
+	v, e := sd.load.do("get:"+path, func() (any, error) {
+		if sd.cacheTTL > 0 {
+			cached, e := sd.cache.GetEntry(path)
+			if e != nil {
+				return nil, e
+			}
+			if cached != nil {
+				return cached, nil
+			}
+		}
+		v, e := sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+			return sd.call(ctx, vm, "get", s.NewContext(vm, ctx), path)
+		})
+		if e != nil {
+			return nil, e
+		}
+		entry := sd.valueToEntry(v)
+		if sd.cacheTTL > 0 {
+			_ = sd.cache.PutEntry(entry, sd.cacheTTL)
+		}
+		return entry, nil
+	})
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "get", s.NewContext(vm, ctx), path)
-	if e != nil {
-		return nil, e
-	}
-	return sd.valueToEntry(v), nil
+	return v.(types.IEntry), nil
 }
 
 func (sd *ScriptDrive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
-	vm, e := sd.pool.Get(ctx)
+	if !sd.has.save {
+		return nil, err.NewUnsupportedError()
+	}
+	_, e := sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+		return sd.call(ctx, vm, "save", s.NewTaskCtx(vm, ctx), path, size, override, s.NewReader(vm, reader))
+	})
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "save", s.NewTaskCtx(vm, ctx), path, size, override, s.NewReader(vm, reader))
-	if e != nil {
-		return nil, e
-	}
-	return sd.valueToEntry(v), nil
+	sd.evictPathAndParent(path, false)
+	return sd.Get(ctx, path)
 }
 
 func (sd *ScriptDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	vm, e := sd.pool.Get(ctx)
+	if !sd.has.makeDir {
+		return nil, err.NewUnsupportedError()
+	}
+	_, e := sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+		return sd.call(ctx, vm, "makeDir", s.NewContext(vm, ctx), path)
+	})
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "makeDir", s.NewContext(vm, ctx), path)
-	if e != nil {
-		return nil, e
-	}
-	return sd.valueToEntry(v), nil
+	sd.evictPathAndParent(path, false)
+	return sd.Get(ctx, path)
 }
 
 func (sd *ScriptDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	vm, e := sd.pool.Get(ctx)
+	src, e := sd.ownedEntry(from)
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "copy", s.NewTaskCtx(vm, ctx), s.NewEntry(from), to, override)
+	if !sd.has.copy {
+		return nil, err.NewUnsupportedError()
+	}
+	_, e = sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+		return sd.call(ctx, vm, "copy", s.NewTaskCtx(vm, ctx), src, to, override)
+	})
 	if e != nil {
 		return nil, e
 	}
-	return sd.valueToEntry(v), nil
+	sd.evictPathAndParent(to, true)
+	return sd.Get(ctx, to)
 }
 
 func (sd *ScriptDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
-	vm, e := sd.pool.Get(ctx)
+	src, e := sd.ownedEntry(from)
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "move", s.NewTaskCtx(vm, ctx), s.NewEntry(from), to, override)
+	if !sd.has.move {
+		return nil, err.NewUnsupportedError()
+	}
+	_, e = sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+		return sd.call(ctx, vm, "move", s.NewTaskCtx(vm, ctx), src, to, override)
+	})
 	if e != nil {
 		return nil, e
 	}
-	return sd.valueToEntry(v), nil
+	sd.evictPathAndParent(to, true)
+	sd.evictPathAndParent(src.Path, true)
+	return sd.Get(ctx, to)
+}
+
+func (sd *ScriptDrive) ownedEntry(from types.IEntry) (*scriptEntryStruct, error) {
+	owned := driveutil.GetSelfEntry(sd, from)
+	if owned == nil {
+		return nil, err.NewUnsupportedError()
+	}
+	se, ok := owned.(*scriptDriveEntry)
+	if !ok || se.s == nil {
+		return nil, err.NewUnsupportedError()
+	}
+	return se.s, nil
 }
 
 func (sd *ScriptDrive) List(ctx context.Context, path string) ([]types.IEntry, error) {
-	vm, e := sd.pool.Get(ctx)
+	if sd.cacheTTL > 0 {
+		cached, e := sd.cache.GetChildren(path)
+		if e != nil {
+			return nil, e
+		}
+		if cached != nil {
+			return cached, nil
+		}
+	}
+	v, e := sd.load.do("list:"+path, func() (any, error) {
+		if sd.cacheTTL > 0 {
+			cached, e := sd.cache.GetChildren(path)
+			if e != nil {
+				return nil, e
+			}
+			if cached != nil {
+				return cached, nil
+			}
+		}
+		v, e := sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+			return sd.call(ctx, vm, "list", s.NewContext(vm, ctx), path)
+		})
+		if e != nil {
+			return nil, e
+		}
+		arr := v.Array()
+		if arr == nil {
+			panic("invalid value got from drive")
+		}
+		entries := utils.ArrayMap(arr, func(t **s.Value) types.IEntry { return sd.valueToEntry(*t) })
+		if sd.cacheTTL > 0 {
+			_ = sd.cache.PutChildren(path, entries, sd.cacheTTL)
+		}
+		return entries, nil
+	})
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "list", s.NewContext(vm, ctx), path)
-	if e != nil {
-		return nil, e
-	}
-	arr := v.Array()
-	if arr == nil {
-		panic("invalid value got from drive")
-	}
-	return utils.ArrayMap(arr, func(t **s.Value) types.IEntry { return sd.valueToEntry(*t) }), nil
+	return v.([]types.IEntry), nil
 }
 
 func (sd *ScriptDrive) Delete(ctx types.TaskCtx, path string) error {
-	vm, e := sd.pool.Get(ctx)
+	if !sd.has.delete {
+		return err.NewUnsupportedError()
+	}
+	_, e := sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+		return sd.call(ctx, vm, "delete", s.NewTaskCtx(vm, ctx), path)
+	})
 	if e != nil {
 		return e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	_, e = sd.call(ctx, vm, "delete", s.NewTaskCtx(vm, ctx), path)
-	return e
+	sd.evictPathAndParent(path, true)
+	return nil
 }
 
 func (sd *ScriptDrive) Upload(ctx context.Context, path string, size int64, override bool, config types.SM) (*types.DriveUploadConfig, error) {
-	vm, e := sd.pool.Get(ctx)
+	completed := config["action"] == "Completed"
+	if completed {
+		var result *types.DriveUploadConfig
+		if sd.has.upload {
+			v, e := sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+				return sd.call(ctx, vm, "upload", s.NewContext(vm, ctx), path, size, override, config)
+			})
+			if e != nil {
+				return nil, e
+			}
+			result = parseUploadConfig(v)
+		}
+		sd.evictPathAndParent(path, false)
+		return result, nil
+	}
+	if !sd.has.upload {
+		return types.UseLocalProvider(size), nil
+	}
+	v, e := sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
+		return sd.call(ctx, vm, "upload", s.NewContext(vm, ctx), path, size, override, config)
+	})
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
-	v, e := sd.call(ctx, vm, "upload", s.NewContext(vm, ctx), path, size, override, config)
-	if e != nil {
-		return nil, e
+	return parseUploadConfig(v), nil
+}
+
+func parseUploadConfig(v *s.Value) *types.DriveUploadConfig {
+	if v == nil || v.IsNil() {
+		return nil
 	}
 	r := types.DriveUploadConfig{}
 	v.ParseInto(&r)
-	return &r, nil
+	return &r
 }
 
 func (sd *ScriptDrive) valueToEntry(v *s.Value) *scriptDriveEntry {
@@ -271,6 +408,9 @@ type scriptDriveEntry struct {
 
 // GetReader gets the reader of this entry
 func (se *scriptDriveEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+	if !se.d.has.getReader {
+		return nil, err.NewUnsupportedError()
+	}
 	vm, e := se.d.pool.Get(ctx)
 	if e != nil {
 		return nil, e
@@ -295,6 +435,9 @@ func (se *scriptDriveEntry) GetReader(ctx context.Context, start, size int64) (i
 }
 
 func (se *scriptDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
+	if !se.d.has.getURL {
+		return nil, err.NewUnsupportedError()
+	}
 	vm, e := se.d.pool.Get(ctx)
 	if e != nil {
 		return nil, e
@@ -346,6 +489,9 @@ func (se *scriptDriveEntry) EntryData() types.SM {
 }
 
 func (se *scriptDriveEntry) HasThumbnail() bool {
+	if !se.d.has.hasThumbnail {
+		return false
+	}
 	vm, e := se.d.pool.Get(context.Background())
 	if e != nil {
 		return false
@@ -359,6 +505,9 @@ func (se *scriptDriveEntry) HasThumbnail() bool {
 }
 
 func (se *scriptDriveEntry) Thumbnail(ctx context.Context) (types.IContentReader, error) {
+	if !se.d.has.getThumbnail {
+		return nil, err.NewUnsupportedError()
+	}
 	vm, e := se.d.pool.Get(ctx)
 	if e != nil {
 		return nil, e

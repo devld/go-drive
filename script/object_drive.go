@@ -22,6 +22,10 @@ func GetDrive(v any) types.IDrive {
 	switch v := v.(type) {
 	case Drive:
 		return v.d
+	case *Drive:
+		if v != nil {
+			return v.d
+		}
 	}
 	return nil
 }
@@ -95,6 +99,10 @@ func GetEntry(v any) types.IEntry {
 	switch v := v.(type) {
 	case Entry:
 		return v.e
+	case *Entry:
+		if v != nil {
+			return v.e
+		}
 	}
 	return nil
 }
