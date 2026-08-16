@@ -3,7 +3,7 @@ title: 脚本 Drive 开发与安装
 description: 安装第三方脚本 Drive，或使用 JavaScript 开发 go-drive 存储适配器和浏览器直传集成。
 lang: zh-CN
 translation_key: script-drives
-source_hash: 5a241c5dee8d7acd05e6b76314f46e3ad933a9952da47e50239ac9bc9c1d01cf
+source_hash: af4de859fb78975cb2769ae978045cb29fad00c562edded562529a454fb39492
 ---
 
 # 脚本 Drive 开发与安装
