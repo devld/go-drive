@@ -78,8 +78,8 @@ func InitDriveRoutes(
 	r.POST("/move", dr._getDrive, dr.move)
 	// deleteEntry entry
 	r.POST("/delete", dr._getDrive, dr.deleteEntry)
-	// get upload config
-	r.POST("/prepare-upload", dr._getDrive, dr.upload)
+	// prepare or complete drive upload
+	r.POST("/upload", dr._getDrive, dr.upload)
 	// write file
 	r.POST("/write", dr._getDrive, dr.writeContent)
 	// create chunk upload

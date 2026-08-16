@@ -50,7 +50,7 @@ class DispatcherUploadTask extends UploadTask {
     let uploadConfig: any
     try {
       uploadConfig = await http.post(
-        '/prepare-upload',
+        '/upload',
         {},
         {
           params: {

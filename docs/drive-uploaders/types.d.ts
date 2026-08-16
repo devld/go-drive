@@ -93,7 +93,7 @@ declare interface UploadFactoryContext {
   /** Chunk count computed from `chunkSize` and `task.file.size`. */
   chunks: number;
   /**
-   * Calls the Drive script's `upload()` again (POST /prepare-upload).
+   * Calls the Drive script's `upload()` again (POST /upload).
    * After a successful `complete`, the runtime already sends `{ action: "Completed" }`.
    */
   readonly uploadCallback: UploadCallback;
