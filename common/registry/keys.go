@@ -11,8 +11,9 @@ var (
 
 	KeyDB = componentKey{k: "db"}
 
-	KeyDriveAccess = componentKey{k: "driveAccess"}
-	KeyRootDrive   = componentKey{k: "rootDrive"}
+	KeyDriveAccess   = componentKey{k: "driveAccess"}
+	KeyRootDrive     = componentKey{k: "rootDrive"}
+	KeyDriveRegistry = componentKey{k: "driveRegistry"}
 
 	KeyUserAuth      = componentKey{k: "userAuth"}
 	KeyEventBus      = componentKey{k: "eventBus"}

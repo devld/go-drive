@@ -38,6 +38,10 @@ func newTestDispatcher(t *testing.T, driveNames []string) (
 	t.Helper()
 	config = testutil.DefaultTestConfig()
 	ch := registry.NewComponentHolder()
+	driveutil.NewDriveRegistry(ch)
+	if e := RegisterAllDrives(context.Background(), config, ch); e != nil {
+		t.Fatalf("RegisterAllDrives: %v", e)
+	}
 	db, e := storage.NewDB(config, ch)
 	if e != nil {
 		t.Fatalf("NewDB: %v", e)
@@ -56,7 +60,8 @@ func newTestDispatcher(t *testing.T, driveNames []string) (
 		}
 	}
 
-	cfg := driveutil.GetDrive("fs", config)
+	driveRegistry := ch.Get(registry.KeyDriveRegistry).(*driveutil.DriveRegistry)
+	cfg := driveRegistry.GetDrive("fs")
 	if cfg == nil {
 		t.Fatal("fs drive not registered")
 	}

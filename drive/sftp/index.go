@@ -23,8 +23,8 @@ import (
 
 var t = i18n.TPrefix("drive.sftp.")
 
-func init() {
-	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
+func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
+	driveRegistry.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "sftp",
 		DisplayName: t("name"),
 		README:      t("readme"),

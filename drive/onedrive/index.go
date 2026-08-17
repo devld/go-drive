@@ -16,8 +16,8 @@ import (
 	"time"
 )
 
-func init() {
-	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
+func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
+	driveRegistry.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "onedrive",
 		DisplayName: t("name"),
 		README:      t("readme"),

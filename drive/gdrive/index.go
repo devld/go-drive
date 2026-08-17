@@ -19,8 +19,8 @@ import (
 	"google.golang.org/api/option"
 )
 
-func init() {
-	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
+func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
+	driveRegistry.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "gdrive",
 		DisplayName: t("name"),
 		README:      t("readme"),

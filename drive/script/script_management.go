@@ -431,9 +431,21 @@ func ListDriveScripts(config common.Config) ([]DriveScript, error) {
 	return result, nil
 }
 
+func readDriveScriptFile(file string, config common.Config) ([]byte, error) {
+	scriptsPath, e := config.GetDir(config.DrivesDir, false)
+	if e != nil {
+		return nil, e
+	}
+	root, e := os.OpenRoot(scriptsPath)
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = root.Close() }()
+	return root.ReadFile(file)
+}
+
 func readDriveScriptMeta(file string, config common.Config) (DriveScript, error) {
-	scriptsPath, _ := config.GetDir(config.DrivesDir, false)
-	content, e := os.ReadFile(filepath.Join(scriptsPath, file))
+	content, e := readDriveScriptFile(file, config)
 	if e != nil {
 		return DriveScript{}, e
 	}

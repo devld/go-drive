@@ -6,29 +6,77 @@
 // > It supports `markdown`
 // > It will be shown above the configuration form
 //
-// Please fill the required `Some Field` below, and .......
-//
-// > You must leave an empty line below indicate the description is ended
+// This template demonstrates both static configuration and a dynamic OAuth
+// initialization step. Replace the example OAuth endpoints and scopes with
+// the provider-specific values.
 
 /// <reference path="./scripts/env/drive.d.ts"/>
 
+function oauthRequest(utils) {
+  return {
+    Endpoint: {
+      AuthURL: "https://example.com/oauth/authorize",
+      TokenURL: "https://example.com/oauth/token",
+    },
+    RedirectURL: utils.Config.OAuthRedirectURI,
+    Scopes: ["files.read"],
+    Text: "Authorize Example Cloud",
+  };
+}
+
+function oauthCredentials(config) {
+  return {
+    ClientID: config.client_id,
+    ClientSecret: config.client_secret,
+  };
+}
+
 defineDrive(
   {
+    // Static fields are saved as the Drive configuration before initConfig
+    // runs. Field names beginning with '_' are reserved by the runtime.
     configForm: [
       {
-        Label: "Some Field",
-        Description: "This is a required field, you can get it from......",
+        Label: "Client ID",
+        Description: "The OAuth application's client ID.",
         Type: "text",
-        Field: "some_field",
+        Field: "client_id",
+        Required: true,
+      },
+      {
+        Label: "Client Secret",
+        Description: "The OAuth application's client secret.",
+        Type: "password",
+        Field: "client_secret",
         Required: true,
       },
       entryCacheTTLFormItem("2h"),
     ],
 
-    createInstance: function (data) {
+    // This is the dynamic, native-style initialization step. OAuthInitConfig
+    // also returns Configured and OAuth information for the admin UI.
+    initConfig: function (ctx, config, utils) {
+      var result = utils.OAuthInitConfig(
+        oauthRequest(utils),
+        oauthCredentials(config)
+      );
+      return result.Config;
+    },
+
+    // The OAuth callback data is passed here by the standard Drive init API.
+    init: function (ctx, data, config, utils) {
+      utils.OAuthInit(
+        ctx,
+        data,
+        oauthRequest(utils),
+        oauthCredentials(config)
+      );
+    },
+
+    createInstance: function (config, utils) {
       return {
-        entryCacheTTL: data.cache_ttl,
-        someField: data.some_field,
+        entryCacheTTL: config.cache_ttl,
+        oauth: utils.OAuthGet(oauthRequest(utils), oauthCredentials(config)),
       };
     },
   },

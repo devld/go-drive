@@ -170,23 +170,25 @@ Use the matching `isBadRequestErr`, `isNotFoundErr`, `isNotAllowedErr`, `isUnsup
 
 Define the adapter with `defineDrive(setup, methods)`.
 
-`setup` is evaluated before any Drive instance exists (`configForm`, `validateConfig`, OAuth, `createInstance`). `methods` run on the created instance; `this` is inferred from the object returned by `createInstance` (`DriveThis<T>`). `$` properties on that object are typed as cross-VM shared JSON state.
+`setup` is evaluated before any Drive instance exists (`configForm`, `initConfig`, `init`, `validateConfig`, `createInstance`). `methods` run on the created instance; `this` is inferred from the object returned by `createInstance` (`DriveThis<T>`). `$` properties on that object are typed as cross-VM shared JSON state.
 
-### `configForm` / `validateConfig`
+### `configForm` / `initConfig` / `init`
 
-`configForm` is the admin form. Required fields must be saved first. `validateConfig(data)` runs on submit before those fields are saved.
+`configForm` is the static admin form. It is always an array, and its field names must not begin with `_`; those names are reserved by the Script Drive wrapper. Required fields are saved as part of the Drive config before initialization.
 
-If `oauthRequest` is set, `Configured` is true only when the form is complete **and** an OAuth token exists. Without OAuth, `Configured` is true when every `Required` field has a saved value.
+`initConfig(ctx, config, utils)` is optional and is called after the static config has been saved. It returns the same `DriveInitConfiguration` shape as a native Drive, including a dynamic `Form`, its current `Value`, `Configured`, and optional `OAuth`. Use `utils.Data.Load("key", ...)` to inspect only the previously saved dynamic fields needed for the current step and return different forms for later steps. Dynamic form field names must also not begin with `_`.
+
+`init(ctx, data, config, utils)` is optional and receives the submitted dynamic data. It is responsible for saving dynamic values with `utils.Data.Save`, or for calling the low-level OAuth helpers. Empty strings are passed through unchanged; saving an empty string clears that key from the data store.
+
+OAuth is explicit: call `utils.OAuthInitConfig`, `utils.OAuthInit`, and `utils.OAuthGet` from these callbacks or from `createInstance`. There is no automatic OAuth request/principal hook.
+
+`validateConfig(config)` runs before `createInstance` and validates the static config.
 
 Include `entryCacheTTLFormItem("2h")` when users should set the entry cache TTL. Pass the raw form value through as `entryCacheTTL` from `createInstance`; the Go runtime parses `ms`/`s`/`m`/`h`. Empty, invalid, or `<= 0` disables caching. The form item is not inserted automatically.
 
-### `oauthRequest` / `oauthPrincipal` (optional)
+### `createInstance(config, utils)` (required)
 
-Return `{ request, credentials }`. The runtime runs `OAuthInitConfig` / `OAuthInit` / `OAuthGet`. `oauthPrincipal(ctx, oauth)` supplies the account label shown in the admin UI.
-
-### `createInstance(data, utils)` (required)
-
-Return instance state: credentials, clients, `entryCacheTTL: data.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
+Return instance state from the static config, loading only the dynamic fields needed by the Drive through `utils.Data.Load("key", ...)`: credentials, clients, `entryCacheTTL: config.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
 
 Required methods: `get` and `list`, plus `getReader` or `getURL`. `upload` defaults to `useLocalProvider`. `getReader` defaults to `ErrUnsupported()` when `getURL` exists. `meta` defaults to `{ Writable: this.writable !== false }`.
 
@@ -289,7 +291,7 @@ The following runtime surface is safe to depend on. Refer to the two `.d.ts` fil
 - `DriveCache.PutEntry`, `PutEntries`, and `PutChildren`.
 - `DriveCache.GetEntry` and `GetChildren`; a miss returns `null`.
 - `DriveCache.Evict(path, descendants)` and `EvictAll()`.
-- `setData(map)` / `getData(key)`: low-level shared state, normally accessed through `$property`.
+- `__setData(map)` / `__getData(key)`: low-level shared state, normally accessed through `$property`.
 - `selfDrive`: the Go wrapper of the current script Drive, with Get/Save/MakeDir/Copy/Move/List/Delete methods.
 
 ### OAuth
@@ -390,18 +392,17 @@ defineDrive(
       entryCacheTTLFormItem("5m")
     ],
 
-    validateConfig: function (data) {
-      if (!/^https:\/\/[^/]+(?:\/.*)?$/.test(data.base_url || "")) {
+    validateConfig: function (config) {
+      if (!/^https:\/\/[^/]+(?:\/.*)?$/.test(config.base_url || "")) {
         throw ErrBadRequest("API URL must use HTTPS");
       }
-      data.base_url = data.base_url.replace(/\/+$/, "");
     },
 
-    createInstance: function (data) {
+    createInstance: function (config) {
       return {
-        entryCacheTTL: data.cache_ttl,
-        baseURL: data.base_url,
-        token: data.token
+        entryCacheTTL: config.cache_ttl,
+        baseURL: config.base_url.replace(/\/+$/, ""),
+        token: config.token
       };
     }
   },

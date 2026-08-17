@@ -28,8 +28,8 @@ import (
 
 var s3T = i18n.TPrefix("drive.s3.")
 
-func init() {
-	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
+func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
+	driveRegistry.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "s3",
 		DisplayName: s3T("name"),
 		README:      s3T("readme"),

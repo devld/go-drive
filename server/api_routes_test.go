@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"go-drive/common"
+	"go-drive/common/driveutil"
+	"go-drive/common/registry"
 	"go-drive/common/utils"
 
 	"github.com/gin-gonic/gin"
@@ -106,9 +108,11 @@ func TestCommonRoutesUsePluralTaskResource(t *testing.T) {
 func TestAdminRoutesUseNormalizedResources(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+	ch := registry.NewComponentHolder()
+	driveutil.NewDriveRegistry(ch)
 
 	if e := InitAdminRoutes(
-		router, nil, common.Config{}, nil, nil, nil, nil, nil, nil, nil,
+		router, ch, common.Config{}, nil, nil, nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	); e != nil {
 		t.Fatalf("InitAdminRoutes() error = %v", e)

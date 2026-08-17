@@ -16,8 +16,8 @@ import (
 
 var fsT = i18n.TPrefix("drive.fs.")
 
-func init() {
-	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
+func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
+	driveRegistry.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "fs",
 		DisplayName: fsT("name"),
 		README:      fsT("readme"),

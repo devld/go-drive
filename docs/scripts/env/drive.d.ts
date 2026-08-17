@@ -9,9 +9,9 @@ declare type JSONValue =
   | { [key: string]: JSONValue };
 
 /** set drive's instance data */
-declare function setData(d: M<JSONValue>): void;
+declare function __setData(d: M<JSONValue>): void;
 /** get drive's instance data by key */
-declare function getData(key: string): JSONValue;
+declare function __getData(key: string): JSONValue;
 
 declare interface DriveMeta {
   Writable: boolean;
@@ -75,6 +75,7 @@ declare interface Drive {
 declare interface DriveDataStore {
   Save(data: SM): void;
   Load<K extends string, T extends { [key in K]: string | undefined }>(
+    key: K,
     ...keys: K[]
   ): T;
 }
@@ -100,7 +101,7 @@ declare interface DriveCache {
 declare interface DriveInitConfiguration {
   Configured: boolean;
   OAuth?: OAuthConfig;
-  Form: FormItem[];
+  Form?: FormItem[];
   Value?: SM;
 }
 
@@ -174,15 +175,10 @@ declare interface DriveUtils {
   OAuthGet(req: OAuthRequest, cred: OAuthCredentials): OAuthResponse;
 }
 
-declare interface DriveOAuthRequestPair {
-  request: OAuthRequest;
-  credentials: OAuthCredentials;
-}
-
 /**
  * Cross-VM shared fields on the instance. Names must start with `$`.
  * Values must be JSON-serializable. Nested mutation is not persisted;
- * reassign the complete property (see `setData` / `getData`).
+ * reassign the complete property (see `__setData` / `__getData`).
  */
 declare type DriveSharedState = {
   [key: `$${string}`]: JSONValue | undefined;
@@ -215,16 +211,20 @@ declare type DriveThis<T extends DriveInstanceState = DriveInstanceState> =
   DriveConfigProps<T> & DriveSharedProps<T> & Drive;
 
 declare interface DriveSetup<T extends DriveInstanceState = DriveInstanceState> {
-  /** Admin configuration form. Required fields must be saved before OAuth or create. */
+  /** Static admin configuration form. Fields beginning with `_` are reserved. */
   configForm?: FormItem[];
-  /** Called with submitted form data before it is saved. */
-  validateConfig?(data: SM): void;
-  /** Return OAuth endpoint and credentials built from saved form data. */
-  oauthRequest?(config: RootConfig, data: SM): DriveOAuthRequestPair;
-  /** Display name of the authorized account. */
-  oauthPrincipal?(ctx: Context, oauth: OAuthResponse): string;
-  /** Build runtime instance state from saved form data. */
-  createInstance(data: SM, utils: DriveUtils): T;
+  /** Validate the static configuration before the runtime instance is created. */
+  validateConfig?(config: SM): void;
+  /** Return the dynamic initialization state, including an optional form. */
+  initConfig?(
+    ctx: Context,
+    config: SM,
+    utils: DriveUtils
+  ): DriveInitConfiguration | undefined;
+  /** Save or otherwise process submitted dynamic initialization data. */
+  init?(ctx: Context, data: SM, config: SM, utils: DriveUtils): void;
+  /** Build runtime instance state from static config. Load dynamic data as needed. */
+  createInstance(config: SM, utils: DriveUtils): T;
 }
 
 declare interface DriveMethods {

@@ -11,7 +11,10 @@ import (
 	"testing"
 
 	"go-drive/common"
+	"go-drive/common/driveutil"
+	"go-drive/common/registry"
 	"go-drive/common/task"
+	"go-drive/common/types"
 )
 
 func testConfig(t *testing.T) common.Config {
@@ -20,6 +23,53 @@ func testConfig(t *testing.T) common.Config {
 		DataDir:           t.TempDir(),
 		DrivesDir:         "script-drives",
 		DriveUploadersDir: "drive-uploaders",
+	}
+}
+
+func TestRegisterAllScriptDrivesRegistersExpandedFactory(t *testing.T) {
+	config := testConfig(t)
+	drivesDir, e := config.GetDir(config.DrivesDir, true)
+	if e != nil {
+		t.Fatal(e)
+	}
+	content := `// @name Example Cloud
+// @version 1.0.0
+// @description Example description.
+
+defineDrive(
+  {
+    configForm: [{ Label: "Token", Field: "token", Type: "password" }],
+    createInstance: function () { return {}; }
+  },
+  {
+    get: function () { return { Path: "x", IsDir: false, Size: 1, ModTime: -1 }; },
+    list: function () { return []; },
+    getURL: function () { return { URL: "https://example.com" }; }
+  }
+);
+`
+	if e := os.WriteFile(filepath.Join(drivesDir, "example.js"), []byte(content), 0644); e != nil {
+		t.Fatal(e)
+	}
+	driveRegistry := driveutil.NewDriveRegistry(registry.NewComponentHolder())
+	t.Cleanup(func() { _ = driveRegistry.ReplaceDriveGroup("script/", nil) })
+
+	if e := RegisterAllScriptDrives(context.Background(), config, driveRegistry); e != nil {
+		t.Fatalf("RegisterAllScriptDrives() error = %v", e)
+	}
+	factory := driveRegistry.GetDrive("script/example")
+	if factory == nil {
+		t.Fatal("expanded Script Drive factory was not registered")
+	}
+	if driveRegistry.GetDrive("script") != nil {
+		t.Fatal("generic Script Drive factory is still registered")
+	}
+	if factory.DisplayName != "Example Cloud" {
+		t.Fatalf("display name = %q", factory.DisplayName)
+	}
+	if factory.README != "Example description." || len(factory.ConfigForm) != 2 ||
+		factory.ConfigForm[0].Field != "token" || factory.ConfigForm[1].Field != poolConfigField {
+		t.Fatalf("expanded config form = %#v", factory.ConfigForm)
 	}
 }
 
@@ -177,6 +227,68 @@ func TestListDriveScriptsReadsVersion(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].Version != "3.0.0" {
 		t.Fatalf("installed metadata = %#v", items)
+	}
+}
+
+func TestGetDriveScriptConfigForm(t *testing.T) {
+	config := testConfig(t)
+	drivesDir := filepath.Join(config.DataDir, config.DrivesDir)
+	if e := os.MkdirAll(drivesDir, 0755); e != nil {
+		t.Fatal(e)
+	}
+	const source = `// @name Example
+// @version 1.0.0
+// @description Example description
+
+/// <reference path="../docs/scripts/env/drive.d.ts"/>
+defineDrive({
+  configForm: [{ Label: "Token", Field: "token", Type: "password", Required: true }],
+  createInstance: function () { return {}; }
+}, {
+  get: function () { return { Path: "x", IsDir: false, Size: 1, ModTime: -1 }; },
+  list: function () { return []; },
+  getURL: function () { return { URL: "https://example.com" }; }
+});
+`
+	if e := os.WriteFile(filepath.Join(drivesDir, "example.js"), []byte(source), 0644); e != nil {
+		t.Fatal(e)
+	}
+
+	form, e := GetDriveScriptConfigForm(context.Background(), config, "example")
+	if e != nil {
+		t.Fatalf("GetDriveScriptConfigForm() error = %v", e)
+	}
+	if len(form) != 1 || form[0].Field != "token" || form[0].Type != "password" {
+		t.Fatalf("form = %#v", form)
+	}
+
+	if e := validateScriptForm([]types.FormItem{{Field: "_reserved"}}); e == nil {
+		t.Fatal("expected reserved field validation error")
+	}
+}
+
+func TestReadDriveScriptFileStaysWithinScriptsRoot(t *testing.T) {
+	config := testConfig(t)
+	drivesDir := filepath.Join(config.DataDir, config.DrivesDir)
+	if e := os.MkdirAll(drivesDir, 0755); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(filepath.Join(drivesDir, "inside.js"), []byte("inside"), 0644); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(filepath.Join(config.DataDir, "outside.js"), []byte("outside"), 0644); e != nil {
+		t.Fatal(e)
+	}
+
+	content, e := readDriveScriptFile("inside.js", config)
+	if e != nil || string(content) != "inside" {
+		t.Fatalf("read inside.js = %q, %v", content, e)
+	}
+	if _, e := readDriveScriptFile("../outside.js", config); e == nil {
+		t.Fatal("expected parent traversal to be rejected")
+	}
+	if _, e := readDriveScriptFile(filepath.Join(config.DataDir, "outside.js"), config); e == nil {
+		t.Fatal("expected absolute path to be rejected")
 	}
 }
 

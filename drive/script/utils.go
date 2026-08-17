@@ -10,11 +10,9 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
-	"go-drive/common/utils"
 	s "go-drive/script"
 	"io"
-	"os"
-	"path/filepath"
+	"maps"
 	"strings"
 	"time"
 
@@ -48,22 +46,75 @@ func init() {
 
 var t = i18n.TPrefix("drive.script.")
 
+const (
+	scriptConfigField = "__script"
+	poolConfigField   = "__pool"
+)
+
+func withScriptName(name string, config types.SM) types.SM {
+	result := make(types.SM, len(config)+1)
+	maps.Copy(result, config)
+	result[scriptConfigField] = name
+	return result
+}
+
+func scriptFileName(name string) (string, error) {
+	if name == "" {
+		return "", err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
+	}
+	if name == "." || name == ".." || strings.ContainsAny(name, `/\\`) {
+		return "", err.NewBadRequestError("invalid script drive name")
+	}
+	return name + ".js", nil
+}
+
+func validateScriptForm(form []types.FormItem) error {
+	for _, item := range form {
+		if strings.HasPrefix(item.Field, "_") {
+			return err.NewBadRequestError("script form fields must not start with '_': " + item.Field)
+		}
+	}
+	return nil
+}
+
+// GetDriveScriptConfigForm returns the static form declared by a script.
+func GetDriveScriptConfigForm(ctx context.Context, config common.Config, name string) ([]types.FormItem, error) {
+	file, e := scriptFileName(name)
+	if e != nil {
+		return nil, e
+	}
+	vm, e := createVm(ctx, config, file)
+	if e != nil {
+		return nil, e
+	}
+	defer func() { _ = vm.Dispose() }()
+
+	formValue, e := vm.GetValue("__driveConfigForm")
+	if e != nil {
+		return nil, e
+	}
+	form := make([]types.FormItem, 0)
+	if formValue != nil && !formValue.IsNil() {
+		formValue.ParseInto(&form)
+	}
+	if e := validateScriptForm(form); e != nil {
+		return nil, e
+	}
+	return form, nil
+}
+
 func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (types.IDrive, error) {
-	cfg, e := driveUtils.Data.Load("_script")
+	selectedScript, e := scriptFileName(config[scriptConfigField])
 	if e != nil {
 		return nil, e
 	}
 
-	if cfg["_script"] == "" {
-		return nil, err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
-	}
-
-	poolConfig, e := parsePoolConfig(config["pool"])
+	poolConfig, e := parsePoolConfig(config[poolConfigField])
 	if e != nil {
 		return nil, err.NewNotAllowedMessageError(i18n.T("drive.script.invalid_pool_config", e.Error()))
 	}
 
-	vm, e := createVm(ctx, driveUtils.Config, cfg["_script"])
+	vm, e := createVm(ctx, driveUtils.Config, selectedScript)
 	if e != nil {
 		return nil, e
 	}
@@ -75,8 +126,8 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.D
 	}
 	d.cache = driveUtils.CreateCache(d.deserializeEntry)
 
-	vm.Set("setData", s.WrapVmCall(vm, d.setData))
-	vm.Set("getData", s.WrapVmCall(vm, d.getData))
+	vm.Set("__setData", s.WrapVmCall(vm, d.setData))
+	vm.Set("__getData", s.WrapVmCall(vm, d.getData))
 
 	scriptUtils := newScriptDriveUtils(driveUtils)
 	scriptUtils.cache = &scriptDriveCache{d.cache}
@@ -126,38 +177,9 @@ func (sd *ScriptDrive) inspectMethods(vm *s.VM) {
 }
 
 func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
-	selectedScript := config["script"]
-	if selectedScript == "" {
-		return nil, err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
-	}
-	selectedScript += ".js"
-
-	cfg, e := driveUtils.Data.Load("_script")
+	selectedScript, e := scriptFileName(config[scriptConfigField])
 	if e != nil {
 		return nil, e
-	}
-	if cfg["_script"] != selectedScript {
-		if e := driveUtils.Data.Clear(); e != nil {
-			return nil, e
-		}
-	}
-	if e := driveUtils.Data.Save(types.SM{"_script": selectedScript}); e != nil {
-		return nil, e
-	}
-
-	initForm := make([]types.FormItem, 0, 1)
-	values := make(types.SM)
-
-	ds, e := readDriveScriptMeta(selectedScript, driveUtils.Config)
-	if e != nil {
-		return nil, e
-	}
-	initForm = append(initForm, types.FormItem{Type: "md", Description: ds.Description})
-
-	retCfg := &driveutil.DriveInitConfig{
-		Configured: false,
-		Form:       initForm,
-		Value:      values,
 	}
 
 	vm, e := createVm(ctx, driveUtils.Config, selectedScript)
@@ -170,8 +192,8 @@ func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.Drive
 	if e != nil {
 		return nil, e
 	}
-	if initConfigVal.IsNil() {
-		return retCfg, nil
+	if initConfigVal == nil || initConfigVal.IsNil() {
+		return nil, nil
 	}
 
 	v, e := vm.Call(ctx, "__driveInitConfig", s.NewContext(vm, ctx), config, newScriptDriveUtils(driveUtils))
@@ -179,33 +201,23 @@ func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.Drive
 		return nil, e
 	}
 
+	if v == nil || v.IsNil() {
+		return nil, nil
+	}
 	vmCfg := &driveutil.DriveInitConfig{}
 	v.ParseInto(vmCfg)
-
-	retCfg.Configured = vmCfg.Configured
-	retCfg.OAuth = vmCfg.OAuth
-	retCfg.Form = append(retCfg.Form, vmCfg.Form...)
-	utils.MapCopy(vmCfg.Value, retCfg.Value)
-
-	return retCfg, nil
+	if e := validateScriptForm(vmCfg.Form); e != nil {
+		return nil, e
+	}
+	return vmCfg, nil
 }
 
 func init_(ctx context.Context, data, config types.SM, driveUtils driveutil.DriveUtils) error {
-	cfg, e := driveUtils.Data.Load("_script")
+	selectedScript, e := scriptFileName(config[scriptConfigField])
 	if e != nil {
 		return e
 	}
-	if cfg["_script"] != "" {
-		// _script is not modifiable
-		delete(data, "_script")
-	} else if data["_script"] != "" {
-		cfg["_script"] = data["_script"]
-		if e := driveUtils.Data.Save(types.SM{"_script": data["_script"]}); e != nil {
-			return e
-		}
-	}
-
-	vm, e := createVm(ctx, driveUtils.Config, cfg["_script"])
+	vm, e := createVm(ctx, driveUtils.Config, selectedScript)
 	if e != nil {
 		return e
 	}
@@ -215,7 +227,7 @@ func init_(ctx context.Context, data, config types.SM, driveUtils driveutil.Driv
 	if e != nil {
 		return e
 	}
-	if initConfigVal.IsNil() {
+	if initConfigVal == nil || initConfigVal.IsNil() {
 		return nil
 	}
 
@@ -333,8 +345,8 @@ func (d driveDataStore) Save(data types.SM) {
 	}
 }
 
-func (d driveDataStore) Load(keys ...string) types.SM {
-	r, e := d.data.Load(keys...)
+func (d driveDataStore) Load(key string, keys ...string) types.SM {
+	r, e := d.data.Load(key, keys...)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}
@@ -359,8 +371,7 @@ func (or *oauthRespWrapper) Token() *oauth2.Token {
 }
 
 func createVm(ctx context.Context, config common.Config, script string) (*s.VM, error) {
-	scriptsPath, _ := config.GetDir(config.DrivesDir, false)
-	scriptBytes, e := os.ReadFile(filepath.Join(scriptsPath, script))
+	scriptBytes, e := readDriveScriptFile(script, config)
 	if e != nil {
 		return nil, e
 	}
