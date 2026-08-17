@@ -54,7 +54,10 @@ const authorized = async ({ data }: any) => {
 
   loading(true)
   try {
-    await initDrive(props.drive.name, data.data)
+    await initDrive(props.drive.name, {
+      __oauth_code: data.data.code,
+      __oauth_state: data.data.state,
+    })
   } catch (e: any) {
     alert(e.message)
     return

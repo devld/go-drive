@@ -15,11 +15,15 @@ import (
 )
 
 const (
-	DsKeyToken        = "token"
-	DsKeyTokenType    = "token_type"
-	DsKeyExpiresAt    = "expires_at"
-	DsKeyRefreshToken = "refresh_token"
-	DsKeyState        = "state"
+	// OAuth helper data is private drive data and uses a reserved namespace so
+	// it cannot collide with drive-specific configuration, runtime data, or
+	// initialization callback data.
+	DsKeyCode         = "__oauth_code"
+	DsKeyToken        = "__oauth_token"
+	DsKeyTokenType    = "__oauth_token_type"
+	DsKeyExpiresAt    = "__oauth_expires_at"
+	DsKeyRefreshToken = "__oauth_refresh_token"
+	DsKeyState        = "__oauth_state"
 )
 
 type OAuthCredentials struct {
@@ -99,8 +103,8 @@ func OAuthInitConfig(o OAuthRequest, cred OAuthCredentials,
 
 func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
 	cred OAuthCredentials, ds DriveDataStore) (*OAuthResponse, error) {
-	code := data["code"]
-	state := data["state"]
+	code := data[DsKeyCode]
+	state := data[DsKeyState]
 
 	if code == "" {
 		return nil, nil
