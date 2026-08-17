@@ -153,16 +153,11 @@ type Job struct {
 	ID          uint   `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	Description string `gorm:"column:description;not null;type:text" json:"description"`
 
-	Triggers     string `gorm:"column:triggers;not null;type:text;default:_need_migration_" json:"triggers"`
-	Action       string `gorm:"column:action;not null;type:string;size:64;default:_need_migration_" json:"action"`
-	ActionParams string `gorm:"column:action_params;not null;type:text;size:512;default:_need_migration_" json:"actionParams"`
+	Triggers     string `gorm:"column:triggers;not null;type:text" json:"triggers"`
+	Action       string `gorm:"column:action;not null;type:string;size:64" json:"action"`
+	ActionParams string `gorm:"column:action_params;not null;type:text;size:512" json:"actionParams"`
 
 	Enabled bool `gorm:"column:enabled;not null;type:bool" json:"enabled"`
-
-	// Schedule is kept for backward compatibility, but deprecated
-	DeprecatedSchedule string `gorm:"column:schedule;type:string;size:64" json:"-"`
-	DeprecatedJob      string `gorm:"column:job;not null;type:string;size:64" json:"-"`
-	DeprecatedParams   string `gorm:"column:params;type:text" json:"-"`
 }
 
 const (

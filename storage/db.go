@@ -3,7 +3,6 @@ package storage
 import (
 	"go-drive/common"
 	"go-drive/common/registry"
-	"go-drive/common/types"
 	"go-drive/common/utils"
 	"log"
 	"os"
@@ -44,33 +43,7 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		return nil, e
 	}
 
-	if e := db.AutoMigrate(
-		&types.User{},
-		&types.Group{},
-		&types.UserGroup{},
-		&types.Drive{},
-		&types.PathPermission{},
-		&types.PathMount{},
-		&types.DriveData{},
-		&types.DriveCache{},
-		&types.Option{},
-		&types.Job{},
-		&types.JobExecution{},
-		&types.PathMeta{},
-		&types.FileBucket{},
-		&types.Session{},
-	); e != nil {
-		closeDb(db)
-		return nil, e
-	}
-
-	if e := tryInitDbData(db); e != nil {
-		closeDb(db)
-		return nil, e
-	}
-
-	// Run migrations
-	if e := migrateJobScheduleToTriggers(db); e != nil {
+	if e := migrateAll(db); e != nil {
 		closeDb(db)
 		return nil, e
 	}
