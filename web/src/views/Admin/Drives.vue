@@ -163,7 +163,7 @@ import { alert, confirm, loading } from '@/utils/ui-utils'
 
 import OAuthConfigure from './drive-configure/OAuth.vue'
 import { mapOf } from '@/utils'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Drive, DriveFactoryConfig, DriveInitConfig, FormItem } from '@/types'
 
@@ -219,50 +219,11 @@ const showReloadingTips = () => {
   }
 }
 
-const expandScriptDrives = (factories: DriveFactoryConfig[]) => {
-  const sfi = factories.findIndex((e) => e.type === 'script')
-  if (sfi === -1) return
-  const sf = factories[sfi]
-  const scriptsIndex = sf.configForm.findIndex((e) => e.field === 'script')
-  if (scriptsIndex === -1) return
-  factories.splice(sfi, 1)
-
-  const scripts = sf.configForm[scriptsIndex].options!
-  scripts.forEach((s) => {
-    if (s.disabled) return
-
-    const configForm = [...sf.configForm]
-    configForm.splice(scriptsIndex, 1, {
-      ...sf.configForm[scriptsIndex],
-      defaultValue: s.value,
-    })
-
-    factories.push({
-      type: `script/${s.value}`,
-      displayName: s.name.toString(),
-      readme: sf.readme,
-      configForm,
-    })
-  })
-
-  factories.push(sf)
-}
-
 const loadDrives = async () => {
   try {
     const factories = await getDriveFactories()
-    expandScriptDrives(factories)
     driveFactories.value = factories
-
-    const loadedDrives = await getDrives()
-    loadedDrives.forEach((e) => {
-      if (e.type === 'script') {
-        const v = JSON.parse(e.config)
-        e.type = 'script' + (v.script ? `/${v.script}` : '')
-      }
-    })
-
-    drives.value = loadedDrives
+    drives.value = await getDrives()
   } catch (e: any) {
     alert(e.message)
   }
@@ -279,11 +240,12 @@ const addDrive = () => {
 }
 
 const editDrive = (drive_: Drive) => {
+  const config = JSON.parse(drive_.config)
   drive.value = {
     name: drive_.name,
     enabled: drive_.enabled ? '1' : '',
     type: drive_.type,
-    config: JSON.parse(drive_.config),
+    config,
   }
   edit.value = true
   getDriveInitConfigInfo()
@@ -321,13 +283,10 @@ const saveDrive = async () => {
     return
   }
 
-  let type = drive.value!.type
-  if (type.startsWith('script/')) type = 'script'
-
   const d = {
     name: drive.value!.name,
     enabled: !!drive.value!.enabled,
-    type,
+    type: drive.value!.type,
     config: JSON.stringify(drive.value!.config),
   }
   saving.value = true
@@ -399,6 +358,16 @@ const reloadDrives = async () => {
 }
 
 loadDrives()
+
+watch(
+  () => drive.value?.type,
+  (type, previousType) => {
+    if (!drive.value) return
+    if (!edit.value && previousType !== undefined && previousType !== type) {
+      drive.value.config = ''
+    }
+  }
+)
 </script>
 <style lang="scss">
 .drives-manager {

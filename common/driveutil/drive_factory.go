@@ -34,7 +34,7 @@ type DriveCacheFactory = func(EntryDeserialize) DriveCache
 // DriveDataStore is a place to store drive's runtime data, such as token, refresh token.
 type DriveDataStore interface {
 	Save(types.SM) error
-	Load(...string) (types.SM, error)
+	Load(string, ...string) (types.SM, error)
 	Clear() error
 }
 

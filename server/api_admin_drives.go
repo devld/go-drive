@@ -18,16 +18,14 @@ import (
 )
 
 type drivesRoute struct {
-	config       common.Config
-	driveDAO     *storage.DriveDAO
-	driveDataDAO *storage.DriveDataDAO
-	rootDrive    *drive.RootDrive
+	driveRegistry *driveutil.DriveRegistry
+	driveDAO      *storage.DriveDAO
+	driveDataDAO  *storage.DriveDataDAO
+	rootDrive     *drive.RootDrive
 }
 
 func (dr *drivesRoute) getDriveFactories(c *gin.Context) {
-	ds := driveutil.GetRegisteredDrives(dr.config)
-	sort.Slice(ds, func(i, j int) bool { return ds[i].Type < ds[j].Type })
-	SetResult(c, ds)
+	SetResult(c, dr.driveRegistry.GetRegisteredDrives())
 }
 
 func (dr *drivesRoute) getDrives(c *gin.Context) {
@@ -37,7 +35,7 @@ func (dr *drivesRoute) getDrives(c *gin.Context) {
 		return
 	}
 	for i, d := range drives {
-		f := driveutil.GetDrive(d.Type, dr.config)
+		f := dr.driveRegistry.GetDrive(d.Type)
 		if f == nil {
 			continue
 		}
@@ -71,7 +69,7 @@ func (dr *drivesRoute) updateDrive(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	f := driveutil.GetDrive(d.Type, dr.config)
+	f := dr.driveRegistry.GetDrive(d.Type)
 	if f == nil {
 		_ = c.Error(err.NewNotAllowedMessageError(i18n.T("api.admin.unknown_drive_type", d.Type)))
 		return
@@ -136,10 +134,11 @@ func (dr *drivesRoute) reloadDrives(c *gin.Context) {
 }
 
 type scriptDrivesRoute struct {
-	config     common.Config
-	runner     task.Runner
-	repoLock   sync.Mutex
-	syncTaskID string
+	config        common.Config
+	driveRegistry *driveutil.DriveRegistry
+	runner        task.Runner
+	repoLock      sync.Mutex
+	syncTaskID    string
 }
 
 func (sdr *scriptDrivesRoute) listDriveScripts(c *gin.Context) {
@@ -184,6 +183,9 @@ func (sdr *scriptDrivesRoute) installDrive(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
+	if e := script.RegisterAllScriptDrives(c.Request.Context(), sdr.config, sdr.driveRegistry); e != nil {
+		_ = c.Error(e)
+	}
 }
 
 func (sdr *scriptDrivesRoute) uninstallDrive(c *gin.Context) {
@@ -191,6 +193,9 @@ func (sdr *scriptDrivesRoute) uninstallDrive(c *gin.Context) {
 	if e := script.UninstallDriveScript(sdr.config, name); e != nil {
 		_ = c.Error(e)
 		return
+	}
+	if e := script.RegisterAllScriptDrives(c.Request.Context(), sdr.config, sdr.driveRegistry); e != nil {
+		_ = c.Error(e)
 	}
 }
 
@@ -212,6 +217,9 @@ func (sdr *scriptDrivesRoute) saveDriveScriptContent(c *gin.Context) {
 	if e := script.SaveDriveScript(sdr.config, c.Param("name"), content); e != nil {
 		_ = c.Error(e)
 		return
+	}
+	if e := script.RegisterAllScriptDrives(c.Request.Context(), sdr.config, sdr.driveRegistry); e != nil {
+		_ = c.Error(e)
 	}
 }
 
@@ -254,7 +262,7 @@ func restoreDriveInitSecrets(data types.SM, store driveutil.DriveDataStore) erro
 	}
 	sort.Strings(keys)
 
-	saved, e := store.Load(keys...)
+	saved, e := store.Load(keys[0], keys[1:]...)
 	if e != nil {
 		return e
 	}

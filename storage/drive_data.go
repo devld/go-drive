@@ -60,9 +60,12 @@ func (d *dbDriveNamespacedDataStore) Save(m types.SM) error {
 	})
 }
 
-func (d *dbDriveNamespacedDataStore) Load(keys ...string) (types.SM, error) {
+func (d *dbDriveNamespacedDataStore) Load(key string, keys ...string) (types.SM, error) {
 	items := make([]types.DriveData, 0)
-	e := d.db.C().Where("`drive` = ? AND `data_key` IN (?)", d.ns, keys).Find(&items).Error
+	query := d.db.C().Where("`drive` = ?", d.ns)
+	loadKeys := append([]string{key}, keys...)
+	query = query.Where("`data_key` IN (?)", loadKeys)
+	e := query.Find(&items).Error
 	if e != nil {
 		return nil, e
 	}

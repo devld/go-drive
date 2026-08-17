@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"go-drive/common"
+	"go-drive/common/driveutil"
 	"go-drive/common/event"
 	"go-drive/common/i18n"
 	"go-drive/common/registry"
@@ -21,6 +22,10 @@ import (
 func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine, error) {
 	config, err := common.InitConfig(ch)
 	if err != nil {
+		return nil, err
+	}
+	driveutil.NewDriveRegistry(ch)
+	if err := drive.RegisterAllDrives(ctx, config, ch); err != nil {
 		return nil, err
 	}
 	bus := event.NewBus(ch)

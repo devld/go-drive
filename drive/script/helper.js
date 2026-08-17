@@ -6,26 +6,29 @@ function __requireFunction__(name, e) {
   }
 }
 
-function formFields(form) {
-  var keys = [];
-  if (!form) return keys;
-  for (var i = 0; i < form.length; i++) {
-    if (form[i] && form[i].Field) keys.push(form[i].Field);
+function validateForm(form, name) {
+  if (!Array.isArray(form)) {
+    throw new Error(name + " must be an array");
   }
-  return keys;
-}
-
-function loadFormData(utils, form) {
-  var keys = formFields(form);
-  if (!keys.length) return {};
-  return utils.Data.Load.apply(utils.Data, keys);
+  for (var i = 0; i < form.length; i++) {
+    var field = form[i] && form[i].Field;
+    if (field && field.charAt(0) === "_") {
+      throw ErrBadRequest("script form fields must not start with '_': " + field);
+    }
+  }
 }
 
 function formConfigured(form, data) {
-  if (!form || !form.length) return false;
+  if (!form || !form.length) return true;
   for (var i = 0; i < form.length; i++) {
     var item = form[i];
-    if (item && item.Required && !data[item.Field]) return false;
+    if (
+      item &&
+      item.Required &&
+      (!data || data[item.Field] === undefined || data[item.Field] === null || data[item.Field] === "")
+    ) {
+      return false;
+    }
   }
   return true;
 }
@@ -41,18 +44,18 @@ function bindSharedState(drive) {
     descriptors[key] = {
       configurable: false,
       get: function () {
-        return getData(key);
+        return __getData(key);
       },
       set: function (v) {
         var dat = {};
         dat[key] = v;
-        setData(dat);
+        __setData(dat);
       },
       enumerable: true,
     };
     values[key] = drive[key];
   });
-  setData(values);
+  __setData(values);
   Object.defineProperties(drive, descriptors);
 }
 
@@ -80,15 +83,6 @@ function bindDriveMethods(drive, methods) {
   }
 }
 
-function oauthPair(setup, config, data) {
-  if (typeof setup.oauthRequest !== "function") return null;
-  var pair = setup.oauthRequest(config, data);
-  if (!pair || !pair.request || !pair.credentials) {
-    throw new Error("oauthRequest must return { request, credentials }");
-  }
-  return pair;
-}
-
 function defineDrive(setup, methods) {
   if (!setup || typeof setup !== "object") {
     throw new Error("defineDrive setup is required");
@@ -109,71 +103,39 @@ function defineDrive(setup, methods) {
   }
 
   var form = setup.configForm || [];
+  validateForm(form, "configForm");
+  global.__driveConfigForm = form;
 
-  global.__driveInitConfig = function (ctx, config, utils) {
-    var data = loadFormData(utils, form);
-    var formReady = formConfigured(form, data);
-    var pair = oauthPair(setup, utils.Config, data);
-
-    if (pair) {
-      if (!formReady) {
-        return { Configured: false, Form: form, Value: data };
+  if (typeof setup.initConfig === "function") {
+    global.__driveInitConfig = function (ctx, config, utils) {
+      if (!formConfigured(form, config)) {
+        return { Configured: false };
       }
-      var result = utils.OAuthInitConfig(pair.request, pair.credentials);
-      var initConfig = result.Config;
-      var oauthResp = result.Response;
-      if (!oauthResp) {
-        return {
-          Configured: false,
-          Form: form,
-          Value: data,
-          OAuth: initConfig.OAuth,
-        };
-      }
-      var oauth = initConfig.OAuth || {};
-      if (typeof setup.oauthPrincipal === "function") {
-        oauth.Principal = setup.oauthPrincipal(ctx, oauthResp);
-      }
-      return {
-        Configured: true,
-        Form: form,
-        Value: data,
-        OAuth: oauth,
-      };
-    }
+      var result = setup.initConfig(ctx, config, utils);
+      if (result && result.Form) validateForm(result.Form, "initConfig form");
+      return result === undefined ? null : result;
+    };
+  } else {
+    global.__driveInitConfig = null;
+  }
 
-    return { Configured: formReady, Form: form, Value: data };
-  };
-
-  global.__driveInit = function (ctx, data, config, utils) {
-    if (typeof setup.validateConfig === "function") {
-      setup.validateConfig(data);
-    }
-    var fields = formFields(form);
-    var toSave = {};
-    var i;
-    for (i = 0; i < fields.length; i++) {
-      var key = fields[i];
-      if (data[key]) toSave[key] = data[key];
-    }
-    if (Object.keys(toSave).length) {
-      utils.Data.Save(toSave);
-    }
-
-    var saved = loadFormData(utils, form);
-    var pair = oauthPair(setup, utils.Config, saved);
-    if (!pair) return;
-    if (!formConfigured(form, saved)) return;
-    utils.OAuthInit(ctx, data, pair.request, pair.credentials);
-  };
+  if (typeof setup.init === "function") {
+    global.__driveInit = function (ctx, data, config, utils) {
+      setup.init(ctx, data, config, utils);
+    };
+  } else {
+    global.__driveInit = null;
+  }
 
   global.__driveCreate = function (ctx, config, utils) {
-    var data = loadFormData(utils, form);
-    if (form.length && !formConfigured(form, data)) {
+    if (!formConfigured(form, config)) {
       throw ErrNotAllowed("drive not configured");
     }
+    if (typeof setup.validateConfig === "function") {
+      setup.validateConfig(config);
+    }
 
-    var drive = setup.createInstance(data, utils);
+    var drive = setup.createInstance(config, utils);
     if (!drive || typeof drive !== "object") {
       throw new Error("createInstance must return an object");
     }

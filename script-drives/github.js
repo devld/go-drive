@@ -1,5 +1,5 @@
 // @name GitHub
-// @version 1.0.0
+// @version 1.0.1
 // @description Map a GitHub repository branch as a read-only virtual drive.
 //
 // Configure the repository owner, repository name, and optionally a branch
@@ -63,27 +63,27 @@ defineDrive(
       entryCacheTTLFormItem("5m"),
     ],
 
-    validateConfig: function (data) {
-      if (data.owner && /[/\s]/.test(data.owner)) {
+    validateConfig: function (config) {
+      if (config.owner && /[/\s]/.test(config.owner)) {
         throw ErrBadRequest("invalid repository owner");
       }
-      if (data.repo && /[/\s]/.test(data.repo)) {
+      if (config.repo && /[/\s]/.test(config.repo)) {
         throw ErrBadRequest("invalid repository name");
       }
     },
 
     /**
-     * @param {SM} data
+     * @param {SM} config
      * @returns {GitHubDriveState}
      */
-    createInstance: function (data) {
+    createInstance: function (config) {
       return {
-        entryCacheTTL: data.cache_ttl,
+        entryCacheTTL: config.cache_ttl,
         writable: false,
-        owner: data.owner,
-        repo: data.repo,
-        branch: data.branch || "",
-        token: data.token || "",
+        owner: config.owner,
+        repo: config.repo,
+        branch: config.branch || "",
+        token: config.token || "",
         $resolvedBranch: "",
       };
     },

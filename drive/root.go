@@ -22,6 +22,7 @@ type RootDrive struct {
 	driveDataStorage *storage.DriveDataDAO
 
 	driveCacheMgr driveutil.DriveCacheManager
+	driveRegistry *driveutil.DriveRegistry
 
 	config common.Config
 
@@ -36,6 +37,7 @@ func NewRootDrive(
 	dataStorage *storage.DriveDataDAO,
 	driveCacheStorage *storage.DriveCacheDAO,
 	ch *registry.ComponentsHolder) (*RootDrive, error) {
+	driveRegistry := ch.Get(registry.KeyDriveRegistry).(*driveutil.DriveRegistry)
 	dispatcher := NewDispatcherDrive(config)
 	root := NewPathMountOverlayDrive(dispatcher, mountStorage)
 	r := &RootDrive{
@@ -44,6 +46,7 @@ func NewRootDrive(
 		driveStorage:     driveStorage,
 		mountStorage:     mountStorage,
 		driveDataStorage: dataStorage,
+		driveRegistry:    driveRegistry,
 		config:           config,
 		mux:              &sync.Mutex{},
 	}
@@ -70,8 +73,8 @@ func (d *RootDrive) Get() types.IDrive {
 	return d.root
 }
 
-func checkAndParseConfig(dc types.Drive, c common.Config) (*driveutil.DriveFactory, types.SM, error) {
-	f := driveutil.GetDrive(dc.Type, c)
+func checkAndParseConfig(dc types.Drive, driveRegistry *driveutil.DriveRegistry) (*driveutil.DriveFactory, types.SM, error) {
+	f := driveRegistry.GetDrive(dc.Type)
 	if f == nil {
 		return nil, nil, err.NewBadRequestError(i18n.T("drive.root.invalid_drive_type", dc.Type))
 	}
@@ -108,7 +111,7 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 		if !dc.Enabled {
 			continue
 		}
-		factory, config, e := checkAndParseConfig(dc, d.config)
+		factory, config, e := checkAndParseConfig(dc, d.driveRegistry)
 		if e != nil {
 			if ignoreFailure {
 				log.Printf("[%s]: %v", dc.Name, e)
@@ -153,7 +156,7 @@ func (d *RootDrive) DriveInitConfig(ctx context.Context, name string) (*driveuti
 	if e != nil {
 		return nil, e
 	}
-	factory, config, e := checkAndParseConfig(dc, d.config)
+	factory, config, e := checkAndParseConfig(dc, d.driveRegistry)
 	if e != nil {
 		return nil, e
 	}
@@ -169,7 +172,7 @@ func (d *RootDrive) DriveInit(ctx context.Context, name string, data types.SM) e
 	if e != nil {
 		return e
 	}
-	factory, config, e := checkAndParseConfig(dc, d.config)
+	factory, config, e := checkAndParseConfig(dc, d.driveRegistry)
 	if e != nil {
 		return e
 	}

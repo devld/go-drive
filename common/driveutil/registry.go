@@ -1,54 +1,106 @@
 package driveutil
 
-import "go-drive/common"
+import (
+	"fmt"
+	"go-drive/common/registry"
+	"strings"
+	"sync"
+)
 
-type DriveDynamicRegistration func(common.Config) *DriveFactoryConfig
+// DriveRegistry stores the drive factories for one application instance.
+type DriveRegistry struct {
+	sync.RWMutex
+	factories []DriveFactoryConfig
+}
 
-var registry = make(map[string]any)
+// NewDriveRegistry creates an empty drive registry.
+func NewDriveRegistry(ch *registry.ComponentsHolder) *DriveRegistry {
+	driveRegistry := &DriveRegistry{}
+	ch.Add(registry.KeyDriveRegistry, driveRegistry)
+	return driveRegistry
+}
 
-func RegisterDrive(factory DriveFactoryConfig) {
-	if _, exists := registry[factory.Type]; exists {
+// RegisterDrive registers a drive factory. Static factories are normally
+// registered during application initialization, but the same API can also be
+// used for a runtime factory whose type is not already registered.
+func (r *DriveRegistry) RegisterDrive(factory DriveFactoryConfig) {
+	r.Lock()
+	defer r.Unlock()
+
+	if r.indexOfLocked(factory.Type) >= 0 {
 		panic(factory.Type + " already registered")
 	}
-	registry[factory.Type] = factory
+	r.factories = append(r.factories, factory)
 }
 
-func RegisterDynamicDrive(typeName string, factory DriveDynamicRegistration) {
-	if _, exists := registry[typeName]; exists {
-		panic(typeName + " already registered")
+// UnregisterDrive removes a factory from the registry. It is intended for
+// runtime registrations; removing a factory does not dispose instances that
+// have already been created from it.
+func (r *DriveRegistry) UnregisterDrive(typeName string) bool {
+	r.Lock()
+	defer r.Unlock()
+
+	i := r.indexOfLocked(typeName)
+	if i < 0 {
+		return false
 	}
-	registry[typeName] = factory
+	r.factories = append(r.factories[:i], r.factories[i+1:]...)
+	return true
 }
 
-func toDriveFactory(typeName string, v any, config common.Config) *DriveFactoryConfig {
-	if f, ok := v.(DriveFactoryConfig); ok {
-		return &f
+// ReplaceDriveGroup atomically replaces all factories whose type starts with
+// prefix. This keeps a dynamic provider from exposing a partially refreshed
+// set of factories while its files are being installed or removed.
+func (r *DriveRegistry) ReplaceDriveGroup(prefix string, factories []DriveFactoryConfig) error {
+	seen := make(map[string]struct{}, len(factories))
+	for _, factory := range factories {
+		if !strings.HasPrefix(factory.Type, prefix) {
+			return fmt.Errorf("drive factory %q is not in group %q", factory.Type, prefix)
+		}
+		if _, exists := seen[factory.Type]; exists {
+			return fmt.Errorf("duplicate drive factory %q in group %q", factory.Type, prefix)
+		}
+		seen[factory.Type] = struct{}{}
 	}
-	fn := v.(DriveDynamicRegistration)
-	f := fn(config)
-	if f == nil {
+
+	r.Lock()
+	defer r.Unlock()
+
+	kept := r.factories[:0]
+	for _, factory := range r.factories {
+		if !strings.HasPrefix(factory.Type, prefix) {
+			kept = append(kept, factory)
+		}
+	}
+	r.factories = append(kept, factories...)
+	return nil
+}
+
+func (r *DriveRegistry) GetDrive(typeName string) *DriveFactoryConfig {
+	r.RLock()
+	defer r.RUnlock()
+
+	i := r.indexOfLocked(typeName)
+	if i < 0 {
 		return nil
 	}
-	factory := *f
-	factory.Type = typeName
+	factory := r.factories[i]
 	return &factory
 }
 
-func GetDrive(typeName string, config common.Config) *DriveFactoryConfig {
-	d, ok := registry[typeName]
-	if !ok {
-		return nil
-	}
-	return toDriveFactory(typeName, d, config)
+func (r *DriveRegistry) GetRegisteredDrives() []DriveFactoryConfig {
+	r.RLock()
+	factories := make([]DriveFactoryConfig, len(r.factories))
+	copy(factories, r.factories)
+	r.RUnlock()
+	return factories
 }
 
-func GetRegisteredDrives(config common.Config) []DriveFactoryConfig {
-	fc := make([]DriveFactoryConfig, 0, len(registry))
-	for n, v := range registry {
-		f := toDriveFactory(n, v, config)
-		if f != nil {
-			fc = append(fc, *f)
+func (r *DriveRegistry) indexOfLocked(typeName string) int {
+	for i, factory := range r.factories {
+		if factory.Type == typeName {
+			return i
 		}
 	}
-	return fc
+	return -1
 }

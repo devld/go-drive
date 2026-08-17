@@ -261,7 +261,6 @@ drive:
     invalid_root_path: "루트 경로는 '/'로 시작해야 합니다"
   script:
     name: 스크립트
-    readme: JavaScript 드라이버를 사용합니다. 아래에서 저장하고 설정하세요
     invalid_pool_config: "잘못된 Pool 설정: {{ 1 }}"
     form:
       pool:

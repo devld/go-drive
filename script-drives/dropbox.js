@@ -1,5 +1,5 @@
 // @name Dropbox
-// @version 1.0.0
+// @version 1.0.1
 // @description Dropbox drive
 
 /// <reference path="../docs/scripts/env/drive.d.ts"/>
@@ -45,27 +45,34 @@ defineDrive(
       entryCacheTTLFormItem("2h"),
     ],
 
-    oauthRequest: function (config, data) {
-      return {
-        request: oauthReq(config),
-        credentials: {
-          ClientID: data.client_id,
-          ClientSecret: data.client_secret,
-        },
-      };
+    initConfig: function (ctx, config, utils) {
+      var result = utils.OAuthInitConfig(oauthReq(utils.Config), {
+        ClientID: config.client_id,
+        ClientSecret: config.client_secret,
+      });
+      if (!result.Response) return result.Config;
+
+      var oauth = result.Config.OAuth || {};
+      var data = request(result.Response, ctx, "POST", "/users/get_current_account");
+      oauth.Principal = data.name.display_name + "<" + data.email + ">";
+      result.Config.OAuth = oauth;
+      result.Config.Configured = true;
+      return result.Config;
     },
 
-    oauthPrincipal: function (ctx, oauth) {
-      var data = request(oauth, ctx, "POST", "/users/get_current_account");
-      return data.name.display_name + "<" + data.email + ">";
+    init: function (ctx, data, config, utils) {
+      utils.OAuthInit(ctx, data, oauthReq(utils.Config), {
+        ClientID: config.client_id,
+        ClientSecret: config.client_secret,
+      });
     },
 
-    createInstance: function (data, utils) {
+    createInstance: function (config, utils) {
       return {
-        entryCacheTTL: data.cache_ttl,
+        entryCacheTTL: config.cache_ttl,
         oauth: utils.OAuthGet(oauthReq(utils.Config), {
-          ClientID: data.client_id,
-          ClientSecret: data.client_secret,
+          ClientID: config.client_id,
+          ClientSecret: config.client_secret,
         }),
       };
     },

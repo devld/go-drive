@@ -20,9 +20,9 @@ import (
 	ftpclient "github.com/jlaffaye/ftp"
 )
 
-func init() {
+func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
 	t := i18n.TPrefix("drive.ftp.")
-	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
+	driveRegistry.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "ftp",
 		DisplayName: t("name"),
 		README:      t("readme"),

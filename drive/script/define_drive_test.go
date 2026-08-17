@@ -24,15 +24,22 @@ func (m *memDriveData) Save(data types.SM) error {
 		m.data = types.SM{}
 	}
 	for k, v := range data {
+		if v == "" {
+			delete(m.data, k)
+			continue
+		}
 		m.data[k] = v
 	}
 	return nil
 }
 
-func (m *memDriveData) Load(keys ...string) (types.SM, error) {
+func (m *memDriveData) Load(key string, keys ...string) (types.SM, error) {
 	r := types.SM{}
+	keys = append([]string{key}, keys...)
 	for _, k := range keys {
-		r[k] = m.data[k]
+		if v, ok := m.data[k]; ok {
+			r[k] = v
+		}
 	}
 	return r, nil
 }
@@ -81,17 +88,30 @@ func TestParseDurationFromJS(t *testing.T) {
 	}
 }
 
-func TestDefineDriveInitConfigRequiredFields(t *testing.T) {
+func TestDefineDriveStaticAndDynamicLifecycle(t *testing.T) {
 	vm := baseVM.Fork()
 	t.Cleanup(func() { _ = vm.Dispose() })
 	if _, e := vm.Run(context.Background(), `
 defineDrive(
   {
   configForm: [
-    { Label: "Token", Field: "token", Type: "text", Required: true },
-    entryCacheTTLFormItem("2h")
+    { Label: "Token", Field: "token", Type: "text", Required: true }
   ],
-  createInstance: function (data) { return { entryCacheTTL: data.cache_ttl, token: data.token }; },
+  initConfig: function (ctx, config, utils) {
+    var data = utils.Data.Load("step");
+    return {
+      Configured: data.step === "done",
+      Form: [{ Label: "Step", Field: "step", Type: "text", Required: true }],
+      Value: data
+    };
+  },
+  init: function (ctx, data, config, utils) {
+    utils.Data.Save({ step: data.step, empty: data.empty });
+  },
+  createInstance: function (config, utils) {
+    var data = utils.Data.Load("step");
+    return { entryCacheTTL: config.token, writable: data.step === "done" };
+  },
   },
   {
   get: function () { return { Path: "x", IsDir: false, Size: 1, ModTime: -1 }; },
@@ -105,28 +125,80 @@ defineDrive(
 
 	data := &memDriveData{}
 	utils := testDriveUtils(data)
-	v, e := vm.Call(context.Background(), "__driveInitConfig", nil, types.SM{}, utils)
+	formValue, e := vm.GetValue("__driveConfigForm")
+	if e != nil {
+		t.Fatal(e)
+	}
+	var form []types.FormItem
+	formValue.ParseInto(&form)
+	if len(form) != 1 || form[0].Field != "token" {
+		t.Fatalf("static form = %#v", form)
+	}
+
+	if e := data.Save(types.SM{"step": "old", "empty": "old"}); e != nil {
+		t.Fatal(e)
+	}
+	v, e := vm.Call(context.Background(), "__driveInitConfig", nil, types.SM{"token": "abc"}, utils)
 	if e != nil {
 		t.Fatal(e)
 	}
 	cfg := &driveutil.DriveInitConfig{}
 	v.ParseInto(cfg)
 	if cfg.Configured {
-		t.Fatal("expected unconfigured without required token")
+		t.Fatal("expected unconfigured before dynamic initialization")
 	}
-	if len(cfg.Form) != 2 {
-		t.Fatalf("form len = %d", len(cfg.Form))
+	if len(cfg.Form) != 1 || cfg.Form[0].Field != "step" {
+		t.Fatalf("dynamic form = %#v", cfg.Form)
 	}
 
-	_ = data.Save(types.SM{"token": "abc", "cache_ttl": "30m"})
-	v, e = vm.Call(context.Background(), "__driveInitConfig", nil, types.SM{}, utils)
+	_, e = vm.Call(context.Background(), "__driveInit", nil,
+		types.SM{"step": "done", "empty": ""}, types.SM{"token": "abc"}, utils)
 	if e != nil {
 		t.Fatal(e)
 	}
-	cfg = &driveutil.DriveInitConfig{}
-	v.ParseInto(cfg)
-	if !cfg.Configured {
-		t.Fatal("expected configured when required fields are saved")
+	saved, e := data.Load("step", "empty")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if saved["step"] != "done" {
+		t.Fatalf("saved step = %#v", saved)
+	}
+	if _, ok := saved["empty"]; ok {
+		t.Fatalf("empty value was not cleared: %#v", saved)
+	}
+
+	v, e = vm.Call(context.Background(), "__driveCreate", nil,
+		types.SM{"token": "30m"}, utils)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var created struct {
+		Writable      bool
+		EntryCacheTTL string
+	}
+	v.ParseInto(&created)
+	if !created.Writable || created.EntryCacheTTL != "30m" {
+		t.Fatalf("created = %#v", created)
+	}
+}
+
+func TestDefineDriveRejectsReservedFormFields(t *testing.T) {
+	vm := baseVM.Fork()
+	t.Cleanup(func() { _ = vm.Dispose() })
+	if _, e := vm.Run(context.Background(), `
+defineDrive(
+  {
+    configForm: [{ Label: "Reserved", Field: "_reserved", Type: "text" }],
+    createInstance: function () { return {}; }
+  },
+  {
+    get: function () { return { Path: "x", IsDir: false, Size: 1, ModTime: -1 }; },
+    list: function () { return []; },
+    getURL: function () { return { URL: "https://example.com" }; }
+  }
+);
+`); e == nil {
+		t.Fatal("expected reserved form field to be rejected")
 	}
 }
 
@@ -394,8 +466,8 @@ func newTestScriptDrive(t *testing.T, js string, data types.SM, cacheMgr *driveu
 	}
 	t.Cleanup(func() { _ = d.Dispose() })
 
-	vm.Set("setData", s.WrapVmCall(vm, d.setData))
-	vm.Set("getData", s.WrapVmCall(vm, d.getData))
+	vm.Set("__setData", s.WrapVmCall(vm, d.setData))
+	vm.Set("__getData", s.WrapVmCall(vm, d.getData))
 	store := &memDriveData{data: data}
 	utils := testDriveUtils(store)
 	if cacheMgr != nil {

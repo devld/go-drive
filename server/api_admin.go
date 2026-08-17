@@ -2,6 +2,7 @@ package server
 
 import (
 	"go-drive/common"
+	"go-drive/common/driveutil"
 	"go-drive/common/event"
 	"go-drive/common/registry"
 	"go-drive/common/task"
@@ -62,7 +63,13 @@ func InitAdminRoutes(
 	// delete group
 	r.DELETE("/groups/:name", gr.deleteGroup)
 
-	dr := &drivesRoute{config, driveDAO, driveDataDAO, rootDrive}
+	driveRegistry := ch.Get(registry.KeyDriveRegistry).(*driveutil.DriveRegistry)
+	dr := &drivesRoute{
+		driveRegistry: driveRegistry,
+		driveDAO:      driveDAO,
+		driveDataDAO:  driveDataDAO,
+		rootDrive:     rootDrive,
+	}
 	// get drive factories
 	r.GET("/drive-factories", dr.getDriveFactories)
 	// get drives
@@ -122,7 +129,7 @@ func InitAdminRoutes(
 	// region script drives
 
 	scriptDriveRoutesGroup := r.Group("/drive-scripts")
-	sdr := &scriptDrivesRoute{config: config, runner: runner}
+	sdr := &scriptDrivesRoute{config: config, driveRegistry: driveRegistry, runner: runner}
 	// list repository and installed drive scripts
 	scriptDriveRoutesGroup.GET("", sdr.listDriveScripts)
 	// sync available drives from repository

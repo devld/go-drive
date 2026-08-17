@@ -21,8 +21,8 @@ import (
 
 var davT = i18n.TPrefix("drive.webdav.")
 
-func init() {
-	driveutil.RegisterDrive(driveutil.DriveFactoryConfig{
+func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
+	driveRegistry.RegisterDrive(driveutil.DriveFactoryConfig{
 		Type:        "webdav",
 		DisplayName: davT("name"),
 		README:      davT("readme"),

@@ -1,5 +1,5 @@
 // @name Qiniu
-// @version 1.0.0
+// @version 1.0.1
 // @uploader qiniu-uploader.js
 // @description Qiniu Kodo
 
@@ -34,23 +34,23 @@ defineDrive(
       entryCacheTTLFormItem("2h"),
     ],
 
-    validateConfig: function (data) {
+    validateConfig: function (config) {
       if (
-        data.downloadBaseURL &&
-        !/^https?:\/\/[^/]+$/i.test(data.downloadBaseURL)
+        config.downloadBaseURL &&
+        !/^https?:\/\/[^/]+$/i.test(config.downloadBaseURL)
       ) {
         throw ErrBadRequest("invalid Download Base URL");
       }
     },
 
-    createInstance: function (data) {
+    createInstance: function (config) {
       return {
-        entryCacheTTL: data.cache_ttl,
-        ak: data.ak,
-        sk: data.sk,
-        bucket: data.bucket,
-        downloadBaseURL: data.downloadBaseURL,
-        uploadURL: data.uploadURL,
+        entryCacheTTL: config.cache_ttl,
+        ak: config.ak,
+        sk: config.sk,
+        bucket: config.bucket,
+        downloadBaseURL: config.downloadBaseURL,
+        uploadURL: config.uploadURL,
       };
     },
   },
