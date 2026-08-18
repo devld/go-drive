@@ -89,17 +89,20 @@ func NewOneDrive(_ context.Context, config types.SM,
 
 	driveId := params["drive_id"]
 	sharePointId := params["share_point_id"]
-
-	if driveId == "" && sharePointId == "" {
-		return nil, err.NewNotAllowedMessageError(t("drive_not_selected"))
-	}
+	sharePointURL := config["share_point"]
 
 	site := getSiteConfig(config["site"])
 	var reqPrefix string
-	if driveId != "" {
-		reqPrefix = utils.BuildURL(site.ApiBase+"/drives/{}", driveId)
-	} else {
+	switch {
+	case sharePointURL != "":
+		if sharePointId == "" {
+			return nil, err.NewNotAllowedMessageError(t("drive_not_selected"))
+		}
 		reqPrefix = utils.BuildURL(site.ApiBase+"/sites/{}/drive", sharePointId)
+	case driveId != "":
+		reqPrefix = utils.BuildURL(site.ApiBase+"/drives/{}", driveId)
+	default:
+		reqPrefix = site.ApiBase + "/me/drive"
 	}
 
 	od.c, e = req.NewClient(reqPrefix, nil, ifApiCallError, resp.Client())
