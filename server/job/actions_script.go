@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+const jobEventName = "$event"
+
 //go:embed script-helper.js
 var helperScript []byte
 var baseVM *s.VM
@@ -23,7 +25,7 @@ func init() {
 		panic(e)
 	}
 
-	_, e = vm.Run(context.Background(), helperScript)
+	_, e = vm.RunNamed(context.Background(), "script-helper.js", helperScript)
 	if e != nil {
 		panic(e)
 	}
@@ -47,13 +49,13 @@ func init() {
 		},
 		Do: func(ctx context.Context, params types.SM, ch *registry.ComponentsHolder, onLog func(s string)) error {
 			code := params["code"]
-			eventJson := params["$event"]
+			eventJson := params[jobEventName]
 			event := make(types.M, 2)
 			e := json.Unmarshal([]byte(eventJson), &event)
 			if e != nil {
 				return fmt.Errorf("failed to parse event: %s", e.Error())
 			}
-			return ExecuteJobCode(ctx, code, types.M{"$event": event}, ch, onLog)
+			return ExecuteJobCode(ctx, code, types.M{jobEventName: event}, ch, onLog)
 		},
 	})
 }
@@ -64,16 +66,36 @@ func ExecuteJobCode(ctx context.Context, code any, globals types.M, ch *registry
 	defer func() { _ = vm.Dispose() }()
 
 	vm.Set("drive", s.NewDrive(ch.Get(registry.KeyDriveAccess).(*drive.Access).GetRootDrive(nil)))
-	vm.Set("log", onLog)
-	for k, v := range globals {
-		vm.Set(k, v)
-	}
+	bindJobLog(vm, onLog)
+	setJobGlobals(vm, globals)
 
-	_, e := vm.Run(ctx, code)
+	_, e := vm.RunNamed(ctx, "job.js", code)
 	return e
 }
 
-var defaultCodeValue = strings.TrimLeft(`
+func bindJobLog(vm *s.VM, onLog func(string)) {
+	vm.Set("log", s.WrapVmCall(vm, func(_ *s.VM, args s.Values) any {
+		if onLog != nil {
+			onLog(s.FormatConsoleArgs(args))
+		}
+		return nil
+	}))
+}
+
+func setJobGlobals(vm *s.VM, globals types.M) {
+	hasEvent := false
+	for k, v := range globals {
+		vm.Set(k, v)
+		if k == jobEventName {
+			hasEvent = true
+		}
+	}
+	if !hasEvent {
+		vm.SetUndefined(jobEventName)
+	}
+}
+
+var defaultCodeValue = strings.TrimLeft(fmt.Sprintf(`
 // Available functions:
 // - cp: copy files/directories
 // - mv: move files/directories
@@ -88,7 +110,7 @@ var defaultCodeValue = strings.TrimLeft(`
 // See https://github.com/devld/go-drive/blob/master/docs/scripts/env/jobs.d.ts
 // See https://github.com/devld/go-drive/tree/master/docs/scripts/libs
 
-log('triggered by event: ' + JSON.stringify($event))
+log('triggered by event:', %s)
 
 // do something
 
@@ -110,4 +132,4 @@ log('triggered by event: ' + JSON.stringify($event))
 // or send a http request
 // log(http(newContext(), 'GET', 'https://example.com').Text())
 
-`, "\t\n\r ")
+`, jobEventName), "\t\n\r ")

@@ -25,7 +25,7 @@ func TestServerSideExampleScriptsEvaluate(t *testing.T) {
 
 			vm := baseVM.Fork()
 			t.Cleanup(func() { _ = vm.Dispose() })
-			if _, e = vm.Run(context.Background(), contents); e != nil {
+			if _, e = vm.RunNamed(context.Background(), filepath.Base(path), contents); e != nil {
 				t.Fatalf("evaluate %s: %v", path, e)
 			}
 		})
