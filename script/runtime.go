@@ -57,7 +57,7 @@ func (v *VM) init() error {
 		if e != nil {
 			return e
 		}
-		if _, e := v.Run(context.Background(), script); e != nil {
+		if _, e := v.RunNamed(context.Background(), entry.Name(), script); e != nil {
 			return e
 		}
 	}
@@ -67,6 +67,10 @@ func (v *VM) init() error {
 
 func (v *VM) Set(name string, value any) {
 	v.o.Set(name, value)
+}
+
+func (v *VM) SetUndefined(name string) {
+	v.o.Set(name, otto.UndefinedValue())
 }
 
 func (v *VM) Fork() *VM {
@@ -94,8 +98,22 @@ func (v *VM) resolveVM(o *otto.Otto) *VM {
 
 // Run runs code with this VM. Run can NOT be executed concurrency
 func (v *VM) Run(ctx context.Context, code any) (*Value, error) {
+	return v.RunNamed(ctx, "", code)
+}
+
+// RunNamed runs code and attributes stack frames to filename so otto errors
+// show the script name instead of "<anonymous>".
+func (v *VM) RunNamed(ctx context.Context, filename string, code any) (*Value, error) {
 	return wrapVmRun(ctx, v, func() (otto.Value, error) {
-		return v.o.Run(code)
+		src := code
+		if filename != "" {
+			compiled, e := v.o.Compile(filename, code)
+			if e != nil {
+				return otto.Value{}, e
+			}
+			src = compiled
+		}
+		return v.o.Run(src)
 	})
 }
 

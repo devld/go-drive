@@ -38,6 +38,62 @@ func (vs Values) Len() int {
 	return len(vs.vs)
 }
 
+// FormatConsoleArgs formats JS values the same way console.log does:
+// primitives as-is, objects/arrays as JSON, errors with their stack.
+func FormatConsoleArgs(args Values) string {
+	return formatConsoleArgs(args, 0)
+}
+
+func formatConsoleArgs(args Values, start int) string {
+	n := args.Len() - start
+	if n <= 0 {
+		return ""
+	}
+	msg := make([]string, n)
+	for i := range msg {
+		msg[i] = formatConsoleArg(args.Get(i + start))
+	}
+	return strings.Join(msg, " ")
+}
+
+func formatConsoleArg(v *Value) string {
+	ov := v.v
+	if ov.IsUndefined() {
+		return "undefined"
+	}
+	if ov.IsNull() {
+		return "null"
+	}
+	if !ov.IsObject() || ov.IsFunction() {
+		return ov.String()
+	}
+	switch ov.Class() {
+	case "Date", "RegExp", "String", "Number", "Boolean":
+		return ov.String()
+	case "Error":
+		return formatConsoleError(v)
+	}
+	obj := ov.Object()
+	if obj == nil {
+		return ov.String()
+	}
+	// otto.Object.MarshalJSON uses the runtime JSON.stringify for JS objects.
+	encoded, e := obj.MarshalJSON()
+	if e != nil || len(encoded) == 0 {
+		return ov.String()
+	}
+	return string(encoded)
+}
+
+func formatConsoleError(v *Value) string {
+	if stack := v.Get("stack"); stack != nil && !stack.IsNil() {
+		if s := stack.String(); s != "" {
+			return s
+		}
+	}
+	return v.v.String()
+}
+
 type Value struct {
 	vm  *VM
 	v   otto.Value

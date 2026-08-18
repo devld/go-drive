@@ -13,7 +13,7 @@ declare type M<T = any> = { [key: string]: T };
  * @param level string
  * @param msg messages
  */
-declare function consoleWrite(level: string, ...msg: string[]): void;
+declare function consoleWrite(level: string, ...msg: any[]): void;
 
 /**
  * Pause for a while

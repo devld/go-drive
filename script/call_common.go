@@ -2,21 +2,14 @@ package script
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"time"
 )
 
 func vm_consoleWrite(vm *VM, args Values) any {
 	level := args.Get(0).String()
-	msg := make([]string, args.Len()-1)
-	for i := range msg {
-		msg[i] = fmt.Sprintf("%v", args.Get(i+1))
-	}
-
-	log.Printf("%s %s", level, strings.Join(msg, " "))
+	log.Printf("%s %s", level, formatConsoleArgs(args, 1))
 	return nil
 }
 

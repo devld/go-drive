@@ -36,7 +36,7 @@ func init() {
 		panic(e)
 	}
 
-	_, e = vm.Run(context.Background(), helperScript)
+	_, e = vm.RunNamed(context.Background(), "helper.js", helperScript)
 	if e != nil {
 		panic(e)
 	}
@@ -390,7 +390,7 @@ func createVm(ctx context.Context, config common.Config, script string) (*s.VM, 
 	vm.Set("__driveUploaderName", strings.TrimSuffix(script, ".js"))
 	vm.Set("__ownEntry", s.WrapVmCall(vm, ownEntry))
 
-	_, e = vm.Run(ctx, scriptBytes)
+	_, e = vm.RunNamed(ctx, script, scriptBytes)
 	if e != nil {
 		_ = vm.Dispose()
 		return nil, e

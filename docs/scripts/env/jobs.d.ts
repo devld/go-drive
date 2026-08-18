@@ -2,7 +2,7 @@
 
 declare const drive: DriveInstance;
 
-declare function log(s: string): void;
+declare function log(...msg: any[]): void;
 
 /** copy files */
 declare function cp(from: string, to: string, override: boolean): DriveEntry;
