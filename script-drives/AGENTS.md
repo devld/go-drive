@@ -186,9 +186,9 @@ OAuth is explicit: call `utils.OAuthInitConfig`, `utils.OAuthInit`, and `utils.O
 
 Include `entryCacheTTLFormItem("2h")` when users should set the entry cache TTL. Pass the raw form value through as `entryCacheTTL` from `createInstance`; the Go runtime parses `ms`/`s`/`m`/`h`. Empty, invalid, or `<= 0` disables caching. The form item is not inserted automatically.
 
-### `createInstance(config, utils)` (required)
+### `createInstance(ctx, config, utils)` (required)
 
-Return instance state from the static config, loading only the dynamic fields needed by the Drive through `utils.Data.Load("key", ...)`: credentials, clients, `entryCacheTTL: config.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
+Return instance state from the static config, loading only the dynamic fields needed by the Drive through `utils.Data.Load("key", ...)`: credentials, clients, `entryCacheTTL: config.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). `ctx` is the Drive-creation context; use it for any remote requests during setup. The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
 
 Required methods: `get` and `list`, plus `getReader` or `getURL`. `upload` defaults to `useLocalProvider`. `getReader` defaults to `ErrUnsupported()` when `getURL` exists. `meta` defaults to `{ Writable: this.writable !== false }`.
 
@@ -398,7 +398,7 @@ defineDrive(
       }
     },
 
-    createInstance: function (config) {
+    createInstance: function (ctx, config) {
       return {
         entryCacheTTL: config.cache_ttl,
         baseURL: config.base_url.replace(/\/+$/, ""),

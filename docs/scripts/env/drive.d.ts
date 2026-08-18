@@ -224,7 +224,7 @@ declare interface DriveSetup<T extends DriveInstanceState = DriveInstanceState> 
   /** Save or otherwise process submitted dynamic initialization data. */
   init?(ctx: Context, data: SM, config: SM, utils: DriveUtils): void;
   /** Build runtime instance state from static config. Load dynamic data as needed. */
-  createInstance(config: SM, utils: DriveUtils): T;
+  createInstance(ctx: Context, config: SM, utils: DriveUtils): T;
 }
 
 declare interface DriveMethods {

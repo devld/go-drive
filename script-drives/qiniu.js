@@ -43,7 +43,7 @@ defineDrive(
       }
     },
 
-    createInstance: function (config) {
+    createInstance: function (ctx, config) {
       return {
         entryCacheTTL: config.cache_ttl,
         ak: config.ak,

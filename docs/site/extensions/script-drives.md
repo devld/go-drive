@@ -69,7 +69,7 @@ The template uses TypeScript references for editor completion, but the runtime i
 - Define a unique type name, display name, description, and configuration form.
 - Keep `configForm` static. Dynamic multi-step configuration belongs in explicit `initConfig(ctx, config, utils)` and `init(ctx, data, config, utils)` callbacks, following the native Drive lifecycle. Form fields beginning with `_` are reserved.
 - Handle OAuth explicitly with `utils.OAuthInitConfig`, `utils.OAuthInit`, and `utils.OAuthGet`; there is no automatic OAuth hook.
-- Implement `createInstance(config, utils)`, loading only the dynamic initialization fields needed by the Drive with `utils.Data.Load("key", ...)`.
+- Implement `createInstance(ctx, config, utils)`, loading only the dynamic initialization fields needed by the Drive with `utils.Data.Load("key", ...)`.
 - Implement `defineDrive` with `get` and `list`, plus `getURL` or `getReader`, then the write, upload, download, and thumbnail methods supported by the service.
 - Return Unsupported from unavailable native `copy` operations so the dispatcher can stream-copy; note that `move` does not have a copy-and-delete fallback.
 - Use the provided context and propagate cancellation through cancellable operations.

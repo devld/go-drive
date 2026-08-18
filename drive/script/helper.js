@@ -135,7 +135,7 @@ function defineDrive(setup, methods) {
       setup.validateConfig(config);
     }
 
-    var drive = setup.createInstance(config, utils);
+    var drive = setup.createInstance(ctx, config, utils);
     if (!drive || typeof drive !== "object") {
       throw new Error("createInstance must return an object");
     }
