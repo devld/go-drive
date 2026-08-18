@@ -73,7 +73,7 @@ defineDrive(
       );
     },
 
-    createInstance: function (config, utils) {
+    createInstance: function (ctx, config, utils) {
       return {
         entryCacheTTL: config.cache_ttl,
         oauth: utils.OAuthGet(oauthRequest(utils), oauthCredentials(config)),

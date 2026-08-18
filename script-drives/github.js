@@ -73,10 +73,11 @@ defineDrive(
     },
 
     /**
+     * @param {Context} ctx
      * @param {SM} config
      * @returns {GitHubDriveState}
      */
-    createInstance: function (config) {
+    createInstance: function (ctx, config) {
       return {
         entryCacheTTL: config.cache_ttl,
         writable: false,

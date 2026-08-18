@@ -108,7 +108,7 @@ defineDrive(
   init: function (ctx, data, config, utils) {
     utils.Data.Save({ step: data.step, empty: data.empty });
   },
-  createInstance: function (config, utils) {
+  createInstance: function (ctx, config, utils) {
     var data = utils.Data.Load("step");
     return { entryCacheTTL: config.token, writable: data.step === "done" };
   },
@@ -167,7 +167,7 @@ defineDrive(
 		t.Fatalf("empty value was not cleared: %#v", saved)
 	}
 
-	v, e = vm.Call(context.Background(), "__driveCreate", nil,
+	v, e = vm.Call(context.Background(), "__driveCreate", s.NewContext(vm, context.Background()),
 		types.SM{"token": "30m"}, utils)
 	if e != nil {
 		t.Fatal(e)
@@ -473,7 +473,7 @@ func newTestScriptDrive(t *testing.T, js string, data types.SM, cacheMgr *driveu
 	if cacheMgr != nil {
 		utils.cache = &scriptDriveCache{d.cache}
 	}
-	createdVal, e := vm.Call(context.Background(), "__driveCreate", nil, types.SM{}, utils)
+	createdVal, e := vm.Call(context.Background(), "__driveCreate", s.NewContext(vm, context.Background()), types.SM{}, utils)
 	if e != nil {
 		t.Fatal(e)
 	}

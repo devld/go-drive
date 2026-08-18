@@ -70,7 +70,7 @@ drive-repository-url: https://example.com/my-drives.json
 - 定义唯一类型名、显示名、说明和配置表单。
 - `configForm` 只用于静态配置；多步动态配置应按照原生 Drive 生命周期实现显式的 `initConfig(ctx, config, utils)` 和 `init(ctx, data, config, utils)` 回调。以下划线开头的表单字段名是保留字段。
 - 通过 `utils.OAuthInitConfig`、`utils.OAuthInit` 和 `utils.OAuthGet` 显式处理 OAuth，不再提供自动 OAuth 回调。
-- 实现 `createInstance(config, utils)`，通过 `utils.Data.Load("key", ...)` 按需读取 Drive 所需的动态初始化字段。
+- 实现 `createInstance(ctx, config, utils)`，通过 `utils.Data.Load("key", ...)` 按需读取 Drive 所需的动态初始化字段。
 - 用 `defineDrive` 实现 `get`、`list`，以及 `getURL` 或 `getReader`，再按服务能力实现写入、上传、下载和缩略图方法。
 - 原生 `copy` 不可用时返回 Unsupported，调度层会流式复制；`move` 没有 copy-and-delete 回退。
 - 使用传入的 context，并在可中止操作中传播取消。
