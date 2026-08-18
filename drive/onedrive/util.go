@@ -141,19 +141,15 @@ func InitConfig(ctx context.Context, config types.SM,
 
 	sharePointURL := config["share_point"]
 
-	// get drives
+	// If listing drives succeeds, the user must pick one. /me/drives needs
+	// Files.ReadWrite.All; with only Files.ReadWrite it 403s. In that case skip
+	// the selector and use the user's default drive (/me/drive).
 	if initConfig.Configured && sharePointURL == "" {
-		_ = generateDrivesForm(ctx, reqClient, config, params, initConfig)
-	}
-
-	// if no SharePoint site provided, get the user's drives
-	// otherwise, treat the SharePoint site as a drive
-	if initConfig.Configured {
-		if sharePointURL == "" {
+		if e := generateDrivesForm(ctx, reqClient, config, params, initConfig); e == nil {
 			initConfig.Configured = params["drive_id"] != ""
-		} else {
-			initConfig.Configured = params["share_point_id"] != ""
 		}
+	} else if initConfig.Configured {
+		initConfig.Configured = params["share_point_id"] != ""
 	}
 
 	return initConfig, nil
@@ -205,10 +201,12 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.D
 func generateDrivesForm(ctx context.Context, reqClient *req.Client,
 	config types.SM, params types.SM, initConfig *driveutil.DriveInitConfig) error {
 	drives, e := getDrives(ctx, reqClient, config["site"])
-	initConfig.Configured = e == nil
 	if e != nil {
 		log.Println("[OneDrive] Error getting drives:", e)
 		return e
+	}
+	if len(drives) == 0 {
+		return errors.New("no drives")
 	}
 	opts := make([]types.FormItemOption, len(drives))
 	for i, d := range drives {
