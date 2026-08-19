@@ -291,7 +291,7 @@ The following runtime surface is safe to depend on. Refer to the two `.d.ts` fil
 - `DriveCache.PutEntry`, `PutEntries`, and `PutChildren`.
 - `DriveCache.GetEntry` and `GetChildren`; a miss returns `null`.
 - `DriveCache.Evict(path, descendants)` and `EvictAll()`.
-- `__setData(map)` / `__getData(key)`: low-level shared state, normally accessed through `$property`.
+- Cross-VM shared state: assign `$` properties on the instance (`this.$foo = …`).
 - `selfDrive`: the Go wrapper of the current script Drive, with Get/Save/MakeDir/Copy/Move/List/Delete methods.
 
 ### OAuth

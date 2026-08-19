@@ -1,79 +1,57 @@
 /// <reference path="./libs/dayjs.d.ts" />
 
-/** is debug mode on */
+/** Shared APIs for Drive and job scripts (Otto ES5). */
+
+/** Debug mode. */
 declare const DEBUG: boolean;
 
-/** String Map */
+/** String map. */
 declare type SM = { [key: string]: string };
-/** Map */
+/** Object map. */
 declare type M<T = any> = { [key: string]: T };
 
-/**
- * write something to console
- * @param level string
- * @param msg messages
- */
+/** Write to the process console. */
 declare function consoleWrite(level: string, ...msg: any[]): void;
 
-/**
- * Pause for a while
- *
- * Example: `sleep(ms(1000))`
- *
- * @param t duration
- */
+/** Block for `t`. Example: `sleep(ms(1000))`. */
 declare function sleep(t: Duration): void;
 
-/** Creates a new Context */
+/** New Context (`context.Background()`). */
 declare function newContext(): Context;
 
-/** Wraps a Context and cancels it after the timeout.
- *
- * Example: `newContextWithTimeout(newContext(), ms(30 * 1000))`
- *
- * @param parent parent context
- * @param timeout timeout
- * @returns **`Cancel` must be called at the function ends**
+/**
+ * Child Context cancelled after `timeout`.
+ * Call `Cancel()` when finished (success or failure).
  */
 declare function newContextWithTimeout(
   parent: Context,
   timeout: Duration
 ): ContextWithTimeout;
 
-/** The progress callback of TaskCtx */
+/** Task progress callback: `(loaded, total)`. */
 declare type TaskCtxOnUpdate = (loaded: number, total: number) => void;
-/**
- *
- * @param ctx wrapped Context
- * @param onUpdate on progress update callback
- */
+/** Wrap `ctx` as a `TaskCtx`. */
 declare function newTaskCtx(ctx: Context, onUpdate?: TaskCtxOnUpdate): TaskCtx;
 
-/** create a locker */
+/** Mutex. Always `Unlock` in `finally`. */
 declare function newLocker(): Locker;
 
-/** Context of Go */
+/** Go context. */
 declare interface Context {
-  /** Detects error of this Context, such as whether it was cancelled, timed out, etc. Any errors will be thrown */
+  /** Throw if cancelled or timed out. */
   Err(): void;
 }
 
 declare interface ContextWithTimeout extends Context {
-  /** Cancel this Context. Cancel **MUST** be called at the end of the Context's use (whether successful or unsuccessful) */
+  /** Must be called when this Context is no longer used. */
   Cancel(): void;
 }
 
-/** Context wrapper. Used to report operation progress */
+/** Context that can report progress. */
 declare interface TaskCtx extends Context {
-  /**
-   * Report progress
-   * @param abs is absolute value
-   */
+  /** Report loaded bytes. `abs`: absolute vs delta. */
   Progress(loaded: number, abs: boolean): void;
-  /**
-   * Report progress total
-   * @param abs is absolute value
-   */
+  /** Report total bytes. `abs`: absolute vs delta. */
   Total(total: number, abs: boolean): void;
 }
 
@@ -82,94 +60,51 @@ declare interface Locker {
   Unlock(): void;
 }
 
-/**
- * Create a Bytes from string
- * @param s content
- */
+/** Bytes from a string. */
 declare function newBytes(s: string): Bytes;
-/**
- * Create an empty Bytes
- * @param n size
- */
+/** Zeroed Bytes of length `n`. */
 declare function newEmptyBytes(n: number): Bytes;
-/**
- * Creates a temporary file that can be used for reading and writing. It will be deleted after closing
- */
+/** Temp file; deleted on `Close()`. */
 declare function newTempFile(): TempFile;
 
 declare interface Bytes {
-  /**
-   * Returns the size of this Bytes
-   */
   Len(): number;
-  /**
-   * Create a Bytes slice from this Bytes
-   * @param start start position
-   * @param end end position(exclusion)
-   */
+  /** Slice `[start, end)`. */
   Slice(start: number, end: number): Bytes;
-  /**
-   * Converts this Bytes to string
-   */
   String(): string;
 }
 
-/** Wrapper of Go io.Reader */
+/** Go `io.Reader`. */
 declare interface Reader {
-  /**
-   * Read contents into dest Bytes. It reads up to `dest.Len()`.
-   * @param dest the data will be read into
-   * @returns how much data has been read, returns `-1` if no more data
-   */
+  /** Read into `dest` (up to `dest.Len()`). Returns bytes read, or `-1` at EOF. */
   Read(dest: Bytes): number;
-  /**
-   * Read the whole data as string
-   */
   ReadAsString(): string;
-  /**
-   * Creates a Reader that is limited to reading `n` data.
-   *
-   * Typically used to slice Reader
-   */
+  /** Limit remaining reads to `n` bytes. */
   LimitReader(n: number): Reader;
-  /**
-   * Wraps this Reader and reports the progress to `ctx` when it is read
-   */
+  /** Report read progress to `ctx`. */
   ProgressReader(ctx: TaskCtx): Reader;
 }
 
-/** Wrapper of Go io.ReadCloser */
+/** Go `io.ReadCloser`. */
 declare interface ReadCloser extends Reader {
-  /** Close this Reader */
   Close(): void;
 }
 
-/** seek relative to the origin of the file */
+/** Seek from start of file. */
 declare const SEEK_START = 0;
-/** seek relative to the current offset */
+/** Seek from current offset. */
 declare const SEEK_CURRENT = 1;
-/** seek relative to the end */
+/** Seek from end of file. */
 declare const SEEK_END = 2;
 
 declare interface TempFile extends ReadCloser {
-  /** Writes data into this file */
   Write(b: Bytes): void;
-  /** Copy data from `r` into this file */
   CopyFrom(r: Reader): void;
-  /**
-   * Seek sets the offset for the next Read or Write on file to offset, interpreted according to whence:
-   * - `SEEK_START`(`0`) means relative to the origin of the file
-   * - `SEEK_CURRENT`(`1`) means relative to the current offset
-   * - `SEEK_END`(`2`) means relative to the end.
-   *
-   * It returns the new absolute offset.
-   */
+  /** Seek; `whence` is `SEEK_*`. Returns the new absolute offset. */
   SeekTo(offset: number, whence: number): number;
-  /** Returns the current file size in bytes. */
   Size(): number;
 }
 
-/** The EntryType is `file` or `dir` */
 declare type EntryType = "file" | "dir";
 
 declare interface EntryMeta {
@@ -180,16 +115,16 @@ declare interface EntryMeta {
 }
 
 declare interface ContentURL {
-  /** The URL */
   URL: string;
-  /** The Headers passed to when sending request */
+  /** Extra request headers. */
   Header?: SM;
-  /** Is this request have to go through the server proxy */
+  /** Proxy the download through go-drive. */
   Proxy?: boolean;
-  /** Filename used by go-drive for Content-Disposition. Defaults to Entry.Name(). */
+  /** Content-Disposition filename; defaults to the entry name. */
   DownloadFileName?: string;
 }
 
+/** Host Drive API (root Drive in jobs, or `selfDrive` in Drive scripts). */
 declare interface DriveInstance {
   Get(ctx: Context, path: string): DriveEntry;
   Save(
@@ -220,18 +155,17 @@ declare interface DriveEntry {
   Path(): string;
   Name(): string;
   Type(): EntryType;
-  /** Returns the size of this entry. Returns `-1` if not available */
+  /** Size in bytes, or `-1` if unknown. */
   Size(): number;
   Meta(): EntryMeta;
-  /** Last modification time, in milliseconds */
+  /** Last modified, Unix milliseconds. */
   ModTime(): number;
-  /** Get the entry's download URL. It throws `ErrUnsupported` when not supported */
+  /** Throws `ErrUnsupported` if not available. */
   GetURL(ctx: Context): ContentURL;
-  /** Get the Reader of the entry's content. It throws `ErrUnsupported` when not supported */
+  /** Range read. Throws `ErrUnsupported` if not available. */
   GetReader(ctx: Context, start: number, size: number): ReadCloser;
-  /** Returns the wrapped real Entry */
+  /** Underlying entry if this one is wrapped. */
   Unwrap(): DriveEntry;
-  /** Returns the cached data of this entry */
   Data(): SM | null;
   Drive(): DriveInstance;
 }
@@ -247,12 +181,14 @@ declare type HttpMethod =
 
 declare type HttpBody = Reader | string | Bytes | HttpFormData;
 
+/** HTTP response headers. */
 declare interface HttpHeaders {
   Get(key: string): string;
   Values(key: string): string[] | null;
   GetAll(): M<string[]>;
 }
 
+/** multipart/form-data body. */
 declare interface HttpFormData {
   AppendField(key: string, data: string | Bytes): void;
   AppendFile(
@@ -262,22 +198,21 @@ declare interface HttpFormData {
   ): void;
 }
 
-/** HttpResponse must be Disposed after use */
+/** Must call `Dispose()` after use (unless `Text()` already did). */
 declare interface HttpResponse {
   Status: number;
   Headers: HttpHeaders;
   Body: ReadCloser;
-  /** Returns the `Content-Length`, returns `-1` if no `Content-Length` */
+  /** `Content-Length`, or `-1` if missing. */
   BodySize(): number;
-  /** Read the whole body as string. `HttpResponse.Text` will dispose this HttpResponse */
+  /** Read body as string and dispose this response. */
   Text(): string;
   Dispose(): void;
 }
 
-/** Creates a FormData for http request */
 declare function newFormData(): HttpFormData;
 
-/** Sends a HTTP request */
+/** HTTP request. Dispose the response when finished. */
 declare function http(
   ctx: Context,
   method: HttpMethod,
@@ -306,25 +241,24 @@ declare interface FormItemOption {
 }
 
 declare interface FormItemPathOptions {
+  /** Comma-separated picker filter (`file`, `dir`, `.ext`, `write`, `<size`). */
   Filter?: string;
 }
 
 declare interface FormItemForm {
   Key: string;
-  /** Display name */
   Name: string;
   Form: FormItem[];
 }
 
 declare interface FormItemForms {
-  /** The display text of the add button */
   AddText?: string;
-  /** The maximum items count can be added */
   MaxItems?: number;
   Forms: FormItemForm[];
 }
 
 declare interface FormItemCode {
+  /** Highlight language. */
   Type: string;
   TypeSelectable?: boolean;
 }
@@ -334,84 +268,70 @@ declare interface FormItem {
   Type: FormItemType;
   Field: string;
   Required?: boolean;
+  /** Help text; markdown when `Type` is `md`. */
   Description?: string;
   Disabled?: boolean;
-
-  /** for FormItemType select */
+  /** `select` */
   Options?: FormItemOption[];
-
-  /** for FormItemType path */
+  /** `path` */
   PathOptions?: FormItemPathOptions;
-
-  /** for FormItemType form */
+  /** `form` */
   Forms?: FormItemForms;
-
-  /** for FormItemType code */
+  /** `code` */
   Code?: FormItemCode;
-
   DefaultValue?: string;
 }
 
-/** time.Time of Go. Use `dayjs(time.UnixMilli())` to convert this */
+/** Go `time.Time`. Convert with `dayjs(t.UnixMilli())`. */
 declare interface GoTime {
   UnixMilli(): number;
 }
 
-/** Use ms to create Duration */
+/** Go `time.Duration`. Build with `ms()`. */
 declare type Duration = number;
 
-/** millisecond to time.Duration of Go */
+/** Milliseconds → Go duration. */
 declare function ms(ms: number): Duration;
 
 /**
- * Parse a Go duration string (`ms`, `s`, `m`, `h`, optional `d` prefix).
- * Empty input is `0`. Invalid input is `-1`.
+ * Parse a Go duration (`ms`/`s`/`m`/`h`, optional `d` prefix).
+ * Empty → `0`. Invalid → `-1`.
  */
 declare function parseDuration(value?: string): Duration;
 
-/** time.Duration of Go to Date */
 declare function toDate(goTime: GoTime): Date;
 
-/**
- * create a BadRequestError(400)
- */
+/** HTTP 400. */
 declare function ErrBadRequest(msg?: string): Error;
 declare function isBadRequestErr(e: any): boolean;
 
-/**
- * create a NotFoundError(404)
- */
+/** HTTP 404. */
 declare function ErrNotFound(msg?: string): Error;
 declare function isNotFoundErr(e: any): boolean;
 
-/**
- * create a NotAllowedError(403)
- */
+/** HTTP 403. */
 declare function ErrNotAllowed(msg?: string): Error;
 declare function isNotAllowedErr(e: any): boolean;
 
-/**
- * create an UnsupportedError
- */
 declare function ErrUnsupported(msg?: string): Error;
 declare function isUnsupportedErr(e: any): boolean;
 
-/**
- * create a RemoteApiError
- */
+/** Remote HTTP error with status. */
 declare function ErrRemoteApi(status: number, msg: string): Error;
 declare function isRemoteApiErr(e: any): boolean;
 
+/** POSIX-like path helpers (`/` separator, no leading slash). */
 declare const pathUtils: {
   clean: (path: string) => string;
   join: (...segments: string[]) => string;
   parent: (path: string) => string;
   base: (path: string) => string;
-  /** returns lower-case file extension name */
+  /** Lower-case extension without the dot. */
   ext: (path: string) => string;
   isRoot: (path: string) => boolean;
 };
 
+/** Hash algorithm for `encUtils`. */
 declare enum HASH {
   MD5 = 1,
   SHA1 = 2,
@@ -424,6 +344,7 @@ declare interface Hasher {
   Sum(): Bytes;
 }
 
+/** Hex / Base64 / HMAC helpers. */
 declare const encUtils: {
   toHex: (b: Bytes) => string;
   fromHex: (s: string) => Bytes;
@@ -438,15 +359,18 @@ declare const encUtils: {
 declare interface EntryTreeNode {
   Entry: DriveEntry;
   Children?: EntryTreeNode[];
+  /** Filter miss; skipped by `flattenEntriesTree`. */
   Excluded?: boolean;
 }
 
+/** Walk a directory tree. `byteProgress` reports size instead of entry count. */
 declare function buildEntriesTree(
   ctx: TaskCtx,
   entry: DriveEntry,
   byteProgress?: boolean
 ): EntryTreeNode;
 
+/** Glob under `root`. */
 declare function findEntries(
   ctx: TaskCtx,
   root: DriveInstance,
@@ -454,6 +378,7 @@ declare function findEntries(
   bytesProgress?: boolean
 ): DriveEntry[];
 
+/** Flatten a tree. `deepFirst` visits children before the node. */
 declare function flattenEntriesTree(
   node: EntryTreeNode,
   deepFirst?: boolean
