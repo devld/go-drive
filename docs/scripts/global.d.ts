@@ -218,13 +218,25 @@ declare interface HttpResponse {
 
 declare function newFormData(): HttpFormData;
 
-/** HTTP request. Dispose the response when finished. */
+declare interface HttpRequestOptions {
+  headers?: SM;
+  body?: HttpBody;
+}
+
+/**
+ * HTTP request. Dispose the response when finished.
+ *
+ * For a Reader `body`, `Content-Length` is taken from `headers` when present
+ * (the body is truncated to that size). Otherwise a known size is used
+ * (`TempFile` remaining bytes, including `ProgressReader` / `LimitReader`
+ * wrapping one). String and Bytes always use their actual length. FormData is
+ * multipart. Set `Transfer-Encoding: chunked` to skip auto `Content-Length`.
+ */
 declare function http(
   ctx: Context,
   method: HttpMethod,
   url: string,
-  headers?: SM,
-  body?: HttpBody
+  req?: HttpRequestOptions
 ): HttpResponse;
 
 declare type FormItemType =
@@ -347,19 +359,30 @@ declare enum HASH {
 
 declare interface Hasher {
   Write(b: Bytes): Hasher;
+  /**
+   * Hash `r` from the current offset to EOF. Does not close `r`.
+   * Does not seek to the start. To hash a whole TempFile, `SeekTo(0, SEEK_START)` first.
+   * If `r` is seekable (`TempFile`), the original offset is restored afterwards.
+   */
+  WriteReader(r: Reader): Hasher;
   Sum(): Bytes;
 }
 
-/** Hex / Base64 / HMAC helpers. */
+/** Hex / Base64 / HMAC / digest helpers. */
 declare const encUtils: {
   toHex: (b: Bytes) => string;
   fromHex: (s: string) => Bytes;
-  base64Encode: (b: Bytes) => string;
-  base64Decode: (s: string) => Bytes;
-  urlBase64Encode: (b: Bytes) => string;
-  urlBase64Decode: (s: string) => Bytes;
+  /** `padded` defaults to `true`. Pass `false` for raw (no `=`). */
+  base64Encode: (b: Bytes, padded?: boolean) => string;
+  base64Decode: (s: string, padded?: boolean) => Bytes;
+  /** URL-safe Base64. `padded` defaults to `true`; `false` for JWT / PKCE. */
+  urlBase64Encode: (b: Bytes, padded?: boolean) => string;
+  urlBase64Decode: (s: string, padded?: boolean) => Bytes;
+  /** Cryptographically random bytes. `n` must be in `[0, 1MiB]`. */
+  randomBytes: (n: number) => Bytes;
   newHash: (h: HASH) => Hasher;
-  hmac: (h: HASH, payload: Bytes, key: Bytes) => Bytes;
+  /** Streaming HMAC; `Write` / `WriteReader` / `Sum` like `newHash`. */
+  newHmac: (h: HASH, key: Bytes) => Hasher;
 };
 
 declare interface EntryTreeNode {

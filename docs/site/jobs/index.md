@@ -96,8 +96,9 @@ cp('incoming/**/*.jpg', 'archive', true)
 var ctx = newContextWithTimeout(newContext(), ms(10000))
 try {
   var resp = http(ctx, 'POST', 'https://example.com/hook', {
-    'content-type': 'application/json'
-  }, JSON.stringify($event))
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify($event)
+  })
   try {
     log('webhook: ' + resp.Status)
   } finally {

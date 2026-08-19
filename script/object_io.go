@@ -133,11 +133,124 @@ func (r Reader) ReadAsString() string {
 }
 
 func (r Reader) LimitReader(n int64) Reader {
-	return NewReader(r.vm, io.LimitReader(r.r, n))
+	limited := io.LimitReader(r.r, n)
+	if f, ok := underlyingFile(r.r); ok {
+		return NewReader(r.vm, limitedFileReader{r: limited, f: f, limit: n})
+	}
+	if k := readerKnownLength(r.r); k >= 0 {
+		if k > n {
+			k = n
+		}
+		return NewReader(r.vm, fixedLengthReader{r: limited, n: k})
+	}
+	return NewReader(r.vm, limited)
 }
 
 func (r Reader) ProgressReader(ctx any) Reader {
-	return NewReader(r.vm, driveutil.ProgressReader(r.r, GetTaskCtx(ctx)))
+	return wrapPreservingLength(r.vm, driveutil.ProgressReader(r.r, GetTaskCtx(ctx)), r.r)
+}
+
+type contentLengthReader interface {
+	ContentLength() int64
+}
+
+type fixedLengthReader struct {
+	r io.Reader
+	n int64
+}
+
+func (f fixedLengthReader) Read(p []byte) (int, error) {
+	return f.r.Read(p)
+}
+
+func (f fixedLengthReader) ContentLength() int64 {
+	return f.n
+}
+
+type sizedFileReader struct {
+	r io.Reader
+	f *os.File
+}
+
+func (s sizedFileReader) Read(p []byte) (int, error) {
+	return s.r.Read(p)
+}
+
+func (s sizedFileReader) ContentLength() int64 {
+	return remainingFileSize(s.f)
+}
+
+type limitedFileReader struct {
+	r     io.Reader
+	f     *os.File
+	limit int64
+}
+
+func (l limitedFileReader) Read(p []byte) (int, error) {
+	return l.r.Read(p)
+}
+
+func (l limitedFileReader) ContentLength() int64 {
+	rem := remainingFileSize(l.f)
+	if rem < 0 {
+		return -1
+	}
+	if rem > l.limit {
+		return l.limit
+	}
+	return rem
+}
+
+func wrapPreservingLength(vm *VM, wrapped, orig io.Reader) Reader {
+	if f, ok := underlyingFile(orig); ok {
+		return NewReader(vm, sizedFileReader{r: wrapped, f: f})
+	}
+	if n := readerKnownLength(orig); n >= 0 {
+		return NewReader(vm, fixedLengthReader{r: wrapped, n: n})
+	}
+	return NewReader(vm, wrapped)
+}
+
+func underlyingFile(r io.Reader) (*os.File, bool) {
+	if f, ok := r.(*os.File); ok {
+		return f, true
+	}
+	if s, ok := r.(sizedFileReader); ok {
+		return s.f, true
+	}
+	if l, ok := r.(limitedFileReader); ok {
+		return l.f, true
+	}
+	return nil, false
+}
+
+func remainingFileSize(f *os.File) int64 {
+	off, e := f.Seek(0, io.SeekCurrent)
+	if e != nil {
+		return -1
+	}
+	info, e := f.Stat()
+	if e != nil {
+		return -1
+	}
+	n := info.Size() - off
+	if n < 0 {
+		return 0
+	}
+	return n
+}
+
+func readerKnownLength(r io.Reader) int64 {
+	if r == nil {
+		return -1
+	}
+	if cl, ok := r.(contentLengthReader); ok {
+		return cl.ContentLength()
+	}
+	if f, ok := r.(*os.File); ok {
+		return remainingFileSize(f)
+	}
+	return -1
 }
 
 type ReadCloser struct {

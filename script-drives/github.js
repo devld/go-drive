@@ -403,7 +403,7 @@ function request(drive, ctx, method, path) {
     headers.Authorization = "Bearer " + drive.token;
   }
   if (DEBUG) console.log("http", method, path);
-  return http(ctx, method, API_BASE + path, headers, null);
+  return http(ctx, method, API_BASE + path, { headers: headers });
 }
 
 /**
