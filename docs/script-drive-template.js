@@ -53,8 +53,6 @@ defineDrive(
       entryCacheTTLFormItem("2h"),
     ],
 
-    // This is the dynamic, native-style initialization step. OAuthInitConfig
-    // also returns Configured and OAuth information for the admin UI.
     initConfig: function (ctx, config, utils) {
       var result = utils.OAuthInitConfig(
         oauthRequest(utils),
@@ -63,7 +61,6 @@ defineDrive(
       return result.Config;
     },
 
-    // The OAuth callback data is passed here by the standard Drive init API.
     init: function (ctx, data, config, utils) {
       utils.OAuthInit(
         ctx,
@@ -76,7 +73,7 @@ defineDrive(
     createInstance: function (ctx, config, utils) {
       return {
         entryCacheTTL: config.cache_ttl,
-        oauth: utils.OAuthGet(oauthRequest(utils), oauthCredentials(config)),
+        oauth: utils.OAuthLoad(oauthRequest(utils), oauthCredentials(config)),
       };
     },
   },

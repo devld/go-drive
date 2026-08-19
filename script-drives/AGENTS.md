@@ -180,7 +180,7 @@ Define the adapter with `defineDrive(setup, methods)`.
 
 `init(ctx, data, config, utils)` is optional and receives the submitted dynamic data. It is responsible for saving dynamic values with `utils.Data.Save`, or for calling the low-level OAuth helpers. Empty strings are passed through unchanged; saving an empty string clears that key from the data store.
 
-OAuth is explicit: call `utils.OAuthInitConfig`, `utils.OAuthInit`, and `utils.OAuthGet` from these callbacks or from `createInstance`. There is no automatic OAuth request/principal hook.
+OAuth is explicit: call `utils.OAuthInitConfig`, `utils.OAuthInit`, and `utils.OAuthLoad` from `initConfig` / `init` / `createInstance`. There is no automatic OAuth request/principal hook. See `dropbox.js`.
 
 `validateConfig(config)` runs before `createInstance` and validates the static config.
 
@@ -296,14 +296,14 @@ The following runtime surface is safe to depend on. Refer to the two `.d.ts` fil
 
 ### OAuth
 
-- `utils.OAuthInitConfig(request, credentials)`: produce a configuration/OAuth step and possibly an existing authorization response.
+- `utils.OAuthInitConfig(request, credentials)`: produce a configuration/OAuth step and possibly an existing `OAuthHolder`.
 - `utils.OAuthInit(ctx, data, request, credentials)`: handle the OAuth callback during initialization.
-- `utils.OAuthGet(request, credentials)`: construct the runtime response wrapper.
-- `OAuthResponse.Token()`: retrieve an automatically refreshed token.
+- `utils.OAuthLoad(request, credentials)`: construct the runtime `OAuthHolder` from a stored token.
+- `OAuthHolder.Token(ctx)`: retrieve an automatically refreshed token. `ctx` is required; refresh uses it.
 - An OAuth request contains Endpoint, RedirectURL, Scopes, and Text; credentials contain ClientID and ClientSecret.
 - Endpoint authentication styles are `OAuthStyle.AutoDetect`, `InParams`, and `InHeader`. Prefer auto-detection unless the provider requires otherwise.
 
-Follow the complete sequence in `dropbox.js`. Do not persist OAuth state manually or duplicate refresh-token logic.
+Follow `dropbox.js`. Do not persist OAuth state manually or duplicate refresh-token logic.
 
 ### HTTP
 

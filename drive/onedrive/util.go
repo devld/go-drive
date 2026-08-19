@@ -106,7 +106,7 @@ func itemPath(path string) string {
 
 func InitConfig(ctx context.Context, config types.SM,
 	driveUtils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
-	initConfig, resp, e := driveutil.OAuthInitConfig(*oauthReq(driveUtils.Config, config),
+	initConfig, oauthHolder, e := driveutil.OAuthInitConfig(*oauthReq(driveUtils.Config, config),
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
@@ -114,10 +114,10 @@ func InitConfig(ctx context.Context, config types.SM,
 	if e != nil {
 		return nil, e
 	}
-	if resp == nil {
+	if oauthHolder == nil {
 		return initConfig, nil
 	}
-	reqClient, e := req.NewClient("", nil, ifApiCallError, resp.Client())
+	reqClient, e := req.NewClient("", nil, ifApiCallError, oauthHolder.Client())
 	if e != nil {
 		return nil, e
 	}
@@ -157,7 +157,7 @@ func InitConfig(ctx context.Context, config types.SM,
 
 func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.DriveUtils) error {
 	oReq := *oauthReq(utils.Config, config)
-	resp, e := driveutil.OAuthInit(ctx, oReq, data,
+	oauthHolder, e := driveutil.OAuthInit(ctx, oReq, data,
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
@@ -170,8 +170,8 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.D
 
 	sharePointURL := config["share_point"]
 	if sharePointURL != "" {
-		if resp == nil {
-			resp, e = driveutil.OAuthGet(oReq,
+		if oauthHolder == nil {
+			oauthHolder, e = driveutil.OAuthLoad(oReq,
 				driveutil.OAuthCredentials{
 					ClientID:     config["client_id"],
 					ClientSecret: config["client_secret"],
@@ -181,7 +181,7 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.D
 			}
 		}
 
-		reqClient, e := req.NewClient("", nil, ifApiCallError, resp.Client())
+		reqClient, e := req.NewClient("", nil, ifApiCallError, oauthHolder.Client())
 		if e != nil {
 			return e
 		}

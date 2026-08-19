@@ -39,29 +39,57 @@ type OAuthRequest struct {
 	AutoCodeOption []oauth2.AuthCodeOption
 }
 
-type OAuthResponse struct {
-	ts oauth2.TokenSource
+// OAuthHolder holds a drive's persisted OAuth token and refreshes it as needed.
+type OAuthHolder struct {
+	conf *oauth2.Config
+	ds   DriveDataStore
+
+	mu sync.Mutex
+	t  *oauth2.Token
 }
 
-func newOAuthResponse(config *oauth2.Config, ds DriveDataStore, token *oauth2.Token) *OAuthResponse {
-	ts := &tokenSource{
-		ts: config.TokenSource(context.Background(), token),
-		ds: ds,
-		mu: sync.Mutex{},
+func newOAuthHolder(config *oauth2.Config, ds DriveDataStore, token *oauth2.Token) *OAuthHolder {
+	return &OAuthHolder{conf: config, ds: ds, t: token}
+}
+
+func (o *OAuthHolder) Client() *http.Client {
+	return &http.Client{Transport: &oauthTransport{o: o}}
+}
+
+func (o *OAuthHolder) Token(ctx context.Context) (*oauth2.Token, error) {
+	if ctx == nil {
+		panic("driveutil.OAuthHolder.Token: nil context")
 	}
-	return &OAuthResponse{ts}
+
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	if o.t.Valid() {
+		tok := *o.t
+		return &tok, nil
+	}
+
+	newTok, e := o.conf.TokenSource(ctx, o.t).Token()
+	if e != nil {
+		return nil, e
+	}
+	if e := o.persistLocked(newTok); e != nil {
+		return nil, e
+	}
+	tok := *newTok
+	return &tok, nil
 }
 
-func (o *OAuthResponse) Client() *http.Client {
-	return oauth2.NewClient(context.Background(), o.TokenSource())
-}
-
-func (o *OAuthResponse) TokenSource() oauth2.TokenSource {
-	return o.ts
-}
-
-func (o *OAuthResponse) Token() (*oauth2.Token, error) {
-	return o.ts.Token()
+func (o *OAuthHolder) persistLocked(token *oauth2.Token) error {
+	changed := o.t == nil ||
+		o.t.AccessToken != token.AccessToken ||
+		(token.RefreshToken != "" && token.RefreshToken != o.t.RefreshToken)
+	copied := *token
+	o.t = &copied
+	if !changed {
+		return nil
+	}
+	return storeToken(o.ds, token)
 }
 
 func oAuthConfig(o OAuthRequest, cred OAuthCredentials) *oauth2.Config {
@@ -75,7 +103,7 @@ func oAuthConfig(o OAuthRequest, cred OAuthCredentials) *oauth2.Config {
 }
 
 func OAuthInitConfig(o OAuthRequest, cred OAuthCredentials,
-	ds DriveDataStore) (*DriveInitConfig, *OAuthResponse, error) {
+	ds DriveDataStore) (*DriveInitConfig, *OAuthHolder, error) {
 
 	c := oAuthConfig(o, cred)
 	t := loadToken(ds)
@@ -93,16 +121,16 @@ func OAuthInitConfig(o OAuthRequest, cred OAuthCredentials,
 		},
 	}
 
-	var resp *OAuthResponse
+	var oauthHolder *OAuthHolder
 	if t != nil {
-		resp = newOAuthResponse(c, ds, t)
+		oauthHolder = newOAuthHolder(c, ds, t)
 	}
 
-	return initConfig, resp, nil
+	return initConfig, oauthHolder, nil
 }
 
 func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
-	cred OAuthCredentials, ds DriveDataStore) (*OAuthResponse, error) {
+	cred OAuthCredentials, ds DriveDataStore) (*OAuthHolder, error) {
 	code := data[DsKeyCode]
 	state := data[DsKeyState]
 
@@ -123,15 +151,15 @@ func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
 	if e != nil {
 		return nil, e
 	}
-	return newOAuthResponse(oauthConf, ds, t), storeToken(ds, t)
+	return newOAuthHolder(oauthConf, ds, t), storeToken(ds, t)
 }
 
-func OAuthGet(o OAuthRequest, cred OAuthCredentials, ds DriveDataStore) (*OAuthResponse, error) {
+func OAuthLoad(o OAuthRequest, cred OAuthCredentials, ds DriveDataStore) (*OAuthHolder, error) {
 	t := loadToken(ds)
 	if t == nil {
 		return nil, err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
 	}
-	return newOAuthResponse(oAuthConfig(o, cred), ds, t), nil
+	return newOAuthHolder(oAuthConfig(o, cred), ds, t), nil
 }
 
 func loadToken(ds DriveDataStore) *oauth2.Token {
@@ -164,39 +192,31 @@ func storeToken(ds DriveDataStore, token *oauth2.Token) error {
 	})
 }
 
-type tokenSource struct {
-	ts oauth2.TokenSource
-	// t is used to store current token value
-	t oauth2.Token
-
-	ds DriveDataStore
-	mu sync.Mutex
+type oauthTransport struct {
+	base http.RoundTripper
+	o    *OAuthHolder
 }
 
-func (t *tokenSource) storeToken(token *oauth2.Token) error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	if t.t.AccessToken != token.AccessToken ||
-		(token.RefreshToken != "" && token.RefreshToken != t.t.RefreshToken) {
-		t.t = *token
-		if e := storeToken(t.ds, token); e != nil {
-			return e
-		}
+func (t *oauthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	reqBodyClosed := false
+	if req.Body != nil {
+		defer func() {
+			if !reqBodyClosed {
+				_ = req.Body.Close()
+			}
+		}()
 	}
 
-	return nil
-}
-
-func (t *tokenSource) Token() (*oauth2.Token, error) {
-	token, e := t.ts.Token()
+	tok, e := t.o.Token(req.Context())
 	if e != nil {
 		return nil, e
 	}
-
-	if e := t.storeToken(token); e != nil {
-		return nil, e
+	req2 := req.Clone(req.Context())
+	tok.SetAuthHeader(req2)
+	reqBodyClosed = true
+	base := t.base
+	if base == nil {
+		base = http.DefaultTransport
 	}
-
-	return token, nil
+	return base.RoundTrip(req2)
 }

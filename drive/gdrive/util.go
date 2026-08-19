@@ -52,7 +52,7 @@ func oauthReq(c common.Config) *driveutil.OAuthRequest {
 
 func InitConfig(ctx context.Context, config types.SM,
 	utils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
-	initConfig, resp, e := driveutil.OAuthInitConfig(*oauthReq(utils.Config),
+	initConfig, oauthHolder, e := driveutil.OAuthInitConfig(*oauthReq(utils.Config),
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
@@ -60,10 +60,10 @@ func InitConfig(ctx context.Context, config types.SM,
 	if e != nil {
 		return nil, e
 	}
-	if resp == nil {
+	if oauthHolder == nil {
 		return initConfig, nil
 	}
-	httpClient := resp.Client()
+	httpClient := oauthHolder.Client()
 	service, e := gOauth.NewService(ctx, option.WithHTTPClient(httpClient))
 	if e != nil {
 		return nil, e
@@ -74,7 +74,7 @@ func InitConfig(ctx context.Context, config types.SM,
 	initConfig.Configured = e == nil
 	if e == nil {
 		initConfig.OAuth.Principal = user.Name
-		if e := buildInitForm(ctx, resp, utils, initConfig); e != nil {
+		if e := buildInitForm(ctx, oauthHolder, utils, initConfig); e != nil {
 			return nil, e
 		}
 	}
@@ -82,10 +82,10 @@ func InitConfig(ctx context.Context, config types.SM,
 	return initConfig, nil
 }
 
-func buildInitForm(ctx context.Context, resp *driveutil.OAuthResponse,
+func buildInitForm(ctx context.Context, oauthHolder *driveutil.OAuthHolder,
 	driveUtils driveutil.DriveUtils, initConfig *driveutil.DriveInitConfig) error {
 	// get shared drives
-	driveSrv, e := drive.NewService(ctx, option.WithHTTPClient(resp.Client()))
+	driveSrv, e := drive.NewService(ctx, option.WithHTTPClient(oauthHolder.Client()))
 	if e != nil {
 		return e
 	}

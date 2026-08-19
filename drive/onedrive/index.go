@@ -65,7 +65,7 @@ type OneDrive struct {
 
 func NewOneDrive(_ context.Context, config types.SM,
 	driveUtils driveutil.DriveUtils) (types.IDrive, error) {
-	resp, e := driveutil.OAuthGet(*oauthReq(driveUtils.Config, config),
+	oauthHolder, e := driveutil.OAuthLoad(*oauthReq(driveUtils.Config, config),
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
@@ -105,7 +105,7 @@ func NewOneDrive(_ context.Context, config types.SM,
 		reqPrefix = site.ApiBase + "/me/drive"
 	}
 
-	od.c, e = req.NewClient(reqPrefix, nil, ifApiCallError, resp.Client())
+	od.c, e = req.NewClient(reqPrefix, nil, ifApiCallError, oauthHolder.Client())
 	od.reqPrefix = reqPrefix
 
 	return od, e
