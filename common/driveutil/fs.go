@@ -15,8 +15,8 @@ import (
 	"time"
 )
 
-func NewDriveFS(d types.IDrive, tempDir string, cfp *CacheFilePool) (*DriveFS, error) {
-	return &DriveFS{d, tempDir, cfp}, nil
+func NewDriveFS(ctx context.Context, d types.IDrive, tempDir string, cfp *CacheFilePool) (*DriveFS, error) {
+	return &DriveFS{drive: d, tempDir: tempDir, cfp: cfp, ctx: ctx}, nil
 }
 
 type DriveFSFile interface {
@@ -33,6 +33,8 @@ type DriveFS struct {
 	tempDir string
 
 	cfp *CacheFilePool
+	// ctx is used by Open/ReadDir, which implement fs.FS and have no context argument.
+	ctx context.Context
 }
 
 func (w *DriveFS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
@@ -44,7 +46,7 @@ func (w *DriveFS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 }
 
 func (w *DriveFS) Open(name string) (fs.File, error) {
-	r, e := w.OpenFile(context.Background(), name, os.O_RDONLY, 0644)
+	r, e := w.OpenFile(w.ctx, name, os.O_RDONLY, 0644)
 	if e != nil {
 		if err.IsNotFoundError(e) {
 			e = os.ErrNotExist
@@ -66,7 +68,7 @@ func (w *DriveFS) OpenFile(ctx context.Context, name string, flag int, _ os.File
 	}
 
 	if e == nil && entry.Type().IsDir() {
-		return w.newDriveFSFile(entry, flag), nil
+		return w.newDriveFSFile(ctx, entry, flag), nil
 	}
 
 	if e == nil && flag&os.O_EXCL != 0 {
@@ -83,12 +85,12 @@ func (w *DriveFS) OpenFile(ctx context.Context, name string, flag int, _ os.File
 		}
 	}
 
-	return w.newDriveFSFile(entry, flag), nil
+	return w.newDriveFSFile(ctx, entry, flag), nil
 }
 
 func (w *DriveFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	name = utils.CleanPath(name)
-	entries, e := w.drive.List(context.Background(), name)
+	entries, e := w.drive.List(w.ctx, name)
 	if e != nil {
 		return nil, mapError(e)
 	}
@@ -119,13 +121,14 @@ func (w *DriveFS) Rename(ctx context.Context, oldName, newName string) error {
 	return mapError(e)
 }
 
-func (w *DriveFS) newDriveFSFile(e types.IEntry, flag int) *driveFSFile {
+func (w *DriveFS) newDriveFSFile(ctx context.Context, e types.IEntry, flag int) *driveFSFile {
 	var seekPos int64 = 0
 	if flag&os.O_APPEND != 0 {
 		seekPos = e.Size()
 	}
 	return &driveFSFile{
 		fs:       w,
+		ctx:      ctx,
 		e:        e,
 		seekPos:  seekPos,
 		mu:       sync.Mutex{},
@@ -135,7 +138,8 @@ func (w *DriveFS) newDriveFSFile(e types.IEntry, flag int) *driveFSFile {
 }
 
 type driveFSFile struct {
-	fs *DriveFS
+	fs  *DriveFS
+	ctx context.Context
 
 	e      types.IEntry
 	file   *os.File
@@ -178,7 +182,7 @@ func (w *driveFSFile) Close() error {
 		if e != nil {
 			return e
 		}
-		_, e = w.e.Drive().Save(task.NewContextWrapper(context.Background()),
+		_, e = w.e.Drive().Save(task.NewContextWrapper(w.ctx),
 			w.e.Path(), stat.Size(), true, file)
 		if e != nil {
 			return e
@@ -208,7 +212,7 @@ func (w *driveFSFile) getFile() error {
 		}
 		reader, e := w.fs.cfp.GetReader(cacheKey, w.e.Size(),
 			func(start, size int64) (io.ReadCloser, error) {
-				return GetIContentReader(context.Background(), w.e, start, size)
+				return GetIContentReader(w.ctx, w.e, start, size)
 			},
 		)
 		if e != nil {
@@ -231,7 +235,7 @@ func (w *driveFSFile) getFile() error {
 		}
 		file = tempFile
 	} else {
-		tempFile, e := CopyIContentToTempFile(task.NewContextWrapper(context.Background()), w.e, w.tempDir)
+		tempFile, e := CopyIContentToTempFile(task.NewContextWrapper(w.ctx), w.e, w.tempDir)
 		if e != nil {
 			return e
 		}
@@ -307,7 +311,7 @@ func (w *driveFSFile) Readdir(count int) ([]fs.FileInfo, error) {
 		return nil, os.ErrInvalid
 	}
 	if w.children == nil {
-		entries, e := w.e.Drive().List(context.Background(), w.e.Path())
+		entries, e := w.e.Drive().List(w.ctx, w.e.Path())
 		if e != nil {
 			return nil, mapError(e)
 		}
