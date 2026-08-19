@@ -2,11 +2,15 @@ package script
 
 import (
 	"bytes"
+	"fmt"
 	gReq "go-drive/common/req"
+	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 var httpClient, _ = gReq.NewClient("", nil, nil, nil)
@@ -28,13 +32,46 @@ func newHTTPRequestBody(r io.Reader, n int64, typ string) gReq.RequestBody {
 	return &httpRequestBody{r: r, n: n, typ: typ}
 }
 
-// vm_http: (ctx Context, method, url string, headers types.SM, body any) *httpResponse
+func headerValue(headers types.SM, name string) (string, bool) {
+	for k, v := range headers {
+		if strings.EqualFold(k, name) {
+			return v, true
+		}
+	}
+	return "", false
+}
+
+func readerBodyLength(headers types.SM, r io.Reader) (int64, error) {
+	if te, ok := headerValue(headers, "Transfer-Encoding"); ok && strings.Contains(strings.ToLower(te), "chunked") {
+		return -1, nil
+	}
+	if raw, ok := headerValue(headers, "Content-Length"); ok && raw != "" {
+		n, e := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+		if e != nil || n < 0 {
+			return 0, fmt.Errorf("invalid Content-Length")
+		}
+		return n, nil
+	}
+	return readerKnownLength(r), nil
+}
+
+// vm_http: (ctx, method, url, { headers, body }?) *httpResponse
 func vm_http(vm *VM, args Values) any {
 	ctx := args.Get(0).Raw()
 	method := args.Get(1).String()
 	url := args.Get(2).String()
-	headers := args.Get(3).SM()
-	body := args.Get(4).Raw()
+	opt := args.Get(3)
+
+	var headers types.SM
+	var body any
+	if !opt.IsNil() {
+		if h := opt.Get("headers"); h != nil && !h.IsNil() {
+			headers = h.SM()
+		}
+		if b := opt.Get("body"); b != nil && !b.IsNil() {
+			body = b.Raw()
+		}
+	}
 
 	var reqBody gReq.RequestBody
 	var errChan chan error
@@ -44,7 +81,14 @@ func vm_http(vm *VM, args Values) any {
 			b := []byte(str)
 			reqBody = newHTTPRequestBody(bytes.NewReader(b), int64(len(b)), "")
 		} else if vr := GetReader(body); vr != nil {
-			reqBody = newHTTPRequestBody(vr, -1, "")
+			n, e := readerBodyLength(headers, vr)
+			if e != nil {
+				vm.ThrowError(e)
+			}
+			if n >= 0 {
+				vr = io.LimitReader(vr, n)
+			}
+			reqBody = newHTTPRequestBody(vr, n, "")
 		} else if b := GetBytes(body); b != nil {
 			reqBody = newHTTPRequestBody(bytes.NewReader(b), int64(len(b)), "")
 		} else if fd, ok := body.(*formData); ok {

@@ -184,7 +184,9 @@ var encUtils = Object.freeze({
   base64Decode: __encBase64Decode__,
   urlBase64Encode: __encURLBase64Encode__,
   urlBase64Decode: __encURLBase64Decode__,
+  randomBytes: __randomBytes__,
   newHash: __newHash__,
+  newHmac: __newHmac__,
   hmac: __hmac__,
 });
 

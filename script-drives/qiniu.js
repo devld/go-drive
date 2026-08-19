@@ -212,7 +212,7 @@ function saveSmall(drive, ctx, path, reader) {
   );
   data.AppendFile("file", pathUtils.base(path), reader);
 
-  var resp = http(ctx, "POST", drive.uploadURL, null, data);
+  var resp = http(ctx, "POST", drive.uploadURL, { body: data });
   var respData = resp.Text();
   try {
     respData = JSON.parse(respData);
@@ -288,7 +288,7 @@ function request(drive, ctx, method, url, headers, body) {
   if (DEBUG) {
     console.log("[HTTP REQ]", method, url, JSON.stringify(headers), body);
   }
-  var r = http(ctx, method, url, headers, body);
+  var r = http(ctx, method, url, { headers: headers, body: body });
 
   var isJSON =
     r.Headers.Get("Content-Type").toLowerCase().indexOf("application/json") >=
