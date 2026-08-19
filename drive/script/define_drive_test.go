@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +14,8 @@ import (
 	"go-drive/common/task"
 	"go-drive/common/types"
 	s "go-drive/script"
+
+	"golang.org/x/oauth2"
 )
 
 type memDriveData struct {
@@ -495,4 +498,66 @@ func newTestScriptDrive(t *testing.T, js string, data types.SM, cacheMgr *driveu
 		MaxTotal: 4, MaxIdle: 2, MinIdle: 0, IdleTime: time.Minute,
 	})
 	return d
+}
+
+func TestOAuthHolderTokenAcceptsTaskCtx(t *testing.T) {
+	ds := &memDriveData{}
+	expiry := time.Now().Add(time.Hour).Unix()
+	if e := ds.Save(types.SM{
+		driveutil.DsKeyToken:     "access",
+		driveutil.DsKeyTokenType: "Bearer",
+		driveutil.DsKeyExpiresAt: strconv.FormatInt(expiry, 10),
+	}); e != nil {
+		t.Fatal(e)
+	}
+	holder := testDriveUtils(ds).OAuthLoad(driveutil.OAuthRequest{
+		Endpoint: oauth2.Endpoint{TokenURL: "http://127.0.0.1:1/unused"},
+	}, driveutil.OAuthCredentials{ClientID: "id", ClientSecret: "secret"})
+
+	vm := baseVM.Fork()
+	t.Cleanup(func() { _ = vm.Dispose() })
+	vm.Set("holder", holder)
+	vm.Set("plainCtx", s.NewContext(vm, context.Background()))
+	vm.Set("taskCtx", s.NewTaskCtx(vm, task.DummyContext()))
+
+	v, e := vm.Run(context.Background(), `holder.Token(plainCtx).AccessToken`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if v.String() != "access" {
+		t.Fatalf("Context token = %q", v.String())
+	}
+
+	v, e = vm.Run(context.Background(), `holder.Token(taskCtx).AccessToken`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if v.String() != "access" {
+		t.Fatalf("TaskCtx token = %q", v.String())
+	}
+
+	v, e = vm.Run(context.Background(), `
+		var tctx = newContextWithTimeout(newContext(), ms(10000));
+		var token = holder.Token(tctx).AccessToken;
+		tctx.Cancel();
+		token
+	`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if v.String() != "access" {
+		t.Fatalf("timeout Context token = %q", v.String())
+	}
+}
+
+func TestOAuthInitAcceptsTaskCtx(t *testing.T) {
+	vm := baseVM.Fork()
+	t.Cleanup(func() { _ = vm.Dispose() })
+	vm.Set("utils", testDriveUtils(&memDriveData{}))
+	vm.Set("taskCtx", s.NewTaskCtx(vm, task.DummyContext()))
+	if _, e := vm.Run(context.Background(), `
+		utils.OAuthInit(taskCtx, {}, { Endpoint: {} }, { ClientID: "id", ClientSecret: "secret" });
+	`); e != nil {
+		t.Fatal(e)
+	}
 }

@@ -2,6 +2,8 @@ package script
 
 import (
 	"context"
+
+	"go-drive/common/task"
 	"go-drive/common/types"
 )
 
@@ -13,22 +15,43 @@ func NewTaskCtx(vm *VM, c types.TaskCtx) TaskCtx {
 	return TaskCtx{NewContext(vm, c), c}
 }
 
-func GetContext(v any) context.Context {
+func scriptContext(v any) (Context, bool) {
 	switch v := v.(type) {
 	case Context:
-		return v.v
+		return v, true
+	case *Context:
+		if v != nil {
+			return *v, true
+		}
 	case TaskCtx:
-		return v.v
+		return v.Context, true
+	case *TaskCtx:
+		if v != nil {
+			return v.Context, true
+		}
+	case contextWithTimeout:
+		return v.Context, true
+	case *contextWithTimeout:
+		if v != nil {
+			return v.Context, true
+		}
+	}
+	return Context{}, false
+}
+
+func GetContext(v any) context.Context {
+	if c, ok := scriptContext(v); ok {
+		return c.v
+	}
+	if c, ok := v.(context.Context); ok {
+		return c
 	}
 	return nil
 }
 
 func GetVM(v any) *VM {
-	switch v := v.(type) {
-	case Context:
-		return v.vm
-	case TaskCtx:
-		return v.vm
+	if c, ok := scriptContext(v); ok {
+		return c.vm
 	}
 	return nil
 }
@@ -37,8 +60,19 @@ func GetTaskCtx(v any) types.TaskCtx {
 	switch v := v.(type) {
 	case TaskCtx:
 		return v.v
+	case *TaskCtx:
+		if v != nil {
+			return v.v
+		}
 	}
-	return nil
+	c := GetContext(v)
+	if c == nil {
+		return nil
+	}
+	if tc, ok := c.(types.TaskCtx); ok {
+		return tc
+	}
+	return task.NewContextWrapper(c)
 }
 
 type Context struct {

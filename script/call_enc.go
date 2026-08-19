@@ -124,8 +124,8 @@ type Hasher struct {
 	s  hash.Hash
 }
 
-func (h Hasher) Write(b Bytes) Hasher {
-	_, _ = h.s.Write(b.b)
+func (h Hasher) Write(b any) Hasher {
+	_, _ = h.s.Write(bytesArg(h.vm, b, "Write requires Bytes"))
 	return h
 }
 

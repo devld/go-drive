@@ -21,9 +21,12 @@ func vm_newContext(vm *VM, args Values) any {
 // vm_newContextWithTimeout: (parent Context, timeout time.Duration) contextWithTimeout
 func vm_newContextWithTimeout(vm *VM, args Values) any {
 	parent := GetContext(args.Get(0).Raw())
+	if parent == nil {
+		vm.ThrowTypeError("newContextWithTimeout requires a Context")
+	}
 	timeout := time.Duration(args.Get(1).Integer())
-	ctx, cancel := context.WithTimeout(GetContext(parent), timeout)
-	cwt := contextWithTimeout{NewContext(vm, ctx), cancel}
+	ctx, cancel := context.WithTimeout(parent, timeout)
+	cwt := &contextWithTimeout{NewContext(vm, ctx), cancel}
 	vm.PutDisposable(cwt)
 	return cwt
 }
@@ -84,7 +87,10 @@ type contextWithTimeout struct {
 	Cancel  func()
 }
 
-func (cwt contextWithTimeout) Dispose() {
+func (cwt *contextWithTimeout) Dispose() {
+	if cwt == nil {
+		return
+	}
 	cwt.Context.vm.RemoveDisposable(cwt)
 	cwt.Cancel()
 }

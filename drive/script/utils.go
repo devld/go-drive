@@ -318,10 +318,14 @@ func (sdu *scriptDriveUtils) OAuthInitConfig(or driveutil.OAuthRequest,
 	return &oauthInitConfigResult{c, wrapped}
 }
 
-func (sdu *scriptDriveUtils) OAuthInit(ctx s.Context,
+func (sdu *scriptDriveUtils) OAuthInit(ctx any,
 	data types.SM, or driveutil.OAuthRequest,
 	cred driveutil.OAuthCredentials) *oauthHolderWrapper {
-	oauthHolder, e := driveutil.OAuthInit(s.GetContext(ctx), or, data, cred, sdu.Data.data)
+	c := s.GetContext(ctx)
+	if c == nil {
+		s.ThrowDetachedError(errors.New("OAuthInit requires a context"))
+	}
+	oauthHolder, e := driveutil.OAuthInit(c, or, data, cred, sdu.Data.data)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}
@@ -370,7 +374,7 @@ type oauthHolderWrapper struct {
 	oauthHolder *driveutil.OAuthHolder
 }
 
-func (or *oauthHolderWrapper) Token(ctx s.Context) *oauth2.Token {
+func (or *oauthHolderWrapper) Token(ctx any) *oauth2.Token {
 	c := s.GetContext(ctx)
 	if c == nil {
 		s.ThrowDetachedError(errors.New("OAuthHolder.Token requires a context"))

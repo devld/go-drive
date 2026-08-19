@@ -84,7 +84,24 @@ func GetBytes(v any) []byte {
 	switch v := v.(type) {
 	case Bytes:
 		return v.b
+	case *Bytes:
+		if v != nil {
+			return v.b
+		}
 	}
+	return nil
+}
+
+func bytesArg(vm *VM, v any, what string) []byte {
+	switch b := v.(type) {
+	case Bytes:
+		return b.b
+	case *Bytes:
+		if b != nil {
+			return b.b
+		}
+	}
+	vm.ThrowTypeError(what)
 	return nil
 }
 
@@ -110,8 +127,9 @@ type Reader struct {
 	r  io.Reader
 }
 
-func (r Reader) Read(dest Bytes) int {
-	n, e := r.r.Read(dest.b)
+func (r Reader) Read(dest any) int {
+	buf := bytesArg(r.vm, dest, "Read requires Bytes")
+	n, e := r.r.Read(buf)
 	if e != nil {
 		if e == io.EOF {
 			if n > 0 {
@@ -270,8 +288,8 @@ type TempFile struct {
 	f *os.File
 }
 
-func (tf TempFile) Write(b Bytes) {
-	_, e := tf.f.Write(b.b)
+func (tf TempFile) Write(b any) {
+	_, e := tf.f.Write(bytesArg(tf.vm, b, "Write requires Bytes"))
 	if e != nil {
 		tf.vm.ThrowError(e)
 	}

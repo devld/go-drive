@@ -129,6 +129,51 @@ func evalJSInt(t *testing.T, vm *VM, code string) int64 {
 	return v.Integer()
 }
 
+func TestEncWriteRejectsNonBytes(t *testing.T) {
+	vm := newScriptTestVM(t)
+	if _, e := vm.Run(context.Background(), `encUtils.newHash(HASH.MD5).Write("abc")`); e == nil {
+		t.Fatal("expected Hasher.Write(string) to fail")
+	}
+}
+
+func TestTempFileWriteAndReadBytes(t *testing.T) {
+	vm := newScriptTestVM(t)
+	got := evalJSString(t, vm, `
+(function() {
+  var tmp = newTempFile();
+  tmp.Write(newBytes("hi"));
+  tmp.SeekTo(0, SEEK_START);
+  var buf = newEmptyBytes(2);
+  var n = tmp.Read(buf);
+  tmp.Close();
+  return n + ":" + buf.String();
+})()
+`)
+	if got != "2:hi" {
+		t.Fatalf("got %q, want 2:hi", got)
+	}
+}
+
+func TestTempFileWriteAndReadRejectNonBytes(t *testing.T) {
+	vm := newScriptTestVM(t)
+	if _, e := vm.Run(context.Background(), `
+		var tmp = newTempFile();
+		try { tmp.Write("hi"); throw new Error("Write(string) succeeded"); }
+		finally { tmp.Close(); }
+	`); e == nil || strings.Contains(e.Error(), "succeeded") {
+		t.Fatalf("expected TempFile.Write(string) to fail, got %v", e)
+	}
+	if _, e := vm.Run(context.Background(), `
+		var tmp = newTempFile();
+		tmp.Write(newBytes("hi"));
+		tmp.SeekTo(0, SEEK_START);
+		try { tmp.Read("nope"); throw new Error("Read(string) succeeded"); }
+		finally { tmp.Close(); }
+	`); e == nil || strings.Contains(e.Error(), "succeeded") {
+		t.Fatalf("expected Reader.Read(string) to fail, got %v", e)
+	}
+}
+
 func TestEncRandomBytesRejectsTooLarge(t *testing.T) {
 	vm := newScriptTestVM(t)
 	_, e := vm.Run(context.Background(), `encUtils.randomBytes(1048577)`)
