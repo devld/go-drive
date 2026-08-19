@@ -64,7 +64,7 @@ func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 		return
 	}
 
-	driveFs, e := driveutil.NewDriveFS(drive, w.config.TempDir, w.cfp)
+	driveFs, e := driveutil.NewDriveFS(c.Request.Context(), drive, w.config.TempDir, w.cfp)
 	if e != nil {
 		c.AbortWithError(http.StatusInternalServerError, e)
 		return

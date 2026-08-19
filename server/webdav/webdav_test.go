@@ -284,7 +284,7 @@ func TestMKCOLPathPermissionReturnsForbidden(t *testing.T) {
 		Policy:     types.PolicyAccept,
 	}})
 	d := drive.NewPermissionWrapperDrive(&permissionDrive{}, permissions)
-	fs, e := driveutil.NewDriveFS(d, t.TempDir(), nil)
+	fs, e := driveutil.NewDriveFS(context.Background(), d, t.TempDir(), nil)
 	if e != nil {
 		t.Fatalf("NewDriveFS: %v", e)
 	}

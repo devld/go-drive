@@ -402,7 +402,7 @@ func FindEntries(ctx types.TaskCtx, root types.IDrive, pattern string, bytesProg
 		ctx = task.DummyContext()
 	}
 	result := make([]types.IEntry, 0)
-	dfs, e := NewDriveFS(root, "", nil)
+	dfs, e := NewDriveFS(ctx, root, "", nil)
 	if e != nil {
 		return nil, e
 	}
