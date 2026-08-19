@@ -12,10 +12,10 @@ declare type HttpRequestMethod =
   | "put"
   | "patch";
 
-export type HttpRequestTransformer = (
+declare type HttpRequestTransformer = (
   config: HttpRequestConfig
 ) => Promise<HttpRequestConfig> | HttpRequestConfig;
-export type HttpResponseTransformer<DT = any> = (
+declare type HttpResponseTransformer<DT = any> = (
   error: any,
   resp: HttpResponse
 ) => DT | Promise<DT>;

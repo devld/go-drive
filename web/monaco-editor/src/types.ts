@@ -5,6 +5,8 @@ export type MessageHandler<T = any> = (data: T) => void
 export interface JavaScriptLibItem {
   name: string
   content: string
+  /** Repo-relative path so .d.ts `/// <reference path>` between libs resolve. */
+  filePath?: string
 }
 export interface JavaScriptSetupOptions {
   target?: string

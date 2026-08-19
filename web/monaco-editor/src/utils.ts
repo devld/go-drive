@@ -5,6 +5,7 @@ import {
 } from 'monaco-editor/esm/vs/platform/actions/common/actions'
 import {
   EditorOutMessageTypes,
+  JavaScriptLibItem,
   JavaScriptSetupOptions,
   MessageHandler,
   MESSAGE_KEY_PREFIX,
@@ -23,8 +24,19 @@ export function createEditor(language: string) {
     '.editor-container'
   ) as HTMLDivElement
 
+  // checkJs only applies to models with a .js URI.
+  const model =
+    language === 'javascript'
+      ? monaco.editor.createModel(
+          '',
+          'javascript',
+          monaco.Uri.parse('file:///script.js')
+        )
+      : undefined
+
   const editor = monaco.editor.create(container, {
     language,
+    model,
     definitionLinkOpensInPeek: true,
   })
 
@@ -54,14 +66,22 @@ const JsTargets: Record<string, monaco.typescript.ScriptTarget> = {
 }
 
 export function setupJavaScript(opt: JavaScriptSetupOptions) {
+  monaco.typescript.javascriptDefaults.setEagerModelSync(true)
   monaco.typescript.javascriptDefaults.setDiagnosticsOptions({
-    noSemanticValidation: true,
+    noSemanticValidation: false,
     noSyntaxValidation: false,
+    // JS-to-TS conversion hints (80001, etc.), not type errors.
+    noSuggestionDiagnostics: true,
   })
   monaco.typescript.javascriptDefaults.setCompilerOptions({
     allowNonTsExtensions: true,
     allowJs: true,
-    lib: opt.lib,
+    checkJs: true,
+    strict: true,
+    // Untyped helper parameters in JS would otherwise flood implicit-any errors.
+    noImplicitAny: false,
+    skipLibCheck: true,
+    lib: opt.lib ?? ['es2020', 'dom'],
     target:
       JsTargets[opt.target ?? 'latest'] ||
       monaco.typescript.ScriptTarget.Latest,
@@ -70,17 +90,21 @@ export function setupJavaScript(opt: JavaScriptSetupOptions) {
     monaco.typescript.javascriptDefaults.setExtraLibs(
       opt.extraLibs.map((item) => ({
         content: item.content,
-        filePath: `${item.name}.d.ts`,
+        filePath: extraLibUri(item).toString(),
       }))
     )
     opt.extraLibs.forEach((item) => {
-      monaco.editor.createModel(
-        item.content,
-        'typescript',
-        monaco.Uri.parse(`${item.name}.d.ts`)
-      )
+      const uri = extraLibUri(item)
+      if (!monaco.editor.getModel(uri)) {
+        monaco.editor.createModel(item.content, 'typescript', uri)
+      }
     })
   }
+}
+
+function extraLibUri(item: JavaScriptLibItem) {
+  const path = (item.filePath ?? `${item.name}.d.ts`).replace(/^\/+/, '')
+  return monaco.Uri.parse(`file:///${path}`)
 }
 
 export function setupDataExchanging(handlers: Record<string, MessageHandler>) {

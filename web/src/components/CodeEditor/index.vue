@@ -18,10 +18,7 @@
 </template>
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import {
-  EditorOutMessageHandlers,
-  JavaScriptSetupOptions,
-} from '../../../monaco-editor/src/types'
+import { EditorOutMessageHandlers } from '../../../monaco-editor/src/types'
 import { getEnv } from './js-script-env'
 import { useEditorSetup, useEditorTheme } from './utils'
 import { languages } from './mapping'
@@ -87,14 +84,11 @@ const initEditor = () => {
   lastValue = undefined
 }
 const prepareEditor = () => {
-  let jsEnv: JavaScriptSetupOptions | undefined
   switch (mode.value?.lang) {
-    case 'javascript':
-      if (mode.value?.env) {
-        jsEnv = getEnv(mode.value?.env)
-        if (jsEnv) editorEmit('setupJs', jsEnv)
-      }
+    case 'javascript': {
+      editorEmit('setupJs', (mode.value.env && getEnv(mode.value.env)) || {})
       break
+    }
   }
 }
 

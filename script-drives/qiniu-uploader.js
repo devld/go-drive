@@ -1,5 +1,3 @@
-/// <reference path="../docs/drive-uploaders/types.d.ts"/>
-
 defineUploader({
   chunkSize: 5 * 1024 * 1024,
 

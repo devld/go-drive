@@ -44,11 +44,12 @@ Check these sources in order. Do not rely only on old adapter examples:
 
 1. `docs/scripts/env/drive.d.ts` — Drive lifecycle, interfaces, and Drive-specific APIs.
 2. `docs/scripts/global.d.ts` — global HTTP, IO, error, encoding, path, and form APIs.
-3. `drive/script/helper.js` — required methods, method binding, and the actual behavior of `$` shared properties.
-4. `drive/script/index.go` and `drive/script/utils.go` — Go/JavaScript value conversion, entry cache, write-path eviction, and resource ownership.
-5. `script-drives/dropbox.js` — OAuth, pagination, streaming uploads, and temporary download URLs.
-6. `script-drives/qiniu.js` and `qiniu-uploader.js` — HMAC signing, object storage, and direct browser uploads.
-7. `docs/drive-uploaders/types.d.ts` — required when implementing direct browser uploads.
+3. `script-drives/jsconfig.json` — loads those declarations for every adapter `.js` in this directory.
+4. `drive/script/helper.js` — required methods, method binding, and the actual behavior of `$` shared properties.
+5. `drive/script/index.go` and `drive/script/utils.go` — Go/JavaScript value conversion, entry cache, write-path eviction, and resource ownership.
+6. `script-drives/dropbox.js` — OAuth, pagination, streaming uploads, and temporary download URLs.
+7. `script-drives/qiniu.js` and `qiniu-uploader.js` — HMAC signing, object storage, and direct browser uploads.
+8. `docs/drive-uploaders/types.d.ts` — required when implementing direct browser uploads.
 
 Type declarations assist development; the Go bridge is the final source of truth. If the declarations and implementation disagree, correct the declaration or documentation instead of inventing an API.
 
@@ -74,8 +75,6 @@ Use a stable, short, lowercase identifier for `<name>`. Files with the same base
 // @description Example Cloud REST API adapter.
 //
 // Create an API token with file read/write permissions.
-
-/// <reference path="../docs/scripts/env/drive.d.ts"/>
 ```
 
 - `// @name Example Cloud` is the display name shown in the UI.
@@ -83,7 +82,7 @@ Use a stable, short, lowercase identifier for `<name>`. Files with the same base
 - Scripts without `@name` or `@version` are ignored when listing installed scripts or syncing the repository.
 - An optional `// @uploader example-uploader.js` line names the browser uploader in the same repository.
 - `// @description` starts the Markdown description. Following `//` lines that are not `@` directives continue the description until a blank non-comment line.
-- The `reference` directive provides editor completion only; it does not change runtime behavior.
+- Editor types come from `script-drives/jsconfig.json` (no `/// <reference>` needed).
 - After saving a script, create or reload the Drive from the administration UI.
 
 ## 4. Runtime constraints
@@ -380,8 +379,6 @@ It demonstrates the interface contract and does not represent a real service:
 // @description Example of a complete HTTP API based adapter.
 //
 // Enter the API endpoint and a token with file read/write permissions.
-
-/// <reference path="../docs/scripts/env/drive.d.ts"/>
 
 defineDrive(
   {

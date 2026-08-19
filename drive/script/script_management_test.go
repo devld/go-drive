@@ -240,7 +240,6 @@ func TestGetDriveScriptConfigForm(t *testing.T) {
 // @version 1.0.0
 // @description Example description
 
-/// <reference path="../docs/scripts/env/drive.d.ts"/>
 defineDrive({
   configForm: [{ Label: "Token", Field: "token", Type: "password", Required: true }],
   createInstance: function () { return {}; }

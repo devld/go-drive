@@ -10,8 +10,39 @@ declare type SM = { [key: string]: string };
 /** Object map. */
 declare type M<T = any> = { [key: string]: T };
 
+declare const __go: unique symbol;
+declare interface GoHandle<Id extends string> {
+  readonly [__go]: Id;
+}
+
+/**
+ * ES2015 `Object.assign` polyfill from `script/js/50.common.js` (Otto is ES5).
+ * Copies enumerable own properties; skips null/undefined sources.
+ */
+interface ObjectConstructor {
+  assign<T extends object, U>(target: T, source: U): T & U;
+  assign<T extends object, U, V>(target: T, source1: U, source2: V): T & U & V;
+  assign<T extends object, U, V, W>(
+    target: T,
+    source1: U,
+    source2: V,
+    source3: W
+  ): T & U & V & W;
+  assign(target: object, ...sources: any[]): any;
+}
+
 /** Write to the process console. */
 declare function consoleWrite(level: string, ...msg: any[]): void;
+
+/** `console` from `script/js/50.common.js` (forwards to `consoleWrite`). */
+declare interface Console {
+  debug(...message: any[]): void;
+  error(...message: any[]): void;
+  info(...message: any[]): void;
+  log(...message: any[]): void;
+  warn(...message: any[]): void;
+}
+declare var console: Console;
 
 /** Block for `t`. Example: `sleep(ms(1000))`. */
 declare function sleep(t: Duration): void;
@@ -37,7 +68,7 @@ declare function newTaskCtx(ctx: Context, onUpdate?: TaskCtxOnUpdate): TaskCtx;
 declare function newLocker(): Locker;
 
 /** Go context. */
-declare interface Context {
+declare interface Context extends GoHandle<"Context"> {
   /** Throw if cancelled or timed out. */
   Err(): void;
 }
@@ -55,7 +86,7 @@ declare interface TaskCtx extends Context {
   Total(total: number, abs: boolean): void;
 }
 
-declare interface Locker {
+declare interface Locker extends GoHandle<"Locker"> {
   Lock(): void;
   Unlock(): void;
 }
@@ -67,7 +98,7 @@ declare function newEmptyBytes(n: number): Bytes;
 /** Temp file; deleted on `Close()`. */
 declare function newTempFile(): TempFile;
 
-declare interface Bytes {
+declare interface Bytes extends GoHandle<"Bytes"> {
   Len(): number;
   /** Slice `[start, end)`. */
   Slice(start: number, end: number): Bytes;
@@ -75,7 +106,7 @@ declare interface Bytes {
 }
 
 /** Go `io.Reader`. */
-declare interface Reader {
+declare interface Reader extends GoHandle<"Reader"> {
   /** Read into `dest` (up to `dest.Len()`). Returns bytes read, or `-1` at EOF. */
   Read(dest: Bytes): number;
   ReadAsString(): string;
@@ -131,7 +162,7 @@ declare interface ContentURL {
 }
 
 /** Host Drive API (root Drive in jobs, or `selfDrive` in Drive scripts). */
-declare interface DriveInstance {
+declare interface DriveInstance extends GoHandle<"DriveInstance"> {
   Get(ctx: Context, path: string): DriveEntry;
   Save(
     ctx: TaskCtx,
@@ -157,7 +188,7 @@ declare interface DriveInstance {
   Delete(ctx: TaskCtx, path: string): void;
 }
 
-declare interface DriveEntry {
+declare interface DriveEntry extends GoHandle<"DriveEntry"> {
   Path(): string;
   Name(): string;
   Type(): EntryType;
@@ -188,14 +219,14 @@ declare type HttpMethod =
 declare type HttpBody = Reader | string | Bytes | HttpFormData;
 
 /** HTTP response headers. */
-declare interface HttpHeaders {
+declare interface HttpHeaders extends GoHandle<"HttpHeaders"> {
   Get(key: string): string;
   Values(key: string): string[] | null;
   GetAll(): M<string[]>;
 }
 
 /** multipart/form-data body. */
-declare interface HttpFormData {
+declare interface HttpFormData extends GoHandle<"HttpFormData"> {
   AppendField(key: string, data: string | Bytes): void;
   AppendFile(
     key: string,
@@ -205,7 +236,7 @@ declare interface HttpFormData {
 }
 
 /** Must call `Dispose()` after use (unless `Text()` already did). */
-declare interface HttpResponse {
+declare interface HttpResponse extends GoHandle<"HttpResponse"> {
   Status: number;
   Headers: HttpHeaders;
   Body: ReadCloser;
@@ -301,7 +332,7 @@ declare interface FormItem {
 }
 
 /** Go `time.Time`. Convert with `dayjs(t.UnixMilli())`. */
-declare interface GoTime {
+declare interface GoTime extends GoHandle<"GoTime"> {
   UnixMilli(): number;
 }
 
@@ -357,7 +388,7 @@ declare enum HASH {
   SHA512 = 4,
 }
 
-declare interface Hasher {
+declare interface Hasher extends GoHandle<"Hasher"> {
   Write(b: Bytes): Hasher;
   /**
    * Hash `r` from the current offset to EOF. Does not close `r`.

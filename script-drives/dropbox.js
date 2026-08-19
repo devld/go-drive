@@ -1,8 +1,6 @@
 // @name Dropbox
-// @version 1.0.3
+// @version 1.0.4
 // @description Dropbox drive
-
-/// <reference path="../docs/scripts/env/drive.d.ts"/>
 
 /**
  * @param {RootConfig} config
@@ -52,10 +50,9 @@ defineDrive(
       });
       if (!result.OAuthHolder) return result.Config;
 
-      var oauth = result.Config.OAuth || {};
       var data = request(result.OAuthHolder, ctx, "POST", "/users/get_current_account");
-      oauth.Principal = data.name.display_name + "<" + data.email + ">";
-      result.Config.OAuth = oauth;
+      result.Config.OAuth.Principal =
+        data.name.display_name + "<" + data.email + ">";
       result.Config.Configured = true;
       return result.Config;
     },
@@ -328,7 +325,7 @@ function dropboxCanThumbnail(entry) {
  * @param {Context} ctx
  * @param {HttpMethod} method
  * @param {string} [url]
- * @param {SM} [headers]
+ * @param {SM|null} [headers]
  * @param {any} [body]
  * @param {boolean} [contentApi]
  */
@@ -358,15 +355,16 @@ function request(oauthHolder, ctx, method, url, headers, body, contentApi) {
     r.Headers.Get("Content-Type").toLowerCase().indexOf("application/json") >=
     0;
 
-  var data = isJSON ? r.Text() : undefined;
+  var dataStr = isJSON ? r.Text() : undefined;
 
   if (DEBUG) {
-    console.log("http", method, url, body, r.Status, data);
+    console.log("http", method, url, body, r.Status, dataStr);
   }
 
-  if (isJSON) {
+  var data;
+  if (isJSON && dataStr) {
     try {
-      data = JSON.parse(data);
+      data = JSON.parse(dataStr);
     } catch (e) {
       throw ErrRemoteApi(500, "Failed to parse JSON: " + e);
     }

@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "target": "ES2015",
+    "lib": ["ES2020", "DOM"],
+    "module": "ES2015",
+    "moduleDetection": "force"
+  },
+  "include": [
+    "./*.js",
+    "../docs/scripts/env/drive.d.ts",
+    "../docs/drive-uploaders/types.d.ts"
+  ]
+}

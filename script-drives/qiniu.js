@@ -1,9 +1,7 @@
 // @name Qiniu
-// @version 1.0.2
+// @version 1.0.3
 // @uploader qiniu-uploader.js
 // @description Qiniu Kodo
-
-/// <reference path="../docs/scripts/env/drive.d.ts"/>
 
 var utcOffset = dayjs().utcOffset();
 
@@ -201,7 +199,7 @@ defineDrive(
  * @param {{ ak: string, sk: string, bucket: string, uploadURL: string }} drive
  * @param {Context} ctx
  * @param {string} path
- * @param {HttpBody} reader
+ * @param {Exclude<HttpBody, HttpFormData>} reader
  */
 function saveSmall(drive, ctx, path, reader) {
   var data = newFormData();
@@ -213,9 +211,10 @@ function saveSmall(drive, ctx, path, reader) {
   data.AppendFile("file", pathUtils.base(path), reader);
 
   var resp = http(ctx, "POST", drive.uploadURL, { body: data });
-  var respData = resp.Text();
+  var respStr = resp.Text();
+  var respData;
   try {
-    respData = JSON.parse(respData);
+    respData = JSON.parse(respStr);
   } catch (e) {
     // ignore
   }
@@ -264,7 +263,8 @@ function toEntry(data, path) {
  * @param {Context} ctx
  * @param {HttpMethod} method
  * @param {string} url
- * @param {SM} headers
+ * @param {SM|null} [headers]
+ * @param {Exclude<HttpBody, HttpFormData>|null} [body]
  */
 function request(drive, ctx, method, url, headers, body) {
   headers = Object.assign({}, headers, {
@@ -274,6 +274,7 @@ function request(drive, ctx, method, url, headers, body) {
   });
 
   var urlParts = baseURLRegex.exec(url);
+  if (!urlParts) throw ErrBadRequest("invalid URL");
 
   var signature = getManagementSignature(
     drive.ak,
@@ -288,20 +289,21 @@ function request(drive, ctx, method, url, headers, body) {
   if (DEBUG) {
     console.log("[HTTP REQ]", method, url, JSON.stringify(headers), body);
   }
-  var r = http(ctx, method, url, { headers: headers, body: body });
+  var r = http(ctx, method, url, { headers: headers, body: body || undefined });
 
   var isJSON =
     r.Headers.Get("Content-Type").toLowerCase().indexOf("application/json") >=
     0;
-  var data = isJSON ? r.Text() : undefined;
+  var dataStr = isJSON ? r.Text() : undefined;
   if (DEBUG) {
-    console.log("[HTTP RES]", r.Status, data);
+    console.log("[HTTP RES]", r.Status, dataStr);
   }
+  var data;
   if (isJSON) {
     try {
-      if (data) {
+      if (dataStr) {
         // qiniu may return empty body with Content-Type application/json
-        data = JSON.parse(data);
+        data = JSON.parse(dataStr);
       }
     } catch (e) {
       throw ErrRemoteApi(500, "Failed to parse JSON: " + e);

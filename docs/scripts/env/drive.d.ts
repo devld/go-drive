@@ -73,7 +73,7 @@ declare interface Drive {
 }
 
 /** Persistent Drive data (tokens, etc.). Keys starting with `_` are reserved. */
-declare interface DriveDataStore {
+declare interface DriveDataStore extends GoHandle<"DriveDataStore"> {
   Save(data: SM): void;
   Load<K extends string, T extends { [key in K]: string | undefined }>(
     key: K,
@@ -89,7 +89,7 @@ declare interface DriveCacheItem {
   Data?: SM;
 }
 
-declare interface DriveCache {
+declare interface DriveCache extends GoHandle<"DriveCache"> {
   PutEntries(entries: Entry[], ttl: Duration): void;
   PutEntry(entry: Entry, ttl: Duration): void;
   PutChildren(parentPath: string, entries: Entry[], ttl: Duration): void;
@@ -148,13 +148,13 @@ declare interface OAuthToken {
 }
 
 /** Persisted OAuth token; refreshes on demand. */
-declare interface OAuthHolder {
-  /** Current token. Requires a real `Context`; refreshes when expired. */
+declare interface OAuthHolder extends GoHandle<"OAuthHolder"> {
+  /** Current token. Pass the method `ctx` (`Context`, `TaskCtx`, or timeout context); refreshes when expired. */
   Token(ctx: Context): OAuthToken;
 }
 
 declare interface OAuthInitConfigResult {
-  Config?: DriveInitConfiguration;
+  Config: DriveInitConfiguration & { OAuth: OAuthConfig };
   /** Set when a stored token already exists. */
   OAuthHolder?: OAuthHolder;
 }
@@ -166,7 +166,7 @@ declare interface RootConfig {
   BuildAt: string;
 }
 
-declare interface DriveUtils {
+declare interface DriveUtils extends GoHandle<"DriveUtils"> {
   Config: RootConfig;
   Data: DriveDataStore;
   /** `defineDrive` already assigns `this.cache`. */

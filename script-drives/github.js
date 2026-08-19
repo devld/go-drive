@@ -1,5 +1,5 @@
 // @name GitHub
-// @version 1.0.1
+// @version 1.0.2
 // @description Map a GitHub repository branch as a read-only virtual drive.
 //
 // Configure the repository owner, repository name, and optionally a branch
@@ -11,8 +11,6 @@
 //
 // Git LFS objects and git submodules are not downloaded. GitHub also rejects
 // files larger than 100 MB outside LFS.
-
-/// <reference path="../docs/scripts/env/drive.d.ts"/>
 
 var API_BASE = "https://api.github.com";
 var RAW_BASE = "https://raw.githubusercontent.com";
@@ -110,7 +108,6 @@ defineDrive(
       }
       var entries = [];
       for (var i = 0; i < result.data.length; i++) {
-        ctx.Err();
         entries.push(toEntry(result.data[i]));
       }
       return entries;
@@ -118,8 +115,7 @@ defineDrive(
 
     getURL: function (ctx, entry) {
       if (DEBUG) console.log("getURL", entry.Path);
-      if (entry.IsDir) return undefined;
-      if (entry.Meta && entry.Meta.Readable === false) {
+      if (entry.IsDir || entry.Meta && entry.Meta.Readable === false) {
         throw ErrUnsupported();
       }
       var ref = rawRef(this, ctx);
@@ -282,7 +278,6 @@ function listViaTree(drive, ctx, path) {
   var entries = [];
   var items = tree.tree || [];
   for (var i = 0; i < items.length; i++) {
-    ctx.Err();
     var item = items[i];
     if (item.type === "commit") {
       entries.push(
@@ -350,9 +345,9 @@ function treeShaAt(drive, ctx, path) {
  */
 function toEntry(data, path) {
   if (Array.isArray(data)) {
-    return makeEntry(true, path, -1, true);
+    return makeEntry(true, path || "", -1, true);
   }
-  var entryPath = data.path || path;
+  var entryPath = data.path || path || "";
   if (data.type === "dir") {
     return makeEntry(true, entryPath, -1, true);
   }
