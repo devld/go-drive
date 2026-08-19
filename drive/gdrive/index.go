@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/oauth2"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 )
@@ -35,7 +34,7 @@ func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
 }
 
 func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils) (types.IDrive, error) {
-	resp, e := driveutil.OAuthGet(*oauthReq(utils.Config),
+	oauthHolder, e := driveutil.OAuthLoad(*oauthReq(utils.Config),
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
@@ -43,7 +42,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils)
 	if e != nil {
 		return nil, e
 	}
-	service, e := drive.NewService(ctx, option.WithHTTPClient(resp.Client()))
+	service, e := drive.NewService(ctx, option.WithHTTPClient(oauthHolder.Client()))
 	if e != nil {
 		return nil, e
 	}
@@ -57,7 +56,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils)
 	g := &GDrive{
 		s:              service,
 		cacheTTL:       cacheTtl,
-		ts:             resp.TokenSource(),
+		oauthHolder:    oauthHolder,
 		driveId:        params["drive_id"],
 		proxyThumbnail: config.GetBool("proxy_thumbnail"),
 	}
@@ -79,7 +78,7 @@ type GDrive struct {
 	cacheTTL time.Duration
 	cache    driveutil.DriveCache
 
-	ts oauth2.TokenSource
+	oauthHolder *driveutil.OAuthHolder
 
 	proxyThumbnail bool
 }
@@ -475,7 +474,7 @@ func (g *gdriveEntry) GetReader(ctx context.Context, start, size int64) (io.Read
 	return driveutil.GetURL(ctx, u.URL, u.Header, start, size)
 }
 
-func (g *gdriveEntry) GetURL(context.Context) (*types.ContentURL, error) {
+func (g *gdriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 	downloadUrl := ""
 
 	fileId := g.fileId()
@@ -492,7 +491,7 @@ func (g *gdriveEntry) GetURL(context.Context) (*types.ContentURL, error) {
 		downloadUrl = utils.BuildURL(g.d.s.BasePath+"files/{}", fileId) + "?alt=media"
 	}
 
-	t, e := g.d.ts.Token()
+	t, e := g.d.oauthHolder.Token(ctx)
 	if e != nil {
 		return nil, e
 	}

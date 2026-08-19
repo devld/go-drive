@@ -1,5 +1,5 @@
 // @name Dropbox
-// @version 1.0.1
+// @version 1.0.2
 // @description Dropbox drive
 
 /// <reference path="../docs/scripts/env/drive.d.ts"/>
@@ -50,10 +50,10 @@ defineDrive(
         ClientID: config.client_id,
         ClientSecret: config.client_secret,
       });
-      if (!result.Response) return result.Config;
+      if (!result.OAuthHolder) return result.Config;
 
       var oauth = result.Config.OAuth || {};
-      var data = request(result.Response, ctx, "POST", "/users/get_current_account");
+      var data = request(result.OAuthHolder, ctx, "POST", "/users/get_current_account");
       oauth.Principal = data.name.display_name + "<" + data.email + ">";
       result.Config.OAuth = oauth;
       result.Config.Configured = true;
@@ -70,7 +70,7 @@ defineDrive(
     createInstance: function (ctx, config, utils) {
       return {
         entryCacheTTL: config.cache_ttl,
-        oauth: utils.OAuthGet(oauthReq(utils.Config), {
+        oauth: utils.OAuthLoad(oauthReq(utils.Config), {
           ClientID: config.client_id,
           ClientSecret: config.client_secret,
         }),
@@ -213,7 +213,7 @@ defineDrive(
 );
 
 /**
- * @param {{ oauth: OAuthResponse }} drive
+ * @param {{ oauth: OAuthHolder }} drive
  * @param {TaskCtx} ctx
  * @param {number} size
  * @param {Reader} reader
@@ -238,7 +238,7 @@ function uploadSmall(drive, ctx, path, size, reader) {
 }
 
 /**
- * @param {{ oauth: OAuthResponse }} drive
+ * @param {{ oauth: OAuthHolder }} drive
  * @param {TaskCtx} ctx
  * @param {number} size
  * @param {Reader} reader
@@ -319,7 +319,7 @@ function toEntry(data) {
 }
 
 /**
- * @param {OAuthResponse} resp
+ * @param {OAuthHolder} oauthHolder
  * @param {Context} ctx
  * @param {HttpMethod} method
  * @param {string} [url]
@@ -327,8 +327,8 @@ function toEntry(data) {
  * @param {any} [body]
  * @param {boolean} [contentApi]
  */
-function request(resp, ctx, method, url, headers, body, contentApi) {
-  var token = resp.Token();
+function request(oauthHolder, ctx, method, url, headers, body, contentApi) {
+  var token = oauthHolder.Token(ctx);
   headers = Object.assign(
     {
       Authorization: token.TokenType + " " + token.AccessToken,

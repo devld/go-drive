@@ -296,43 +296,41 @@ func (sdu *scriptDriveUtils) CreateCache() *scriptDriveCache {
 }
 
 func (sdu *scriptDriveUtils) OAuthInitConfig(or driveutil.OAuthRequest,
-	cred driveutil.OAuthCredentials) *oauthInitConfigResp {
-	c, r, e := driveutil.OAuthInitConfig(or, cred, sdu.Data.data)
+	cred driveutil.OAuthCredentials) *oauthInitConfigResult {
+	c, oauthHolder, e := driveutil.OAuthInitConfig(or, cred, sdu.Data.data)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}
-	var resp *oauthRespWrapper
-	if r != nil {
-		resp = &oauthRespWrapper{r}
+	var wrapped *oauthHolderWrapper
+	if oauthHolder != nil {
+		wrapped = &oauthHolderWrapper{oauthHolder}
 	}
-	return &oauthInitConfigResp{c, resp}
+	return &oauthInitConfigResult{c, wrapped}
 }
 
 func (sdu *scriptDriveUtils) OAuthInit(ctx s.Context,
 	data types.SM, or driveutil.OAuthRequest,
-	cred driveutil.OAuthCredentials) *oauthRespWrapper {
-	resp, e := driveutil.OAuthInit(s.GetContext(ctx), or, data, cred, sdu.Data.data)
+	cred driveutil.OAuthCredentials) *oauthHolderWrapper {
+	oauthHolder, e := driveutil.OAuthInit(s.GetContext(ctx), or, data, cred, sdu.Data.data)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}
-	var r *oauthRespWrapper
-	if resp != nil {
-		r = &oauthRespWrapper{resp}
+	if oauthHolder == nil {
+		return nil
 	}
-	return r
+	return &oauthHolderWrapper{oauthHolder}
 }
 
-func (sdu *scriptDriveUtils) OAuthGet(o driveutil.OAuthRequest,
-	cred driveutil.OAuthCredentials) *oauthRespWrapper {
-	resp, e := driveutil.OAuthGet(o, cred, sdu.Data.data)
+func (sdu *scriptDriveUtils) OAuthLoad(o driveutil.OAuthRequest,
+	cred driveutil.OAuthCredentials) *oauthHolderWrapper {
+	oauthHolder, e := driveutil.OAuthLoad(o, cred, sdu.Data.data)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}
-	var r *oauthRespWrapper
-	if resp != nil {
-		r = &oauthRespWrapper{resp}
+	if oauthHolder == nil {
+		return nil
 	}
-	return r
+	return &oauthHolderWrapper{oauthHolder}
 }
 
 type driveDataStore struct {
@@ -353,17 +351,21 @@ func (d driveDataStore) Load(key string, keys ...string) types.SM {
 	return r
 }
 
-type oauthInitConfigResp struct {
-	Config   *driveutil.DriveInitConfig
-	Response *oauthRespWrapper
+type oauthInitConfigResult struct {
+	Config      *driveutil.DriveInitConfig
+	OAuthHolder *oauthHolderWrapper
 }
 
-type oauthRespWrapper struct {
-	resp *driveutil.OAuthResponse
+type oauthHolderWrapper struct {
+	oauthHolder *driveutil.OAuthHolder
 }
 
-func (or *oauthRespWrapper) Token() *oauth2.Token {
-	t, e := or.resp.Token()
+func (or *oauthHolderWrapper) Token(ctx s.Context) *oauth2.Token {
+	c := s.GetContext(ctx)
+	if c == nil {
+		s.ThrowDetachedError(errors.New("OAuthHolder.Token requires a context"))
+	}
+	t, e := or.oauthHolder.Token(c)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}

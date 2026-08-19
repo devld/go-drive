@@ -142,13 +142,13 @@ declare interface OAuthToken {
   Expiry: GoTime;
 }
 
-declare interface OAuthResponse {
-  Token(): OAuthToken;
+declare interface OAuthHolder {
+  Token(ctx: Context): OAuthToken;
 }
 
 declare interface OAuthInitConfigResult {
   Config?: DriveInitConfiguration;
-  Response?: OAuthResponse;
+  OAuthHolder?: OAuthHolder;
 }
 
 declare interface RootConfig {
@@ -171,8 +171,8 @@ declare interface DriveUtils {
     data: SM,
     req: OAuthRequest,
     cred: OAuthCredentials
-  ): OAuthResponse | null;
-  OAuthGet(req: OAuthRequest, cred: OAuthCredentials): OAuthResponse;
+  ): OAuthHolder | null;
+  OAuthLoad(req: OAuthRequest, cred: OAuthCredentials): OAuthHolder;
 }
 
 /**
