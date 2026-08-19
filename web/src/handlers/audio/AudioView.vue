@@ -305,9 +305,7 @@ const loadedRatio = computed(() =>
 )
 
 const supportThumbnail = (entry: Entry) => {
-  const t = entry.meta.thumbnail
-  if (typeof t === 'string') return true
-  if (t === true) return true
+  if (entry.meta.thumbnailUrl || entry.meta.selfThumbnail) return true
   const ext = filenameExt(entry.name)
   return !!store.config?.thumbnail.extensions?.[ext]
 }
@@ -315,8 +313,8 @@ const supportThumbnail = (entry: Entry) => {
 const currentCover = computed(() => {
   const track = currentTrack.value
   if (!track) return undefined
-  const t = track.entry.meta.thumbnail
-  if (typeof t === 'string') return t
+  const url = track.entry.meta.thumbnailUrl
+  if (url) return url
   if (supportThumbnail(track.entry)) {
     return fileThumbnail(track.entry.path, track.entry.meta)
   }

@@ -26,10 +26,11 @@ type EntryMeta struct {
 	Readable bool
 	// Writable indicates is this entry can be written
 	Writable bool
-	// Thumbnail is the thumbnail image url if available.
-	// For internal generated thumbnails, this is always empty.
-	// There is an API for internal generated thumbnails.
-	Thumbnail string
+	// ThumbnailURL is a client-loadable thumbnail image URL.
+	ThumbnailURL string
+	// SelfThumbnail indicates the entry can produce a thumbnail through
+	// IEntryThumbnail (served by the server thumbnail API).
+	SelfThumbnail bool
 	// Props is some drive-specified properties of this entry
 	Props M
 }

@@ -441,13 +441,17 @@ func (g *gdriveEntry) mimeType() string {
 }
 
 func (g *gdriveEntry) Meta() types.EntryMeta {
-	thumbnail := ""
+	thumbnailURL := ""
+	selfThumbnail := false
 	if !g.d.proxyThumbnail {
-		thumbnail = g.thumbnail
+		thumbnailURL = g.thumbnail
+	} else if g.thumbnail != "" {
+		selfThumbnail = true
 	}
 
 	return types.EntryMeta{
-		Readable: true, Writable: true, Thumbnail: thumbnail,
+		Readable: true, Writable: true,
+		ThumbnailURL: thumbnailURL, SelfThumbnail: selfThumbnail,
 		Props: types.M{
 			"ext": mimeTypeExtensionsMap[g.mimeType()],
 		},
@@ -512,12 +516,8 @@ func (g *gdriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 	}, nil
 }
 
-func (g *gdriveEntry) HasThumbnail() bool {
-	return g.d.proxyThumbnail && g.thumbnail != ""
-}
-
-func (g *gdriveEntry) Thumbnail(ctx context.Context) (types.IContentReader, error) {
-	if !g.d.proxyThumbnail || g.thumbnail == "" {
+func (g *gdriveEntry) Thumbnail(_ context.Context) (types.IContentReader, error) {
+	if !g.Meta().SelfThumbnail {
 		return nil, err.NewUnsupportedError()
 	}
 	return driveutil.NewURLContentReader(g.thumbnail, nil, true), nil

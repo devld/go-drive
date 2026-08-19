@@ -75,13 +75,18 @@ func (sd *ScriptDrive) deserializeEntry(item driveutil.EntryCacheItem) (types.IE
 }
 
 func cacheItemToStruct(item driveutil.EntryCacheItem, writable bool) *scriptEntryStruct {
+	meta := types.EntryMeta{Readable: true, Writable: writable}
+	if item.Meta != nil {
+		meta = *item.Meta
+		meta.Writable = writable
+	}
 	return &scriptEntryStruct{
 		Path:    item.Path,
 		Size:    item.Size,
 		ModTime: item.ModTime,
 		IsDir:   item.Type.IsDir(),
 		Data:    item.Data,
-		Meta:    types.EntryMeta{Readable: true, Writable: writable},
+		Meta:    meta,
 	}
 }
 

@@ -19,7 +19,7 @@ var _ types.IDrive = (*ScriptDrive)(nil)
 
 type scriptDriveHas struct {
 	meta, save, makeDir, copy, move, delete, upload bool
-	getReader, getURL, hasThumbnail, getThumbnail   bool
+	getReader, getURL, getThumbnail                 bool
 }
 
 type ScriptDrive struct {
@@ -464,24 +464,8 @@ func (se *scriptDriveEntry) EntryData() types.SM {
 	return se.s.Data
 }
 
-func (se *scriptDriveEntry) HasThumbnail() bool {
-	if !se.d.has.hasThumbnail {
-		return false
-	}
-	vm, e := se.d.pool.Get(context.Background())
-	if e != nil {
-		return false
-	}
-	defer func() { _ = se.d.pool.Return(context.Background(), vm) }()
-	v, e := se.d.call(context.Background(), vm, "hasThumbnail", se.s)
-	if e != nil {
-		return false
-	}
-	return v.Bool()
-}
-
 func (se *scriptDriveEntry) Thumbnail(ctx context.Context) (types.IContentReader, error) {
-	if !se.d.has.getThumbnail {
+	if se.d == nil || !se.d.has.getThumbnail || se.s == nil || !se.s.Meta.SelfThumbnail {
 		return nil, err.NewUnsupportedError()
 	}
 	vm, e := se.d.pool.Get(ctx)

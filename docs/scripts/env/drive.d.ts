@@ -69,7 +69,6 @@ declare interface Drive {
     size: number
   ): ReadCloser;
   getURL?(ctx: Context, entry: Entry): ContentURL;
-  hasThumbnail?(entry: Entry): boolean;
   getThumbnail?(ctx: Context, entry: Entry): ReadCloser | ContentURL;
 }
 
@@ -268,7 +267,6 @@ declare interface DriveMethods {
     size: number
   ): ReadCloser;
   getURL?(ctx: Context, entry: Entry): ContentURL;
-  hasThumbnail?(entry: Entry): boolean;
   getThumbnail?(
     ctx: Context,
     entry: Entry

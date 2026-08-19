@@ -37,19 +37,22 @@ type CacheableEntry interface {
 }
 
 type EntryCacheItem struct {
-	ModTime int64           `json:"m"`
-	Size    int64           `json:"s"`
-	Path    string          `json:"p"`
-	Type    types.EntryType `json:"t"`
-	Data    types.SM        `json:"d"`
+	ModTime int64            `json:"m"`
+	Size    int64            `json:"s"`
+	Path    string           `json:"p"`
+	Type    types.EntryType  `json:"t"`
+	Data    types.SM         `json:"d"`
+	Meta    *types.EntryMeta `json:"e,omitempty"`
 }
 
 func SerializeEntry(e types.IEntry) EntryCacheItem {
+	meta := e.Meta()
 	dat := EntryCacheItem{
 		ModTime: e.ModTime(),
 		Size:    e.Size(),
 		Path:    e.Path(),
 		Type:    e.Type(),
+		Meta:    &meta,
 	}
 	if ed, ok := e.(CacheableEntry); ok {
 		dat.Data = ed.EntryData()

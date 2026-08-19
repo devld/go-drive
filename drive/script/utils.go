@@ -172,7 +172,6 @@ func (sd *ScriptDrive) inspectMethods(vm *s.VM) {
 	sd.has.upload = sd.hasMethod(vm, "upload")
 	sd.has.getReader = sd.hasMethod(vm, "getReader")
 	sd.has.getURL = sd.hasMethod(vm, "getURL")
-	sd.has.hasThumbnail = sd.hasMethod(vm, "hasThumbnail")
 	sd.has.getThumbnail = sd.hasMethod(vm, "getThumbnail")
 }
 

@@ -270,13 +270,9 @@ Return:
 
 With no Header and `Proxy: false`, the client receives a redirect. If a Header is present, proxying is forced, or `Proxy: true`, go-drive proxies the response. Private headers are not exposed to the browser. Do not cache a short-lived signed URL in Entry.Data.
 
-#### `hasThumbnail(entry) -> boolean` (optional)
-
-This must be a quick, local predicate with no network request. Usually check the entry type, extension, and size.
-
 #### `getThumbnail(ctx, entry) -> ReadCloser | ContentURL` (optional)
 
-Return a remote thumbnail response body or URL configuration. When returning the body, do not dispose it first. Omit both thumbnail methods when the service has no thumbnail capability.
+Return a remote thumbnail response body or URL configuration. When returning the body, do not dispose it first. Mark eligible entries with `Meta.SelfThumbnail: true` in `get`/`list` (type, extension, size only; no network). Omit `getThumbnail` when the service has no thumbnail capability.
 
 ## 7. Available JavaScript APIs
 
