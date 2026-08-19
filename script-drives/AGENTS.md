@@ -345,7 +345,6 @@ Log only inside a `DEBUG` branch, and redact arguments before constructing the l
 - `encUtils.randomBytes(n)` (CSPRNG; `n` in `[0, 1MiB]`).
 - `encUtils.newHash(HASH.*)`; Hasher has `Write`, `WriteReader`, and `Sum`.
 - `encUtils.newHmac(HASH.*, keyBytes)` returns a streaming Hasher.
-- `encUtils.hmac(HASH.*, payloadBytes, keyBytes)`.
 - HASH supports MD5, SHA1, SHA256, and SHA512. `WriteReader` hashes from the current offset to EOF (it does not seek to the start). On a seekable `TempFile` it restores that same offset, so hashing from the middle (`SeekTo` then `WriteReader`) and then continuing from that point works. After `Write`, call `SeekTo(0, SEEK_START)` if the whole file must be hashed or uploaded. One-shot Readers (response bodies) are consumed; copy them to a TempFile first if they must be reused. When a digest must appear in request headers (`Content-MD5`), hash the TempFile, then `http()`.
 
 ### Traversal helpers

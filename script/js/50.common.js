@@ -187,7 +187,6 @@ var encUtils = Object.freeze({
   randomBytes: __randomBytes__,
   newHash: __newHash__,
   newHmac: __newHmac__,
-  hmac: __hmac__,
 });
 
 var SEEK_START = 0;

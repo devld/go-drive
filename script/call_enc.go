@@ -171,10 +171,3 @@ func vm_newHmac(vm *VM, args Values) any {
 	mac := hmac.New(hashFn(vm, int(args.Get(0).Integer())), GetBytes(args.Get(1).Raw()))
 	return Hasher{vm, mac}
 }
-
-// vm_hmac: (typ int, payload, key Bytes) Bytes
-func vm_hmac(vm *VM, args Values) any {
-	mac := hmac.New(hashFn(vm, int(args.Get(0).Integer())), GetBytes(args.Get(2).Raw()))
-	_, _ = mac.Write(GetBytes(args.Get(1).Raw()))
-	return NewBytes(vm, mac.Sum(nil))
-}

@@ -383,7 +383,6 @@ declare const encUtils: {
   newHash: (h: HASH) => Hasher;
   /** Streaming HMAC; `Write` / `WriteReader` / `Sum` like `newHash`. */
   newHmac: (h: HASH, key: Bytes) => Hasher;
-  hmac: (h: HASH, payload: Bytes, key: Bytes) => Bytes;
 };
 
 declare interface EntryTreeNode {

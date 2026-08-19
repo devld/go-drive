@@ -1,5 +1,5 @@
 // @name Qiniu
-// @version 1.0.1
+// @version 1.0.2
 // @uploader qiniu-uploader.js
 // @description Qiniu Kodo
 
@@ -234,7 +234,7 @@ function getDownloadURL(baseURL, key, ak, sk) {
     ak +
     ":" +
     encUtils.urlBase64Encode(
-      encUtils.hmac(HASH.SHA1, newBytes(url), newBytes(sk))
+      encUtils.newHmac(HASH.SHA1, newBytes(sk)).Write(newBytes(url)).Sum()
     );
 
   return url + "&token=" + encodeURIComponent(sign);
@@ -330,7 +330,7 @@ function getUploadSignature(ak, sk, bucket, key, returnBody) {
   });
   var encodedPutPolicy = encUtils.urlBase64Encode(newBytes(putPolicy));
   var sign = encUtils.urlBase64Encode(
-    encUtils.hmac(HASH.SHA1, newBytes(encodedPutPolicy), newBytes(sk))
+    encUtils.newHmac(HASH.SHA1, newBytes(sk)).Write(newBytes(encodedPutPolicy)).Sum()
   );
   return ak + ":" + sign + ":" + encodedPutPolicy;
 }
@@ -370,7 +370,7 @@ function getManagementSignature(ak, sk, host, method, url, headers, bodyStr) {
     ak +
     ":" +
     encUtils.urlBase64Encode(
-      encUtils.hmac(HASH.SHA1, newBytes(payload), newBytes(sk))
+      encUtils.newHmac(HASH.SHA1, newBytes(sk)).Write(newBytes(payload)).Sum()
     );
   return s;
 }

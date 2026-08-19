@@ -77,7 +77,9 @@ func TestEncWriteReaderRewindsTempFile(t *testing.T) {
   var hmacHex = encUtils.toHex(
     encUtils.newHmac(HASH.SHA256, newBytes("key")).WriteReader(tmp).Sum()
   );
-  var oneShot = encUtils.toHex(encUtils.hmac(HASH.SHA256, newBytes("abc"), newBytes("key")));
+  var oneShot = encUtils.toHex(
+    encUtils.newHmac(HASH.SHA256, newBytes("key")).Write(newBytes("abc")).Sum()
+  );
   var again = tmp.ReadAsString();
   tmp.Close();
   if (hmacHex !== oneShot) throw new Error("hmac mismatch");

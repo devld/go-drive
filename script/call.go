@@ -40,7 +40,6 @@ func initVarsForVm(v *VM) {
 
 	v.o.Set("__newHash__", WrapVmCall(v, vm_newHash))
 	v.o.Set("__newHmac__", WrapVmCall(v, vm_newHmac))
-	v.o.Set("__hmac__", WrapVmCall(v, vm_hmac))
 	v.o.Set("__randomBytes__", WrapVmCall(v, vm_randomBytes))
 
 	v.o.Set("buildEntriesTree", WrapVmCall(v, vm_buildEntriesTree))
