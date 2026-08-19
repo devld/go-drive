@@ -10,7 +10,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/task"
 	"go-drive/common/types"
-	"go-drive/common/utils"
 	"io"
 	"net/http"
 	"os"
@@ -257,49 +256,52 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 }
 
 func GetDriveScript(config common.Config, name string) (DriveScriptContent, error) {
-	if name == "" {
-		return DriveScriptContent{}, err.NewBadRequestError("")
+	file, e := driveScriptFile(name)
+	if e != nil {
+		return DriveScriptContent{}, e
 	}
 
-	drivesDir, _ := config.GetDir(config.DrivesDir, false)
-	driveUploadersDir, _ := config.GetDir(config.DriveUploadersDir, false)
-	driveFile := filepath.Join(drivesDir, name+".js")
-	driveUploaderFile := filepath.Join(driveUploadersDir, name+".js")
+	drivesDir, e := config.GetDir(config.DrivesDir, false)
+	if e != nil {
+		return DriveScriptContent{}, err.NewNotFoundError()
+	}
 
 	r := DriveScriptContent{}
-	var e error
-
-	if exists, _ := utils.FileExists(driveFile); exists {
-		bytes, e := os.ReadFile(driveFile)
-		if e != nil {
-			return r, e
+	driveBytes, e := readFileInDir(drivesDir, file)
+	if e != nil {
+		if os.IsNotExist(e) {
+			return r, err.NewNotFoundError()
 		}
-		r.Drive = string(bytes)
-	} else {
-		return r, err.NewNotFoundError()
+		return r, e
 	}
+	r.Drive = string(driveBytes)
 
-	if exists, _ := utils.FileExists(driveUploaderFile); exists {
-		bytes, e := os.ReadFile(driveUploaderFile)
-		if e != nil {
-			return r, e
+	driveUploadersDir, e := config.GetDir(config.DriveUploadersDir, false)
+	if e != nil {
+		return r, nil
+	}
+	uploaderBytes, e := readFileInDir(driveUploadersDir, file)
+	if e != nil {
+		if os.IsNotExist(e) {
+			return r, nil
 		}
-		r.Uploader = string(bytes)
+		return r, e
 	}
-
-	return r, e
+	r.Uploader = string(uploaderBytes)
+	return r, nil
 }
 
 func SaveDriveScript(config common.Config, name string, content DriveScriptContent) error {
-	if name == "" {
-		return err.NewBadRequestError("")
+	file, e := driveScriptFile(name)
+	if e != nil {
+		return e
 	}
 	if content.Drive != "" {
 		drivesDir, e := config.GetDir(config.DrivesDir, true)
 		if e != nil {
 			return e
 		}
-		if e = os.WriteFile(filepath.Join(drivesDir, name+".js"), []byte(content.Drive), 0644); e != nil {
+		if e = writeFileAtomically(drivesDir, file, []byte(content.Drive)); e != nil {
 			return e
 		}
 	}
@@ -309,7 +311,7 @@ func SaveDriveScript(config common.Config, name string, content DriveScriptConte
 		if e != nil {
 			return e
 		}
-		if e = os.WriteFile(filepath.Join(driveUploadersDir, name+".js"), []byte(content.Uploader), 0644); e != nil {
+		if e = writeFileAtomically(driveUploadersDir, file, []byte(content.Uploader)); e != nil {
 			return e
 		}
 	}
@@ -318,8 +320,9 @@ func SaveDriveScript(config common.Config, name string, content DriveScriptConte
 }
 
 func InstallDriveScript(config common.Config, name string) error {
-	if name == "" {
-		return err.NewBadRequestError("invalid installation request")
+	file, e := driveScriptFile(name)
+	if e != nil {
+		return e
 	}
 	cache, ready, e := loadRepositoryCache(config)
 	if e != nil {
@@ -339,6 +342,15 @@ func InstallDriveScript(config common.Config, name string) error {
 		return err.NewNotFoundError()
 	}
 
+	driveFile, ok := repositoryFileName(cached.DriveFile)
+	if !ok {
+		return err.NewNotFoundError()
+	}
+	destFile, e := driveScriptFile(cached.Name)
+	if e != nil || destFile != file {
+		return err.NewNotFoundError()
+	}
+
 	_, filesDir, _, e := repositoryCachePaths(config, false)
 	if e != nil {
 		return e
@@ -348,16 +360,18 @@ func InstallDriveScript(config common.Config, name string) error {
 	if e != nil {
 		return e
 	}
-	driveSrc := filepath.Join(filesDir, cached.DriveFile)
-	if exists, _ := utils.FileExists(driveSrc); !exists {
+	if exists, _ := fileExistsInDir(filesDir, driveFile); !exists {
 		return err.NewNotFoundError()
 	}
 
-	var uploaderSrc string
+	var uploaderFile string
 	var driveUploadersDir string
 	if cached.UploaderFile != "" {
-		uploaderSrc = filepath.Join(filesDir, cached.UploaderFile)
-		if exists, _ := utils.FileExists(uploaderSrc); !exists {
+		uploaderFile, ok = repositoryFileName(cached.UploaderFile)
+		if !ok {
+			return err.NewNotFoundError()
+		}
+		if exists, _ := fileExistsInDir(filesDir, uploaderFile); !exists {
 			return err.NewNotFoundError()
 		}
 		driveUploadersDir, e = config.GetDir(config.DriveUploadersDir, true)
@@ -366,46 +380,46 @@ func InstallDriveScript(config common.Config, name string) error {
 		}
 	}
 
-	if e = copyFileReplace(driveSrc, filepath.Join(drivesDir, cached.Name+".js")); e != nil {
+	if e = copyFileInDir(filesDir, driveFile, drivesDir, destFile); e != nil {
 		return e
 	}
 	if driveUploadersDir != "" {
-		if e = copyFileReplace(uploaderSrc, filepath.Join(driveUploadersDir, cached.Name+".js")); e != nil {
-			return e
-		}
-		return nil
+		return copyFileInDir(filesDir, uploaderFile, driveUploadersDir, destFile)
 	}
 
-	driveUploadersDir, _ = config.GetDir(config.DriveUploadersDir, false)
-	staleUploader := filepath.Join(driveUploadersDir, cached.Name+".js")
-	if exists, _ := utils.FileExists(staleUploader); exists {
-		_ = os.Remove(staleUploader)
+	driveUploadersDir, e = config.GetDir(config.DriveUploadersDir, false)
+	if e != nil {
+		return nil
+	}
+	if exists, _ := fileExistsInDir(driveUploadersDir, destFile); exists {
+		_ = removeFileInDir(driveUploadersDir, destFile)
 	}
 	return nil
 }
 
 func UninstallDriveScript(config common.Config, name string) error {
-	if name == "" {
-		return err.NewBadRequestError("")
+	file, e := driveScriptFile(name)
+	if e != nil {
+		return e
 	}
 
-	drivesDir, _ := config.GetDir(config.DrivesDir, false)
-	driveUploadersDir, _ := config.GetDir(config.DriveUploadersDir, false)
-	driveFile := filepath.Join(drivesDir, name+".js")
-	driveUploaderFile := filepath.Join(driveUploadersDir, name+".js")
-	if exists, _ := utils.FileExists(driveFile); exists {
-		e := os.Remove(driveFile)
-		if e != nil {
-			return e
-		}
-	} else {
+	drivesDir, e := config.GetDir(config.DrivesDir, false)
+	if e != nil {
 		return err.NewNotFoundError()
 	}
-	if exists, _ := utils.FileExists(driveUploaderFile); exists {
-		e := os.Remove(driveUploaderFile)
-		if e != nil {
-			return e
+	if e := removeFileInDir(drivesDir, file); e != nil {
+		if os.IsNotExist(e) {
+			return err.NewNotFoundError()
 		}
+		return e
+	}
+
+	driveUploadersDir, e := config.GetDir(config.DriveUploadersDir, false)
+	if e != nil {
+		return nil
+	}
+	if e := removeFileInDir(driveUploadersDir, file); e != nil && !os.IsNotExist(e) {
+		return e
 	}
 	return nil
 }
@@ -431,17 +445,56 @@ func ListDriveScripts(config common.Config) ([]DriveScript, error) {
 	return result, nil
 }
 
+func driveScriptFile(name string) (string, error) {
+	if name == "" {
+		return "", err.NewBadRequestError("")
+	}
+	return scriptFileName(name)
+}
+
 func readDriveScriptFile(file string, config common.Config) ([]byte, error) {
 	scriptsPath, e := config.GetDir(config.DrivesDir, false)
 	if e != nil {
 		return nil, e
 	}
-	root, e := os.OpenRoot(scriptsPath)
+	return readFileInDir(scriptsPath, file)
+}
+
+func readFileInDir(dir, name string) ([]byte, error) {
+	root, e := os.OpenRoot(dir)
 	if e != nil {
 		return nil, e
 	}
 	defer func() { _ = root.Close() }()
-	return root.ReadFile(file)
+	return root.ReadFile(name)
+}
+
+func fileExistsInDir(dir, name string) (bool, error) {
+	root, e := os.OpenRoot(dir)
+	if e != nil {
+		if os.IsNotExist(e) {
+			return false, nil
+		}
+		return false, e
+	}
+	defer func() { _ = root.Close() }()
+	_, e = root.Stat(name)
+	if e != nil {
+		if os.IsNotExist(e) {
+			return false, nil
+		}
+		return false, e
+	}
+	return true, nil
+}
+
+func removeFileInDir(dir, name string) error {
+	root, e := os.OpenRoot(dir)
+	if e != nil {
+		return e
+	}
+	defer func() { _ = root.Close() }()
+	return root.Remove(name)
 }
 
 func readDriveScriptMeta(file string, config common.Config) (DriveScript, error) {
@@ -657,14 +710,20 @@ func writeFileAtomically(dir, name string, content []byte) error {
 	if e := os.MkdirAll(dir, 0755); e != nil {
 		return e
 	}
+	root, e := os.OpenRoot(dir)
+	if e != nil {
+		return e
+	}
+	defer func() { _ = root.Close() }()
+
 	tempFile, e := os.CreateTemp(dir, ".script-*")
 	if e != nil {
 		return e
 	}
-	tempName := tempFile.Name()
+	tempName := filepath.Base(tempFile.Name())
 	cleanup := func() {
 		_ = tempFile.Close()
-		_ = os.Remove(tempName)
+		_ = root.Remove(tempName)
 	}
 	if _, e = tempFile.Write(content); e != nil {
 		cleanup()
@@ -675,22 +734,21 @@ func writeFileAtomically(dir, name string, content []byte) error {
 		return e
 	}
 	if e = tempFile.Close(); e != nil {
-		_ = os.Remove(tempName)
+		_ = root.Remove(tempName)
 		return e
 	}
-	dest := filepath.Join(dir, name)
-	_ = os.Remove(dest)
-	if e = os.Rename(tempName, dest); e != nil {
-		_ = os.Remove(tempName)
+	_ = root.Remove(name)
+	if e = root.Rename(tempName, name); e != nil {
+		_ = root.Remove(tempName)
 		return e
 	}
 	return nil
 }
 
-func copyFileReplace(src, dest string) error {
-	content, e := os.ReadFile(src)
+func copyFileInDir(srcDir, srcName, destDir, destName string) error {
+	content, e := readFileInDir(srcDir, srcName)
 	if e != nil {
 		return e
 	}
-	return writeFileAtomically(filepath.Dir(dest), filepath.Base(dest), content)
+	return writeFileAtomically(destDir, destName, content)
 }

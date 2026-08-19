@@ -292,6 +292,65 @@ func TestReadDriveScriptFileStaysWithinScriptsRoot(t *testing.T) {
 	}
 }
 
+func TestGetSaveUninstallDriveScriptRoundTrip(t *testing.T) {
+	config := testConfig(t)
+	content := DriveScriptContent{Drive: "drive-body", Uploader: "uploader-body"}
+	if e := SaveDriveScript(config, "example", content); e != nil {
+		t.Fatalf("SaveDriveScript() error = %v", e)
+	}
+
+	got, e := GetDriveScript(config, "example")
+	if e != nil {
+		t.Fatalf("GetDriveScript() error = %v", e)
+	}
+	if got != content {
+		t.Fatalf("GetDriveScript() = %#v, want %#v", got, content)
+	}
+
+	if e := UninstallDriveScript(config, "example"); e != nil {
+		t.Fatalf("UninstallDriveScript() error = %v", e)
+	}
+	if _, e := GetDriveScript(config, "example"); e == nil {
+		t.Fatal("GetDriveScript() after uninstall error = nil, want error")
+	}
+}
+
+func TestDriveScriptManagementRejectsPathTraversal(t *testing.T) {
+	config := testConfig(t)
+	outside := filepath.Join(config.DataDir, "outside.js")
+	if e := os.WriteFile(outside, []byte("secret"), 0644); e != nil {
+		t.Fatal(e)
+	}
+
+	names := []string{
+		"../outside",
+		"..\\outside",
+		"/tmp/outside",
+		filepath.Join(config.DataDir, "outside"),
+		"..",
+		"",
+	}
+	for _, name := range names {
+		if _, e := GetDriveScript(config, name); e == nil {
+			t.Fatalf("GetDriveScript(%q) error = nil, want error", name)
+		}
+		if e := SaveDriveScript(config, name, DriveScriptContent{Drive: "pwned"}); e == nil {
+			t.Fatalf("SaveDriveScript(%q) error = nil, want error", name)
+		}
+		if e := UninstallDriveScript(config, name); e == nil {
+			t.Fatalf("UninstallDriveScript(%q) error = nil, want error", name)
+		}
+		if e := InstallDriveScript(config, name); e == nil {
+			t.Fatalf("InstallDriveScript(%q) error = nil, want error", name)
+		}
+	}
+
+	got, e := os.ReadFile(outside)
+	if e != nil || string(got) != "secret" {
+		t.Fatalf("outside.js = %q, %v; want unmodified", got, e)
+	}
+}
+
 func TestInstallDriveScriptCopiesCachedFiles(t *testing.T) {
 	mux := http.NewServeMux()
 	var server *httptest.Server

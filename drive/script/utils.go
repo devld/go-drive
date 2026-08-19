@@ -13,6 +13,7 @@ import (
 	s "go-drive/script"
 	"io"
 	"maps"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -62,10 +63,20 @@ func scriptFileName(name string) (string, error) {
 	if name == "" {
 		return "", err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
 	}
-	if name == "." || name == ".." || strings.ContainsAny(name, `/\\`) {
-		return "", err.NewBadRequestError("invalid script drive name")
+	if e := validateScriptName(name); e != nil {
+		return "", e
 	}
 	return name + ".js", nil
+}
+
+func validateScriptName(name string) error {
+	if name == "." || name == ".." || strings.ContainsRune(name, 0) || strings.ContainsAny(name, `/\`) {
+		return err.NewBadRequestError("invalid script drive name")
+	}
+	if filepath.Base(name) != name {
+		return err.NewBadRequestError("invalid script drive name")
+	}
+	return nil
 }
 
 func validateScriptForm(form []types.FormItem) error {
