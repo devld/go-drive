@@ -303,8 +303,9 @@ Follow `dropbox.js`. Do not persist OAuth state manually or duplicate refresh-to
 
 ### HTTP
 
-- `http(ctx, method, url, headers?, body?) -> HttpResponse`; methods are HEAD, GET, POST, PUT, DELETE, PATCH, and OPTIONS.
+- `http(ctx, method, url, { headers, body }?) -> HttpResponse`; methods are HEAD, GET, POST, PUT, DELETE, PATCH, and OPTIONS.
 - The body may be a Reader, string, Bytes, or HttpFormData.
+- For a Reader body, `Content-Length` comes from `headers` when set (the body is truncated to that size). Otherwise a known size is used (`TempFile` remaining bytes, including `ProgressReader` / `LimitReader` wrapping one) so object-storage PUT is not chunked. String and Bytes always use their actual length. FormData is multipart. Set `Transfer-Encoding: chunked` to skip auto `Content-Length`.
 - `newFormData()`, with `AppendField` and `AppendFile`.
 - `HttpResponse.Status`, `Body`, `BodySize()`, `Text()`, and `Dispose()`.
 - `HttpResponse.Headers.Get(key)`, `Values(key)`, and `GetAll()`.
@@ -339,10 +340,12 @@ Log only inside a `DEBUG` branch, and redact arguments before constructing the l
 
 - `pathUtils.clean/join/parent/base/ext/isRoot`.
 - `dayjs` and `toDate(goTime)`; GoTime also has `UnixMilli()`.
-- `encUtils.toHex/fromHex/base64Encode/base64Decode/urlBase64Encode/urlBase64Decode`.
-- `encUtils.newHash(HASH.*)`; Hasher has `Write` and `Sum`.
-- `encUtils.hmac(HASH.*, payloadBytes, keyBytes)`.
-- HASH supports MD5, SHA1, SHA256, and SHA512.
+- `encUtils.toHex/fromHex`.
+- `encUtils.base64Encode/base64Decode` and `urlBase64Encode/urlBase64Decode`; second argument `padded` defaults to `true`. Pass `false` for raw encoding (JWT, PKCE).
+- `encUtils.randomBytes(n)` (CSPRNG; `n` in `[0, 1MiB]`).
+- `encUtils.newHash(HASH.*)`; Hasher has `Write`, `WriteReader`, and `Sum`.
+- `encUtils.newHmac(HASH.*, keyBytes)` returns a streaming Hasher.
+- HASH supports MD5, SHA1, SHA256, and SHA512. `WriteReader` hashes from the current offset to EOF (it does not seek to the start). On a seekable `TempFile` it restores that same offset, so hashing from the middle (`SeekTo` then `WriteReader`) and then continuing from that point works. After `Write`, call `SeekTo(0, SEEK_START)` if the whole file must be hashed or uploaded. One-shot Readers (response bodies) are consumed; copy them to a TempFile first if they must be reused. When a digest must appear in request headers (`Content-MD5`), hash the TempFile, then `http()`.
 
 ### Traversal helpers
 
@@ -433,16 +436,13 @@ defineDrive(
       ctx.Total(size, true);
       var route = "/v1/content?path=" + encodeURIComponent(path) +
         "&override=" + (override ? "true" : "false");
-      var resp = http(
-        ctx,
-        "PUT",
-        this.baseURL + route,
-        {
+      var resp = http(ctx, "PUT", this.baseURL + route, {
+        headers: {
           Authorization: "Bearer " + this.token,
           "Content-Type": "application/octet-stream"
         },
-        reader.ProgressReader(ctx)
-      );
+        body: reader.ProgressReader(ctx)
+      });
       var status = resp.Status;
       var message = resp.Text();
       if (status === 409) throw ErrNotAllowed("destination already exists");
@@ -493,7 +493,10 @@ function requestJSON(drive, ctx, method, route, body) {
     headers["Content-Type"] = "application/json";
     payload = JSON.stringify(body);
   }
-  var resp = http(ctx, method, drive.baseURL + route, headers, payload);
+  var resp = http(ctx, method, drive.baseURL + route, {
+    headers: headers,
+    body: payload
+  });
   var status = resp.Status;
   var text = resp.Text();
   var data = {};

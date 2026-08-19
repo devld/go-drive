@@ -1,5 +1,5 @@
 // @name Qiniu
-// @version 1.0.1
+// @version 1.0.2
 // @uploader qiniu-uploader.js
 // @description Qiniu Kodo
 
@@ -212,7 +212,7 @@ function saveSmall(drive, ctx, path, reader) {
   );
   data.AppendFile("file", pathUtils.base(path), reader);
 
-  var resp = http(ctx, "POST", drive.uploadURL, null, data);
+  var resp = http(ctx, "POST", drive.uploadURL, { body: data });
   var respData = resp.Text();
   try {
     respData = JSON.parse(respData);
@@ -234,7 +234,7 @@ function getDownloadURL(baseURL, key, ak, sk) {
     ak +
     ":" +
     encUtils.urlBase64Encode(
-      encUtils.hmac(HASH.SHA1, newBytes(url), newBytes(sk))
+      encUtils.newHmac(HASH.SHA1, newBytes(sk)).Write(newBytes(url)).Sum()
     );
 
   return url + "&token=" + encodeURIComponent(sign);
@@ -288,7 +288,7 @@ function request(drive, ctx, method, url, headers, body) {
   if (DEBUG) {
     console.log("[HTTP REQ]", method, url, JSON.stringify(headers), body);
   }
-  var r = http(ctx, method, url, headers, body);
+  var r = http(ctx, method, url, { headers: headers, body: body });
 
   var isJSON =
     r.Headers.Get("Content-Type").toLowerCase().indexOf("application/json") >=
@@ -330,7 +330,7 @@ function getUploadSignature(ak, sk, bucket, key, returnBody) {
   });
   var encodedPutPolicy = encUtils.urlBase64Encode(newBytes(putPolicy));
   var sign = encUtils.urlBase64Encode(
-    encUtils.hmac(HASH.SHA1, newBytes(encodedPutPolicy), newBytes(sk))
+    encUtils.newHmac(HASH.SHA1, newBytes(sk)).Write(newBytes(encodedPutPolicy)).Sum()
   );
   return ak + ":" + sign + ":" + encodedPutPolicy;
 }
@@ -370,7 +370,7 @@ function getManagementSignature(ak, sk, host, method, url, headers, bodyStr) {
     ak +
     ":" +
     encUtils.urlBase64Encode(
-      encUtils.hmac(HASH.SHA1, newBytes(payload), newBytes(sk))
+      encUtils.newHmac(HASH.SHA1, newBytes(sk)).Write(newBytes(payload)).Sum()
     );
   return s;
 }

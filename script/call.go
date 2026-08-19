@@ -39,7 +39,8 @@ func initVarsForVm(v *VM) {
 	v.o.Set("__encURLBase64Decode__", WrapVmCall(v, vm_urlBase64Decode))
 
 	v.o.Set("__newHash__", WrapVmCall(v, vm_newHash))
-	v.o.Set("__hmac__", WrapVmCall(v, vm_hmac))
+	v.o.Set("__newHmac__", WrapVmCall(v, vm_newHmac))
+	v.o.Set("__randomBytes__", WrapVmCall(v, vm_randomBytes))
 
 	v.o.Set("buildEntriesTree", WrapVmCall(v, vm_buildEntriesTree))
 	v.o.Set("flattenEntriesTree", WrapVmCall(v, vm_flattenEntriesTree))

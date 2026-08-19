@@ -352,8 +352,7 @@ function request(oauthHolder, ctx, method, url, headers, body, contentApi) {
     (contentApi
       ? "https://content.dropboxapi.com/2"
       : "https://api.dropboxapi.com/2") + url,
-    headers,
-    body
+    { headers: headers, body: body }
   );
   var isJSON =
     r.Headers.Get("Content-Type").toLowerCase().indexOf("application/json") >=
