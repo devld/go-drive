@@ -1,12 +1,20 @@
-name: Deploy documentation to Pages
+name: Validate and deploy documentation to Pages
 
 on:
+  push:
+    branches:
+      - master
+    paths:
+      - docs/site/**
+  pull_request:
+    branches:
+      - master
+    paths:
+      - docs/site/**
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -14,7 +22,9 @@ concurrency:
 
 jobs:
   build:
-    name: Build Pages artifact
+    name: Validate documentation
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -28,9 +38,6 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: docs/site/package-lock.json
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
 
       - name: Install dependencies
         working-directory: docs/site
@@ -49,6 +56,7 @@ jobs:
         run: npm run build
 
       - name: Upload Pages artifact
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-pages-artifact@v4
         with:
           path: docs/site/.vitepress/dist
@@ -56,11 +64,19 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: build
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
       - name: Deploy Pages artifact
         id: deployment
         uses: actions/deploy-pages@v4

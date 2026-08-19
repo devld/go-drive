@@ -3,7 +3,7 @@ title: 自动任务
 description: 使用 Cron 计划或文件事件触发 go-drive 的复制、移动、删除和 JavaScript 操作，并查看执行历史。
 lang: zh-CN
 translation_key: jobs
-source_hash: 243ac6567c3d1f4c439a0e0e68aa39247492a14a92c629d7b4f9cefe470e47bc
+source_hash: 5c203a1195b331ce4f3e516f277125ed58c1e7f107ab3af750678c2799fa25ee
 ---
 
 # 自动任务
