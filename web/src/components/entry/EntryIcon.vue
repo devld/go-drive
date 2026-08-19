@@ -57,9 +57,9 @@ const supportThumbnail = computed(() => {
   return !!thumbnailConfig.value.extensions?.[ext]
 })
 const thumbnail = computed(() => {
-  const t = props.entry.meta.thumbnail
-  if (typeof t === 'string') return t
-  if (supportThumbnail.value || t === true) {
+  const url = props.entry.meta.thumbnailUrl
+  if (url) return url
+  if (supportThumbnail.value || props.entry.meta.selfThumbnail) {
     return fileThumbnail(props.entry.path, props.entry.meta)
   }
   return undefined

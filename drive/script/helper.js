@@ -73,7 +73,6 @@ function bindDriveMethods(drive, methods) {
     "upload",
     "getURL",
     "getThumbnail",
-    "hasThumbnail",
   ];
   for (var i = 0; i < names.length; i++) {
     var name = names[i];

@@ -110,7 +110,13 @@ declare type EntryType = "file" | "dir";
 declare interface EntryMeta {
   Readable: boolean;
   Writable: boolean;
-  Thumbnail?: string;
+  /** Client-loadable thumbnail URL. */
+  ThumbnailURL?: string;
+  /**
+   * Set when `getThumbnail` can produce a thumbnail for this entry.
+   * Local predicate only (type, extension, size); no network I/O.
+   */
+  SelfThumbnail?: boolean;
   Props?: M;
 }
 

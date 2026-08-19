@@ -341,6 +341,9 @@ func parseValue(ov *Value, v reflect.Value) {
 			}
 			fName := vt.Field(i).Name
 			value := ov.Get(fName)
+			if value == nil || value.IsNil() {
+				continue
+			}
 			parseValue(value, fv)
 		}
 	case reflect.Bool:

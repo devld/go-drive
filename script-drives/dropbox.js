@@ -1,5 +1,5 @@
 // @name Dropbox
-// @version 1.0.2
+// @version 1.0.3
 // @description Dropbox drive
 
 /// <reference path="../docs/scripts/env/drive.d.ts"/>
@@ -168,26 +168,10 @@ defineDrive(
       return { URL: data.link };
     },
 
-    hasThumbnail: function (entry) {
-      if (entry.IsDir) return false;
-      if (entry.Size > 20 * 1024 * 1024) return false;
-      var ext = pathUtils.ext(entry.Path);
-      return (
-        [
-          "jpg",
-          "jpeg",
-          "png",
-          "tiff",
-          "tif",
-          "gif",
-          "webp",
-          "ppm",
-          "bmp",
-        ].indexOf(ext) !== -1
-      );
-    },
-
     getThumbnail: function (ctx, entry) {
+      if (!dropboxCanThumbnail(entry)) {
+        throw ErrUnsupported();
+      }
       var resp = request(
         this.oauth,
         ctx,
@@ -307,15 +291,36 @@ function uploadLarge(drive, ctx, path, size, reader) {
 }
 
 function toEntry(data) {
-  return {
-    IsDir: data[".tag"] === "folder",
+  var isDir = data[".tag"] === "folder";
+  var entry = {
+    IsDir: isDir,
     Path: data.path_display.substring(1),
-    Size: data[".tag"] === "folder" ? -1 : data.size,
-    ModTime:
-      data[".tag"] === "folder"
-        ? -1
-        : dayjs(data.server_modified).toDate().getTime(),
+    Size: isDir ? -1 : data.size,
+    ModTime: isDir ? -1 : dayjs(data.server_modified).toDate().getTime(),
   };
+  if (dropboxCanThumbnail(entry)) {
+    entry.Meta = { Readable: true, Writable: true, SelfThumbnail: true };
+  }
+  return entry;
+}
+
+function dropboxCanThumbnail(entry) {
+  if (entry.IsDir) return false;
+  if (entry.Size > 20 * 1024 * 1024) return false;
+  var ext = pathUtils.ext(entry.Path);
+  return (
+    [
+      "jpg",
+      "jpeg",
+      "png",
+      "tiff",
+      "tif",
+      "gif",
+      "webp",
+      "ppm",
+      "bmp",
+    ].indexOf(ext) !== -1
+  );
 }
 
 /**

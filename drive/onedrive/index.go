@@ -388,7 +388,7 @@ func (o *oneDriveEntry) Size() int64 {
 func (o *oneDriveEntry) Meta() types.EntryMeta {
 	return types.EntryMeta{
 		Readable: true, Writable: true,
-		Thumbnail: o.thumbnail,
+		ThumbnailURL: o.thumbnail,
 	}
 }
 
