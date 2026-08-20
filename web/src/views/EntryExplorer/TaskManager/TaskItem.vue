@@ -163,10 +163,22 @@ const showRemove = computed(() => !showStop.value)
 </script>
 <style lang="scss">
 .upload-task-item {
+  --upload-task-ops-size: 18px;
+  --upload-task-ops-gap: 4px;
+  --upload-task-ops-width: calc(
+    2 * var(--upload-task-ops-size) + var(--upload-task-ops-gap)
+  );
+  --upload-task-status-width: 7em;
+
   position: relative;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px 88px 72px max-content;
+  grid-template-columns:
+    minmax(0, 1fr)
+    5em
+    5.5em
+    var(--upload-task-status-width)
+    var(--upload-task-ops-width);
   align-items: center;
   column-gap: 8px;
   min-width: 0;
@@ -177,6 +189,10 @@ const showRemove = computed(() => !showStop.value)
   & > * {
     z-index: 1;
     min-width: 0;
+  }
+
+  & > .upload-task-item__ops {
+    min-width: var(--upload-task-ops-width);
   }
 
   &.task-status-64 {
@@ -240,6 +256,7 @@ const showRemove = computed(() => !showStop.value)
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
 }
 
 .upload-task-item__location {
@@ -260,15 +277,20 @@ const showRemove = computed(() => !showStop.value)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .upload-task-item__ops {
+  box-sizing: border-box;
+  width: var(--upload-task-ops-width);
+  min-width: var(--upload-task-ops-width);
+  justify-self: end;
   white-space: nowrap;
   text-align: right;
   display: inline-flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 4px;
+  gap: var(--upload-task-ops-gap);
 
   .simple-button.plain {
     font-size: 18px;
@@ -277,10 +299,11 @@ const showRemove = computed(() => !showStop.value)
 
 @media screen and (max-width: 600px) {
   .upload-task-item {
-    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-columns:
+      max-content minmax(0, 1fr) var(--upload-task-status-width);
     grid-template-areas:
-      'name ops'
-      'size status';
+      'name name ops'
+      'size location status';
     row-gap: 4px;
   }
 
@@ -298,10 +321,11 @@ const showRemove = computed(() => !showStop.value)
 
   .upload-task-item__status {
     grid-area: status;
+    text-align: right;
   }
 
   .upload-task-item__location {
-    display: none;
+    grid-area: location;
   }
 }
 </style>
