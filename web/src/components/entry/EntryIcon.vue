@@ -5,7 +5,7 @@
     @click="emit('click', $event)"
   >
     <Icon
-      v-show="entry.type === 'dir' || !thumbnailLoaded"
+      v-show="entry.type === 'dir' || !showThumbnail || !thumbnailLoaded"
       :name="icon || entryIcon"
     />
     <img
@@ -69,6 +69,13 @@ watch(thumbnail, () => {
   err.value = null
   thumbnailLoaded.value = false
 })
+
+watch(
+  () => props.showThumbnail,
+  () => {
+    thumbnailLoaded.value = false
+  }
+)
 
 const onLoad = () => (thumbnailLoaded.value = true)
 const onError = (e: Event) => {
