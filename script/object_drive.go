@@ -1,6 +1,10 @@
 package script
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+
 	"go-drive/common/driveutil"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -91,6 +95,10 @@ func (d Drive) Delete(ctx any, path string) {
 	}
 }
 
+func (d Drive) ConsoleString() string {
+	return formatGoInspect("Drive", nil, true)
+}
+
 type Entry struct {
 	e types.IEntry
 }
@@ -123,21 +131,24 @@ func (e Entry) Size() int64 {
 	return e.e.Size()
 }
 
-func (e Entry) Meta() types.EntryMeta {
-	return e.e.Meta()
+func (e Entry) Meta() entryMeta {
+	return entryMeta{e.e.Meta()}
 }
 
 func (e Entry) ModTime() int64 {
 	return e.e.ModTime()
 }
 
-func (e Entry) GetURL(ctx any) *types.ContentURL {
+func (e Entry) GetURL(ctx any) *contentURL {
 	vm := GetVM(ctx)
 	r, er := e.e.GetURL(GetContext(ctx))
 	if er != nil {
 		throwForVM(vm, er)
 	}
-	return r
+	if r == nil {
+		return nil
+	}
+	return &contentURL{*r}
 }
 
 func (e Entry) GetReader(ctx any, start, size int64) ReadCloser {
@@ -171,4 +182,58 @@ func (e Entry) Data() any {
 
 func (e Entry) Drive() Drive {
 	return NewDrive(e.e.Drive())
+}
+
+func (e Entry) ConsoleString() string {
+	if e.e == nil {
+		return "Entry {}"
+	}
+	return formatGoInspect("Entry", []string{
+		"Path: " + strconv.Quote(e.e.Path()),
+		"Type: " + strconv.Quote(string(e.e.Type())),
+		"Name: " + strconv.Quote(e.e.Name()),
+		fmt.Sprintf("Size: %d", e.e.Size()),
+	}, true)
+}
+
+func (e Entry) MarshalJSON() ([]byte, error) {
+	if e.e == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(struct {
+		Path    string          `json:"Path"`
+		Name    string          `json:"Name"`
+		Type    types.EntryType `json:"Type"`
+		Size    int64           `json:"Size"`
+		ModTime int64           `json:"ModTime"`
+		Meta    types.EntryMeta `json:"Meta"`
+	}{
+		Path:    e.e.Path(),
+		Name:    e.e.Name(),
+		Type:    e.e.Type(),
+		Size:    e.e.Size(),
+		ModTime: e.e.ModTime(),
+		Meta:    e.e.Meta(),
+	})
+}
+
+type entryMeta struct {
+	types.EntryMeta
+}
+
+func (m entryMeta) ConsoleString() string {
+	return formatGoInspect("EntryMeta", []string{
+		fmt.Sprintf("Readable: %t", m.Readable),
+		fmt.Sprintf("Writable: %t", m.Writable),
+	}, true)
+}
+
+type contentURL struct {
+	types.ContentURL
+}
+
+func (u contentURL) ConsoleString() string {
+	return formatGoInspect("ContentURL", []string{
+		"URL: " + strconv.Quote(u.URL),
+	}, true)
 }

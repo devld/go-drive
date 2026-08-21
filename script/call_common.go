@@ -95,6 +95,10 @@ func (cwt *contextWithTimeout) Dispose() {
 	cwt.Cancel()
 }
 
+func (cwt contextWithTimeout) ConsoleString() string {
+	return formatGoInspect("ContextWithTimeout", nil, true)
+}
+
 // vm_newLocker: () *locker
 func vm_newLocker(vm *VM, args Values) any {
 	return &locker{&sync.Mutex{}}
@@ -110,4 +114,8 @@ func (l *locker) Lock() {
 
 func (l *locker) Unlock() {
 	l.mu.Unlock()
+}
+
+func (l *locker) ConsoleString() string {
+	return formatGoInspect("Locker", nil, true)
 }

@@ -2,6 +2,7 @@ package script
 
 import (
 	"context"
+	"strconv"
 
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -87,6 +88,16 @@ func (c Context) Err() {
 	}
 }
 
+func (c Context) ConsoleString() string {
+	if c.v == nil {
+		return "Context {}"
+	}
+	if e := c.v.Err(); e != nil {
+		return formatGoInspect("Context", []string{"Err: " + strconv.Quote(e.Error())}, true)
+	}
+	return formatGoInspect("Context", nil, true)
+}
+
 type TaskCtx struct {
 	Context
 	v types.TaskCtx
@@ -98,4 +109,8 @@ func (t TaskCtx) Progress(loaded int64, abs bool) {
 
 func (t TaskCtx) Total(total int64, abs bool) {
 	t.v.Total(total, abs)
+}
+
+func (t TaskCtx) ConsoleString() string {
+	return formatGoInspect("TaskCtx", nil, true)
 }

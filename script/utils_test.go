@@ -20,7 +20,7 @@ func TestFormatConsoleArgSerializesObjects(t *testing.T) {
 		{name: "null", code: `null`, want: "null"},
 		{name: "undefined", code: `undefined`, want: "undefined"},
 		{name: "object", code: `({a: 1, b: "x"})`, want: `{"a":1,"b":"x"}`},
-		{name: "array", code: `[1, {a: 2}, "x"]`, want: `[1,{"a":2},"x"]`},
+		{name: "array", code: `[1, {a: 2}, "x"]`, want: `[ 1, {"a":2}, x ]`},
 		{name: "nested", code: `({a: {b: [1, 2]}})`, want: `{"a":{"b":[1,2]}}`},
 	}
 
@@ -39,6 +39,39 @@ func TestFormatConsoleArgFallsBackForCircular(t *testing.T) {
 	got := evalConsoleArg(t, vm, `(function() { var o = {}; o.self = o; return o; })()`)
 	if got != "[object Object]" {
 		t.Fatalf("circular object = %q, want [object Object]", got)
+	}
+}
+
+func TestFormatConsoleArgTruncatesCircularArray(t *testing.T) {
+	vm := newPoolTestVM(t)
+	got := evalConsoleArg(t, vm, `(function() { var a = []; a.push(a); return a; })()`)
+	if got != "[ [ ... ] ]" {
+		t.Fatalf("circular array = %q, want [ [ ... ] ]", got)
+	}
+}
+
+func TestFormatConsoleArgTruncatesLongArray(t *testing.T) {
+	vm := newPoolTestVM(t)
+
+	got100 := evalConsoleArg(t, vm, `(function() {
+		var a = [];
+		for (var i = 0; i < 100; i++) a.push(i);
+		return a;
+	})()`)
+	if strings.Contains(got100, "more items") {
+		t.Fatalf("100-item array should not truncate: %s", got100)
+	}
+	if !strings.HasPrefix(got100, "[ 0, ") || !strings.HasSuffix(got100, ", 99 ]") {
+		t.Fatalf("100-item array = %s", got100)
+	}
+
+	got101 := evalConsoleArg(t, vm, `(function() {
+		var a = [];
+		for (var i = 0; i < 101; i++) a.push(i);
+		return a;
+	})()`)
+	if !strings.HasSuffix(got101, ", 99, ... 1 more items ]") {
+		t.Fatalf("101-item array = %s, want 100 items then remainder", got101)
 	}
 }
 

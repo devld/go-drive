@@ -160,6 +160,11 @@ func (fd *formData) AppendFile(key, filename string, reader any) {
 	fd.data = append(fd.data, formDataField{key, filename, r})
 }
 
+func (fd formData) ConsoleString() string {
+	n := len(fd.data)
+	return formatGoInspect("HttpFormData", []string{fmt.Sprintf("Len: %d", n)}, n > 0)
+}
+
 func (fd *formData) prepare(w io.Writer) string {
 	if fd.mw != nil {
 		panic("already prepared")
@@ -220,6 +225,14 @@ func (h *httpHeaders) GetAll() map[string][]string {
 	return h.h
 }
 
+func (h httpHeaders) ConsoleString() string {
+	n := 0
+	if h.h != nil {
+		n = len(h.h)
+	}
+	return formatGoInspect("HttpHeaders", []string{fmt.Sprintf("Len: %d", n)}, n > 0)
+}
+
 func newHttpResponse(vm *VM, resp *http.Response) *httpResponse {
 	return &httpResponse{
 		vm:      vm,
@@ -247,4 +260,15 @@ func (r *httpResponse) Text() string {
 
 func (r *httpResponse) Dispose() {
 	GetReadCloser(r.Body).Close()
+}
+
+func (r httpResponse) ConsoleString() string {
+	bodySize := int64(-1)
+	if r.Headers != nil {
+		bodySize = r.BodySize()
+	}
+	return formatGoInspect("HttpResponse", []string{
+		fmt.Sprintf("Status: %d", r.Status),
+		fmt.Sprintf("BodySize: %d", bodySize),
+	}, true)
 }

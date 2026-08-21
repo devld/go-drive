@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"hash"
 	"io"
 )
@@ -161,6 +162,13 @@ func (h Hasher) WriteReader(r any) Hasher {
 func (h Hasher) Sum() Bytes {
 	r := h.s.Sum(nil)
 	return NewBytes(h.vm, r)
+}
+
+func (h Hasher) ConsoleString() string {
+	if h.s == nil {
+		return "Hasher {}"
+	}
+	return formatGoInspect("Hasher", []string{fmt.Sprintf("Size: %d", h.s.Size())}, true)
 }
 
 func vm_newHash(vm *VM, args Values) any {

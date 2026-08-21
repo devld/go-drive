@@ -1,9 +1,11 @@
 package script
 
 import (
-	"go-drive/common/driveutil"
+	"fmt"
 	"io"
 	"os"
+
+	"go-drive/common/driveutil"
 )
 
 func NewBytes(vm *VM, s any) Bytes {
@@ -122,6 +124,10 @@ func (b Bytes) String() string {
 	return string(b.b)
 }
 
+func (b Bytes) ConsoleString() string {
+	return formatGoInspect("Bytes", []string{fmt.Sprintf("Len: %d", len(b.b))}, false)
+}
+
 type Reader struct {
 	vm *VM
 	r  io.Reader
@@ -166,6 +172,10 @@ func (r Reader) LimitReader(n int64) Reader {
 
 func (r Reader) ProgressReader(ctx any) Reader {
 	return wrapPreservingLength(r.vm, driveutil.ProgressReader(r.r, GetTaskCtx(ctx)), r.r)
+}
+
+func (r Reader) ConsoleString() string {
+	return formatGoInspect("Reader", nil, true)
 }
 
 type contentLengthReader interface {
@@ -283,6 +293,10 @@ func (r ReadCloser) Close() {
 	}
 }
 
+func (r ReadCloser) ConsoleString() string {
+	return formatGoInspect("ReadCloser", nil, true)
+}
+
 type TempFile struct {
 	Reader
 	f *os.File
@@ -324,6 +338,14 @@ func (tf TempFile) Size() int64 {
 		tf.vm.ThrowError(e)
 	}
 	return info.Size()
+}
+
+func (tf TempFile) ConsoleString() string {
+	n := int64(-1)
+	if info, e := tf.f.Stat(); e == nil {
+		n = info.Size()
+	}
+	return formatGoInspect("TempFile", []string{fmt.Sprintf("Size: %d", n)}, true)
 }
 
 func (tf TempFile) close() error {

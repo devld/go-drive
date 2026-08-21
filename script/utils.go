@@ -40,6 +40,7 @@ func (vs Values) Len() int {
 
 // FormatConsoleArgs formats JS values the same way console.log does:
 // primitives as-is, objects/arrays as JSON, errors with their stack.
+// Types that implement ConsoleStringer print that summary instead.
 func FormatConsoleArgs(args Values) string {
 	return formatConsoleArgs(args, 0)
 }
@@ -56,7 +57,17 @@ func formatConsoleArgs(args Values, start int) string {
 	return strings.Join(msg, " ")
 }
 
+// ConsoleStringer is a readable summary for log() / console.
+// It is not fmt.Stringer: some script types already use String() as a content API.
+type ConsoleStringer interface {
+	ConsoleString() string
+}
+
 func formatConsoleArg(v *Value) string {
+	return formatConsoleArgSeen(v, nil)
+}
+
+func formatConsoleArgSeen(v *Value, seen map[otto.Value]struct{}) string {
 	ov := v.v
 	if ov.IsUndefined() {
 		return "undefined"
@@ -72,6 +83,11 @@ func formatConsoleArg(v *Value) string {
 		return ov.String()
 	case "Error":
 		return formatConsoleError(v)
+	case "Array", "GoSlice", "GoArray":
+		return formatConsoleArray(v, seen)
+	}
+	if s, ok := consoleStringOf(v); ok {
+		return s
 	}
 	obj := ov.Object()
 	if obj == nil {
@@ -83,6 +99,79 @@ func formatConsoleArg(v *Value) string {
 		return ov.String()
 	}
 	return string(encoded)
+}
+
+const maxConsoleArrayItems = 100
+
+func formatConsoleArray(v *Value, seen map[otto.Value]struct{}) string {
+	if seen == nil {
+		seen = make(map[otto.Value]struct{})
+	}
+	if _, ok := seen[v.v]; ok {
+		return "[ ... ]"
+	}
+	seen[v.v] = struct{}{}
+	defer delete(seen, v.v)
+
+	n := consoleArrayLen(v)
+	if n <= 0 {
+		return "[ ]"
+	}
+	show := min(n, maxConsoleArrayItems)
+	parts := make([]string, 0, show+1)
+	for i := range show {
+		parts = append(parts, formatConsoleArgSeen(v.Get(strconv.Itoa(i)), seen))
+	}
+	if n > show {
+		parts = append(parts, fmt.Sprintf("... %d more items", n-show))
+	}
+	return "[ " + strings.Join(parts, ", ") + " ]"
+}
+
+func consoleArrayLen(v *Value) int {
+	lengthVal := v.Get("length")
+	if lengthVal == nil || lengthVal.IsNil() {
+		return 0
+	}
+	n := lengthVal.Integer()
+	if n <= 0 {
+		return 0
+	}
+	return int(n)
+}
+
+func consoleStringOf(v *Value) (string, bool) {
+	if v == nil || v.IsNil() || !v.v.IsObject() || v.v.IsFunction() {
+		return "", false
+	}
+	fn := v.Get("ConsoleString")
+	if fn == nil || fn.IsNil() || !fn.v.IsFunction() {
+		return "", false
+	}
+	obj := v.object()
+	if obj == nil {
+		return "", false
+	}
+	ret, e := obj.Call("ConsoleString")
+	if e != nil {
+		return "", false
+	}
+	return ret.String(), true
+}
+
+func formatGoInspect(kind string, parts []string, more bool) string {
+	var b strings.Builder
+	b.WriteString(kind)
+	b.WriteString(" { ")
+	b.WriteString(strings.Join(parts, ", "))
+	if more {
+		if len(parts) > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString("...")
+	}
+	b.WriteString(" }")
+	return b.String()
 }
 
 func formatConsoleError(v *Value) string {

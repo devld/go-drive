@@ -1,17 +1,30 @@
 package script
 
 import (
+	"fmt"
+	"strings"
+	"time"
+
 	"go-drive/common/driveutil"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"strings"
-	"time"
 )
 
 type entryTreeNode struct {
 	Entry    Entry
 	Children []entryTreeNode
 	Excluded bool
+}
+
+func (n entryTreeNode) ConsoleString() string {
+	parts := []string{
+		"Entry: " + n.Entry.ConsoleString(),
+		fmt.Sprintf("Children: %d", len(n.Children)),
+	}
+	if n.Excluded {
+		parts = append(parts, "Excluded: true")
+	}
+	return formatGoInspect("EntryTreeNode", parts, true)
 }
 
 func convertEntryTreeNode(root driveutil.EntryTreeNode) entryTreeNode {
