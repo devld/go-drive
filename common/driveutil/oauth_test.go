@@ -3,9 +3,12 @@ package driveutil
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -163,5 +166,91 @@ func TestOAuthClientClosesBodyWhenTokenRequestFails(t *testing.T) {
 	_, _ = oauthHolder.Client().Do(req)
 	if !body.closed {
 		t.Fatal("request body was not closed after token retrieval failed")
+	}
+}
+
+func TestOAuthHolderRefreshUpdatesValidCachedToken(t *testing.T) {
+	var n atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := n.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"access_token":"new-%d","token_type":"Bearer","expires_in":3600,"refresh_token":"rt-%d"}`, id, id)
+	}))
+	t.Cleanup(srv.Close)
+
+	ds := &memOAuthData{}
+	expiry := time.Now().Add(time.Hour).Unix()
+	if e := ds.Save(types.SM{
+		DsKeyToken:        "access",
+		DsKeyTokenType:    "Bearer",
+		DsKeyRefreshToken: "refresh",
+		DsKeyExpiresAt:    strconv.FormatInt(expiry, 10),
+	}); e != nil {
+		t.Fatal(e)
+	}
+	oauthHolder, e := OAuthLoad(OAuthRequest{
+		Endpoint: oauth2.Endpoint{TokenURL: srv.URL},
+	}, OAuthCredentials{ClientID: "id", ClientSecret: "secret"}, ds)
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	tok, e := oauthHolder.Token(context.Background())
+	if e != nil {
+		t.Fatal(e)
+	}
+	if tok.AccessToken != "access" {
+		t.Fatalf("Token before Refresh = %q", tok.AccessToken)
+	}
+	if n.Load() != 0 {
+		t.Fatal("Token() should not refresh a valid cached token")
+	}
+
+	tok, e = oauthHolder.Refresh(context.Background())
+	if e != nil {
+		t.Fatal(e)
+	}
+	if tok.AccessToken != "new-1" {
+		t.Fatalf("Refresh = %q", tok.AccessToken)
+	}
+
+	tok, e = oauthHolder.Token(context.Background())
+	if e != nil {
+		t.Fatal(e)
+	}
+	if tok.AccessToken != "new-1" {
+		t.Fatalf("Token after Refresh = %q", tok.AccessToken)
+	}
+	if n.Load() != 1 {
+		t.Fatalf("token endpoint hits = %d", n.Load())
+	}
+	saved, e := ds.Load(DsKeyToken, DsKeyRefreshToken)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if saved[DsKeyToken] != "new-1" || saved[DsKeyRefreshToken] != "rt-1" {
+		t.Fatalf("persisted token = %#v", saved)
+	}
+}
+
+func TestOAuthHolderRefreshRequiresRefreshToken(t *testing.T) {
+	ds := &memOAuthData{}
+	expiry := time.Now().Add(time.Hour).Unix()
+	if e := ds.Save(types.SM{
+		DsKeyToken:     "access",
+		DsKeyTokenType: "Bearer",
+		DsKeyExpiresAt: strconv.FormatInt(expiry, 10),
+	}); e != nil {
+		t.Fatal(e)
+	}
+	oauthHolder, e := OAuthLoad(OAuthRequest{
+		Endpoint: oauth2.Endpoint{TokenURL: "http://127.0.0.1:1/unused"},
+	}, OAuthCredentials{ClientID: "id", ClientSecret: "secret"}, ds)
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, e = oauthHolder.Refresh(context.Background())
+	if e == nil {
+		t.Fatal("expected missing refresh token to fail")
 	}
 }

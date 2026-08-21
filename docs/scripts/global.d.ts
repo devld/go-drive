@@ -44,8 +44,8 @@ declare interface Console {
 }
 declare var console: Console;
 
-/** Block for `t`. Example: `sleep(ms(1000))`. */
-declare function sleep(t: Duration): void;
+/** Block for `t`. Example: `sleep(ms(1000))` or `sleep("1s")`. */
+declare function sleep(t: DurationLike): void;
 
 /** New Context (`context.Background()`). */
 declare function newContext(): Context;
@@ -56,7 +56,7 @@ declare function newContext(): Context;
  */
 declare function newContextWithTimeout(
   parent: Context,
-  timeout: Duration
+  timeout: DurationLike
 ): ContextWithTimeout;
 
 /** Task progress callback: `(loaded, total)`. */
@@ -336,17 +336,20 @@ declare interface GoTime extends GoHandle<"GoTime"> {
   UnixMilli(): number;
 }
 
-/** Go `time.Duration`. Build with `ms()`. */
+/** Go `time.Duration` as nanoseconds. Build with `ms()`. */
 declare type Duration = number;
+
+/**
+ * `ms(500)` or a Go duration string (`"2s"`, `"1h30m"`, `"2d3h4m5s"`).
+ * Days (`d`) are a go-drive extension; the rest is `time.ParseDuration`.
+ */
+declare type DurationLike = Duration | string;
 
 /** Milliseconds → Go duration. */
 declare function ms(ms: number): Duration;
 
-/**
- * Parse a Go duration (`ms`/`s`/`m`/`h`, optional `d` prefix).
- * Empty → `0`. Invalid → `-1`.
- */
-declare function parseDuration(value?: string): Duration;
+/** Parse `ms(500)` or a duration string. Empty / omitted → `0`. Invalid throws TypeError. */
+declare function parseDuration(value?: DurationLike): Duration;
 
 declare function toDate(goTime: GoTime): Date;
 

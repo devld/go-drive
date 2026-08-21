@@ -5,17 +5,18 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"io"
+	"maps"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"go-drive/common"
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	s "go-drive/script"
-	"io"
-	"maps"
-	"path/filepath"
-	"strings"
-	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -149,23 +150,39 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.D
 		_ = d.Dispose()
 		return nil, e
 	}
-	var created struct {
-		Writable      bool
-		EntryCacheTTL string
-	}
-	if createdVal != nil && !createdVal.IsNil() {
-		createdVal.ParseInto(&created)
-		d.writable = created.Writable
-		ttl := types.SV(created.EntryCacheTTL).Duration(0)
-		if ttl > 0 {
-			d.cacheTTL = ttl
-		}
+	if e := d.applyCreated(createdVal); e != nil {
+		_ = d.Dispose()
+		return nil, e
 	}
 	d.inspectMethods(vm)
 	vm.Set("selfDrive", s.NewDrive(d))
 	d.pool = s.NewVMPool(vm, poolConfig)
+	if e := d.startIntervals(); e != nil {
+		_ = d.Dispose()
+		return nil, e
+	}
 
 	return d, nil
+}
+
+func (sd *ScriptDrive) applyCreated(createdVal *s.Value) error {
+	if createdVal == nil || createdVal.IsNil() {
+		return nil
+	}
+	sd.writable = true
+	if v := createdVal.Get("Writable"); v != nil && !v.IsNil() {
+		sd.writable = v.Bool()
+	}
+	if v := createdVal.Get("EntryCacheTTL"); v != nil && !v.IsNil() {
+		ttl, ok := s.DurationFrom(v)
+		if !ok {
+			return err.NewNotAllowedMessageError("entryCacheTTL requires a Duration or duration string")
+		}
+		if ttl > 0 {
+			sd.cacheTTL = ttl
+		}
+	}
+	return sd.prepareIntervals(createdVal.Get("Intervals"))
 }
 
 func (sd *ScriptDrive) hasMethod(vm *s.VM, name string) bool {
@@ -184,6 +201,7 @@ func (sd *ScriptDrive) inspectMethods(vm *s.VM) {
 	sd.has.getReader = sd.hasMethod(vm, "getReader")
 	sd.has.getURL = sd.hasMethod(vm, "getURL")
 	sd.has.getThumbnail = sd.hasMethod(vm, "getThumbnail")
+	sd.has.onInterval = sd.hasMethod(vm, "onInterval")
 }
 
 func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
@@ -380,6 +398,18 @@ func (or *oauthHolderWrapper) Token(ctx any) *oauth2.Token {
 		s.ThrowDetachedError(errors.New("OAuthHolder.Token requires a context"))
 	}
 	t, e := or.oauthHolder.Token(c)
+	if e != nil {
+		s.ThrowDetachedError(e)
+	}
+	return t
+}
+
+func (or *oauthHolderWrapper) Refresh(ctx any) *oauth2.Token {
+	c := s.GetContext(ctx)
+	if c == nil {
+		s.ThrowDetachedError(errors.New("OAuthHolder.Refresh requires a context"))
+	}
+	t, e := or.oauthHolder.Refresh(c)
 	if e != nil {
 		s.ThrowDetachedError(e)
 	}

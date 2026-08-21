@@ -24,7 +24,7 @@ func vm_newContextWithTimeout(vm *VM, args Values) any {
 	if parent == nil {
 		vm.ThrowTypeError("newContextWithTimeout requires a Context")
 	}
-	timeout := time.Duration(args.Get(1).Integer())
+	timeout := RequireDuration(args.Get(1), "newContextWithTimeout")
 	ctx, cancel := context.WithTimeout(parent, timeout)
 	cwt := &contextWithTimeout{NewContext(vm, ctx), cancel}
 	vm.PutDisposable(cwt)
@@ -43,8 +43,16 @@ func vm_newTaskCtx(vm *VM, args Values) any {
 
 // vm_sleep: (t time.Duration)
 func vm_sleep(vm *VM, args Values) any {
-	time.Sleep(time.Duration(args.Get(0).Integer()))
+	time.Sleep(RequireDuration(args.Get(0), "sleep"))
 	return nil
+}
+
+func vm_parseDuration(vm *VM, args Values) any {
+	v := args.Get(0)
+	if v.IsNil() {
+		return time.Duration(0)
+	}
+	return RequireDuration(v, "parseDuration")
 }
 
 type scriptTaskCtx struct {

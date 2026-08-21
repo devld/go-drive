@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -62,32 +66,27 @@ func testDriveUtils(data *memDriveData) *scriptDriveUtils {
 	})
 }
 
-func TestParseDurationFromJS(t *testing.T) {
+func TestSleepAndTimeoutAcceptDurationString(t *testing.T) {
 	vm := baseVM.Fork()
 	t.Cleanup(func() { _ = vm.Dispose() })
 
-	v, e := vm.Run(context.Background(), `parseDuration("2h")`)
-	if e != nil {
+	start := time.Now()
+	if _, e := vm.Run(context.Background(), `sleep("20ms")`); e != nil {
 		t.Fatal(e)
 	}
-	if time.Duration(v.Integer()) != 2*time.Hour {
-		t.Fatalf("parseDuration(2h) = %d", v.Integer())
+	if time.Since(start) < 15*time.Millisecond {
+		t.Fatal("sleep(\"20ms\") returned too quickly")
 	}
 
-	v, e = vm.Run(context.Background(), `parseDuration("")`)
-	if e != nil {
-		t.Fatal(e)
-	}
-	if v.Integer() != 0 {
-		t.Fatalf("parseDuration empty = %d", v.Integer())
+	if _, e := vm.Run(context.Background(), `sleep("nope")`); e == nil {
+		t.Fatal("expected sleep(\"nope\") to fail")
 	}
 
-	v, e = vm.Run(context.Background(), `parseDuration("nope")`)
-	if e != nil {
+	if _, e := vm.Run(context.Background(), `
+		var ctx = newContextWithTimeout(newContext(), "50ms");
+		ctx.Cancel();
+	`); e != nil {
 		t.Fatal(e)
-	}
-	if time.Duration(v.Integer()) != -1 {
-		t.Fatalf("parseDuration invalid = %d", v.Integer())
 	}
 }
 
@@ -480,24 +479,56 @@ func newTestScriptDrive(t *testing.T, js string, data types.SM, cacheMgr *driveu
 	if e != nil {
 		t.Fatal(e)
 	}
-	var created struct {
-		Writable      bool
-		EntryCacheTTL string
-	}
-	if createdVal != nil && !createdVal.IsNil() {
-		createdVal.ParseInto(&created)
-		d.writable = created.Writable
-		ttl := types.SV(created.EntryCacheTTL).Duration(0)
-		if ttl > 0 {
-			d.cacheTTL = ttl
-		}
+	if e := d.applyCreated(createdVal); e != nil {
+		t.Fatal(e)
 	}
 	d.inspectMethods(vm)
 	vm.Set("selfDrive", s.NewDrive(d))
 	d.pool = s.NewVMPool(vm, &s.VMPoolConfig{
 		MaxTotal: 4, MaxIdle: 2, MinIdle: 0, IdleTime: time.Minute,
 	})
+	if e := d.startIntervals(); e != nil {
+		t.Fatal(e)
+	}
 	return d
+}
+
+func newTestScriptDriveExpectError(t *testing.T, js string) error {
+	t.Helper()
+	vm := baseVM.Fork()
+	if _, e := vm.Run(context.Background(), js); e != nil {
+		_ = vm.Dispose()
+		return e
+	}
+	d := &ScriptDrive{
+		baseVM:   vm,
+		data:     make(map[string]json.RawMessage),
+		writable: true,
+		cache:    driveutil.DummyCache(),
+	}
+	vm.Set("__setData", s.WrapVmCall(vm, d.setData))
+	vm.Set("__getData", s.WrapVmCall(vm, d.getData))
+	utils := testDriveUtils(&memDriveData{})
+	createdVal, e := vm.Call(context.Background(), "__driveCreate", s.NewContext(vm, context.Background()), types.SM{}, utils)
+	if e != nil {
+		_ = d.Dispose()
+		return e
+	}
+	if e := d.applyCreated(createdVal); e != nil {
+		_ = d.Dispose()
+		return e
+	}
+	d.inspectMethods(vm)
+	vm.Set("selfDrive", s.NewDrive(d))
+	d.pool = s.NewVMPool(vm, &s.VMPoolConfig{
+		MaxTotal: 4, MaxIdle: 2, MinIdle: 0, IdleTime: time.Minute,
+	})
+	if e := d.startIntervals(); e != nil {
+		_ = d.Dispose()
+		return e
+	}
+	_ = d.Dispose()
+	return nil
 }
 
 func TestOAuthHolderTokenAcceptsTaskCtx(t *testing.T) {
@@ -547,6 +578,50 @@ func TestOAuthHolderTokenAcceptsTaskCtx(t *testing.T) {
 	}
 	if v.String() != "access" {
 		t.Fatalf("timeout Context token = %q", v.String())
+	}
+}
+
+func TestOAuthHolderRefreshFromJS(t *testing.T) {
+	var n atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := n.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"access_token":"new-%d","token_type":"Bearer","expires_in":3600}`, id)
+	}))
+	t.Cleanup(srv.Close)
+
+	ds := &memDriveData{}
+	expiry := time.Now().Add(time.Hour).Unix()
+	if e := ds.Save(types.SM{
+		driveutil.DsKeyToken:        "access",
+		driveutil.DsKeyTokenType:    "Bearer",
+		driveutil.DsKeyRefreshToken: "refresh",
+		driveutil.DsKeyExpiresAt:    strconv.FormatInt(expiry, 10),
+	}); e != nil {
+		t.Fatal(e)
+	}
+	holder := testDriveUtils(ds).OAuthLoad(driveutil.OAuthRequest{
+		Endpoint: oauth2.Endpoint{TokenURL: srv.URL},
+	}, driveutil.OAuthCredentials{ClientID: "id", ClientSecret: "secret"})
+
+	vm := baseVM.Fork()
+	t.Cleanup(func() { _ = vm.Dispose() })
+	vm.Set("holder", holder)
+	vm.Set("plainCtx", s.NewContext(vm, context.Background()))
+
+	v, e := vm.Run(context.Background(), `holder.Refresh(plainCtx).AccessToken`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if v.String() != "new-1" {
+		t.Fatalf("Refresh = %q", v.String())
+	}
+	v, e = vm.Run(context.Background(), `holder.Token(plainCtx).AccessToken`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if v.String() != "new-1" {
+		t.Fatalf("Token after Refresh = %q", v.String())
 	}
 }
 

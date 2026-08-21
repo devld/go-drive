@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFormatConsoleArgSerializesObjects(t *testing.T) {
@@ -129,4 +130,55 @@ func evalConsoleArg(t *testing.T, vm *VM, code string) string {
 		t.Fatal(e)
 	}
 	return formatConsoleArg(value)
+}
+
+func TestRequireDurationStringAndMs(t *testing.T) {
+	vm := newScriptTestVM(t)
+
+	must := func(src string, want time.Duration) {
+		t.Helper()
+		v, e := vm.Run(context.Background(), src)
+		if e != nil {
+			t.Fatal(e)
+		}
+		if d := RequireDuration(v, "test"); d != want {
+			t.Fatalf("%s = %v want %v", src, d, want)
+		}
+	}
+	must(`"2s"`, 2*time.Second)
+	must(`ms(1500)`, 1500*time.Millisecond)
+	must(`"1h30m"`, 90*time.Minute)
+	must(`"2d3h4m5s"`, 2*24*time.Hour+3*time.Hour+4*time.Minute+5*time.Second)
+	must(`""`, 0)
+
+	v, e := vm.Run(context.Background(), `parseDuration("2s")`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if time.Duration(v.Integer()) != 2*time.Second {
+		t.Fatalf("parseDuration(2s) = %d", v.Integer())
+	}
+
+	v, e = vm.Run(context.Background(), `parseDuration("")`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if v.Integer() != 0 {
+		t.Fatalf("parseDuration empty = %d", v.Integer())
+	}
+
+	if _, e := vm.Run(context.Background(), `parseDuration("nope")`); e == nil {
+		t.Fatal("expected parseDuration(\"nope\") to fail")
+	}
+
+	v, e = vm.Run(context.Background(), `"nope"`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected TypeError for invalid duration")
+		}
+	}()
+	RequireDuration(v, "test")
 }

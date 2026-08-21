@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/robertkrimen/otto"
 )
@@ -194,7 +195,11 @@ func (v *Value) IsNil() bool {
 }
 
 func (v *Value) IsNumber() bool {
-	return v.v.IsNumber()
+	return v != nil && !v.IsNil() && v.v.IsNumber()
+}
+
+func (v *Value) IsString() bool {
+	return v != nil && !v.IsNil() && v.v.IsString()
 }
 
 func (v *Value) String() string {
@@ -585,4 +590,56 @@ func mapError(e error) error {
 		return err.NewRemoteApiError(status, msg)
 	}
 	return e
+}
+
+// RequireDuration reads a JS Duration (`ms()` / nanoseconds) or Go duration
+// string (`2s`, `1h30m`, optional `2d` prefix). Invalid values throw TypeError
+// when v carries a VM; otherwise they panic a detached error.
+func RequireDuration(v any, what string) time.Duration {
+	d, ok := DurationFrom(v)
+	if ok {
+		return d
+	}
+	msg := what + " requires a Duration or duration string"
+	if ov, ok := v.(*Value); ok && ov != nil && ov.vm != nil {
+		ov.vm.ThrowTypeError(msg)
+	}
+	ThrowDetachedError(msg)
+	return 0
+}
+
+// DurationFrom reads a JS Duration (`ms()` / nanoseconds) or Go duration
+// string. Missing or invalid values return false.
+func DurationFrom(v any) (time.Duration, bool) {
+	switch x := v.(type) {
+	case nil:
+		return 0, false
+	case *Value:
+		if x == nil || x.IsNil() {
+			return 0, false
+		}
+		if x.v.IsString() {
+			return types.ParseDuration(x.String())
+		}
+		if x.v.IsNumber() {
+			return time.Duration(x.Integer()), true
+		}
+		return DurationFrom(x.Raw())
+	case time.Duration:
+		return x, true
+	case string:
+		return types.ParseDuration(x)
+	case int64:
+		return time.Duration(x), true
+	case int:
+		return time.Duration(x), true
+	case int32:
+		return time.Duration(x), true
+	case uint64:
+		return time.Duration(x), true
+	case float64:
+		return time.Duration(x), true
+	default:
+		return 0, false
+	}
 }

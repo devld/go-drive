@@ -73,6 +73,7 @@ function bindDriveMethods(drive, methods) {
     "upload",
     "getURL",
     "getThumbnail",
+    "onInterval",
   ];
   for (var i = 0; i < names.length; i++) {
     var name = names[i];
@@ -149,9 +150,28 @@ function defineDrive(setup, methods) {
 
     return {
       Writable: drive.writable !== false,
-      EntryCacheTTL: drive.entryCacheTTL || "",
+      EntryCacheTTL: drive.entryCacheTTL,
+      Intervals: normalizeIntervals(drive.intervals),
     };
   };
+}
+
+function normalizeIntervals(raw) {
+  if (!raw) return [];
+  if (!Array.isArray(raw)) {
+    throw new Error("intervals must be an array");
+  }
+  var intervals = [];
+  for (var i = 0; i < raw.length; i++) {
+    var item = raw[i] || {};
+    intervals.push({
+      Name: item.name || "",
+      Interval: item.interval,
+      Timeout: item.timeout,
+      Immediately: item.immediately === true,
+    });
+  }
+  return intervals;
 }
 
 function entryCacheTTLFormItem(defaultValue) {

@@ -1,32 +1,32 @@
 package script
 
 import (
+	"sync"
+
 	"go-drive/common/driveutil"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	s "go-drive/script"
-	"sync"
-	"time"
 )
 
 type scriptDriveCache struct {
 	c driveutil.DriveCache
 }
 
-func (sc *scriptDriveCache) PutEntries(entries []scriptEntryStruct, ttl int64) {
-	if e := sc.c.PutEntries(utils.ArrayMap(entries, structToEntry), time.Duration(ttl)); e != nil {
+func (sc *scriptDriveCache) PutEntries(entries []scriptEntryStruct, ttl any) {
+	if e := sc.c.PutEntries(utils.ArrayMap(entries, structToEntry), s.RequireDuration(ttl, "cache ttl")); e != nil {
 		s.ThrowDetachedError(e)
 	}
 }
 
-func (sc *scriptDriveCache) PutEntry(entry scriptEntryStruct, ttl int64) {
-	if e := sc.c.PutEntry(structToEntry(&entry), time.Duration(ttl)); e != nil {
+func (sc *scriptDriveCache) PutEntry(entry scriptEntryStruct, ttl any) {
+	if e := sc.c.PutEntry(structToEntry(&entry), s.RequireDuration(ttl, "cache ttl")); e != nil {
 		s.ThrowDetachedError(e)
 	}
 }
 
-func (sc *scriptDriveCache) PutChildren(parentPath string, entries []scriptEntryStruct, ttl int64) {
-	if e := sc.c.PutChildren(parentPath, utils.ArrayMap(entries, structToEntry), time.Duration(ttl)); e != nil {
+func (sc *scriptDriveCache) PutChildren(parentPath string, entries []scriptEntryStruct, ttl any) {
+	if e := sc.c.PutChildren(parentPath, utils.ArrayMap(entries, structToEntry), s.RequireDuration(ttl, "cache ttl")); e != nil {
 		s.ThrowDetachedError(e)
 	}
 }

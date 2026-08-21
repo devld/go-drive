@@ -90,9 +90,9 @@ declare interface DriveCacheItem {
 }
 
 declare interface DriveCache extends GoHandle<"DriveCache"> {
-  PutEntries(entries: Entry[], ttl: Duration): void;
-  PutEntry(entry: Entry, ttl: Duration): void;
-  PutChildren(parentPath: string, entries: Entry[], ttl: Duration): void;
+  PutEntries(entries: Entry[], ttl: DurationLike): void;
+  PutEntry(entry: Entry, ttl: DurationLike): void;
+  PutChildren(parentPath: string, entries: Entry[], ttl: DurationLike): void;
   Evict(path: string, descendants: boolean): void;
   EvictAll(): void;
   GetEntry(path: string): DriveCacheItem | null;
@@ -151,6 +151,12 @@ declare interface OAuthToken {
 declare interface OAuthHolder extends GoHandle<"OAuthHolder"> {
   /** Current token. Pass the method `ctx` (`Context`, `TaskCtx`, or timeout context); refreshes when expired. */
   Token(ctx: Context): OAuthToken;
+  /**
+   * Force a refresh-token exchange even if the access token is still valid.
+   * Updates this holder's memory cache and the Drive data store. Use from
+   * `onInterval`; ordinary requests should keep calling `Token`.
+   */
+  Refresh(ctx: Context): OAuthToken;
 }
 
 declare interface OAuthInitConfigResult {
@@ -195,11 +201,26 @@ declare type DriveSharedState = {
   [key: `$${string}`]: JSONValue | undefined;
 };
 
+declare interface DriveInterval {
+  name: string;
+  /** Repeat period. Must be `>= 1ms`. */
+  interval: DurationLike;
+  /** Per-tick timeout. Defaults to `"30s"`. */
+  timeout?: DurationLike;
+  /** Run once as soon as the Drive is created. Defaults to `false`. */
+  immediately?: boolean;
+}
+
 declare interface DriveInstanceState extends DriveSharedState {
-  /** Form duration (e.g. `"2h"`). Empty / invalid / `<= 0` disables entry cache. */
-  entryCacheTTL?: string;
+  /** Omit, `""`, `null`/`undefined`, or `<= 0` to disable. */
+  entryCacheTTL?: DurationLike;
   /** `meta().Writable`. Defaults to `true`. */
   writable?: boolean;
+  /**
+   * Repeating background work started with the Drive instance and stopped on dispose.
+   * Requires `onInterval`. Do not use Admin Jobs for Drive-internal keep-alive.
+   */
+  intervals?: DriveInterval[];
 }
 
 declare type DriveConfigProps<T> = {
@@ -271,6 +292,14 @@ declare interface DriveMethods {
     ctx: Context,
     entry: Entry
   ): ReadCloser | ContentURL;
+  /**
+   * Periodic work declared in `createInstance.intervals`. Go owns the clock and
+   * borrows a VM like other methods. Return `"25m"` or `ms(...)` to reschedule;
+   * omit to keep `interval`. Keep this short. For OAuth, call
+   * `this.oauth.Refresh(ctx)` on the holder from `createInstance` — do not
+   * `OAuthLoad` again.
+   */
+  onInterval?(ctx: Context, name: string): DurationLike | void;
 }
 
 /** Keep `this` inferred from `createInstance`, not widened by `methods`. */

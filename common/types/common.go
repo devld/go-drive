@@ -138,8 +138,21 @@ func (s SV) Float64(defVal float64) float64 {
 var durationDaysPattern = regexp.MustCompile(`^((\d+)d)([\d]+)?`)
 
 func (s SV) Duration(defVal time.Duration) time.Duration {
-	strVal := string(s)
+	d, ok := ParseDuration(string(s))
+	if !ok {
+		return defVal
+	}
+	return d
+}
+
+// ParseDuration parses a Go duration string (`2s`, `1h30m`) with an optional
+// `d` prefix for days (`2d`, `2d3h`). Empty input is `0`. Invalid input returns false.
+func ParseDuration(s string) (time.Duration, bool) {
+	if s == "" {
+		return 0, true
+	}
 	result := time.Duration(0)
+	strVal := s
 	daysMatch := durationDaysPattern.FindStringSubmatch(strVal)
 	if daysMatch != nil {
 		result = time.Duration(SV(daysMatch[2]).Int64(0) * int64(24*time.Hour))
@@ -148,11 +161,15 @@ func (s SV) Duration(defVal time.Duration) time.Duration {
 	if strVal != "" {
 		dur, e := time.ParseDuration(strVal)
 		if e != nil {
-			return defVal
+			return 0, false
 		}
 		result += dur
+		return result, true
 	}
-	return result
+	if daysMatch != nil {
+		return result, true
+	}
+	return 0, false
 }
 
 func (s SV) UnixTime(defVal *time.Time) time.Time {

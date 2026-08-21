@@ -110,6 +110,7 @@ Browser uploader scripts have a separate runtime and may use modern JavaScript, 
 - A `$` value must be JSON-serializable. Objects and arrays are read as copies. Mutating a nested value does not persist it; reassign the complete `$` property.
 - A single shared-property read or write is protected, but a read-modify-write sequence is not atomic. `newLocker()` protects only its current VM and is not a cross-VM lock. Prefer concurrency control provided by the remote API.
 - Never place response bodies, readers, contexts, or functions in a `$` property.
+- Periodic work uses `intervals` / `onInterval`. Go holds the clock; ticks borrow a VM like `get`. Do not occupy a VM with `sleep` loops.
 
 ```js
 var next = this.$state;
@@ -183,11 +184,11 @@ OAuth is explicit: call `utils.OAuthInitConfig`, `utils.OAuthInit`, and `utils.O
 
 `validateConfig(config)` runs before `createInstance` and validates the static config.
 
-Include `entryCacheTTLFormItem("2h")` when users should set the entry cache TTL. Pass the raw form value through as `entryCacheTTL` from `createInstance`; the Go runtime parses `ms`/`s`/`m`/`h`. Empty, invalid, or `<= 0` disables caching. The form item is not inserted automatically.
+Include `entryCacheTTLFormItem("2h")` when users should set the entry cache TTL. Pass the raw form value through as `entryCacheTTL` from `createInstance`; the runtime accepts duration strings or `ms(...)`. Omit / `""` / `undefined` / `null` / `<= 0` disables caching. The form item is not inserted automatically.
 
 ### `createInstance(ctx, config, utils)` (required)
 
-Return instance state from the static config, loading only the dynamic fields needed by the Drive through `utils.Data.Load("key", ...)`: credentials, clients, `entryCacheTTL: config.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). `ctx` is the Drive-creation context; use it for any remote requests during setup. The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
+Return instance state from the static config, loading only the dynamic fields needed by the Drive through `utils.Data.Load("key", ...)`: credentials, clients, `entryCacheTTL: config.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). Optional `intervals` declare Drive-local periodic work (see `onInterval`). `ctx` is the Drive-creation context; use it for any remote requests during setup. The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
 
 Required methods: `get` and `list`, plus `getReader` or `getURL`. `upload` defaults to `useLocalProvider`. `getReader` defaults to `ErrUnsupported()` when `getURL` exists. `meta` defaults to `{ Writable: this.writable !== false }`.
 
@@ -273,6 +274,31 @@ With no Header and `Proxy: false`, the client receives a redirect. If a Header i
 
 Return a remote thumbnail response body or URL configuration. When returning the body, do not dispose it first. Mark eligible entries with `Meta.SelfThumbnail: true` in `get`/`list` (type, extension, size only; no network). Omit `getThumbnail` when the service has no thumbnail capability.
 
+### Background intervals
+
+#### `onInterval(ctx, name)` (optional)
+
+Required when `createInstance` returns `intervals`. Go owns the clock; the callback runs on a borrowed VM and must finish within `timeout` (default `30s`). Use `ctx` for HTTP. Return `"25m"` or `ms(...)` to choose the next delay; omit to keep `interval`.
+
+```js
+createInstance: function (ctx, config, utils) {
+  return {
+    oauth: utils.OAuthLoad(oauthReq(utils.Config), {
+      ClientID: config.client_id,
+      ClientSecret: config.client_secret
+    }),
+    intervals: [{ name: "refresh", interval: "30m", immediately: false }]
+  };
+}
+
+onInterval: function (ctx, name) {
+  if (name !== "refresh") return;
+  this.oauth.Refresh(ctx);
+}
+```
+
+Do not call `OAuthLoad` inside `onInterval`. Standard OAuth request paths should keep using `Token(ctx)`.
+
 ## 7. Available JavaScript APIs
 
 The following runtime surface is safe to depend on. Refer to the two `.d.ts` files for exact field types.
@@ -282,8 +308,8 @@ The following runtime surface is safe to depend on. Refer to the two `.d.ts` fil
 - `utils.Config`: `OAuthRedirectURI`, `Version`, `RevHash`, and `BuildAt`.
 - `utils.Data.Load(...keys)` / `utils.Data.Save(map)`: persistent string configuration.
 - `this.cache`: entry cache created for the instance. Use it only for extra invalidation; `get`/`list` and write methods are wrapped automatically.
-- `parseDuration(str)`: parse a Go duration string (`ms`/`s`/`m`/`h`).
-- `DriveCache.PutEntry`, `PutEntries`, and `PutChildren`.
+- `parseDuration(value)`: `ms(...)` or a duration string (`"2s"`, `"2d3h"`). Empty → `0`; invalid throws TypeError.
+- `DriveCache.PutEntry`, `PutEntries`, and `PutChildren` (`ttl` is `ms(...)` or a duration string).
 - `DriveCache.GetEntry` and `GetChildren`; a miss returns `null`.
 - `DriveCache.Evict(path, descendants)` and `EvictAll()`.
 - Cross-VM shared state: assign `$` properties on the instance (`this.$foo = …`).
@@ -295,10 +321,11 @@ The following runtime surface is safe to depend on. Refer to the two `.d.ts` fil
 - `utils.OAuthInit(ctx, data, request, credentials)`: handle the OAuth callback during initialization.
 - `utils.OAuthLoad(request, credentials)`: construct the runtime `OAuthHolder` from a stored token.
 - `OAuthHolder.Token(ctx)`: retrieve an automatically refreshed token. `ctx` is required; refresh uses it.
+- `OAuthHolder.Refresh(ctx)`: force a token-endpoint exchange even if the access token is still valid. Call this from `onInterval` on the holder created in `createInstance`. Do not call `OAuthLoad` again.
 - An OAuth request contains Endpoint, RedirectURL, Scopes, and Text; credentials contain ClientID and ClientSecret.
 - Endpoint authentication styles are `OAuthStyle.AutoDetect`, `InParams`, and `InHeader`. Prefer auto-detection unless the provider requires otherwise.
 
-Follow `dropbox.js`. Do not persist OAuth state manually or duplicate refresh-token logic.
+Follow `dropbox.js`. Do not persist OAuth state manually or duplicate refresh-token logic. Ordinary request methods should keep using `Token`; `Refresh` is for keep-alive when a provider expires unused refresh tokens.
 
 ### HTTP
 
@@ -331,8 +358,9 @@ Log only inside a `DEBUG` branch, and redact arguments before constructing the l
 
 - Context has `Err()`; a timeout context also has a required `Cancel()`.
 - TaskCtx has `Progress(value, absolute)` and `Total(value, absolute)`.
-- `newContext()`, `newContextWithTimeout(parent, ms(...))`, and `newTaskCtx(ctx, callback)`.
+- `newContext()`, `newContextWithTimeout(parent, timeout)`, and `newTaskCtx(ctx, callback)`. `timeout` is `ms(...)` or a duration string (`"2s"`).
 - `sleep(duration)`; `newLocker()` returns a current-VM mutex with `Lock()` and `Unlock()`.
+- Drive intervals: `createInstance` may return `intervals: [{ name, interval, timeout?, immediately? }]`. Go schedules them; `onInterval(ctx, name)` runs on a borrowed VM. `interval` / `timeout` / the return value are `ms(...)` or duration strings (`"30m"`); timeout defaults to `"30s"`. Overlapping ticks are skipped. A returned duration reschedules the next run; omitting it keeps `interval`. Stopped when the Drive is disposed. Do not emulate this with `sleep` loops or Admin Jobs.
 - `ms(milliseconds)` converts milliseconds to a Go Duration.
 
 ### Paths, time, encoding, and hashes

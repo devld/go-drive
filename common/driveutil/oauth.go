@@ -80,6 +80,39 @@ func (o *OAuthHolder) Token(ctx context.Context) (*oauth2.Token, error) {
 	return &tok, nil
 }
 
+// Refresh forces a token endpoint exchange even if the cached access token is
+// still valid. Use this from onInterval; request paths should keep calling
+// Token. There must be a refresh token. The in-memory cache and data store are
+// updated on the same holder so concurrent Token calls see the new value.
+func (o *OAuthHolder) Refresh(ctx context.Context) (*oauth2.Token, error) {
+	if ctx == nil {
+		panic("driveutil.OAuthHolder.Refresh: nil context")
+	}
+
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	if o.t == nil || o.t.RefreshToken == "" {
+		return nil, err.NewNotAllowedMessageError("OAuth refresh token is not available")
+	}
+
+	stale := &oauth2.Token{RefreshToken: o.t.RefreshToken}
+	newTok, e := o.conf.TokenSource(ctx, stale).Token()
+	if e != nil {
+		return nil, e
+	}
+	if newTok.RefreshToken == "" {
+		copied := *newTok
+		copied.RefreshToken = o.t.RefreshToken
+		newTok = &copied
+	}
+	if e := o.persistLocked(newTok); e != nil {
+		return nil, e
+	}
+	tok := *newTok
+	return &tok, nil
+}
+
 func (o *OAuthHolder) persistLocked(token *oauth2.Token) error {
 	changed := o.t == nil ||
 		o.t.AccessToken != token.AccessToken ||

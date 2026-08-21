@@ -2,8 +2,6 @@ package script
 
 import (
 	"fmt"
-	"strings"
-	"time"
 
 	"go-drive/common/driveutil"
 	"go-drive/common/types"
@@ -85,12 +83,4 @@ func vm_flattenEntriesTree(vm *VM, args Values) any {
 	deepFirst := args.Get(1).Bool()
 	r := make([]entryTreeNode, 0)
 	return flattenEntriesTree(entry, r, deepFirst)
-}
-
-func vm_parseDuration(vm *VM, args Values) any {
-	raw := strings.TrimSpace(args.Get(0).String())
-	if raw == "" {
-		return time.Duration(0)
-	}
-	return types.SV(raw).Duration(-1)
 }

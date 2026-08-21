@@ -19,7 +19,7 @@ var _ types.IDrive = (*ScriptDrive)(nil)
 
 type scriptDriveHas struct {
 	meta, save, makeDir, copy, move, delete, upload bool
-	getReader, getURL, getThumbnail                 bool
+	getReader, getURL, getThumbnail, onInterval     bool
 }
 
 type ScriptDrive struct {
@@ -34,6 +34,11 @@ type ScriptDrive struct {
 	// data is the place where the data of the script instance is stored
 	data map[string]json.RawMessage
 	mu   sync.RWMutex
+
+	intervals      []*driveInterval
+	intervalCtx    context.Context
+	intervalCancel context.CancelFunc
+	intervalWG     sync.WaitGroup
 }
 
 func (sd *ScriptDrive) setData(vm *s.VM, args s.Values) any {
@@ -341,6 +346,10 @@ func (sd *ScriptDrive) valueToEntry(v *s.Value) *scriptDriveEntry {
 }
 
 func (sd *ScriptDrive) Dispose() error {
+	if sd.intervalCancel != nil {
+		sd.intervalCancel()
+		sd.intervalWG.Wait()
+	}
 	_ = sd.baseVM.Dispose()
 	if sd.pool != nil {
 		_ = sd.pool.Dispose()
