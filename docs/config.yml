@@ -206,6 +206,10 @@ auth:
 # maximum number of files to be cached at the same time, default is 1000
 #  max-cache-items: 1000
 
+# WOPI Office document editing. WOPI is disabled when discovery-url is empty.
+#wopi:
+#  discovery-url: "https://office.example.com/hosting/discovery"
+
 # Search configuration
 search:
   enabled: false

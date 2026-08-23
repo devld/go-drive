@@ -63,6 +63,9 @@ auth:
 #   allow-anonymous: false
 #   max-cache-items: 1000
 
+# wopi:
+#   discovery-url: https://office.example.com/hosting/discovery
+
 search:
   enabled: false
   type: sqlite
@@ -137,11 +140,12 @@ auth:
 
 Handler types are `image`, `text`, and `shell`. Shell handlers accept `shell`, `mime-type`, `write-content`, `max-size`, `timeout`, and related settings; see [Preview and thumbnails](../features/preview-thumbnail.html). The official Docker configuration enables libvips and ffmpeg. Extract the configuration from the image to get those templates.
 
-## WebDAV, search, and cache
+## WebDAV, WOPI, search, and cache
 
 - WebDAV is disabled by default. `allow-anonymous` remains subject to path permissions; test anonymous access before public deployment.
 - The current search engine is `sqlite`; the old `bleve` setting is invalid.
 - `web-dav.max-cache-items` limits the WebDAV file-object cache.
+- WOPI is disabled when `wopi.discovery-url` is empty. The URL must point to the Office service discovery XML.
 - The global `cache` currently uses an in-memory implementation; `clean-period` controls periodic cleanup.
 
 See also:
@@ -150,3 +154,4 @@ See also:
 - [Security guide](./security.html)
 - [Search and indexing](../features/search.html)
 - [WebDAV](../features/webdav.html)
+- [Office editing with WOPI](../features/wopi.html)

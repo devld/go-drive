@@ -446,6 +446,15 @@
       "name": "预览",
       "desc": "预览这个文件"
     },
+    "office": {
+      "name": "使用 Office 打开",
+      "desc": "使用已配置的 Office 服务打开这个文档",
+      "edit": "编辑",
+      "view": "查看",
+      "loading": "正在加载 Office 编辑器...",
+      "load_failed": "无法加载 Office 编辑器",
+      "frame_title": "Office 文档编辑器"
+    },
     "audio": {
       "name": "播放",
       "desc": "播放音乐",

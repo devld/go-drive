@@ -3,7 +3,7 @@ title: 配置文件参考
 description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: 507e3efd917833d29527a148c1209165a1c9fb98ed3aafbe81cdd0cb6d79af89
+source_hash: e5d11df81b2fa48741c917e58e1f5ea7b4d6df4c221e17c2e3e08408a2dc5474
 ---
 
 # 配置文件参考
@@ -63,6 +63,9 @@ auth:
 #   prefix: /dav
 #   allow-anonymous: false
 #   max-cache-items: 1000
+
+# wopi:
+#   discovery-url: https://office.example.com/hosting/discovery
 
 search:
   enabled: false
@@ -138,11 +141,12 @@ auth:
 
 处理器类型为 `image`、`text` 或 `shell`。Shell 处理器支持 `shell`、`mime-type`、`write-content`、`max-size` 和 `timeout` 等配置，详见[预览与缩略图](../features/preview-thumbnail.html)。官方 Docker 镜像中的配置会启用 libvips/ffmpeg；从镜像提取配置可以获得对应模板。
 
-## WebDAV、搜索和缓存
+## WebDAV、WOPI、搜索和缓存
 
 - WebDAV 默认关闭。`allow-anonymous` 仍受路径权限约束；公开启用前务必测试匿名权限。
 - 搜索器当前为 `sqlite`，旧的 `bleve` 配置已经无效。
 - `web-dav.max-cache-items` 控制 WebDAV 文件对象缓存上限。
+- `wopi.discovery-url` 为空时关闭 WOPI；该 URL 必须指向 Office 服务的 discovery XML。
 - 全局 `cache` 当前使用内存实现，`clean-period` 控制定期清理周期。
 
 更多内容：
@@ -151,3 +155,4 @@ auth:
 - [安全指南](./security.html)
 - [搜索与索引](../features/search.html)
 - [WebDAV](../features/webdav.html)
+- [通过 WOPI 编辑 Office 文档](../features/wopi.html)

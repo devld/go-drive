@@ -23,6 +23,7 @@ var (
 	KeyThumbnail     = componentKey{k: "thumbnail"}
 	KeySearchService = componentKey{k: "searchService"}
 	KeyTokenStore    = componentKey{k: "tokenStore"}
+	KeyWOPI          = componentKey{k: "wopi"}
 
 	KeyUserDAO           = componentKey{k: "userDAO"}
 	KeySessionDAO        = componentKey{k: "sessionDAO"}
