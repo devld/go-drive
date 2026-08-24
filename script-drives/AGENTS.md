@@ -340,11 +340,11 @@ The HTTP client does not follow redirects automatically. Handle 3xx responses ac
 
 ### Logging and debugging
 
-- `DEBUG`: whether `GO_DRIVE_DEBUG` is enabled.
 - `console.debug/error/info/log/warn(...)`: write to the server log.
 - `consoleWrite(level, ...messages)`: low-level logging; normally use `console`.
 
-Log only inside a `DEBUG` branch, and redact arguments before constructing the log message.
+Use the appropriate `console.debug/info/warn/error` level directly, and redact
+arguments before constructing the log message.
 
 ### IO
 
@@ -610,7 +610,7 @@ An agent must proceed in this order:
    ```
 
 10. On a test instance, verify root and empty directories, pagination, Unicode and space-containing paths, 404, empty/small/large files, overwrite and no-overwrite, deep directory creation, recursive delete, same-Drive and cross-Drive copy, move, cancellation, timeout, 401/403, 429, 5xx, credential refresh, and cache consistency.
-11. Enable `GO_DRIVE_DEBUG=1` only for temporary diagnosis. Confirm logs are redacted, then disable it.
+11. Set `GO_DRIVE_LOGGING_LEVEL=debug` only for temporary diagnosis. Confirm logs are redacted, then remove it.
 12. Do not edit `build/`, `web/dist/`, or dependency directories, and never commit real credentials.
 
 Completion means every contract above is implemented or has explicit Unsupported behavior, and read/write operations, errors, cancellation, and resource ownership have been verified against a real test instance. Merely loading the script is not sufficient.

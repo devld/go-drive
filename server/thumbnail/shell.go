@@ -6,9 +6,9 @@ import (
 	"errors"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/types"
 	"io"
-	"log"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -133,8 +133,7 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry T
 	}
 
 	if e != nil {
-		log.Printf("shell thumbnail handler error for entry %q: %v. stderr: %s",
-			entry.Path(), e, strings.TrimSpace(stdErr.String()))
+		logging.For("thumbn").Errorf("shell handler failed for %s: %v; stderr: %s", entry.Path(), e, strings.TrimSpace(stdErr.String()))
 		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.create_failed"))
 	}
 

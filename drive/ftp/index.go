@@ -7,6 +7,7 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
@@ -70,6 +71,7 @@ func NewDrive(ctx context.Context, config types.SM,
 
 	_, e := ftp.List(ctx, "")
 	if e != nil {
+		logging.For("ftp").Warnf("FTP drive connection check failed addr=%s: %v", client.addr, e)
 		_ = client.Close()
 		return nil, e
 	}
@@ -405,6 +407,7 @@ func newClientPool(addr, user, password string, timeout time.Duration, size int)
 }
 
 func (p *clientPool) get(ctx context.Context) (*ftpclient.ServerConn, error) {
+	started := time.Now()
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -441,12 +444,14 @@ func (p *clientPool) get(ctx context.Context) (*ftpclient.ServerConn, error) {
 		e = c.Login(p.user, p.password)
 	}
 	if e != nil {
+		logging.For("ftp").Warnf("FTP connection failed addr=%s duration=%s: %v", p.addr, time.Since(started), e)
 		if c != nil {
 			_ = c.Quit()
 		}
 		p.slots <- struct{}{}
 		return nil, mapError(e)
 	}
+	logging.For("ftp").Debugf("FTP connection established addr=%s duration=%s", p.addr, time.Since(started))
 	return c, nil
 }
 

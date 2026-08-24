@@ -3,7 +3,7 @@ package script
 import (
 	"context"
 	"errors"
-	"log"
+	"go-drive/common/logging"
 	"sync/atomic"
 	"time"
 
@@ -119,9 +119,12 @@ func (sd *ScriptDrive) fireInterval(job *driveInterval) time.Duration {
 		return job.interval
 	}
 	if !job.running.CompareAndSwap(false, true) {
+		logging.For("scr-drv").Warnf("script interval skipped name=%s reason=already_running", job.name)
 		return job.interval
 	}
 	defer job.running.Store(false)
+	started := time.Now()
+	logging.For("scr-drv").Debugf("script interval started name=%s", job.name)
 
 	ctx, cancel := context.WithTimeout(sd.intervalCtx, job.timeout)
 	defer cancel()
@@ -146,8 +149,9 @@ func (sd *ScriptDrive) fireInterval(job *driveInterval) time.Duration {
 		if sd.intervalCtx.Err() != nil || errors.Is(e, s.ErrVMPoolClosed) {
 			return job.interval
 		}
-		log.Printf("script drive interval %q: %v", job.name, e)
+		logging.For("scr-drv").Warnf("script drive interval %q: %v", job.name, e)
 		return job.interval
 	}
+	logging.For("scr-drv").Debugf("script interval completed name=%s next=%s duration=%s", job.name, next, time.Since(started))
 	return next
 }

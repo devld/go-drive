@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	err "go-drive/common/errors"
+	"go-drive/common/logging"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -498,6 +498,10 @@ func WrapVmCall(vm *VM, fn func(vm *VM, args Values) any) any {
 }
 
 func wrapVmRun(ctx context.Context, vm *VM, fn func() (otto.Value, error)) (value *Value, e error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			if ee, ok := r.(error); ok {
@@ -546,7 +550,7 @@ func mapError(e error) error {
 	}
 
 	if oe, ok := e.(*otto.Error); ok {
-		log.Println(oe.String())
+		logging.For("script").Errorf("otto runtime error: %s", oe.String())
 	}
 
 	if re, ok := e.(err.Error); ok {

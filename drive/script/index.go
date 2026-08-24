@@ -6,6 +6,7 @@ import (
 	"errors"
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
+	"go-drive/common/logging"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	s "go-drive/script"
@@ -23,6 +24,7 @@ type scriptDriveHas struct {
 }
 
 type ScriptDrive struct {
+	name     string
 	baseVM   *s.VM
 	pool     *s.VMPool
 	cache    driveutil.DriveCache
@@ -84,15 +86,29 @@ func (sd *ScriptDrive) call(ctx context.Context, vm *s.VM, fn string, args ...an
 	if gotValue.IsNil() {
 		return nil, err.NewUnsupportedError()
 	}
-	return vm.Call(ctx, fn, args...)
+	started := time.Now()
+	value, e := vm.Call(ctx, fn, args...)
+	if e != nil {
+		logging.For("scr-drv").Errorf("script call failed script=%s function=%s duration=%s: %v",
+			logging.Sanitize(sd.name), fn, time.Since(started), e)
+	} else if elapsed := time.Since(started); elapsed >= time.Second {
+		logging.For("scr-drv").Debugf("script call slow script=%s function=%s duration=%s",
+			logging.Sanitize(sd.name), fn, elapsed)
+	}
+	return value, e
 }
 
 func (sd *ScriptDrive) withVM(ctx context.Context, fn func(vm *s.VM) (*s.Value, error)) (*s.Value, error) {
 	vm, e := sd.pool.Get(ctx)
 	if e != nil {
+		logging.For("scr-drv").Debugf("script VM unavailable script=%s: %v", logging.Sanitize(sd.name), e)
 		return nil, e
 	}
-	defer func() { _ = sd.pool.Return(context.Background(), vm) }()
+	defer func() {
+		if e := sd.pool.Return(context.Background(), vm); e != nil {
+			logging.For("scr-drv").Warnf("script VM return failed script=%s: %v", logging.Sanitize(sd.name), e)
+		}
+	}()
 	return fn(vm)
 }
 

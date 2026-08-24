@@ -13,12 +13,12 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/storage"
 	"io"
-	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -77,15 +77,28 @@ func NewMaker(config common.Config, optionsDAO *storage.OptionsDAO,
 	// Remove leftover lock files and empty failure markers on startup. Empty
 	// files mark previously failed generations; dropping them on restart gives
 	// those entries a fresh chance to be regenerated.
-	_ = filepath.Walk(m.cacheDir, func(path string, info os.FileInfo, e error) error {
-		if e != nil || info.IsDir() {
+	cleaned := 0
+	walkErr := filepath.Walk(m.cacheDir, func(path string, info os.FileInfo, e error) error {
+		if e != nil {
+			logging.For("thumbn").Warnf("thumbnail cache cleanup walk failed path=%s: %v", logging.Sanitize(path), e)
+			return nil
+		}
+		if info.IsDir() {
 			return nil
 		}
 		if strings.HasSuffix(info.Name(), lockSuffix) || info.Size() == 0 {
-			_ = os.Remove(path)
+			if e := os.Remove(path); e != nil {
+				logging.For("thumbn").Warnf("thumbnail cache cleanup failed path=%s: %v", logging.Sanitize(path), e)
+			} else {
+				cleaned++
+			}
 		}
 		return nil
 	})
+	if walkErr != nil {
+		logging.For("thumbn").Errorf("thumbnail cache cleanup failed: %v", walkErr)
+	}
+	logging.For("thumbn").Debugf("thumbnail cache startup cleanup removed=%d", cleaned)
 
 	m.stopCleaner = utils.TimeTick(m.clean, 12*time.Hour)
 	m.pool = pond.NewPool(config.Thumbnail.Concurrent)
@@ -143,8 +156,10 @@ func (m *Maker) Make(ctx context.Context, entry types.IEntry) (Thumbnail, error)
 		return nil, e
 	}
 	if t != nil {
+		logging.For("thumbn").Debugf("thumbnail cache hit path=%s", logging.Sanitize(entry.Path()))
 		return t, nil
 	}
+	logging.For("thumbn").Debugf("thumbnail cache miss path=%s", logging.Sanitize(entry.Path()))
 
 	return m.doMake(ctx, thumbnailEntry, itemPath)
 }
@@ -216,7 +231,7 @@ func (m *Maker) resolveHandler(entry ThumbnailEntry) ([]TypeHandler, error) {
 		}
 		temp := strings.SplitN(m, ":", 2)
 		if len(temp) != 2 {
-			log.Println("invalid handler mapping:", m)
+			logging.For("thumbn").Warnf("invalid handler mapping: %s", m)
 			continue
 		}
 		if ok, e := doublestar.Match(temp[1], entry.GetRealPath()); ok && e == nil {
@@ -241,8 +256,12 @@ func (m *Maker) resolveHandler(entry ThumbnailEntry) ([]TypeHandler, error) {
 	}
 
 	if len(matchedHandlers) == 0 {
+		logging.For("thumbn").Debugf("thumbnail handler not found path=%s type=%s",
+			logging.Sanitize(entry.Path()), fType)
 		return nil, err.NewNotFoundMessageError("no thumbnail handlers matched")
 	}
+	logging.For("thumbn").Debugf("thumbnail handlers resolved path=%s type=%s count=%d",
+		logging.Sanitize(entry.Path()), fType, len(matchedHandlers))
 	return matchedHandlers, nil
 }
 
@@ -252,6 +271,7 @@ func (m *Maker) tryToGetFromCache(entry ThumbnailEntry, path string) (Thumbnail,
 		return nil, e
 	}
 	if !exists {
+		logging.For("thumbn").Debugf("thumbnail cache file absent path=%s", logging.Sanitize(entry.Path()))
 		return nil, nil
 	}
 	f, e := os.Open(path)
@@ -269,11 +289,13 @@ func (m *Maker) tryToGetFromCache(entry ThumbnailEntry, path string) (Thumbnail,
 	// kept until it expires (cleaned by the periodic cleaner / on restart).
 	if stat.Size() == 0 {
 		_ = f.Close()
+		logging.For("thumbn").Debugf("thumbnail failure marker hit path=%s", logging.Sanitize(entry.Path()))
 		return nil, err.NewNotFoundMessageError(i18n.T("api.thumbnail.create_failed"))
 	}
 	meta, headerSize, e := m.readItemMeta(f)
 	if e != nil || m.isThumbnailExpired(entry, *meta) {
 		_ = f.Close()
+		logging.For("thumbn").Debugf("thumbnail cache expired path=%s", logging.Sanitize(entry.Path()))
 		if e := m.remove(path); e != nil {
 			return nil, e
 		}
@@ -299,6 +321,11 @@ func (m *Maker) doMake(ctx context.Context, entry ThumbnailEntry, path string) (
 		}
 		c <- taskErr
 	}); e != nil {
+		if errors.Is(e, pond.ErrQueueFull) {
+			logging.For("thumbn").Warnf("thumbnail worker queue full path=%s: %v", logging.Sanitize(entry.Path()), e)
+		} else {
+			logging.For("thumbn").Errorf("thumbnail worker submission failed path=%s: %v", logging.Sanitize(entry.Path()), e)
+		}
 		return nil, e
 	}
 
@@ -325,11 +352,13 @@ func (m *Maker) doMake(ctx context.Context, entry ThumbnailEntry, path string) (
 }
 
 func (m *Maker) executeTask(task *taskWrapper) error {
+	started := time.Now()
 	exists, e := utils.FileExists(task.dest)
 	if e != nil {
 		return e
 	}
 	if exists {
+		logging.For("thumbn").Debugf("thumbnail generated concurrently path=%s", logging.Sanitize(task.entry.Path()))
 		return nil
 	}
 
@@ -339,10 +368,12 @@ func (m *Maker) executeTask(task *taskWrapper) error {
 		return e
 	}
 	if exists {
+		logging.For("thumbn").Debugf("thumbnail generation already in progress path=%s", logging.Sanitize(task.entry.Path()))
 		return errMaking
 	}
 	var lastErr error
 	for _, h := range task.h {
+		logging.For("thumbn").Debugf("thumbnail handler started path=%s mime=%s", logging.Sanitize(task.entry.Path()), h.MimeType())
 		item, e := m.createItem(task.entry, lockFile, h.MimeType())
 		if e != nil {
 			return e
@@ -361,6 +392,8 @@ func (m *Maker) executeTask(task *taskWrapper) error {
 		_ = item.Close()
 
 		if err.IsUnsupportedError(e) {
+			logging.For("thumbn").Debugf("thumbnail handler unsupported path=%s mime=%s",
+				logging.Sanitize(task.entry.Path()), h.MimeType())
 			continue
 		}
 
@@ -370,6 +403,8 @@ func (m *Maker) executeTask(task *taskWrapper) error {
 				_ = os.Remove(task.dest)
 				return e
 			}
+			logging.For("thumbn").Debugf("thumbnail generated path=%s mime=%s duration=%s",
+				logging.Sanitize(task.entry.Path()), h.MimeType(), time.Since(started))
 			return nil
 		}
 
@@ -386,10 +421,12 @@ func (m *Maker) executeTask(task *taskWrapper) error {
 	// handler is not executed again on every subsequent request. The marker
 	// follows the regular cache TTL and is also dropped on restart.
 	if e := writeFailedMarker(task.dest); e != nil {
-		log.Println("failed to write thumbnail failure marker:", e)
+		logging.For("thumbn").Errorf("failed to write thumbnail failure marker: %v", e)
 		_ = os.Remove(lockFile)
 		_ = os.Remove(task.dest)
 	}
+	logging.For("thumbn").Debugf("thumbnail generation failed path=%s duration=%s: %v",
+		logging.Sanitize(task.entry.Path()), time.Since(started), lastErr)
 	return lastErr
 }
 
@@ -541,17 +578,17 @@ func (m *Maker) clean() {
 		}
 		if info.ModTime().Before(notBefore) {
 			if e := os.Remove(path); e != nil {
-				log.Println("failed to delete file", e)
+				logging.For("thumbn").Warnf("failed to delete file %s: %v", path, e)
 			}
 			n++
 		}
 		return nil
 	})
 	if n > 0 {
-		log.Printf("%d expired thumbnails cleaned", n)
+		logging.For("thumbn").Debugf("%d expired thumbnails cleaned", n)
 	}
 	if e != nil {
-		log.Println("error when cleaning expired thumbnails", e)
+		logging.For("thumbn").Errorf("error when cleaning expired thumbnails: %v", e)
 	}
 }
 

@@ -3,7 +3,7 @@ title: 命令行参考
 description: 使用 go-drive 命令行参数选择配置文件、输出版本信息、控制启动并执行管理操作。
 lang: zh-CN
 translation_key: cli
-source_hash: 17ef0e9ae63515081d4f50424d23833034d049bad03039b502a2f1fbd39146fb
+source_hash: 0c1b026b35dcaa883a41f1dbd28e48f549c4471d59066ee8c1ffad4e588ac4f9
 ---
 
 # 命令行参考
@@ -27,10 +27,10 @@ source_hash: 17ef0e9ae63515081d4f50424d23833034d049bad03039b502a2f1fbd39146fb
 ## 环境变量
 
 ```text
-GO_DRIVE_DEBUG=1
+GO_DRIVE_LOGGING_LEVEL=debug
 ```
 
-启用额外调试行为和日志。仅在排障期间使用，完成后关闭。
+覆盖配置文件中的 `logging.level`。仅在排障期间使用 `debug`，完成后移除该环境变量。
 
 构建时常用 Make 变量：
 

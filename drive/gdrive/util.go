@@ -6,6 +6,7 @@ import (
 	"go-drive/common"
 	"go-drive/common/driveutil"
 	"go-drive/common/i18n"
+	"go-drive/common/req"
 	"go-drive/common/types"
 
 	"golang.org/x/oauth2"
@@ -63,7 +64,7 @@ func InitConfig(ctx context.Context, config types.SM,
 	if oauthHolder == nil {
 		return initConfig, nil
 	}
-	httpClient := oauthHolder.Client()
+	httpClient := req.NewLoggingClient(oauthHolder.Client())
 	service, e := gOauth.NewService(ctx, option.WithHTTPClient(httpClient))
 	if e != nil {
 		return nil, e
@@ -85,7 +86,7 @@ func InitConfig(ctx context.Context, config types.SM,
 func buildInitForm(ctx context.Context, oauthHolder *driveutil.OAuthHolder,
 	driveUtils driveutil.DriveUtils, initConfig *driveutil.DriveInitConfig) error {
 	// get shared drives
-	driveSrv, e := drive.NewService(ctx, option.WithHTTPClient(oauthHolder.Client()))
+	driveSrv, e := drive.NewService(ctx, option.WithHTTPClient(req.NewLoggingClient(oauthHolder.Client())))
 	if e != nil {
 		return e
 	}

@@ -8,19 +8,19 @@ function __consoleWrite__(level, args) {
 
 var console = {
   debug: function () {
-    __consoleWrite__("DEBUG", arguments);
+    __consoleWrite__("debug", arguments);
   },
   error: function () {
-    __consoleWrite__("ERROR", arguments);
+    __consoleWrite__("error", arguments);
   },
   info: function () {
-    __consoleWrite__(" INFO", arguments);
+    __consoleWrite__("info", arguments);
   },
   log: function () {
-    __consoleWrite__("  LOG", arguments);
+    __consoleWrite__("log", arguments);
   },
   warn: function () {
-    __consoleWrite__(" WARN", arguments);
+    __consoleWrite__("warn", arguments);
   },
 };
 

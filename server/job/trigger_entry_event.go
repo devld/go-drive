@@ -4,9 +4,9 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/event"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -147,7 +147,8 @@ func (eet *entryEventTrigger) checkAndTrigger(path string, entryEventType EntryE
 		}
 		pathMatched, e := doublestar.Match(config.pathPattern, path)
 		if e != nil {
-			log.Printf("error matching path pattern %s with path %s: %v", config.pathPattern, path, e)
+			logging.For("job-tri").Warnf("error matching path pattern %s with path %s: %v",
+				logging.Sanitize(config.pathPattern), logging.Sanitize(path), e)
 			continue
 		}
 		if !pathMatched {
@@ -161,7 +162,12 @@ func (eet *entryEventTrigger) checkAndTrigger(path string, entryEventType EntryE
 				"includeDescendants": strconv.FormatBool(includeDescendants),
 			},
 		}
-		eet.executor.TriggerExecution(config.jobID, event)
+		logging.For("job-tri").Debugf("entry trigger matched job_id=%d event=%s path=%s",
+			config.jobID, entryEventType, logging.Sanitize(path))
+		if _, e := eet.executor.TriggerExecution(config.jobID, event); e != nil {
+			logging.For("job-tri").Warnf("entry trigger queue failed job_id=%d path=%s: %v",
+				config.jobID, logging.Sanitize(path), e)
+		}
 	}
 }
 

@@ -1,5 +1,5 @@
 // @name Qiniu
-// @version 1.0.3
+// @version 1.0.5
 // @uploader qiniu-uploader.js
 // @description Qiniu Kodo
 
@@ -286,18 +286,14 @@ function request(drive, ctx, method, url, headers, body) {
     body
   );
   headers["Authorization"] = "Qiniu " + signature;
-  if (DEBUG) {
-    console.log("[HTTP REQ]", method, url, JSON.stringify(headers), body);
-  }
+  console.debug("http request", method, url);
   var r = http(ctx, method, url, { headers: headers, body: body || undefined });
 
   var isJSON =
     r.Headers.Get("Content-Type").toLowerCase().indexOf("application/json") >=
     0;
   var dataStr = isJSON ? r.Text() : undefined;
-  if (DEBUG) {
-    console.log("[HTTP RES]", r.Status, dataStr);
-  }
+  console.debug("http response", r.Status);
   var data;
   if (isJSON) {
     try {

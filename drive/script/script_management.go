@@ -8,6 +8,8 @@ import (
 	"errors"
 	"go-drive/common"
 	err "go-drive/common/errors"
+	"go-drive/common/logging"
+	httpreq "go-drive/common/req"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"io"
@@ -16,6 +18,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
@@ -142,6 +145,8 @@ func driveScriptUpdateAvailable(repositoryVersion, installedVersion string) bool
 }
 
 func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, repoURL string) (DriveScriptRepository, error) {
+	started := time.Now()
+	log := logging.For("scr-drv")
 	if ctx == nil {
 		ctx = task.DummyContext()
 	}
@@ -157,19 +162,15 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 	ctx.Total(1, true)
 	ctx.Progress(0, true)
 
-	req, e := http.NewRequestWithContext(ctx, "GET", repoURL, nil)
+	resp, e := httpreq.NewDefaultClient().Get(ctx, repoURL, nil)
 	if e != nil {
 		return DriveScriptRepository{}, e
 	}
-	resp, e := http.DefaultClient.Do(req)
-	if e != nil {
-		return DriveScriptRepository{}, e
+	defer func() { _ = resp.Dispose() }()
+	if resp.Status() != http.StatusOK {
+		return DriveScriptRepository{}, err.NewRemoteApiError(resp.Status(), "failed to fetch data")
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return DriveScriptRepository{}, err.NewRemoteApiError(resp.StatusCode, "failed to fetch data")
-	}
-	respData, e := readLimitedContent(resp.Body, maxRepositoryResponseSize, "script repository response is too large")
+	respData, e := readLimitedContent(resp.Response().Body, maxRepositoryResponseSize, "script repository response is too large")
 	if e != nil {
 		return DriveScriptRepository{}, e
 	}
@@ -181,9 +182,12 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 
 	itemsMap := make(map[string]driveRepositoryListResp, len(items))
 	jsItems := make([]driveRepositoryListResp, 0)
+	invalidItems := 0
 	for _, item := range items {
 		name, ok := repositoryFileName(item.Name)
 		if !ok || item.DownloadURL == "" {
+			invalidItems++
+			log.Warnf("ignored invalid script repository item name=%s", logging.Sanitize(item.Name))
 			continue
 		}
 		item.Name = name
@@ -193,6 +197,7 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 
 	ctx.Total(int64(len(jsItems)), false)
 	contents := make(map[string][]byte, len(jsItems))
+	failedDownloads := 0
 	for _, item := range jsItems {
 		if e := ctx.Err(); e != nil {
 			return DriveScriptRepository{}, e
@@ -200,6 +205,8 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 		content, e := syncRepositoryFile(ctx, filesDir, item)
 		ctx.Progress(1, false)
 		if e != nil {
+			failedDownloads++
+			log.Warnf("script repository file download failed file=%s: %v", logging.Sanitize(item.Name), e)
 			continue
 		}
 		contents[item.Name] = content
@@ -207,6 +214,7 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 
 	cached := make([]repositoryCachedScript, 0, len(jsItems))
 	keepFiles := make(map[string]struct{}, len(jsItems))
+	invalidScripts := 0
 	for _, item := range jsItems {
 		content, ok := contents[item.Name]
 		if !ok {
@@ -214,6 +222,8 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 		}
 		meta, ok, e := parseDriveScriptMeta(content, item.Name)
 		if e != nil || !ok {
+			invalidScripts++
+			log.Warnf("ignored invalid script repository file=%s: %v", logging.Sanitize(item.Name), e)
 			continue
 		}
 
@@ -247,6 +257,8 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 	if e := saveRepositoryCache(indexPath, repositoryCache{Scripts: cached}); e != nil {
 		return DriveScriptRepository{}, e
 	}
+	log.Debugf("script repository sync completed files=%d scripts=%d invalid_items=%d failed_downloads=%d invalid_scripts=%d duration=%s",
+		len(jsItems), len(cached), invalidItems, failedDownloads, invalidScripts, time.Since(started))
 
 	scripts := make([]AvailableDriveScript, 0, len(cached))
 	for _, item := range cached {
@@ -640,7 +652,10 @@ func removeUnusedRepositoryFiles(filesDir string, keep map[string]struct{}) erro
 		if _, ok := keep[entry.Name()]; ok {
 			continue
 		}
-		_ = os.Remove(filepath.Join(filesDir, entry.Name()))
+		if e := os.Remove(filepath.Join(filesDir, entry.Name())); e != nil {
+			logging.For("scr-drv").Warnf("failed to remove stale repository file file=%s: %v",
+				logging.Sanitize(entry.Name()), e)
+		}
 	}
 	return nil
 }
@@ -670,18 +685,14 @@ func repositoryUploaderName(value string) string {
 	return base + ".js"
 }
 
-func openScriptResponse(ctx context.Context, url string) (*http.Response, error) {
-	req, e := http.NewRequestWithContext(ctx, "GET", url, nil)
+func openScriptResponse(ctx context.Context, url string) (httpreq.Response, error) {
+	resp, e := httpreq.NewDefaultClient().Get(ctx, url, nil)
 	if e != nil {
 		return nil, e
 	}
-	resp, e := http.DefaultClient.Do(req)
-	if e != nil {
-		return nil, e
-	}
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		_ = resp.Body.Close()
-		return nil, err.NewRemoteApiError(resp.StatusCode, "failed to download script")
+	if resp.Status() < http.StatusOK || resp.Status() >= http.StatusMultipleChoices {
+		_ = resp.Dispose()
+		return nil, err.NewRemoteApiError(resp.Status(), "failed to download script")
 	}
 	return resp, nil
 }
@@ -691,8 +702,8 @@ func downloadScriptContent(ctx context.Context, url string) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	defer func() { _ = resp.Body.Close() }()
-	return readLimitedContent(resp.Body, maxScriptSize, "script is too large")
+	defer func() { _ = resp.Dispose() }()
+	return readLimitedContent(resp.Response().Body, maxScriptSize, "script is too large")
 }
 
 func readLimitedContent(reader io.Reader, maxSize int64, message string) ([]byte, error) {

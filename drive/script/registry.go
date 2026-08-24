@@ -4,8 +4,8 @@ import (
 	"context"
 	"go-drive/common"
 	"go-drive/common/driveutil"
+	"go-drive/common/logging"
 	"go-drive/common/types"
-	"log"
 )
 
 const scriptDriveTypePrefix = "script/"
@@ -27,7 +27,7 @@ func RegisterAllScriptDrives(ctx context.Context, config common.Config, driveReg
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			log.Printf("cannot register script drive %q: %v", script.Name, e)
+			logging.For("scr-drv").Warnf("cannot register script drive %q: %v", script.Name, e)
 			continue
 		}
 

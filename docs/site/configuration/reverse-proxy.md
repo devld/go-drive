@@ -76,4 +76,4 @@ location /drive/ {
 
 ## Diagnose the client IP
 
-With the `GO_DRIVE_DEBUG` environment variable set, debug responses include information useful for confirming the client IP. Disable debug mode after diagnosis to avoid exposing extra implementation details.
+With `GO_DRIVE_LOGGING_LEVEL=debug` set, debug responses include information useful for confirming the client IP. Remove the variable after diagnosis to avoid exposing extra implementation details.

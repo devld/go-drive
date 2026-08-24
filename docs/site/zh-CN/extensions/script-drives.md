@@ -3,7 +3,7 @@ title: 脚本 Drive 开发与安装
 description: 安装第三方脚本 Drive，或使用 JavaScript 开发 go-drive 存储适配器和浏览器直传集成。
 lang: zh-CN
 translation_key: script-drives
-source_hash: b595d53fde9e7aa2e1b8455872de4502933b1a8072c7efc0a7b37970c0307a5c
+source_hash: ca35d2135b0bdc8fd283104a565d8c45e13df456c44db8eb7ca4edd485cdb390
 ---
 
 # 脚本 Drive 开发与安装
@@ -85,8 +85,8 @@ drive-repository-url: https://example.com/my-drives.json
 
 1. 在测试实例中安装或编辑脚本。
 2. 使用专门测试账号和目录。
-3. 开启 `GO_DRIVE_DEBUG=1` 获取临时调试信息。
+3. 设置 `GO_DRIVE_LOGGING_LEVEL=debug` 获取临时调试日志。
 4. 分别测试空文件、大文件、覆盖、目录、取消、网络错误和凭据过期。
-5. 测试完成后关闭 debug，并重新加载 Drive。
+5. 测试完成后移除该环境变量，并重新加载 Drive。
 
 调用由并发 VM 池执行，普通可变全局变量不是可靠的共享状态；只有可 JSON 序列化的 `$` 实例属性会在 VM 间同步。脚本仍可以访问网络和 Drive 数据；不要把它当作不可信代码沙箱。

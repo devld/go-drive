@@ -40,11 +40,12 @@ func GetSharedTestConfig() (common.Config, func()) {
 func defaultTestConfigWithDirs(dataDir, tempDir string) common.Config {
 	// DB file lives under DataDir, cleaned with the temp root
 	return common.Config{
-		Listen:      common.DefaultListen,
-		APIPath:     common.DefaultAPIPath,
-		WebPath:     common.DefaultWebPath,
-		DataDir:     dataDir,
-		TempDir:     tempDir,
+		Listen:  common.DefaultListen,
+		APIPath: common.DefaultAPIPath,
+		WebPath: common.DefaultWebPath,
+		DataDir: dataDir,
+		TempDir: tempDir,
+		Logging: common.LoggingConfig{Level: common.DefaultLoggingLevel},
 
 		DrivesDir:          common.DefaultDrivesDir,
 		DriveUploadersDir:  common.DefaultDriveUploadersDir,

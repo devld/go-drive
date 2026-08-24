@@ -3,8 +3,8 @@ package driveutil
 import (
 	"errors"
 	err "go-drive/common/errors"
+	"go-drive/common/logging"
 	"io"
-	"log"
 	"math"
 	"os"
 	"sort"
@@ -263,7 +263,7 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
 		if offset > 0 {
 			_, e = writer.Seek(offset, io.SeekStart)
 			if e != nil {
-				log.Printf("cache_file_pool seek error: %v", e)
+				logging.For("f-cache").Errorf("cache_file_pool seek error: %v", e)
 				_ = cf.Close()
 				return
 			}
@@ -285,7 +285,7 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
 			if nr > 0 {
 				nw, ew := writer.Write(buf[0:nr])
 				if ew != nil {
-					log.Printf("cache_file_pool write error: %v", ew)
+					logging.For("f-cache").Errorf("cache_file_pool write error: %v", ew)
 					_ = cf.Close()
 					return
 				}
@@ -294,7 +294,7 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
 			}
 			if er != nil {
 				if er != io.EOF {
-					log.Printf("cache_file_pool read error: %v", er)
+					logging.For("f-cache").Errorf("cache_file_pool read error: %v", er)
 					_ = cf.Close()
 					return
 				}

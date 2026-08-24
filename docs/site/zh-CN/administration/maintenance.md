@@ -3,7 +3,7 @@ title: 维护和运行状态
 description: 查看 go-drive 运行状态，重新加载 Drive、重建搜索索引、管理缓存，并执行常规服务维护。
 lang: zh-CN
 translation_key: maintenance
-source_hash: f0bc59e87c478d6b9a46c357fe89ffb9cd00ce6e2f5471469aaee80303baeb70
+source_hash: 9d14e982d17e3c3347993f063be1bbf2296bf5f6122c8d4a3dab61eb1115888a
 ---
 
 # 维护和运行状态
@@ -43,7 +43,7 @@ source_hash: f0bc59e87c478d6b9a46c357fe89ffb9cd00ce6e2f5471469aaee80303baeb70
 - 已隐藏凭据的相关配置。
 - 同一时间段的后端日志。
 
-设置 `GO_DRIVE_DEBUG=1` 可临时增加调试信息。问题解决后关闭调试模式。
+设置 `GO_DRIVE_LOGGING_LEVEL=debug` 可临时增加调试日志。问题解决后移除该环境变量。
 
 ## 日常维护建议
 

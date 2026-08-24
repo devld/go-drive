@@ -14,6 +14,9 @@ The following example covers all current public settings. Keep unused features d
 ```yaml
 listen: :8089
 
+logging:
+  level: info                 # debug, info, warn, or error
+
 # Only proxies that connect directly to go-drive belong here
 # trusted-proxies:
 #   - 127.0.0.1
@@ -80,6 +83,7 @@ web-path: ""
 | Setting | Default | Description |
 | --- | --- | --- |
 | `listen` | `:8089` | HTTP listen address |
+| `logging.level` | `info` | Minimum log level; `GO_DRIVE_LOGGING_LEVEL` overrides it |
 | `trusted-proxies` | Empty | Proxy IPs/CIDRs allowed to supply `X-Forwarded-For` |
 | `data-dir` | `./data` | Database, local files, scripts, sessions, and cache data |
 | `temp-dir` | `data-dir/temp` | Temporary files for upload, copy, and related work |

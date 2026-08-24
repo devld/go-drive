@@ -60,4 +60,4 @@ OneDrive and Google Drive require an OAuth client secret. You may use the defaul
 
 ## Logs and debugging
 
-Error logs may contain paths, remote-service errors, and usernames. Treat centrally collected logs as sensitive data. Use `GO_DRIVE_DEBUG` only temporarily and disable it after troubleshooting.
+Error logs may contain paths, remote-service errors, and usernames. Treat centrally collected logs as sensitive data. Use `GO_DRIVE_LOGGING_LEVEL=debug` only temporarily and remove it after troubleshooting.

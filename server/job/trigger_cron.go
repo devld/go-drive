@@ -4,6 +4,7 @@ import (
 	"fmt"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"strconv"
@@ -92,6 +93,11 @@ func (ct *cronTrigger) Register(jobID uint, config types.SM) error {
 		gocron.WithTags(tag),
 		gocron.WithSingletonMode(gocron.LimitModeReschedule),
 	)
+	if e == nil {
+		logging.For("job-tri").Debugf("cron trigger registered job_id=%d schedule=%s", jobID, schedule)
+	} else {
+		logging.For("job-tri").Warnf("cron trigger registration failed job_id=%d: %v", jobID, e)
+	}
 	return e
 }
 
@@ -121,7 +127,10 @@ func (ct *cronTrigger) GetInfo(jobID uint) ([]types.SM, error) {
 }
 
 func (ct *cronTrigger) triggerAction(jobID uint) {
-	ct.executor.TriggerExecution(jobID, TriggerEvent{Type: JobTriggerTypeCron})
+	logging.For("job-tri").Debugf("cron trigger fired job_id=%d", jobID)
+	if _, e := ct.executor.TriggerExecution(jobID, TriggerEvent{Type: JobTriggerTypeCron}); e != nil {
+		logging.For("job-tri").Warnf("cron trigger queue failed job_id=%d: %v", jobID, e)
+	}
 }
 
 func (ct *cronTrigger) Clear() {

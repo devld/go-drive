@@ -6,6 +6,7 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/req"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
@@ -42,7 +43,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils)
 	if e != nil {
 		return nil, e
 	}
-	service, e := drive.NewService(ctx, option.WithHTTPClient(oauthHolder.Client()))
+	service, e := drive.NewService(ctx, option.WithHTTPClient(req.NewLoggingClient(oauthHolder.Client())))
 	if e != nil {
 		return nil, e
 	}

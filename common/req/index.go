@@ -8,14 +8,11 @@ import (
 	"fmt"
 	"go-drive/common"
 	"go-drive/common/types"
-	"go-drive/common/utils"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
 	"sync"
-	"time"
 )
 
 const maxReadableBodySize int64 = 10 * 1024 * 1024 // 10MB
@@ -51,11 +48,21 @@ func NewClient(
 		u = temp
 	}
 	return &Client{
-		c:       client,
+		c:       wrapClient(client),
 		baseURL: u,
 		before:  before,
 		after:   after,
 	}, nil
+}
+
+// NewDefaultClient returns a request client backed by net/http's default
+// client.
+func NewDefaultClient() *Client {
+	client, e := NewClient("", nil, nil, http.DefaultClient)
+	if e != nil {
+		panic(e)
+	}
+	return client
 }
 
 func (h *Client) BuildURL(requestUrl string) (string, error) {
@@ -120,24 +127,11 @@ func (h *Client) client() *http.Client {
 	if h.c != nil {
 		return h.c
 	}
-	return defaultClient
+	return defaultLoggingClient
 }
 
 func (h *Client) request(req *http.Request) (Response, error) {
-	if utils.IsDebugOn {
-		log.Printf("[HttpClient  req] %s %s", req.Method, req.URL.String())
-	}
-	start := time.Now()
 	r, e := h.client().Do(req)
-	if utils.IsDebugOn {
-		var v any = nil
-		if e == nil {
-			v = r.StatusCode
-		} else {
-			v = e
-		}
-		log.Printf("[HttpClient resp] %s %s %v %s", req.Method, req.URL.String(), v, time.Since(start))
-	}
 	if e != nil {
 		return nil, e
 	}

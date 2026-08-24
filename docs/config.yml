@@ -1,6 +1,10 @@
 # The application will listen at this address
 listen: :8089
 
+# Log level: debug, info, warn, or error
+logging:
+  level: info
+
 # Trusted proxy IPs or CIDRs.
 # When set, Gin will only trust X-Forwarded-For headers from these sources
 # to determine the client IP. This is important for IP-based rate limiting

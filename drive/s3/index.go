@@ -7,6 +7,7 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/req"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -67,7 +68,7 @@ var _ types.IDrive = (*Drive)(nil)
 
 // NewDrive creates a S3 compatible storage
 func NewDrive(ctx context.Context, config types.SM,
-	utils driveutil.DriveUtils) (types.IDrive, error) {
+	driveUtils driveutil.DriveUtils) (types.IDrive, error) {
 	id := config["id"]
 	secret := config["secret"]
 	bucket := config["bucket"]
@@ -86,8 +87,11 @@ func NewDrive(ctx context.Context, config types.SM,
 		awsCfg.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(id, secret, "")),
 	)
 	if e != nil {
+		logging.For("s3").Warnf("S3 client initialization failed endpoint=%s bucket=%s: %v",
+			req.SanitizeURL(endpoint), logging.Sanitize(bucket), req.SanitizeError(e))
 		return nil, e
 	}
+	s3Cfg.HTTPClient = req.NewLoggingHTTPClient(s3Cfg.HTTPClient)
 	s3Cfg.APIOptions = append(s3Cfg.APIOptions, withRequestHeaders(requestHeaders))
 	client := s3.NewFromConfig(s3Cfg, func(o *s3.Options) { o.UsePathStyle = pathStyle != "" })
 
@@ -97,12 +101,12 @@ func NewDrive(ctx context.Context, config types.SM,
 		uploadProxy:   config.GetBool("proxy_upload"),
 		downloadProxy: config.GetBool("proxy_download"),
 		cacheTTL:      cacheTtl,
-		tempDir:       utils.Config.TempDir,
+		tempDir:       driveUtils.Config.TempDir,
 	}
 	if cacheTtl <= 0 {
 		d.cache = driveutil.DummyCache()
 	} else {
-		d.cache = utils.CreateCache(d.deserializeEntry)
+		d.cache = driveUtils.CreateCache(d.deserializeEntry)
 	}
 	return d, d.check(ctx)
 }
@@ -112,6 +116,7 @@ func (s *Drive) check(ctx context.Context) error {
 		Bucket: s.bucket,
 	})
 	if e != nil {
+		logging.For("s3").Warnf("S3 bucket check failed bucket=%s: %s", logging.Sanitize(*s.bucket), req.SanitizeError(e))
 		var noSuchBucket *awsType.NoSuchBucket
 		if errors.As(e, &noSuchBucket) {
 			return err.NewNotFoundMessageError(s3T("bucket_not_exists", *s.bucket))

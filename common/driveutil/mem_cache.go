@@ -1,9 +1,9 @@
 package driveutil
 
 import (
+	"go-drive/common/logging"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"log"
 	"time"
 )
 
@@ -61,7 +61,7 @@ func (m *MemDriveCacheManager) clean() {
 	cleaned, total := 0, 0
 	t := time.Now().UnixMicro()
 	m._cleanNode(m.cache, nil, &cleaned, &total)
-	log.Printf("[MemDriveCacheManager] %d of %d cache items cleaned(%fms)",
+	logging.For("d-cache").Debugf("%d of %d cache items cleaned(%fms)",
 		cleaned, total, float64(time.Now().UnixMicro()-t)/1000)
 }
 

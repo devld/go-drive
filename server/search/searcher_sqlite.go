@@ -2,11 +2,10 @@ package search
 
 import (
 	"go-drive/common"
+	"go-drive/common/logging"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"log"
 	"math"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -46,18 +45,18 @@ func NewSQLiteSearcher(config common.Config, searcherConfig types.SM) (Searcher,
 		return nil, e
 	}
 
-	dbConfig := &gorm.Config{}
-	if utils.IsDebugOn {
-		dbConfig.Logger = logger.New(
-			log.New(os.Stdout, "\n[SQLiteSearcher] ", log.LstdFlags),
-			logger.Config{
-				SlowThreshold:             time.Second,
-				LogLevel:                  logger.Info,
-				IgnoreRecordNotFoundError: true,
-				Colorful:                  true,
-			},
-		)
+	gormConfig := logger.Config{
+		SlowThreshold:             200 * time.Millisecond,
+		LogLevel:                  logger.Warn,
+		IgnoreRecordNotFoundError: false,
+		Colorful:                  false,
 	}
+	if logging.Enabled(logging.DebugLevel) {
+		gormConfig.SlowThreshold = time.Second
+		gormConfig.LogLevel = logger.Info
+		gormConfig.IgnoreRecordNotFoundError = true
+	}
+	dbConfig := &gorm.Config{Logger: logging.NewGormLogger("db-srch", gormConfig)}
 	dbFile := filepath.Join(dbDir, sqliteDBFilename)
 	db, e := gorm.Open(sqlite.Open(dbFile), dbConfig)
 	if e != nil {

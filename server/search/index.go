@@ -6,15 +6,16 @@ import (
 	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/event"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/storage"
-	"log"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 )
@@ -85,7 +86,10 @@ func (s *Service) checkEnabled() error {
 
 func (s *Service) Search(ctx context.Context, path string, query string,
 	next int, perms utils.PermMap) (types.EntrySearchResult, error) {
+	started := time.Now()
+	log := logging.For("search")
 	if e := s.checkEnabled(); e != nil {
+		log.Debugf("search rejected path=%s reason=disabled", logging.Sanitize(path))
 		return types.EntrySearchResult{}, e
 	}
 	if next < 0 {
@@ -97,10 +101,13 @@ func (s *Service) Search(ctx context.Context, path string, query string,
 	result := make([]types.EntrySearchResultItem, 0, size)
 	for {
 		if e := ctx.Err(); e != nil {
+			log.Debugf("search canceled path=%s duration=%s: %v", logging.Sanitize(path), time.Since(started), e)
 			return types.EntrySearchResult{}, e
 		}
 		items, hasMore, e := s.search(path, query, from, size, perms)
 		if e != nil {
+			log.Warnf("search failed path=%s query_length=%d duration=%s: %v",
+				logging.Sanitize(path), len(query), time.Since(started), e)
 			return types.EntrySearchResult{}, e
 		}
 		more = hasMore
@@ -118,10 +125,13 @@ func (s *Service) Search(ctx context.Context, path string, query string,
 	if more {
 		nextNext = from + size
 	}
-	return types.EntrySearchResult{
+	resultValue := types.EntrySearchResult{
 		Items: result,
 		Next:  nextNext,
-	}, nil
+	}
+	log.Debugf("search completed path=%s query_length=%d results=%d next=%d duration=%s",
+		logging.Sanitize(path), len(query), len(resultValue.Items), resultValue.Next, time.Since(started))
+	return resultValue, nil
 }
 
 func (s *Service) TriggerIndexAll(path string, ignoreError bool) (task.Task, error) {
@@ -129,9 +139,13 @@ func (s *Service) TriggerIndexAll(path string, ignoreError bool) (task.Task, err
 		return task.Task{}, e
 	}
 	return s.runner.Execute(func(ctx types.TaskCtx) (any, error) {
+		started := time.Now()
+		logging.For("search").Debugf("index started path=%s ignore_error=%t", logging.Sanitize(path), ignoreError)
 		e := s.indexAll(ctx, path, ignoreError)
 		if e != nil {
-			log.Printf("Error indexing %s: %s", utils.LogSanitize(path), e)
+			logging.For("search").Errorf("error indexing %s: %s", logging.Sanitize(path), e)
+		} else {
+			logging.For("search").Debugf("index completed path=%s duration=%s", logging.Sanitize(path), time.Since(started))
 		}
 		return nil, e
 	}, task.WithNameGroup(path, "search/index"))
@@ -158,12 +172,14 @@ func (s *Service) search(path, query string, from, size int,
 }
 
 func (s *Service) indexAll(ctx types.TaskCtx, path string, ignoreError bool) error {
-	_ = s.s.Delete(ctx, path)
+	if e := s.s.Delete(ctx, path); e != nil {
+		logging.For("search").Warnf("failed to clear index path=%s: %v", logging.Sanitize(path), e)
+	}
 	ctx.Total(0, true)
 	ctx.Progress(0, true)
 	filters, e := s.loadFilters()
 	if e != nil {
-		log.Println("[SearchService ] failed to get filter options", e.Error())
+		logging.For("search").Errorf("failed to get filter options: %s", e.Error())
 		return e
 	}
 	if filters == nil {
@@ -217,7 +233,7 @@ func isEntryExcluded(entry types.IEntry, filters []string) bool {
 		p := f[1:]
 		matched, e := doublestar.Match(p, path)
 		if e != nil {
-			log.Println("Warning: invalid filter pattern: ", f, e)
+			logging.For("search").Warnf("invalid filter pattern: %s %v", f, e)
 		}
 		if t == '+' {
 			hasIncludes = true
@@ -272,7 +288,7 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 	entry, e := d.Get(ctx, rootPath)
 	if e != nil {
 		if ignoreError {
-			log.Printf("failed to index %s: %s", utils.LogSanitize(rootPath), e)
+			logging.For("search").Warnf("failed to index %s: %s", logging.Sanitize(rootPath), e)
 			return nil
 		}
 		return e
@@ -281,7 +297,7 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 		if e == errSkip {
 			return nil
 		}
-		log.Printf("failed to index %s: %s", utils.LogSanitize(rootPath), e)
+		logging.For("search").Warnf("failed to index %s: %s", logging.Sanitize(rootPath), e)
 		if !ignoreError {
 			return e
 		}
@@ -294,7 +310,7 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 		entries, e := d.List(ctx, rootPath)
 		if e != nil {
 			if ignoreError {
-				log.Printf("failed to index %s: %s", utils.LogSanitize(rootPath), e)
+				logging.For("search").Warnf("failed to index %s: %s", logging.Sanitize(rootPath), e)
 				return nil
 			}
 			return e
@@ -314,19 +330,25 @@ func (s *Service) onUpdated(dc types.DriveListenerContext, path string, includeD
 		return
 	}
 	if includeDescendants {
-		_, _ = s.TriggerIndexAll(path, true)
+		logging.For("search").Debugf("index update scheduled path=%s descendants=true", logging.Sanitize(path))
+		if _, e := s.TriggerIndexAll(path, true); e != nil {
+			logging.For("search").Warnf("failed to schedule subtree index path=%s: %v", logging.Sanitize(path), e)
+		}
 	} else {
-		_, _ = s.runner.Execute(func(ctx types.TaskCtx) (any, error) {
+		logging.For("search").Debugf("index update scheduled path=%s descendants=false", logging.Sanitize(path))
+		if _, e := s.runner.Execute(func(ctx types.TaskCtx) (any, error) {
 			entry, e := dc.Drive.Get(ctx, path)
 			if e != nil {
 				return nil, e
 			}
 			e = s.Index(ctx, entry)
 			if e != nil {
-				log.Printf("Error indexing %s: %s", path, e)
+				logging.For("search").Errorf("error indexing %s: %s", logging.Sanitize(path), e)
 			}
 			return nil, e
-		})
+		}, task.WithNameGroup(path, "search/index")); e != nil {
+			logging.For("search").Warnf("failed to schedule index path=%s: %v", logging.Sanitize(path), e)
+		}
 	}
 }
 
@@ -334,13 +356,16 @@ func (s *Service) onDeleted(dc types.DriveListenerContext, path string) {
 	if s.checkEnabled() != nil {
 		return
 	}
-	_, _ = s.runner.Execute(func(ctx types.TaskCtx) (any, error) {
+	logging.For("search").Debugf("index deletion scheduled path=%s", logging.Sanitize(path))
+	if _, e := s.runner.Execute(func(ctx types.TaskCtx) (any, error) {
 		e := s.s.Delete(ctx, path)
 		if e != nil {
-			log.Printf("Error deleting index %s: %s", utils.LogSanitize(path), e)
+			logging.For("search").Errorf("error deleting index %s: %s", logging.Sanitize(path), e)
 		}
 		return nil, e
-	}, task.WithNameGroup(path, "search/delete"))
+	}, task.WithNameGroup(path, "search/delete")); e != nil {
+		logging.For("search").Warnf("failed to schedule index deletion path=%s: %v", logging.Sanitize(path), e)
+	}
 }
 
 func (s *Service) Status() (string, types.SM, error) {

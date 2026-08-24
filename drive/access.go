@@ -2,6 +2,7 @@ package drive
 
 import (
 	"go-drive/common/event"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -64,8 +65,11 @@ func (da *Access) GetChroot(s types.Principal) (*Chroot, error) {
 		rootPath = resolveUserRootPath(s.User)
 	}
 	if rootPath == "" {
+		logging.For("drive").Debugf("access root resolved anonymous=%t chroot=false", s.IsAnonymous())
 		return nil, nil
 	}
+	logging.For("drive").Debugf("access root resolved anonymous=%t chroot=true path=%s",
+		s.IsAnonymous(), logging.Sanitize(rootPath))
 	return NewChroot(rootPath, nil), nil
 }
 
@@ -126,8 +130,10 @@ func (da *Access) ReloadPerm() error {
 	defer da.permMux.Unlock()
 	all, e := da.permissionDAO.GetAll()
 	if e != nil {
+		logging.For("drive").Errorf("permission reload failed: %v", e)
 		return e
 	}
 	da.perms = utils.NewPermMap(all)
+	logging.For("drive").Debugf("permissions reloaded count=%d", len(all))
 	return nil
 }

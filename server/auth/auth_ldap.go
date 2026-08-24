@@ -13,6 +13,7 @@ import (
 
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/storage"
@@ -113,6 +114,7 @@ func (p *ldapAuthProvider) Callback(r *http.Request, formData types.SM) (types.U
 	username := formData["username"]
 	password := formData["password"]
 	if username == "" || password == "" {
+		logging.For("auth").Debugf("LDAP authentication rejected reason=missing_credentials")
 		return types.User{}, err.NewNotAllowedMessageError(i18n.T("api.auth.invalid_username_or_password"))
 	}
 
@@ -122,11 +124,13 @@ func (p *ldapAuthProvider) Callback(r *http.Request, formData types.SM) (types.U
 	// supported by all common LDAP servers.
 	conn, e := p.connect()
 	if e != nil {
+		logging.For("auth").Warnf("LDAP connection failed user=%s: %v", logging.Sanitize(username), e)
 		return types.User{}, e
 	}
 	defer conn.Close()
 
 	if e := conn.Bind(p.config.BindDN, p.config.BindPassword); e != nil {
+		logging.For("auth").Warnf("LDAP service bind failed user=%s: %v", logging.Sanitize(username), e)
 		return types.User{}, err.NewNotAllowedMessageError(i18n.T("api.auth.invalid_username_or_password"))
 	}
 
@@ -143,9 +147,11 @@ func (p *ldapAuthProvider) Callback(r *http.Request, formData types.SM) (types.U
 		nil,
 	))
 	if e != nil {
+		logging.For("auth").Warnf("LDAP user search failed user=%s: %v", logging.Sanitize(username), e)
 		return types.User{}, e
 	}
 	if len(sr.Entries) == 0 {
+		logging.For("auth").Debugf("LDAP user not found user=%s", logging.Sanitize(username))
 		return types.User{}, err.NewNotAllowedMessageError(i18n.T("api.auth.invalid_username_or_password"))
 	}
 	entry := sr.Entries[0]
@@ -158,9 +164,11 @@ func (p *ldapAuthProvider) Callback(r *http.Request, formData types.SM) (types.U
 	// Verify the user's password by binding as them, then rebind as the service
 	// account so the connection can be reused for the group search below.
 	if e := conn.Bind(userDN, password); e != nil {
+		logging.For("auth").Debugf("LDAP user bind rejected user=%s", logging.Sanitize(username))
 		return types.User{}, err.NewNotAllowedMessageError(i18n.T("api.auth.invalid_username_or_password"))
 	}
 	if e := conn.Bind(p.config.BindDN, p.config.BindPassword); e != nil {
+		logging.For("auth").Warnf("LDAP service rebind failed user=%s: %v", logging.Sanitize(username), e)
 		return types.User{}, err.NewNotAllowedMessageError(i18n.T("api.auth.invalid_username_or_password"))
 	}
 
@@ -175,12 +183,14 @@ func (p *ldapAuthProvider) Callback(r *http.Request, formData types.SM) (types.U
 		return p.jitCreateUser(username, goDriveGroups)
 	}
 	if e != nil {
+		logging.For("auth").Errorf("LDAP user lookup failed user=%s: %v", logging.Sanitize(username), e)
 		return types.User{}, e
 	}
 
 	// A user with this name already exists locally but is not an LDAP user.
 	// Do not let LDAP take over a local (or other-provider) account.
 	if user.Source != ldapProviderName {
+		logging.For("auth").Warnf("LDAP authentication rejected user=%s reason=local_account", logging.Sanitize(username))
 		return types.User{}, err.NewNotAllowedMessageError(i18n.T("api.auth.invalid_username_or_password"))
 	}
 
@@ -212,6 +222,7 @@ func (p *ldapAuthProvider) connect() (*ldap.Conn, error) {
 	if e != nil {
 		return nil, fmt.Errorf("ldap url: %w", e)
 	}
+	logging.For("auth").Debugf("LDAP connecting scheme=%s host=%s start_tls=%t", u.Scheme, u.Hostname(), p.config.StartTLS)
 
 	var tlsCfg *tls.Config
 	if u.Scheme == "ldaps" || p.config.StartTLS {
@@ -238,6 +249,7 @@ func (p *ldapAuthProvider) connect() (*ldap.Conn, error) {
 			return nil, e
 		}
 	}
+	logging.For("auth").Debugf("LDAP connection established scheme=%s host=%s", u.Scheme, u.Hostname())
 	return conn, nil
 }
 
@@ -264,6 +276,8 @@ func (p *ldapAuthProvider) fetchUserGroups(conn *ldap.Conn, uid, userDN string) 
 		nil,
 	))
 	if e != nil {
+		logging.For("auth").Warnf("LDAP group search failed user=%s host=%s: %v",
+			logging.Sanitize(uid), ldapHost(p.config.URL), e)
 		return nil
 	}
 	names := make([]string, 0, len(sr.Entries))
@@ -272,7 +286,16 @@ func (p *ldapAuthProvider) fetchUserGroups(conn *ldap.Conn, uid, userDN string) 
 			names = append(names, v)
 		}
 	}
+	logging.For("auth").Debugf("LDAP groups resolved user=%s count=%d", logging.Sanitize(uid), len(names))
 	return names
+}
+
+func ldapHost(rawURL string) string {
+	u, e := url.Parse(rawURL)
+	if e != nil {
+		return "?"
+	}
+	return u.Hostname()
 }
 
 func (p *ldapAuthProvider) mapGroups(ldapGroups []string) []string {

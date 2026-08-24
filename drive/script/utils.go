@@ -132,6 +132,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.D
 	}
 
 	d := &ScriptDrive{
+		name:     config[scriptConfigField],
 		baseVM:   vm,
 		data:     make(map[string]json.RawMessage),
 		writable: true,

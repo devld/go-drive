@@ -7,11 +7,11 @@ import (
 	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/storage"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -79,12 +79,15 @@ func (ts *DBTokenStore) Create(value types.Principal) (types.Token, error) {
 		ExpiresAt: expiresAt,
 	}
 	if e := ts.sessionDAO.Create(row); e != nil {
+		logging.For("auth").Errorf("session creation failed user=%s: %v", logging.Sanitize(row.Username), e)
 		return types.Token{}, e
 	}
 	ts.setCached(row.TokenHash, dbTokenCacheItem{
 		username:  row.Username,
 		expiresAt: row.ExpiresAt,
 	})
+	logging.For("auth").Debugf("session created user=%s expires=%s", logging.Sanitize(row.Username),
+		time.Unix(expiresAt, 0).Format(time.RFC3339))
 	return types.Token{Token: token, Value: value, ExpiredAt: expiresAt}, nil
 }
 
@@ -96,17 +99,24 @@ func (ts *DBTokenStore) Validate(token string) (types.Token, error) {
 
 	item, ok := ts.getCached(hash)
 	if !ok {
+		logging.For("auth").Debugf("session cache miss")
 		row, e := ts.sessionDAO.GetByHash(hash)
 		if e != nil {
+			logging.For("auth").Debugf("session validation failed reason=not_found_or_storage: %v", e)
 			return types.Token{}, ts.invalidTokenError()
 		}
 		item = dbTokenCacheItem{username: row.Username, expiresAt: row.ExpiresAt}
 		ts.setCached(hash, item)
+	} else {
+		logging.For("auth").Debugf("session cache hit user=%s", logging.Sanitize(item.username))
 	}
 
 	now := time.Now()
 	if item.expiresAt <= now.Unix() {
-		_ = ts.revokeHash(hash)
+		logging.For("auth").Debugf("session expired user=%s", logging.Sanitize(item.username))
+		if e := ts.revokeHash(hash); e != nil {
+			logging.For("auth").Warnf("expired session cleanup failed user=%s: %v", logging.Sanitize(item.username), e)
+		}
 		return types.Token{}, ts.invalidTokenError()
 	}
 
@@ -115,6 +125,7 @@ func (ts *DBTokenStore) Validate(token string) (types.Token, error) {
 		var exists bool
 		expiresAt, exists = ts.maybeRefresh(hash, item, now)
 		if !exists {
+			logging.For("auth").Debugf("session validation failed reason=revoked user=%s", logging.Sanitize(item.username))
 			return types.Token{}, ts.invalidTokenError()
 		}
 	}
@@ -124,7 +135,10 @@ func (ts *DBTokenStore) Validate(token string) (types.Token, error) {
 		user, e := ts.userDAO.GetUser(item.username)
 		if e != nil {
 			// the user has been removed; invalidate the token
-			_ = ts.revokeHash(hash)
+			logging.For("auth").Debugf("session invalidated reason=user_missing user=%s", logging.Sanitize(item.username))
+			if revokeErr := ts.revokeHash(hash); revokeErr != nil {
+				logging.For("auth").Warnf("invalid session cleanup failed user=%s: %v", logging.Sanitize(item.username), revokeErr)
+			}
 			return types.Token{}, ts.invalidTokenError()
 		}
 		principal = types.Principal{User: user, AuthType: types.AuthTypeToken}
@@ -152,14 +166,18 @@ func (ts *DBTokenStore) maybeRefresh(hash string, item dbTokenCacheItem, now tim
 	}
 	updated, e := ts.sessionDAO.UpdateExpiresAt(hash, newExp)
 	if e != nil {
+		logging.For("auth").Warnf("session refresh failed user=%s: %v", logging.Sanitize(item.username), e)
 		return item.expiresAt, true
 	}
 	if !updated {
+		logging.For("auth").Debugf("session refresh lost race user=%s", logging.Sanitize(item.username))
 		ts.removeCached(hash)
 		return item.expiresAt, false
 	}
 	item.expiresAt = newExp
 	ts.setCached(hash, item)
+	logging.For("auth").Debugf("session refreshed user=%s expires=%s", logging.Sanitize(item.username),
+		time.Unix(newExp, 0).Format(time.RFC3339))
 	return newExp, true
 }
 
@@ -190,8 +208,10 @@ func (ts *DBTokenStore) removeCached(hash string) {
 
 func (ts *DBTokenStore) clean() {
 	if e := ts.sessionDAO.DeleteExpired(time.Now().Unix()); e != nil {
-		log.Println("error when cleaning expired sessions", e)
+		logging.For("auth").Errorf("error when cleaning expired sessions: %v", e)
+		return
 	}
+	logging.For("auth").Debugf("expired sessions cleaned")
 }
 
 func (ts *DBTokenStore) Status() (string, types.SM, error) {

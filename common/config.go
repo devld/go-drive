@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"math"
@@ -57,6 +58,7 @@ const (
 
 	DefaultCacheType                      = "mem"
 	DefaultCacheCleanPeriod time.Duration = 10 * time.Minute
+	DefaultLoggingLevel                   = "info"
 
 	DefaultConfigFile = "config.yml"
 
@@ -74,7 +76,8 @@ type Config struct {
 	// returns the direct remote address.
 	TrustedProxies []string `yaml:"trusted-proxies"`
 
-	Db DbConfig `yaml:"db"`
+	Db      DbConfig      `yaml:"db"`
+	Logging LoggingConfig `yaml:"logging"`
 
 	APIPath string `yaml:"api-path"`
 	WebPath string `yaml:"web-path"`
@@ -122,6 +125,10 @@ type DbConfig struct {
 	Password string   `yaml:"password"`
 	Name     string   `yaml:"name"`
 	Config   types.SM `yaml:"config"`
+}
+
+type LoggingConfig struct {
+	Level string `yaml:"level"`
 }
 
 type ThumbnailConfig struct {
@@ -179,6 +186,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		APIPath: DefaultAPIPath,
 		WebPath: DefaultWebPath,
 		DataDir: DefaultDataDir,
+		Logging: LoggingConfig{Level: DefaultLoggingLevel},
 
 		DrivesDir:          DefaultDrivesDir,
 		DriveUploadersDir:  DefaultDriveUploadersDir,
@@ -241,6 +249,10 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		}
 	}
 
+	if e := applyLoggingConfig(&config.Logging); e != nil {
+		return config, e
+	}
+
 	if _, e := os.Stat(config.DataDir); os.IsNotExist(e) {
 		if e := os.Mkdir(config.DataDir, 0755); e != nil {
 			return config, fmt.Errorf("failed to create data dir '%s': %w", config.DataDir, e)
@@ -273,6 +285,19 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	ch.Add(registry.KeyConfig, config)
 	ch.Add(registry.KeyVersionSysConfig, versionSysConfig{})
 	return config, nil
+}
+
+func applyLoggingConfig(config *LoggingConfig) error {
+	levelValue := config.Level
+	if envLevel, ok := os.LookupEnv("GO_DRIVE_LOGGING_LEVEL"); ok {
+		levelValue = envLevel
+	}
+	level, e := logging.ParseLevel(levelValue)
+	if e != nil {
+		return fmt.Errorf("logging.level: %w", e)
+	}
+	logging.SetLevel(level)
+	return nil
 }
 
 func parseDbConfig(c *DbConfig) error {

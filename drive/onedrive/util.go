@@ -8,11 +8,11 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/req"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -127,7 +127,7 @@ func InitConfig(ctx context.Context, config types.SM,
 	initConfig.Configured = e == nil
 
 	if e != nil {
-		log.Println("[OneDrive] Failed to get user info", e)
+		logging.For("onedrv").Errorf("failed to get user info: %v", e)
 	}
 
 	if e == nil {
@@ -202,7 +202,7 @@ func generateDrivesForm(ctx context.Context, reqClient *req.Client,
 	config types.SM, params types.SM, initConfig *driveutil.DriveInitConfig) error {
 	drives, e := getDrives(ctx, reqClient, config["site"])
 	if e != nil {
-		log.Println("[OneDrive] Error getting drives:", e)
+		logging.For("onedrv").Errorf("error getting drives: %v", e)
 		return e
 	}
 	if len(drives) == 0 {

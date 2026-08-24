@@ -7,6 +7,7 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
@@ -111,6 +112,7 @@ func NewDrive(_ context.Context, config types.SM, driveUtils driveutil.DriveUtil
 
 	_, e = s.getClient()
 	if e != nil {
+		logging.For("sftp").Warnf("SFTP drive connection check failed addr=%s: %v", s.addr, e)
 		return nil, e
 	}
 
@@ -126,16 +128,21 @@ func (f *Drive) getClient() (*sftp.Client, error) {
 	if f.client != nil {
 		return f.client, nil
 	}
+	started := time.Now()
+	logging.For("sftp").Debugf("SFTP connection started addr=%s", f.addr)
 	sshClient, e := ssh.Dial("tcp", f.addr, f.sshConfig)
 	if e != nil {
+		logging.For("sftp").Warnf("SFTP SSH connection failed addr=%s duration=%s: %v", f.addr, time.Since(started), e)
 		return nil, f.handleError(e)
 	}
 	f.ssh = sshClient
 	client, e := sftp.NewClient(f.ssh)
 	if e != nil {
+		logging.For("sftp").Warnf("SFTP client initialization failed addr=%s duration=%s: %v", f.addr, time.Since(started), e)
 		return nil, f.handleError(e)
 	}
 	f.client = client
+	logging.For("sftp").Debugf("SFTP connection established addr=%s duration=%s", f.addr, time.Since(started))
 	return f.client, nil
 }
 

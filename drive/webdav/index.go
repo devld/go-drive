@@ -70,7 +70,7 @@ func NewDrive(ctx context.Context, config types.SM,
 		w.cache = utils.CreateCache(w.deserializeEntry)
 	}
 
-	client, e := req.NewClient(u, w.beforeRequest, w.afterRequest, &http.Client{})
+	client, e := req.NewClient(u, w.beforeRequest, w.afterRequest, nil)
 	if e != nil {
 		return nil, e
 	}

@@ -42,7 +42,7 @@ The search page can create indexing jobs by path, show progress, and abort a job
 - Relevant configuration with credentials redacted.
 - Backend logs from the same time period.
 
-Set `GO_DRIVE_DEBUG=1` to temporarily add diagnostic information. Disable debug mode after the issue is resolved.
+Set `GO_DRIVE_LOGGING_LEVEL=debug` to temporarily add diagnostic logs. Remove it after the issue is resolved.
 
 ## Routine maintenance recommendations
 

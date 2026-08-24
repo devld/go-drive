@@ -2,41 +2,30 @@ package storage
 
 import (
 	"go-drive/common"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
-	"go-drive/common/utils"
-	"log"
-	"os"
 	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
-	dialect := config.GetDB()
-	dbConfig := gorm.Config{}
+var dbLog = logging.For("db")
 
-	if utils.IsDebugOn {
-		dbConfig.Logger = logger.New(
-			log.New(os.Stdout, "\n", log.LstdFlags),
-			logger.Config{
-				SlowThreshold:             200 * time.Millisecond,
-				LogLevel:                  logger.Info,
-				IgnoreRecordNotFoundError: false,
-				Colorful:                  true,
-			},
-		)
-	} else {
-		dbConfig.Logger = logger.New(
-			log.New(os.Stdout, "\n", log.LstdFlags),
-			logger.Config{
-				SlowThreshold:             200 * time.Millisecond,
-				LogLevel:                  logger.Warn,
-				IgnoreRecordNotFoundError: true,
-				Colorful:                  false,
-			},
-		)
+func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
+	dbLog.Debugf("opening database type=%s", config.Db.Type)
+	dialect := config.GetDB()
+	gormConfig := logger.Config{
+		SlowThreshold:             200 * time.Millisecond,
+		LogLevel:                  logger.Warn,
+		IgnoreRecordNotFoundError: true,
+		Colorful:                  false,
 	}
+	if logging.Enabled(logging.DebugLevel) {
+		gormConfig.LogLevel = logger.Info
+		gormConfig.IgnoreRecordNotFoundError = false
+	}
+	dbConfig := gorm.Config{Logger: logging.NewGormLogger("db", gormConfig)}
 
 	db, e := gorm.Open(dialect, &dbConfig)
 	if e != nil {
@@ -47,6 +36,7 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		closeDb(db)
 		return nil, e
 	}
+	dbLog.Debugf("database ready type=%s", config.Db.Type)
 
 	d := &DB{db: db}
 	ch.Add(registry.KeyDB, d)

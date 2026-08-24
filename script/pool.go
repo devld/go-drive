@@ -3,6 +3,7 @@ package script
 import (
 	"context"
 	"errors"
+	"go-drive/common/logging"
 	"sync"
 	"time"
 )
@@ -89,28 +90,41 @@ func cleanPeriod(idleTime time.Duration) time.Duration {
 }
 
 func (p *VMPool) Get(ctx context.Context) (*VM, error) {
+	var waitStarted time.Time
 	for {
 		p.mu.Lock()
 		if p.closed {
 			p.mu.Unlock()
+			logging.For("script").Debugf("VM pool get rejected reason=closed")
 			return nil, ErrVMPoolClosed
 		}
 		if n := len(p.idle); n > 0 {
 			item := p.idle[n-1]
 			p.idle = p.idle[:n-1]
 			p.mu.Unlock()
+			if !waitStarted.IsZero() {
+				logging.For("script").Debugf("VM pool wait completed duration=%s", time.Since(waitStarted))
+			}
 			return item.vm, nil
 		}
 		if p.total < p.config.MaxTotal {
 			p.total++
 			p.mu.Unlock()
+			if !waitStarted.IsZero() {
+				logging.For("script").Debugf("VM pool wait completed duration=%s", time.Since(waitStarted))
+			}
 			return p.base.Fork(), nil
 		}
 		changed := p.changed
 		p.mu.Unlock()
+		if waitStarted.IsZero() {
+			waitStarted = time.Now()
+			logging.For("script").Debugf("VM pool exhausted max=%d", p.config.MaxTotal)
+		}
 
 		select {
 		case <-ctx.Done():
+			logging.For("script").Debugf("VM pool wait canceled duration=%s: %v", time.Since(waitStarted), ctx.Err())
 			return nil, ctx.Err()
 		case <-changed:
 		}

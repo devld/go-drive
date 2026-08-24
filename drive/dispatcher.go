@@ -6,6 +6,7 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -17,6 +18,8 @@ import (
 )
 
 var pathRegexp = regexp.MustCompile(`^/?([^/]+)(/(.*))?$`)
+
+var dispatcherLog = logging.For("drive")
 
 var _ types.IDrive = (*DispatcherDrive)(nil)
 
@@ -45,7 +48,9 @@ func (d *DispatcherDrive) setDrives(drives map[string]types.IDrive) {
 	defer d._drivesMux.Unlock()
 	for _, d := range d._drives {
 		if disposable, ok := d.(types.IDisposable); ok {
-			_ = disposable.Dispose()
+			if e := disposable.Dispose(); e != nil {
+				dispatcherLog.Warnf("drive dispose failed: %v", e)
+			}
 		}
 	}
 	newDrives := make(map[string]types.IDrive, len(drives))
@@ -54,6 +59,7 @@ func (d *DispatcherDrive) setDrives(drives map[string]types.IDrive) {
 	}
 	d._drives = newDrives
 	d.drivesLock = utils.NewKeyLock(len(drives))
+	dispatcherLog.Debugf("drive registry replaced count=%d", len(drives))
 }
 
 func (d *DispatcherDrive) drives() map[string]types.IDrive {
@@ -67,7 +73,9 @@ func (d *DispatcherDrive) Dispose() error {
 	defer d._drivesMux.Unlock()
 	for _, d := range d._drives {
 		if disposable, ok := d.(types.IDisposable); ok {
-			_ = disposable.Dispose()
+			if e := disposable.Dispose(); e != nil {
+				dispatcherLog.Warnf("drive dispose failed: %v", e)
+			}
 		}
 	}
 	return nil
@@ -80,12 +88,15 @@ func (d *DispatcherDrive) Meta(context.Context) (types.DriveMeta, error) {
 func (d *DispatcherDrive) resolve(path string) (string, types.IDrive, string, error) {
 	paths := pathRegexp.FindStringSubmatch(path)
 	if paths == nil {
+		dispatcherLog.Debugf("drive path resolve failed reason=invalid_path path=%s", logging.Sanitize(path))
 		return "", nil, "", err.NewNotFoundError()
 	}
 	driveName := paths[1]
 	entryPath := paths[3]
 	drive, ok := d.drives()[driveName]
 	if !ok {
+		dispatcherLog.Debugf("drive path resolve failed reason=unknown_drive drive=%s path=%s",
+			logging.Sanitize(driveName), logging.Sanitize(path))
 		return "", nil, "", err.NewNotFoundError()
 	}
 	return driveName, drive, entryPath, nil
@@ -127,6 +138,10 @@ func (d *DispatcherDrive) Save(ctx types.TaskCtx, path string, size int64,
 		if e != nil {
 			return nil, e
 		}
+		if realPath != utils.CleanPath(path) {
+			dispatcherLog.Debugf("save path renamed drive=%s from=%s to=%s",
+				logging.Sanitize(driveName), logging.Sanitize(path), logging.Sanitize(realPath))
+		}
 	}
 	save, e := drive.Save(ctx, realPath, size, override, reader)
 	if e != nil {
@@ -157,6 +172,8 @@ func (d *DispatcherDrive) ensureDir(ctx context.Context, driveName string, drive
 			if e != nil {
 				return e
 			}
+			dispatcherLog.Debugf("parent directory created drive=%s path=%s",
+				logging.Sanitize(driveName), logging.Sanitize(path))
 		} else {
 			return e
 		}
@@ -190,6 +207,7 @@ func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 		if e != nil {
 			return nil, e
 		}
+		dispatcherLog.Debugf("copy target resolved drive=%s target=%s", logging.Sanitize(driveName), logging.Sanitize(pathTo))
 	}
 	entry, e := driveTo.Copy(ctx, from, pathTo, override)
 	if e == nil {
@@ -198,6 +216,7 @@ func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 	if !err.IsUnsupportedError(e) {
 		return nil, e
 	}
+	dispatcherLog.Debugf("copy fallback drive=%s target=%s", logging.Sanitize(driveName), logging.Sanitize(to))
 	e = driveutil.CopyAll(ctx, from, d, to,
 		func(from types.IEntry, _ types.IDrive, to string, ctx types.TaskCtx) error {
 			_, driveTo, pathTo, e := d.resolve(to)
@@ -243,10 +262,13 @@ func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, 
 		if e != nil {
 			return nil, e
 		}
+		dispatcherLog.Debugf("move target resolved drive=%s target=%s", logging.Sanitize(driveName), logging.Sanitize(pathTo))
 	}
 	move, e := driveTo.Move(ctx, from, pathTo, override)
 	if e != nil {
 		if err.IsUnsupportedError(e) {
+			dispatcherLog.Debugf("move rejected drive=%s reason=unsupported target=%s",
+				logging.Sanitize(driveName), logging.Sanitize(to))
 			return nil, err.NewNotAllowedMessageError(i18n.T("drive.dispatcher.move_across_not_supported"))
 		}
 		return nil, e
@@ -288,6 +310,7 @@ func (d *DispatcherDrive) Delete(ctx types.TaskCtx, path string) error {
 		return e
 	}
 	if utils.IsRootPath(resolvedPath) {
+		dispatcherLog.Debugf("delete rejected path=%s reason=root", logging.Sanitize(path))
 		return err.NewNotAllowedError()
 	}
 	return drive.Delete(ctx, resolvedPath)
@@ -310,6 +333,8 @@ func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 		}
 		if realPath != p {
 			newPath = path2.Join(utils.PathParent(path), utils.PathBase(p))
+			dispatcherLog.Debugf("upload path renamed drive=%s from=%s to=%s",
+				logging.Sanitize(driveName), logging.Sanitize(path), logging.Sanitize(newPath))
 		}
 		realPath = p
 	}

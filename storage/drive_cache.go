@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"log"
 	"time"
 
 	"gorm.io/gorm"
@@ -36,8 +36,8 @@ func (d *DriveCacheDAO) StartCleaner(period time.Duration) {
 func (d *DriveCacheDAO) cleanExpired() {
 	now := time.Now().Unix()
 	rows := d.db.C().Delete(&types.DriveCache{}, "`expires_at` > 0 AND `expires_at` < ?", now).RowsAffected
-	if utils.IsDebugOn && rows > 0 {
-		log.Printf("%d expired caches item cleaned", rows)
+	if rows > 0 {
+		logging.For("d-cache").Debugf("%d expired caches item cleaned", rows)
 	}
 }
 

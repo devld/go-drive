@@ -1,5 +1,5 @@
 // @name Dropbox
-// @version 1.0.4
+// @version 1.0.6
 // @description Dropbox drive
 
 /**
@@ -76,7 +76,7 @@ defineDrive(
   },
   {
     get: function (ctx, path) {
-      if (DEBUG) console.log("get", path);
+      console.debug("get", path);
       var data = request(this.oauth, ctx, "POST", "/files/get_metadata", null, {
         path: "/" + path,
       });
@@ -113,7 +113,7 @@ defineDrive(
     },
 
     list: function (ctx, path) {
-      if (DEBUG) console.log("list", path);
+      console.debug("list", path);
       var hasMore = true;
       var cursor;
       var result = [];
@@ -144,14 +144,14 @@ defineDrive(
     },
 
     delete: function (ctx, path) {
-      if (DEBUG) console.log("delete", path);
+      console.debug("delete", path);
       request(this.oauth, ctx, "POST", "/files/delete_v2", null, {
         path: "/" + path,
       });
     },
 
     getURL: function (ctx, entry) {
-      if (DEBUG) console.log("getURL", entry.Path);
+      console.debug("getURL", entry.Path);
       var data = request(
         this.oauth,
         ctx,
@@ -357,9 +357,7 @@ function request(oauthHolder, ctx, method, url, headers, body, contentApi) {
 
   var dataStr = isJSON ? r.Text() : undefined;
 
-  if (DEBUG) {
-    console.log("http", method, url, body, r.Status, dataStr);
-  }
+  console.debug("http response", method, url, r.Status);
 
   var data;
   if (isJSON && dataStr) {

@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/drive"
 	s "go-drive/script"
 	"strings"
+	"time"
 )
 
 const jobEventName = "$event"
@@ -62,6 +64,8 @@ func init() {
 
 // ExecuteJobCode executes the code, and return the log and error
 func ExecuteJobCode(ctx context.Context, code any, globals types.M, ch *registry.ComponentsHolder, onLog func(string)) error {
+	started := time.Now()
+	logging.For("job").Debugf("job script started")
 	vm := baseVM.Fork()
 	defer func() { _ = vm.Dispose() }()
 
@@ -70,6 +74,11 @@ func ExecuteJobCode(ctx context.Context, code any, globals types.M, ch *registry
 	setJobGlobals(vm, globals)
 
 	_, e := vm.RunNamed(ctx, "job.js", code)
+	if e != nil {
+		logging.For("job").Errorf("job script failed duration=%s: %v", time.Since(started), e)
+	} else {
+		logging.For("job").Debugf("job script completed duration=%s", time.Since(started))
+	}
 	return e
 }
 

@@ -4,12 +4,13 @@ import (
 	"context"
 	"go-drive/common"
 	"go-drive/common/driveutil"
+	"go-drive/common/logging"
 	"go-drive/drive"
 	"go-drive/server/auth"
 	"go-drive/server/webdav"
-	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -59,21 +60,34 @@ func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 
 	drive, e := w.access.GetDrive(principal)
 	if e != nil {
-		log.Printf("GetDrive error: %v", e)
+		logging.For("webdav").Errorf("GetDrive error: %v", e)
 		c.AbortWithError(http.StatusInternalServerError, e)
 		return
 	}
 
 	driveFs, e := driveutil.NewDriveFS(c.Request.Context(), drive, w.config.TempDir, w.cfp)
 	if e != nil {
+		logging.For("webdav").Errorf("DriveFS creation failed method=%s path=%s: %v",
+			c.Request.Method, logging.Sanitize(c.Request.URL.Path), e)
 		c.AbortWithError(http.StatusInternalServerError, e)
 		return
 	}
 
+	started := time.Now()
 	handler := webdav.Handler{
 		Prefix:     w.config.WebDav.Prefix,
 		FileSystem: webDavFS{driveFs},
 		LockSystem: w.lockSys,
+		Logger: func(r *http.Request, handlerErr error) {
+			path := logging.Sanitize(r.URL.Path)
+			if handlerErr != nil {
+				logging.For("webdav").Warnf("request failed method=%s path=%s duration=%s: %v",
+					r.Method, path, time.Since(started), handlerErr)
+				return
+			}
+			logging.For("webdav").Debugf("request completed method=%s path=%s duration=%s",
+				r.Method, path, time.Since(started))
+		},
 	}
 	handler.ServeHTTP(c.Writer, c.Request)
 }

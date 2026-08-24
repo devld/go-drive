@@ -1,5 +1,5 @@
 // @name GitHub
-// @version 1.0.2
+// @version 1.0.3
 // @description Map a GitHub repository branch as a read-only virtual drive.
 //
 // Configure the repository owner, repository name, and optionally a branch
@@ -89,7 +89,7 @@ defineDrive(
   },
   {
     get: function (ctx, path) {
-      if (DEBUG) console.log("get", path);
+      console.debug("get", path);
       var result = getContents(this, ctx, path);
       if (result.tooMany) {
         return makeEntry(true, path, -1, true);
@@ -98,7 +98,7 @@ defineDrive(
     },
 
     list: function (ctx, path) {
-      if (DEBUG) console.log("list", path);
+      console.debug("list", path);
       var result = getContents(this, ctx, path);
       if (result.tooMany) {
         return listViaTree(this, ctx, path);
@@ -114,7 +114,7 @@ defineDrive(
     },
 
     getURL: function (ctx, entry) {
-      if (DEBUG) console.log("getURL", entry.Path);
+      console.debug("getURL", entry.Path);
       if (entry.IsDir || entry.Meta && entry.Meta.Readable === false) {
         throw ErrUnsupported();
       }
@@ -397,7 +397,7 @@ function request(drive, ctx, method, path) {
   if (drive.token) {
     headers.Authorization = "Bearer " + drive.token;
   }
-  if (DEBUG) console.log("http", method, path);
+  console.debug("http", method, path);
   return http(ctx, method, API_BASE + path, { headers: headers });
 }
 

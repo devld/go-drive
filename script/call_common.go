@@ -2,14 +2,25 @@ package script
 
 import (
 	"context"
-	"log"
+	"go-drive/common/logging"
 	"sync"
 	"time"
 )
 
 func vm_consoleWrite(vm *VM, args Values) any {
-	level := args.Get(0).String()
-	log.Printf("%s %s", level, formatConsoleArgs(args, 1))
+	levelName := args.Get(0).String()
+	message := formatConsoleArgs(args, 1)
+	logger := logging.For("script")
+	switch levelName {
+	case "debug":
+		logger.Debugf("%s", message)
+	case "warn", "warning":
+		logger.Warnf("%s", message)
+	case "error":
+		logger.Errorf("%s", message)
+	default:
+		logger.Infof("%s", message)
+	}
 	return nil
 }
 

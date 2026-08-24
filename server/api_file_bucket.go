@@ -6,13 +6,13 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/storage"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -64,9 +64,11 @@ func (fr *fileBucketRoute) _getBucketDrive(c *gin.Context) {
 	bucketName := c.Param("name")
 	bucket, e := fr.fileBucketDAO.GetBucket(bucketName)
 	if e != nil {
+		logging.For("f-bkt").Debugf("bucket lookup failed bucket=%s: %v", logging.Sanitize(bucketName), e)
 		fr.abortWithError(c, e)
 		return
 	}
+	logging.For("f-bkt").Debugf("bucket request bucket=%s", logging.Sanitize(bucketName))
 	bucketDrive := fr.access.GetRootDrive(nil)
 	chroot := drive.NewChroot(bucket.TargetPath, nil)
 	bucketDrive = drive.NewChrootWrapper(bucketDrive, chroot)
@@ -98,6 +100,7 @@ func (fr *fileBucketRoute) checkAllowedTypes(mimeType, fileExt, allowedTypes str
 func (fr *fileBucketRoute) upload(c *gin.Context) {
 	bucket := c.MustGet("bucket").(types.FileBucket)
 	if c.Query(FileBucketSecretTokenKey) != bucket.SecretToken {
+		logging.For("f-bkt").Debugf("bucket upload rejected bucket=%s reason=invalid_token", logging.Sanitize(bucket.Name))
 		fr.abortWithMessage(c, http.StatusUnauthorized, "invalid token")
 		return
 	}
@@ -179,12 +182,16 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 
 	savedEntry, e := bucketDrive.Save(task.NewTaskContext(c.Request.Context()), path, fileSize, false, file)
 	if e != nil {
+		logging.For("f-bkt").Warnf("bucket upload failed bucket=%s path=%s size=%d: %v",
+			logging.Sanitize(bucket.Name), logging.Sanitize(path), fileSize, e)
 		fr.abortWithError(c, e)
 		return
 	}
 
 	c.Header("X-File-Size", strconv.FormatInt(savedEntry.Size(), 10))
 	c.Header("X-File-Mime", fileMime.String())
+	logging.For("f-bkt").Debugf("bucket upload completed bucket=%s path=%s size=%d mime=%s",
+		logging.Sanitize(bucket.Name), logging.Sanitize(savedEntry.Path()), fileSize, fileMime.String())
 	c.Writer.WriteString(fr.generateURL(bucket.URLTemplate, urlTemplateValues{ctx: c, bucketName: bucket.Name, key: savedEntry.Path()}))
 }
 
@@ -219,6 +226,8 @@ func (fr *fileBucketRoute) get(c *gin.Context) {
 	bucketDrive := c.MustGet("drive").(types.IDrive)
 
 	if !fr.checkReferrers(c.Request.Referer(), bucket.AllowedReferrers) {
+		logging.For("f-bkt").Debugf("bucket download rejected bucket=%s reason=referrer path=%s",
+			logging.Sanitize(bucket.Name), logging.Sanitize(c.Param("path")))
 		fr.abortWithMessage(c, http.StatusForbidden, "")
 		return
 	}
@@ -226,6 +235,8 @@ func (fr *fileBucketRoute) get(c *gin.Context) {
 	path := utils.CleanPath(c.Param("path"))
 	entry, e := bucketDrive.Get(c, path)
 	if e != nil {
+		logging.For("f-bkt").Debugf("bucket download lookup failed bucket=%s path=%s: %v",
+			logging.Sanitize(bucket.Name), logging.Sanitize(path), e)
 		fr.abortWithError(c, e)
 		return
 	}
@@ -244,9 +255,13 @@ func (fr *fileBucketRoute) get(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
 	}
 	if e := driveutil.DownloadIContent(c.Request.Context(), entry, c.Writer, c.Request, false); e != nil {
+		logging.For("f-bkt").Warnf("bucket download failed bucket=%s path=%s: %v",
+			logging.Sanitize(bucket.Name), logging.Sanitize(path), e)
 		fr.abortWithError(c, e)
 		return
 	}
+	logging.For("f-bkt").Debugf("bucket download completed bucket=%s path=%s size=%d",
+		logging.Sanitize(bucket.Name), logging.Sanitize(path), entry.Size())
 }
 
 func (fr *fileBucketRoute) abortWithError(c *gin.Context, e error) {
@@ -254,7 +269,7 @@ func (fr *fileBucketRoute) abortWithError(c *gin.Context, e error) {
 		fr.abortWithMessage(c, ge.Code(), TranslateV(c, fr.messageSource, ge.Error()).(string))
 		return
 	}
-	log.Println("unknown error", e)
+	logging.For("f-bkt").Errorf("unknown error: %v", e)
 	fr.abortWithMessage(c, http.StatusInternalServerError, "internal server error")
 }
 

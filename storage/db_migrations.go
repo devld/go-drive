@@ -6,9 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common/driveutil"
+	"go-drive/common/logging"
 	"go-drive/common/types"
-	"log"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -48,25 +49,34 @@ func runDBMigrations(db *gorm.DB, migrations []dbMigration) error {
 	if e != nil {
 		return e
 	}
+	logging.For("db-mgrt").Debugf("database migrations started current=%d", current)
 	for _, migration := range migrations {
+		started := time.Now()
 		if migration.version < 0 {
+			logging.For("db-mgrt").Debugf("migration started version=%d name=%s", migration.version, migration.name)
 			if e := migration.run(db); e != nil {
+				logging.For("db-mgrt").Errorf("migration failed version=%d name=%s duration=%s: %v", migration.version, migration.name, time.Since(started), e)
 				return fmt.Errorf("migration %s: %w", migration.name, e)
 			}
+			logging.For("db-mgrt").Debugf("migration completed version=%d name=%s duration=%s", migration.version, migration.name, time.Since(started))
 			continue
 		}
 		if migration.version <= current {
 			continue
 		}
-		log.Printf("applying database migration %d (%s)", migration.version, migration.name)
+		logging.For("db-mgrt").Infof("applying database migration %d (%s)", migration.version, migration.name)
 		if e := migration.run(db); e != nil {
+			logging.For("db-mgrt").Errorf("migration failed version=%d name=%s duration=%s: %v", migration.version, migration.name, time.Since(started), e)
 			return fmt.Errorf("migration %d (%s): %w", migration.version, migration.name, e)
 		}
 		if e := setMigrationVersion(sqlDB, migration.version); e != nil {
+			logging.For("db-mgrt").Errorf("migration version update failed version=%d name=%s duration=%s: %v", migration.version, migration.name, time.Since(started), e)
 			return fmt.Errorf("record migration %d (%s): %w", migration.version, migration.name, e)
 		}
 		current = migration.version
+		logging.For("db-mgrt").Debugf("migration completed version=%d name=%s duration=%s", migration.version, migration.name, time.Since(started))
 	}
+	logging.For("db-mgrt").Debugf("database migrations completed version=%d", current)
 	return nil
 }
 
@@ -102,9 +112,10 @@ func tryInitDbData(db *gorm.DB) error {
 		return e
 	}
 	if n > 0 {
+		logging.For("db-mgrt").Debugf("database seed data already exists users=%d", n)
 		return nil
 	}
-	return db.Transaction(func(tx *gorm.DB) error {
+	e := db.Transaction(func(tx *gorm.DB) error {
 		for _, initSQL := range initSQL {
 			if e := tx.Exec(initSQL).Error; e != nil {
 				return e
@@ -112,6 +123,10 @@ func tryInitDbData(db *gorm.DB) error {
 		}
 		return nil
 	})
+	if e == nil {
+		logging.For("db-mgrt").Infof("initialized database seed data statements=%d", len(initSQL))
+	}
+	return e
 }
 
 func migrateJobScheduleToTriggers(db *gorm.DB) error {
@@ -261,7 +276,7 @@ func copyLegacyJobValues(sqlDB *sql.DB, columns map[string]tableColumn) error {
 		migrated++
 	}
 	if migrated > 0 {
-		log.Printf("migrated %d jobs from Schedule/Job/Params to Triggers/Action/ActionParams", migrated)
+		logging.For("db-mgrt").Infof("migrated %d jobs from Schedule/Job/Params to Triggers/Action/ActionParams", migrated)
 	}
 	return nil
 }
@@ -295,7 +310,7 @@ func migratedJobTriggers(values map[string]string) (string, bool) {
 		"config": map[string]any{"schedule": schedule},
 	}})
 	if e != nil {
-		log.Printf("error marshaling triggers for job %s: %v", values["id"], e)
+		logging.For("db-mgrt").Warnf("error marshaling triggers for job %s: %v", values["id"], e)
 		return "", false
 	}
 	return string(triggersJSON), true
@@ -453,7 +468,7 @@ func migrateScriptDriveConfigs(db *gorm.DB) error {
 	for _, drive := range drives {
 		config := make(types.SM)
 		if e := json.Unmarshal([]byte(drive.Config), &config); e != nil {
-			log.Printf("cannot migrate script drive %q: invalid config: %v", drive.Name, e)
+			logging.For("db-mgrt").Warnf("cannot migrate script drive %q: invalid config: %v", drive.Name, e)
 			continue
 		}
 		if config == nil {
@@ -483,7 +498,7 @@ func migrateScriptDriveConfigs(db *gorm.DB) error {
 		}
 		fields, knownScript := scriptDriveConfigFields[scriptName]
 		if !knownScript {
-			log.Printf("cannot migrate script drive %q: unknown script %q", drive.Name, scriptName)
+			logging.For("db-mgrt").Warnf("cannot migrate script drive %q: unknown script %q", drive.Name, scriptName)
 			continue
 		}
 
@@ -544,7 +559,7 @@ func migrateScriptDriveConfigs(db *gorm.DB) error {
 	}
 
 	if migrated > 0 {
-		log.Printf("migrated %d Script Drive configuration(s)", migrated)
+		logging.For("db-mgrt").Infof("migrated %d Script Drive configuration(s)", migrated)
 	}
 	return nil
 }
@@ -605,7 +620,7 @@ func migrateOAuthDriveData(db *gorm.DB) error {
 	}
 
 	if migrated > 0 {
-		log.Printf("migrated %d OAuth data field(s) to the reserved namespace", migrated)
+		logging.For("db-mgrt").Infof("migrated %d OAuth data field(s) to the reserved namespace", migrated)
 	}
 	return nil
 }

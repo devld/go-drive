@@ -9,6 +9,7 @@ import (
 	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	httpreq "go-drive/common/req"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -568,23 +569,17 @@ func ProgressReader(reader io.Reader, ctx types.TaskCtx) io.Reader {
 }
 
 func getURL(ctx context.Context, u string, header types.SM) (int, io.ReadCloser, error) {
-	req, e := http.NewRequestWithContext(ctx, "GET", u, nil)
+	resp, e := httpreq.NewDefaultClient().Get(ctx, u, header)
 	if e != nil {
 		return 0, nil, e
 	}
-	for k, v := range header {
-		req.Header.Set(k, v)
+	status := resp.Status()
+	if status < 200 || status >= 300 {
+		_ = resp.Dispose()
+		return status, nil, err.NewRemoteApiError(status,
+			i18n.T("util.request_failed", strconv.Itoa(status)))
 	}
-	resp, e := http.DefaultClient.Do(req)
-	if e != nil {
-		return 0, nil, e
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		_ = resp.Body.Close()
-		return resp.StatusCode, nil, err.NewRemoteApiError(resp.StatusCode,
-			i18n.T("util.request_failed", strconv.Itoa(resp.StatusCode)))
-	}
-	return resp.StatusCode, resp.Body, nil
+	return status, resp.Response().Body, nil
 }
 
 func BuildRangeHeader(start, size int64) string {

@@ -6,7 +6,9 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/event"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
+	httpreq "go-drive/common/req"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -18,8 +20,8 @@ import (
 	"go-drive/storage"
 	"io/fs"
 	"net/http"
-	"os"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -50,11 +52,12 @@ func InitServer(config common.Config,
 	messageSource i18n.MessageSource,
 	webFS fs.FS) (*gin.Engine, error) {
 
-	if utils.IsDebugOn {
+	if logging.Enabled(logging.DebugLevel) {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
+	configureGinLogging()
 
 	engine := gin.New()
 
@@ -66,11 +69,9 @@ func InitServer(config common.Config,
 		engine.SetTrustedProxies(nil)
 	}
 
-	engine.Use(gin.CustomRecovery(handlePanic))
+	engine.Use(gin.CustomRecoveryWithWriter(nil, handlePanic))
 
-	if noLogRequest, _ := os.LookupEnv("NO_LOG_REQUEST"); noLogRequest == "" {
-		engine.Use(Logger())
-	}
+	engine.Use(Logger())
 
 	engine.Use(apiResultHandler(messageSource))
 
@@ -154,11 +155,24 @@ func handlePanic(c *gin.Context, err any) {
 	} else {
 		msg = fmt.Sprintf("%v", err)
 	}
+	logging.For("http").Errorf("panic recovered: %s\n%s", msg, debug.Stack())
 	c.JSON(http.StatusInternalServerError,
 		types.M{
 			"message": msg,
 		},
 	)
+}
+
+func configureGinLogging() {
+	ginLog := logging.For("gin")
+	gin.DefaultWriter = ginLog.Writer()
+	gin.DefaultErrorWriter = ginLog.ErrorWriter()
+	gin.DebugPrintFunc = func(format string, values ...any) {
+		ginLog.Debugf(format, values...)
+	}
+	gin.DebugPrintRouteFunc = func(method, path, handler string, handlers int) {
+		ginLog.Debugf("%-6s %-25s --> %s (%d handlers)", method, path, handler, handlers)
+	}
 }
 
 func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v any) {
@@ -170,14 +184,23 @@ func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v any) {
 }
 
 func Logger() gin.HandlerFunc {
-	logger := gin.Logger()
+	httpLog := logging.For("http")
 	return func(c *gin.Context) {
 		if c.FullPath() == "" {
 			// NoRoute static files
 			c.Next()
 			return
 		}
-		logger(c)
+
+		start := time.Now()
+		c.Next()
+
+		status := c.Writer.Status()
+		httpLog.Infof("%s %s %d %s %s %d", c.Request.Method, httpreq.SanitizeURL(c.Request.URL.RequestURI()),
+			status, time.Since(start), c.ClientIP(), c.Writer.Size())
+		if errors := c.Errors.ByType(gin.ErrorTypePrivate).String(); errors != "" {
+			httpLog.Errorf("request errors: %s", errors)
+		}
 	}
 }
 

@@ -32,7 +32,7 @@ The web interface uses browser storage for the login token, list display prefere
 
 ## Logs
 
-The server records runtime errors and diagnostic information, which may include usernames, client IP addresses, file paths, remote-service errors, and job script output. Enabling `GO_DRIVE_DEBUG` adds more diagnostic details. Instance operators should set suitable access controls, retention periods, and redaction rules.
+The server records runtime errors and diagnostic information, which may include usernames, client IP addresses, file paths, remote-service errors, and job script output. Setting `GO_DRIVE_LOGGING_LEVEL=debug` adds more diagnostic details. Instance operators should set suitable access controls, retention periods, and redaction rules.
 
 ## Third-party services
 

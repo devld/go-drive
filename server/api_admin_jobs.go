@@ -2,6 +2,7 @@ package server
 
 import (
 	err "go-drive/common/errors"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -228,6 +229,7 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 	e = ExecuteTaskStreaming(c, jr.runner,
 		func(ctx types.TaskCtx) (any, error) {
 			e := job.ExecuteJobCode(c.Request.Context(), code, nil, jr.ch, func(s string) {
+				logging.For("job").Infof("[script eval] %s", s)
 				_, _ = w.Write([]byte(s + "\n"))
 				w.Flush()
 			})

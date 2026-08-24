@@ -84,8 +84,8 @@ An uploader runs in the user's browser and can provide direct transfers to S3-li
 
 1. Install or edit the script in a test instance.
 2. Use a dedicated test account and directory.
-3. Enable `GO_DRIVE_DEBUG=1` for temporary diagnostic information.
+3. Set `GO_DRIVE_LOGGING_LEVEL=debug` for temporary diagnostic logs.
 4. Test empty files, large files, overwrite, directories, cancellation, network errors, and credential expiration separately.
-5. Disable debug mode and reload the Drive when testing is complete.
+5. Remove the environment variable and reload the Drive when testing is complete.
 
 Calls use a pool of concurrent script VMs. Ordinary mutable globals are not reliable shared state; only JSON-serializable `$` instance properties are synchronized between VMs. Scripts can access the network and Drive data, so do not treat the runtime as a sandbox for untrusted code.

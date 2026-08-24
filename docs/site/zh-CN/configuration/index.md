@@ -3,7 +3,7 @@ title: 配置文件参考
 description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: 507e3efd917833d29527a148c1209165a1c9fb98ed3aafbe81cdd0cb6d79af89
+source_hash: 8cdda32873e49430f3cff942eebe1ecd70846a742f1654626d58b0aeaeb0062c
 ---
 
 # 配置文件参考
@@ -14,6 +14,9 @@ go-drive 使用 YAML 配置。默认读取当前目录的 `config.yml`，也可�
 
 ```yaml
 listen: :8089
+
+logging:
+  level: info                 # debug、info、warn 或 error
 
 # 只有直接连接 go-drive 的反向代理才应加入此列表
 # trusted-proxies:
@@ -81,6 +84,7 @@ web-path: ""
 | 选项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `listen` | `:8089` | HTTP 监听地址 |
+| `logging.level` | `info` | 最低日志级别；`GO_DRIVE_LOGGING_LEVEL` 会覆盖此配置 |
 | `trusted-proxies` | 空 | 可以提供 `X-Forwarded-For` 的代理 IP/CIDR |
 | `data-dir` | `./data` | 数据库、本地盘、脚本、会话、缓存等数据目录 |
 | `temp-dir` | `data-dir/temp` | 上传、复制等临时文件目录 |

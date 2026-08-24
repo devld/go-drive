@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	err "go-drive/common/errors"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/storage"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -59,6 +59,7 @@ func (je *JobExecutor) ReloadJobs() error {
 
 	jobs, e := je.jobDAO.GetJobs(false)
 	if e != nil {
+		logging.For("job").Errorf("job reload failed: %v", e)
 		return e
 	}
 
@@ -70,7 +71,7 @@ func (je *JobExecutor) ReloadJobs() error {
 	for _, job := range jobs {
 		triggers, e := je.parseTriggers(job)
 		if e != nil {
-			log.Printf("error parsing triggers for job %d: %v", job.ID, e)
+			logging.For("job").Warnf("error parsing triggers for job %d: %v", job.ID, e)
 			continue
 		}
 
@@ -80,11 +81,12 @@ func (je *JobExecutor) ReloadJobs() error {
 				continue
 			}
 			if e := triggerInstance.Register(job.ID, trigger.Config); e != nil {
-				log.Printf("error registering trigger %s for job %d: %v", string(trigger.Type), job.ID, e)
+				logging.For("job").Warnf("error registering trigger %s for job %d: %v", string(trigger.Type), job.ID, e)
 				continue
 			}
 		}
 	}
+	logging.For("job").Debugf("jobs reloaded jobs=%d triggers=%d", len(jobs), len(je.triggers))
 
 	return nil
 }
@@ -104,21 +106,33 @@ func (je *JobExecutor) parseTriggers(job types.Job) ([]ParsedJobTrigger, error) 
 func (je *JobExecutor) TriggerExecution(jobID uint, event TriggerEvent) (task.Task, error) {
 	job, e := je.jobDAO.GetJob(jobID)
 	if e != nil {
+		logging.For("job").Warnf("job trigger failed job_id=%d reason=load_job: %v", jobID, e)
 		return task.Task{}, e
 	}
 
-	return je.runner.Execute(func(ctx types.TaskCtx) (any, error) {
+	created, e := je.runner.Execute(func(ctx types.TaskCtx) (any, error) {
 		return nil, je.ExecuteJobSync(ctx, job, event, nil)
 	}, task.WithNameGroup(job.Description, "job/execution"))
+	if e != nil {
+		logging.For("job").Warnf("job trigger queue failed job_id=%d: %v", jobID, e)
+		return task.Task{}, e
+	}
+	logging.For("job").Debugf("job triggered job_id=%d task_id=%s event=%s", jobID, created.Id, event.Type)
+	return created, nil
 }
 
 func (je *JobExecutor) ExecuteJobSync(ctx context.Context, job types.Job, event TriggerEvent, onLog func(string)) error {
+	started := time.Now()
 	jobExecution, e := je.newJobExecution(job)
 	if e != nil {
+		logging.For("job").Errorf("job execution creation failed job_id=%d: %v", job.ID, e)
 		return e
 	}
-	logger := newJobExecutionLogger(jobExecution.ID, onLog)
-	return je.executeJob(ctx, job, jobExecution, logger, &event)
+	logger := newJobExecutionLogger(job.ID, jobExecution.ID, onLog)
+	e = je.executeJob(ctx, job, jobExecution, logger, &event)
+	logging.For("job").Debugf("job execution completed job_id=%d execution_id=%d duration=%s status=%s",
+		job.ID, jobExecution.ID, time.Since(started), jobExecution.Status)
+	return e
 }
 
 func (je *JobExecutor) executeJob(ctx context.Context, job types.Job,
@@ -133,6 +147,7 @@ func (je *JobExecutor) executeJob(ctx context.Context, job types.Job,
 
 	actionDef := GetActionDef(job.Action)
 	if actionDef == nil {
+		logging.For("job").Errorf("job action not found job_id=%d action=%s", job.ID, job.Action)
 		e = errors.New("job not found")
 		return
 	}
@@ -140,6 +155,7 @@ func (je *JobExecutor) executeJob(ctx context.Context, job types.Job,
 	params := make(types.SM, 0)
 	e = json.Unmarshal([]byte(job.ActionParams), &params)
 	if e != nil {
+		logging.For("job").Errorf("job action params invalid job_id=%d: %v", job.ID, e)
 		e = fmt.Errorf("failed to parse params: %s", e.Error())
 		return
 	}
@@ -163,6 +179,9 @@ func (je *JobExecutor) newJobExecution(job types.Job) (*types.JobExecution, erro
 		Status:    types.JobExecutionRunning,
 	}
 	e := je.jobDAO.AddJobExecution(jobExecution)
+	if e == nil {
+		logging.For("job").Debugf("job execution started job_id=%d execution_id=%d", job.ID, jobExecution.ID)
+	}
 	return jobExecution, e
 }
 
@@ -176,7 +195,18 @@ func (je *JobExecutor) updateJobExecutionResult(item *jobExecutionItem, e error)
 	}
 	item.JobExecution.Logs = item.logger.String()
 	if e := je.jobDAO.UpdateJobExecution(item.JobExecution); e != nil {
-		log.Printf("failed to update job execution: %v", e)
+		logging.For("job").Errorf("failed to update job execution: %v", e)
+	}
+	duration := time.Duration(0)
+	if item.CompletedAt >= item.StartedAt {
+		duration = time.Duration(item.CompletedAt-item.StartedAt) * time.Millisecond
+	}
+	if e != nil {
+		logging.For("job").Errorf("job execution failed job_id=%d execution_id=%d duration=%s: %v",
+			item.JobId, item.ID, duration, e)
+	} else {
+		logging.For("job").Debugf("job execution succeeded job_id=%d execution_id=%d duration=%s",
+			item.JobId, item.ID, duration)
 	}
 	item.cancel()
 	je.removeJobExecution(item.ID)
@@ -229,6 +259,7 @@ func (je *JobExecutor) CancelJobExecution(id uint) error {
 	item := je.executions[id]
 	if item != nil {
 		item.cancel()
+		logging.For("job").Debugf("job execution canceled execution_id=%d job_id=%d", id, item.JobId)
 	}
 	return nil
 }
@@ -274,25 +305,26 @@ type jobExecutionItem struct {
 	logger *jobExecutionLogger
 }
 
-func newJobExecutionLogger(jid uint, onLog func(string)) *jobExecutionLogger {
-	return &jobExecutionLogger{jid: jid, onLog: onLog}
+func newJobExecutionLogger(jobID, executionID uint, onLog func(string)) *jobExecutionLogger {
+	return &jobExecutionLogger{jobID: jobID, executionID: executionID, onLog: onLog}
 }
 
 type jobExecutionLogger struct {
-	jid   uint
-	onLog func(string)
-	logs  strings.Builder
-	mu    sync.RWMutex
+	jobID       uint
+	executionID uint
+	onLog       func(string)
+	logs        strings.Builder
+	mu          sync.RWMutex
 }
 
-func (jel *jobExecutionLogger) Log(s string) {
-	log.Printf("[JobExecutor] [%d] %s\n", jel.jid, s)
+func (jel *jobExecutionLogger) Log(message string) {
+	logging.For("job").Infof("[job_id=%d execution_id=%d] %s", jel.jobID, jel.executionID, message)
 	if jel.onLog != nil {
-		jel.onLog(s)
+		jel.onLog(message)
 	}
 	jel.mu.Lock()
 	defer jel.mu.Unlock()
-	jel.logs.WriteString(s)
+	jel.logs.WriteString(message)
 	jel.logs.WriteRune('\n')
 }
 

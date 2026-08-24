@@ -3,6 +3,7 @@ package server
 import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/utils"
 	"net/http"
 	"time"
@@ -24,7 +25,7 @@ type FailBanGroup struct {
 func (f *FailBanGroup) LimiterByIP(path string, duration time.Duration, maxFailure uint32) gin.HandlerFunc {
 	return f.Limiter(path, duration, maxFailure, func(ctx *gin.Context) string {
 		ip := ctx.ClientIP()
-		if utils.IsDebugOn {
+		if logging.Enabled(logging.DebugLevel) {
 			ctx.Header("X-ClientIP", ip)
 		}
 		return ip
@@ -40,6 +41,8 @@ func (f *FailBanGroup) Limiter(path string, duration time.Duration, maxFailure u
 
 		record, exists := m.Get(key)
 		if exists && record.n >= maxFailure {
+			logging.For("auth").Warnf("request blocked reason=fail-ban path=%s failures=%d",
+				logging.Sanitize(path), record.n)
 			_ = c.Error(errFailBan)
 			c.Abort()
 			return
@@ -51,6 +54,7 @@ func (f *FailBanGroup) Limiter(path string, duration time.Duration, maxFailure u
 		ok := len(c.Errors) == 0 && status >= 100 && status < 300
 
 		if ok {
+			logging.For("auth").Debugf("fail-ban counter cleared path=%s", logging.Sanitize(path))
 			m.Remove(key)
 		} else {
 			record, ok = m.Get(key)
@@ -59,6 +63,8 @@ func (f *FailBanGroup) Limiter(path string, duration time.Duration, maxFailure u
 			}
 			record.n++
 			m.Set(key, record, duration)
+			logging.For("auth").Debugf("fail-ban counter updated path=%s failures=%d/%d",
+				logging.Sanitize(path), record.n, maxFailure)
 		}
 	}
 }

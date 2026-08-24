@@ -1,5 +1,5 @@
 // @name My Drive
-// @version 1.0.0
+// @version 1.0.1
 // @uploader my-drive-uploader.js
 // @description
 // > Here and below is the drive's description
@@ -79,7 +79,7 @@ defineDrive(
   },
   {
     get: function (ctx, path) {
-      if (DEBUG) console.log("get", path);
+      console.debug("get", path);
       // TODO request
       return {
         Path: path,
@@ -90,7 +90,7 @@ defineDrive(
     },
 
     list: function (ctx, path) {
-      if (DEBUG) console.log("list", path);
+      console.debug("list", path);
       // TODO request
       return [];
     },
@@ -112,12 +112,12 @@ defineDrive(
     },
 
     delete: function (ctx, path) {
-      if (DEBUG) console.log("delete", path);
+      console.debug("delete", path);
       // TODO request
     },
 
     getURL: function (ctx, entry) {
-      if (DEBUG) console.log("getURL", entry.Path);
+      console.debug("getURL", entry.Path);
       // TODO
     },
   }

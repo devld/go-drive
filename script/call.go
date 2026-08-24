@@ -1,12 +1,6 @@
 package script
 
-import (
-	"go-drive/common/utils"
-)
-
 func initVarsForVm(v *VM) {
-	v.o.Set("DEBUG", utils.IsDebugOn)
-
 	v.o.Set("consoleWrite", WrapVmCall(v, vm_consoleWrite))
 
 	v.o.Set("newFormData", WrapVmCall(v, vm_newFormData))

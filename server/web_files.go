@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"go-drive/common"
+	"go-drive/common/logging"
 	"go-drive/common/utils"
 	"go-drive/storage"
 	"io"
 	"io/fs"
-	"log"
 	"net/http"
 	path2 "path"
 	"strconv"
@@ -102,7 +102,7 @@ func (r *rootFs) Open(name string) (http.File, error) {
 	}
 	defer func() { _ = file.Close() }()
 	if e != nil {
-		log.Println("error processing file", e)
+		logging.For("web").Errorf("error processing file: %v", e)
 		return nil, e
 	}
 	return newProcessedFile(name, content), nil

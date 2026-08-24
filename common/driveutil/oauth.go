@@ -4,6 +4,7 @@ import (
 	"context"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"net/http"
@@ -66,16 +67,21 @@ func (o *OAuthHolder) Token(ctx context.Context) (*oauth2.Token, error) {
 
 	if o.t.Valid() {
 		tok := *o.t
+		logging.For("oauth").Debugf("OAuth token cache hit")
 		return &tok, nil
 	}
 
+	logging.For("oauth").Debugf("OAuth token refresh started")
 	newTok, e := o.conf.TokenSource(ctx, o.t).Token()
 	if e != nil {
+		logging.For("oauth").Warnf("OAuth token refresh failed: %v", e)
 		return nil, e
 	}
 	if e := o.persistLocked(newTok); e != nil {
+		logging.For("oauth").Errorf("OAuth token persistence failed: %v", e)
 		return nil, e
 	}
+	logging.For("oauth").Debugf("OAuth token refreshed")
 	tok := *newTok
 	return &tok, nil
 }
@@ -93,12 +99,14 @@ func (o *OAuthHolder) Refresh(ctx context.Context) (*oauth2.Token, error) {
 	defer o.mu.Unlock()
 
 	if o.t == nil || o.t.RefreshToken == "" {
+		logging.For("oauth").Debugf("OAuth forced refresh unavailable reason=missing_refresh_token")
 		return nil, err.NewNotAllowedMessageError("OAuth refresh token is not available")
 	}
 
 	stale := &oauth2.Token{RefreshToken: o.t.RefreshToken}
 	newTok, e := o.conf.TokenSource(ctx, stale).Token()
 	if e != nil {
+		logging.For("oauth").Warnf("OAuth forced refresh failed: %v", e)
 		return nil, e
 	}
 	if newTok.RefreshToken == "" {
@@ -107,8 +115,10 @@ func (o *OAuthHolder) Refresh(ctx context.Context) (*oauth2.Token, error) {
 		newTok = &copied
 	}
 	if e := o.persistLocked(newTok); e != nil {
+		logging.For("oauth").Errorf("OAuth forced token persistence failed: %v", e)
 		return nil, e
 	}
+	logging.For("oauth").Debugf("OAuth forced refresh completed")
 	tok := *newTok
 	return &tok, nil
 }
@@ -153,6 +163,7 @@ func OAuthInitConfig(o OAuthRequest, cred OAuthCredentials,
 			Text: o.Text,
 		},
 	}
+	logging.For("oauth").Debugf("OAuth initialization config loaded token_present=%t", t != nil)
 
 	var oauthHolder *OAuthHolder
 	if t != nil {
@@ -178,18 +189,26 @@ func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
 		return nil, e
 	}
 	if state != params[DsKeyState] {
+		logging.For("oauth").Warnf("OAuth callback rejected reason=state_mismatch")
 		return nil, err.NewNotAllowedMessageError(i18n.T("oauth.state_mismatch"))
 	}
 	t, e := oauthConf.Exchange(ctx, code)
 	if e != nil {
+		logging.For("oauth").Warnf("OAuth code exchange failed: %v", e)
 		return nil, e
 	}
-	return newOAuthHolder(oauthConf, ds, t), storeToken(ds, t)
+	if e := storeToken(ds, t); e != nil {
+		logging.For("oauth").Errorf("OAuth token persistence failed after exchange: %v", e)
+		return nil, e
+	}
+	logging.For("oauth").Debugf("OAuth callback completed")
+	return newOAuthHolder(oauthConf, ds, t), nil
 }
 
 func OAuthLoad(o OAuthRequest, cred OAuthCredentials, ds DriveDataStore) (*OAuthHolder, error) {
 	t := loadToken(ds)
 	if t == nil {
+		logging.For("oauth").Debugf("OAuth load failed reason=not_configured")
 		return nil, err.NewNotAllowedMessageError(i18n.T("drive.not_configured"))
 	}
 	return newOAuthHolder(oAuthConfig(o, cred), ds, t), nil

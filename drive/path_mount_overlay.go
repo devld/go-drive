@@ -5,12 +5,12 @@ import (
 	"errors"
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
+	"go-drive/common/logging"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/storage"
 	"io"
-	"log"
 	path2 "path"
 	"strings"
 	"sync"
@@ -44,6 +44,7 @@ func NewPathMountOverlayDrive(lower types.IDrive, mountStorage *storage.PathMoun
 func (d *PathMountOverlayDrive) reloadMounts() error {
 	mounts, e := d.mountStorage.GetMounts()
 	if e != nil {
+		logging.For("drv-mnt").Errorf("mount reload failed: %v", e)
 		return e
 	}
 	tree := utils.NewPathTreeNodeNonLock[*types.PathMount]("")
@@ -54,6 +55,7 @@ func (d *PathMountOverlayDrive) reloadMounts() error {
 	d.mountsMux.Lock()
 	d.mountTree = tree
 	d.mountsMux.Unlock()
+	logging.For("drv-mnt").Debugf("mounts reloaded count=%d", len(mounts))
 	return nil
 }
 
@@ -69,6 +71,7 @@ func (d *PathMountOverlayDrive) Meta(ctx context.Context) (types.DriveMeta, erro
 
 func checkMountDepth(depth int) error {
 	if depth > maxMountDepth {
+		logging.For("drv-mnt").Warnf("mount resolution depth exceeded depth=%d", depth)
 		return errors.New("maximum mounting depth exceeded")
 	}
 	return nil
@@ -187,7 +190,9 @@ func mergeMounts(first, second []types.PathMount) []types.PathMount {
 }
 
 func (d *PathMountOverlayDrive) replaceMounts(deletes, mounts []types.PathMount) error {
+	logging.For("drv-mnt").Debugf("mounts replacing delete=%d save=%d", len(deletes), len(mounts))
 	if e := d.mountStorage.DeleteAndSaveMounts(deletes, mounts, true); e != nil {
+		logging.For("drv-mnt").Errorf("mount replacement failed delete=%d save=%d: %v", len(deletes), len(mounts), e)
 		return e
 	}
 	return d.reloadMounts()
@@ -210,6 +215,8 @@ func (d *PathMountOverlayDrive) get(ctx context.Context, path string, depth int)
 		return nil, e
 	}
 	if mount, target := d.matchedMount(path); mount != nil {
+		logging.For("drv-mnt").Debugf("path remapped path=%s target=%s",
+			logging.Sanitize(path), logging.Sanitize(target))
 		entry, e := d.get(ctx, target, depth+1)
 		if e != nil {
 			return nil, e
@@ -223,6 +230,7 @@ func (d *PathMountOverlayDrive) get(ctx context.Context, path string, depth int)
 	entry, e := d.lower.Get(ctx, path)
 	if e != nil {
 		if err.IsNotFoundError(e) && d.hasDescendantMounts(path) {
+			logging.For("drv-mnt").Debugf("virtual mount directory path=%s", logging.Sanitize(path))
 			return &pathMountVirtualEntry{drive: d, path: path}, nil
 		}
 		return nil, e
@@ -239,6 +247,8 @@ func (d *PathMountOverlayDrive) save(ctx types.TaskCtx, path string, size int64,
 		return nil, e
 	}
 	if _, target := d.matchedMount(path); target != "" {
+		logging.For("drv-mnt").Debugf("save remapped path=%s target=%s",
+			logging.Sanitize(path), logging.Sanitize(target))
 		entry, e := d.save(ctx, target, size, override, reader, depth+1)
 		if e != nil {
 			return nil, e
@@ -261,6 +271,8 @@ func (d *PathMountOverlayDrive) makeDir(ctx context.Context, path string, depth 
 		return nil, e
 	}
 	if _, target := d.matchedMount(path); target != "" {
+		logging.For("drv-mnt").Debugf("mkdir remapped path=%s target=%s",
+			logging.Sanitize(path), logging.Sanitize(target))
 		entry, e := d.makeDir(ctx, target, depth+1)
 		if e != nil {
 			return nil, e
@@ -283,6 +295,8 @@ func (d *PathMountOverlayDrive) list(ctx context.Context, path string, depth int
 		return nil, e
 	}
 	if _, target := d.matchedMount(path); target != "" {
+		logging.For("drv-mnt").Debugf("list remapped path=%s target=%s",
+			logging.Sanitize(path), logging.Sanitize(target))
 		entries, e := d.list(ctx, target, depth+1)
 		if e != nil {
 			return nil, e
@@ -319,7 +333,7 @@ func (d *PathMountOverlayDrive) mergeMountChildren(ctx context.Context, path str
 			entry, getErr := d.get(ctx, mount.MountAt, depth+1)
 			if getErr != nil {
 				if !err.IsNotFoundError(getErr) {
-					log.Printf("get mounted entry(%s) error: %v", mount.MountAt, getErr)
+					logging.For("drv-mnt").Warnf("get mounted entry(%s) error: %v", mount.MountAt, getErr)
 				}
 				continue
 			}
@@ -345,7 +359,9 @@ func (d *PathMountOverlayDrive) mergeMountChildren(ctx context.Context, path str
 	}
 	for _, name := range d.phantomChildDirs(path) {
 		if !existing[name] {
-			entries = append(entries, &pathMountVirtualEntry{drive: d, path: path2.Join(path, name)})
+			virtualPath := path2.Join(path, name)
+			entries = append(entries, &pathMountVirtualEntry{drive: d, path: virtualPath})
+			logging.For("drv-mnt").Debugf("virtual mount child path=%s", logging.Sanitize(virtualPath))
 		}
 	}
 	return entries, nil

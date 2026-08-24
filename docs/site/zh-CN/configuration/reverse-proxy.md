@@ -3,7 +3,7 @@ title: 反向代理和子路径部署
 description: 将 go-drive 部署到 Nginx 等反向代理之后，正确配置 HTTPS 请求头、WebSocket 转发和子路径访问。
 lang: zh-CN
 translation_key: reverse-proxy
-source_hash: d80e2a9b38d4a5967045870777536bb277340beacc4f1d7c7d9cf26035faeb19
+source_hash: 862b075a3d8c2ff0c6810bd223636ec393f23579e2d6e7e4cc985921dffcefab
 ---
 
 # 反向代理和子路径部署
@@ -77,4 +77,4 @@ location /drive/ {
 
 ## 排查真实 IP
 
-设置环境变量 `GO_DRIVE_DEBUG` 后，调试响应会包含帮助确认客户端 IP 的信息。排查完成后关闭调试模式，避免长期暴露额外实现信息。
+设置 `GO_DRIVE_LOGGING_LEVEL=debug` 后，调试响应会包含帮助确认客户端 IP 的信息。排查完成后移除该环境变量，避免长期暴露额外实现信息。

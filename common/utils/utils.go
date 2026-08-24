@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"go-drive/common/types"
-	"log"
 	"math"
 	"math/rand"
 	"net/url"
@@ -16,16 +15,6 @@ import (
 	"strings"
 	"time"
 )
-
-var IsDebugOn bool
-
-func init() {
-	debugOn, _ := os.LookupEnv("GO_DRIVE_DEBUG")
-	IsDebugOn = debugOn != ""
-	if IsDebugOn {
-		log.Println("debug mode is on")
-	}
-}
 
 func FileExists(path string) (bool, error) {
 	_, e := os.Stat(path)
@@ -350,10 +339,4 @@ func Base64URLDecode(s string) ([]byte, error) {
 		s += strings.Repeat("=", 4-len(s)%4)
 	}
 	return base64.URLEncoding.DecodeString(s)
-}
-
-func LogSanitize(s string) string {
-	s = strings.Replace(s, "\n", "", -1)
-	s = strings.Replace(s, "\r", "", -1)
-	return s
 }

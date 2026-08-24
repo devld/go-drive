@@ -7,11 +7,12 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/storage"
-	"log"
 	"sync"
+	"time"
 )
 
 type RootDrive struct {
@@ -89,20 +90,25 @@ func checkAndParseConfig(dc types.Drive, driveRegistry *driveutil.DriveRegistry)
 func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 	d.mux.Lock()
 	defer d.mux.Unlock()
+	started := time.Now()
 
 	drivesConfig, e := d.driveStorage.GetDrives()
 	if e != nil {
+		logging.For("drive").Errorf("drive reload failed: %v", e)
 		return e
 	}
 
-	log.Println("Reloading drives...")
+	driveLog := logging.For("drive")
+	driveLog.Debugf("drive reload started configured=%d ignore_failure=%t", len(drivesConfig), ignoreFailure)
 	drives := make(map[string]types.IDrive, len(drivesConfig))
 	ok := false
 	defer func() {
 		if !ok {
-			for _, d := range drives {
+			for name, d := range drives {
 				if disposable, ok := d.(types.IDisposable); ok {
-					_ = disposable.Dispose()
+					if e := disposable.Dispose(); e != nil {
+						driveLog.Warnf("drive cleanup failed name=%s: %v", logging.Sanitize(name), e)
+					}
 				}
 			}
 		}
@@ -114,32 +120,40 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 		factory, config, e := checkAndParseConfig(dc, d.driveRegistry)
 		if e != nil {
 			if ignoreFailure {
-				log.Printf("[%s]: %v", dc.Name, e)
+				driveLog.Warnf("error parsing drive config for '%s' (%s): %v",
+					logging.Sanitize(dc.Name), logging.Sanitize(dc.Type), e)
 				continue
 			}
 			return e
 		}
-		log.Println("Creating drive:", dc.Name)
+		driveLog.Infof("creating drive '%s' (%s)", logging.Sanitize(dc.Name), logging.Sanitize(dc.Type))
 		iDrive, e := factory.Create(ctx, config, d.createDriveUtils(dc.Name))
 		if e != nil {
 			if ignoreFailure {
-				log.Printf("[%s]: %v", dc.Name, e)
+				driveLog.Warnf("error creating drive '%s' (%s): %v",
+					logging.Sanitize(dc.Name), logging.Sanitize(dc.Type), e)
 				continue
 			}
 			return err.NewBadRequestError(i18n.T("drive.root.error_create_drive", dc.Name, e.Error()))
 		}
-		log.Println("Created drive:", dc.Name)
+		driveLog.Infof("created drive '%s' (%s)", logging.Sanitize(dc.Name), logging.Sanitize(dc.Type))
 		drives[dc.Name] = iDrive
 	}
 	d.dispatcher.setDrives(drives)
 	ok = true
 
-	log.Println("Reloading drives done.")
+	driveLog.Infof("reloaded drives configured=%d active=%d duration=%s", len(drivesConfig), len(drives), time.Since(started))
 	return nil
 }
 
 func (d *RootDrive) ReloadMounts() error {
-	return d.root.reloadMounts()
+	started := time.Now()
+	if e := d.root.reloadMounts(); e != nil {
+		logging.For("drive").Errorf("mount reload failed: %v", e)
+		return e
+	}
+	logging.For("drive").Debugf("mount reload completed duration=%s", time.Since(started))
+	return nil
 }
 
 func (d *RootDrive) ClearDriveCache(ns string) error {

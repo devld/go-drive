@@ -26,10 +26,10 @@ Without `-c`, go-drive automatically reads `config.yml` from the working directo
 ## Environment variables
 
 ```text
-GO_DRIVE_DEBUG=1
+GO_DRIVE_LOGGING_LEVEL=debug
 ```
 
-Enables additional diagnostic behavior and logging. Use it only while troubleshooting and disable it afterward.
+Overrides `logging.level` for the process. Use `debug` only while troubleshooting and remove it afterward.
 
 Common Make variables at build time:
 

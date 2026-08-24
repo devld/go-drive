@@ -7,6 +7,7 @@ import (
 	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/storage"
@@ -85,10 +86,13 @@ func NewUserAuth(configs []common.AuthProviderConfig, ch *registry.ComponentsHol
 		}
 		p, e := def.Factory(cfg.Config, ch)
 		if e != nil {
+			logging.For("auth").Errorf("authentication provider initialization failed provider=%s: %v",
+				logging.Sanitize(cfg.Type), e)
 			return nil, fmt.Errorf("init auth provider %q: %w", cfg.Type, e)
 		}
 		providers = append(providers, namedProvider{name: cfg.Type, provider: p})
 	}
+	logging.For("auth").Debugf("authentication providers initialized count=%d", len(providers)+1)
 	return &UserAuth{userDAO: userDAO, local: local, providers: providers}, nil
 }
 
@@ -147,10 +151,12 @@ func (ua *UserAuth) resolveProvider(name string) AuthProvider {
 func (ua *UserAuth) Start(provider string, r *http.Request, formData types.SM) (any, error) {
 	p := ua.resolveProvider(provider)
 	if p == nil {
+		logging.For("auth").Debugf("authentication start rejected provider=%s reason=not_found", logging.Sanitize(provider))
 		return nil, err.NewNotFoundMessageError(i18n.T("api.auth.provider_not_found", provider))
 	}
 	starter, ok := p.(AuthStarter)
 	if !ok {
+		logging.For("auth").Debugf("authentication start rejected provider=%s reason=not_supported", logging.Sanitize(provider))
 		return nil, err.NewNotAllowedMessageError(i18n.T("api.auth.start_not_supported", provider))
 	}
 	return starter.Start(r, formData)
@@ -168,6 +174,7 @@ func (ua *UserAuth) AuthenticateCallback(provider string, r *http.Request, formD
 	}
 	p := ua.findProvider(provider)
 	if p == nil {
+		logging.For("auth").Debugf("authentication callback rejected provider=%s reason=not_found", logging.Sanitize(provider))
 		return types.User{}, err.NewNotFoundMessageError(i18n.T("api.auth.provider_not_found", provider))
 	}
 	return p.Callback(r, formData)
@@ -202,6 +209,9 @@ func (ua *UserAuth) authenticateIdentity(r *http.Request, formData types.SM) (ty
 			if provider := ua.findProvider(existing.Source); provider != nil {
 				if user, ce := provider.Callback(r, formData); ce == nil {
 					return user, nil
+				} else {
+					logging.For("auth").Debugf("external authentication failed user=%s provider=%s; falling back",
+						logging.Sanitize(username), logging.Sanitize(existing.Source))
 				}
 			}
 		}
@@ -214,6 +224,8 @@ func (ua *UserAuth) authenticateIdentity(r *http.Request, formData types.SM) (ty
 			return user, nil
 		}
 		if err.IsNotAllowedError(e) || err.IsNotFoundError(e) {
+			logging.For("auth").Debugf("external authentication rejected user=%s provider=%s",
+				logging.Sanitize(username), logging.Sanitize(np.name))
 			continue
 		}
 		return types.User{}, e

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"go-drive/common/logging"
 	"time"
 
 	"go-drive/common/types"
@@ -40,9 +41,11 @@ func (a *authRoute) start(c *gin.Context) {
 	provider := c.Param("provider")
 	result, e := a.userAuth.Start(provider, c.Request, readAuthFormData(c))
 	if e != nil {
+		logging.For("auth").Debugf("authentication start failed provider=%s: %v", logging.Sanitize(provider), e)
 		_ = c.Error(e)
 		return
 	}
+	logging.For("auth").Debugf("authentication start provider=%s", logging.Sanitize(provider))
 	SetResult(c, result)
 }
 
@@ -50,27 +53,39 @@ func (a *authRoute) callback(c *gin.Context) {
 	provider := c.Param("provider")
 	user, e := a.userAuth.AuthenticateCallback(provider, c.Request, readAuthFormData(c))
 	if e != nil {
+		logging.For("auth").Debugf("authentication failed provider=%s: %v", logging.Sanitize(provider), e)
 		_ = c.Error(e)
 		return
 	}
 	token, e := a.tokenStore.Create(types.Principal{User: user, AuthType: types.AuthTypeToken})
 	if e != nil {
+		logging.For("auth").Errorf("session creation failed provider=%s user=%s: %v",
+			logging.Sanitize(provider), logging.Sanitize(user.Username), e)
 		_ = c.Error(e)
 		return
 	}
+	logging.For("auth").Debugf("authentication succeeded provider=%s user=%s",
+		logging.Sanitize(provider), logging.Sanitize(user.Username))
 	SetResult(c, token)
 }
 
 // readAuthFormData reads the submitted credentials/parameters from the JSON body.
 func readAuthFormData(c *gin.Context) types.SM {
 	formData := types.SM{}
-	_ = c.ShouldBindJSON(&formData)
+	if e := c.ShouldBindJSON(&formData); e != nil {
+		logging.For("auth").Debugf("authentication form parse failed provider=%s: %v",
+			logging.Sanitize(c.Param("provider")), e)
+	}
 	return formData
 }
 
 func (a *authRoute) logout(c *gin.Context) {
 	if token := GetToken(c); token != "" {
-		_ = a.tokenStore.Revoke(token)
+		if e := a.tokenStore.Revoke(token); e != nil {
+			logging.For("auth").Warnf("session revoke failed: %v", e)
+		} else {
+			logging.For("auth").Debugf("session revoked")
+		}
 	}
 }
 

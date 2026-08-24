@@ -2,9 +2,9 @@ package i18n
 
 import (
 	"fmt"
+	"go-drive/common/logging"
 	"go-drive/common/utils"
 	"io/fs"
-	"log"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -32,7 +32,7 @@ func NewFileMessageSource(fsys fs.FS) (*FileMessageSource, error) {
 		}
 		msg = temp
 	} else {
-		log.Println("[i18n] no languages configuration found.")
+		logging.For("i18n").Warnf("no language configuration found")
 	}
 
 	lang := make([]language.Tag, 0, len(msg))
@@ -49,7 +49,7 @@ func NewFileMessageSource(fsys fs.FS) (*FileMessageSource, error) {
 			def = lang[index]
 		}
 	}
-	log.Printf("[i18n] %d languages loaded: %v, default language: %v", len(lang), lang, def)
+	logging.For("i18n").Infof("%d languages loaded: %v, default language: %v", len(lang), lang, def)
 
 	return &FileMessageSource{
 		defaultLang: def,
@@ -102,7 +102,7 @@ func readAllLang(fsys fs.FS) (map[language.Tag]map[string]string, error) {
 
 		langTag, e := language.Parse(lang)
 		if e != nil {
-			log.Printf("[i18n] ignore unknown language tag for file '%s': %v", file.Name(), e)
+			logging.For("i18n").Warnf("ignore unknown language tag for file %q: %v", file.Name(), e)
 			continue
 		}
 

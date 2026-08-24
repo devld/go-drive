@@ -47,7 +47,11 @@ assets.
 
 ## Project-specific behavior
 
+- Backend code should use `go-drive/common/logging` instead of the standard
+  library `log` package directly.
 - Update `docs/config.yml` when user-facing configuration changes.
+- When editing `docs/site`, keep each page's `source_hash` synchronized or CI
+  will fail.
 - Keep configuration examples disabled unless required for normal operation.
 - Thumbnail `shell` handlers use `/bin/sh` on Unix and `cmd.exe` on Windows;
   document platform assumptions for external commands.
@@ -59,3 +63,13 @@ assets.
 Use Conventional Commits with a short lowercase subsystem scope. Non-trivial
 commits must include a body explaining the motivation, behavior changes, and
 relevant compatibility implications.
+
+## Releases
+
+- Create and push a semantic-version tag such as `v0.0.0`, then wait for CI to
+  create the draft release.
+- Write user-facing release notes using the previous notes and commits since
+  the previous version, covering breaking changes, features, and fixes; avoid
+  technical details in general.
+- Keep the release as a draft until a human reviews the notes and explicitly
+  confirms publication.

@@ -3,7 +3,7 @@ title: 安全指南
 description: 通过修改默认凭据、限制公网暴露、保护密钥和配置可信代理，提高 go-drive 部署的安全性。
 lang: zh-CN
 translation_key: security
-source_hash: 2bb10424bc3a2a7b0662daa80890ec8498c6be8c6c5f4f445ad0c168611f7c2f
+source_hash: 0bb8617bf19c878006a6d2a52ed9d9fdb88191ca2f56795a76300a1074caeb65
 ---
 
 # 安全指南
@@ -61,4 +61,4 @@ OneDrive 和 Google Drive 需要 OAuth Client Secret。可使用默认静态回�
 
 ## 日志与调试
 
-错误日志可能包含路径、远端服务错误和用户名。集中收集日志时按敏感数据处理。`GO_DRIVE_DEBUG` 只用于临时排查，问题解决后应关闭。
+错误日志可能包含路径、远端服务错误和用户名。集中收集日志时按敏感数据处理。`GO_DRIVE_LOGGING_LEVEL=debug` 只用于临时排查，问题解决后应移除。

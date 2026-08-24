@@ -2,9 +2,6 @@
 
 /** Shared APIs for Drive and job scripts (Otto ES5). */
 
-/** Debug mode. */
-declare const DEBUG: boolean;
-
 /** String map. */
 declare type SM = { [key: string]: string };
 /** Object map. */

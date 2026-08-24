@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
-	"log"
 )
 
 // executes after all other jobs registered
@@ -58,7 +58,7 @@ func init() {
 					return fmt.Errorf("flow execution error at step %d: %s", i+1, e.Error())
 				}
 				if e != nil {
-					log.Printf("ignored error at step %d: %s", i+1, e.Error())
+					logging.For("job").Warnf("ignored error at step %d: %s", i+1, e.Error())
 				}
 			}
 			return nil

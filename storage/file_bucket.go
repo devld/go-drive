@@ -4,10 +4,10 @@ import (
 	"errors"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
+	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"log"
 
 	"gorm.io/gorm"
 )
@@ -27,7 +27,7 @@ func NewFileBucketDAO(db *DB, ch *registry.ComponentsHolder) *FileBucketDAO {
 func (f *FileBucketDAO) reloadBuckets() {
 	buckets, e := f.GetBuckets()
 	if e != nil {
-		log.Println("failed to reload buckets: ", e)
+		logging.For("f-bkt").Errorf("failed to reload buckets: %v", e)
 		return
 	}
 	for _, bucket := range buckets {
