@@ -232,7 +232,7 @@ declare interface HttpFormData extends GoHandle<"HttpFormData"> {
   ): void;
 }
 
-/** Must call `Dispose()` after use (unless `Text()` already did). */
+/** Must call `Dispose()` after use (unless `Text()` or `JSON()` already did). */
 declare interface HttpResponse extends GoHandle<"HttpResponse"> {
   Status: number;
   Headers: HttpHeaders;
@@ -241,6 +241,8 @@ declare interface HttpResponse extends GoHandle<"HttpResponse"> {
   BodySize(): number;
   /** Read body as string and dispose this response. */
   Text(): string;
+  /** Parse the body as JSON and dispose this response; an empty body returns null. */
+  JSON(): any;
   Dispose(): void;
 }
 

@@ -333,7 +333,7 @@ Follow `dropbox.js`. Do not persist OAuth state manually or duplicate refresh-to
 - The body may be a Reader, string, Bytes, or HttpFormData.
 - For a Reader body, `Content-Length` comes from `headers` when set (the body is truncated to that size). Otherwise a known size is used (`TempFile` remaining bytes, including `ProgressReader` / `LimitReader` wrapping one) so object-storage PUT is not chunked. String and Bytes always use their actual length. FormData is multipart. Set `Transfer-Encoding: chunked` to skip auto `Content-Length`.
 - `newFormData()`, with `AppendField` and `AppendFile`.
-- `HttpResponse.Status`, `Body`, `BodySize()`, `Text()`, and `Dispose()`.
+- `HttpResponse.Status`, `Body`, `BodySize()`, `Text()`, `JSON()`, and `Dispose()`.
 - `HttpResponse.Headers.Get(key)`, `Values(key)`, and `GetAll()`.
 
 The HTTP client does not follow redirects automatically. Handle 3xx responses according to the service API. For every unexpected status, read or dispose the response and map it to a go-drive error.

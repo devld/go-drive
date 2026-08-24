@@ -2,6 +2,7 @@ package script
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	gReq "go-drive/common/req"
 	"go-drive/common/types"
@@ -11,6 +12,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/robertkrimen/otto"
 )
 
 var httpClient, _ = gReq.NewClient("", nil, nil, nil)
@@ -256,6 +259,21 @@ func (r *httpResponse) BodySize() int64 {
 func (r *httpResponse) Text() string {
 	defer r.Dispose()
 	return r.Body.ReadAsString()
+}
+
+// JSON reads and parses the complete response body, then disposes the response.
+// An empty body is returned as JavaScript null.
+func (r *httpResponse) JSON() any {
+	text := r.Text()
+	if text == "" {
+		return otto.NullValue()
+	}
+
+	var value any
+	if e := json.Unmarshal([]byte(text), &value); e != nil {
+		r.vm.ThrowTypeError(fmt.Sprintf("invalid JSON: %v", e))
+	}
+	return value
 }
 
 func (r *httpResponse) Dispose() {

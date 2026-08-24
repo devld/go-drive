@@ -183,3 +183,56 @@ func TestHTTPContentLengthHeader(t *testing.T) {
 		t.Fatalf("body = %q, want he", cap.body)
 	}
 }
+
+func TestHTTPResponseJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"name":"otto","items":[1,true]}`)
+	}))
+	t.Cleanup(server.Close)
+
+	vm := newScriptTestVM(t)
+	vm.Set("url", server.URL)
+	got := evalJSString(t, vm, `
+(function() {
+  var resp = http(newContext(), "GET", url);
+  var data = resp.JSON();
+  return data.name + "|" + data.items[0] + "|" + data.items[1];
+})()
+`)
+	if got != "otto|1|true" {
+		t.Fatalf("HttpResponse.JSON() = %q, want otto|1|true", got)
+	}
+}
+
+func TestHTTPResponseJSONEmptyBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(server.Close)
+
+	vm := newScriptTestVM(t)
+	vm.Set("url", server.URL)
+	got := evalJSString(t, vm, `
+(function() {
+  var resp = http(newContext(), "GET", url);
+  return String(resp.JSON());
+})()
+`)
+	if got != "null" {
+		t.Fatalf("HttpResponse.JSON() empty body = %q, want null", got)
+	}
+}
+
+func TestHTTPResponseJSONRejectsInvalidBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "not-json")
+	}))
+	t.Cleanup(server.Close)
+
+	vm := newScriptTestVM(t)
+	vm.Set("url", server.URL)
+	if _, e := vm.Run(context.Background(), `http(newContext(), "GET", url).JSON()`); e == nil {
+		t.Fatal("HttpResponse.JSON() accepted invalid JSON")
+	}
+}
