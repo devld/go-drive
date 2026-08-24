@@ -5,6 +5,10 @@ func initVarsForVm(v *VM) {
 
 	v.o.Set("newFormData", WrapVmCall(v, vm_newFormData))
 	v.o.Set("http", WrapVmCall(v, vm_http))
+	v.o.Set("__urlParse__", WrapVmCall(v, vm_urlParse))
+	v.o.Set("__urlBuild__", WrapVmCall(v, vm_urlBuild))
+	v.o.Set("__urlParseSearchParams__", WrapVmCall(v, vm_urlParseSearchParams))
+	v.o.Set("__urlBuildSearchParams__", WrapVmCall(v, vm_urlBuildSearchParams))
 
 	v.o.Set("sleep", WrapVmCall(v, vm_sleep))
 	v.o.Set("parseDuration", WrapVmCall(v, vm_parseDuration))

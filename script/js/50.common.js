@@ -170,6 +170,13 @@ var pathUtils = Object.freeze({
   },
 });
 
+var urlUtils = Object.freeze({
+  parse: __urlParse__,
+  build: __urlBuild__,
+  parseSearchParams: __urlParseSearchParams__,
+  buildSearchParams: __urlBuildSearchParams__,
+});
+
 var HASH = Object.freeze({
   MD5: 1,
   SHA1: 2,

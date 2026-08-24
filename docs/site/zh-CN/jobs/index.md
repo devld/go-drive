@@ -3,7 +3,7 @@ title: 自动任务
 description: 使用 Cron 计划或文件事件触发 go-drive 的复制、移动、删除和 JavaScript 操作，并查看执行历史。
 lang: zh-CN
 translation_key: jobs
-source_hash: 5c203a1195b331ce4f3e516f277125ed58c1e7f107ab3af750678c2799fa25ee
+source_hash: d378f0aa8a657538ffbaee9a3c00027955053a2d50db178fa3f53fb98647f70e
 ---
 
 # 自动任务
@@ -79,7 +79,7 @@ mkdir(path)
 log(message)
 ```
 
-以及通用运行时中的 `http`、`newContext`、`newContextWithTimeout`、`sleep`、`pathUtils`、`encUtils`、错误构造与 Drive API。完整类型定义位于代码仓库：
+以及通用运行时中的 `http`、`newContext`、`newContextWithTimeout`、`sleep`、`pathUtils`、`urlUtils`、`encUtils`、错误构造与 Drive API。完整类型定义位于代码仓库：
 
 - [`docs/scripts/global.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/global.d.ts)
 - [`docs/scripts/env/jobs.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/env/jobs.d.ts)

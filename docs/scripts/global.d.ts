@@ -380,6 +380,38 @@ declare const pathUtils: {
   isRoot: (path: string) => boolean;
 };
 
+/** URL query parameters; each array preserves repeated query keys. */
+declare type URLSearchParamsMap = { [key: string]: string[] };
+
+/** URL components returned by `urlUtils.parse`. */
+declare interface URLParts {
+  origin: string;
+  /** Scheme with the trailing colon, e.g. `https:`. */
+  protocol: string;
+  username: string;
+  password: string;
+  /** Hostname plus port, without user information. */
+  host: string;
+  hostname: string;
+  port: string;
+  /** Escaped path, including the leading slash when present. */
+  pathname: string;
+  /** Query values; repeated keys are represented by multiple array items. */
+  searchParams: URLSearchParamsMap;
+  /** Escaped fragment including `#`, or an empty string. */
+  hash: string;
+}
+
+/** Parse and build URLs using Go's `net/url` semantics. */
+declare const urlUtils: {
+  parse: (url: string) => URLParts;
+  build: (parts: Partial<URLParts>) => string;
+  /** Parse a query string with an optional leading `?`. */
+  parseSearchParams: (search: string) => URLSearchParamsMap;
+  /** Build a query string with a leading `?`, or an empty string. */
+  buildSearchParams: (searchParams: URLSearchParamsMap) => string;
+};
+
 /** Hash algorithm for `encUtils`. */
 declare enum HASH {
   MD5 = 1,

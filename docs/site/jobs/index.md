@@ -78,7 +78,7 @@ mkdir(path)
 log(message)
 ```
 
-The shared runtime also provides `http`, `newContext`, `newContextWithTimeout`, `sleep`, `pathUtils`, `encUtils`, error constructors, and the Drive API. Complete type definitions are in the source repository:
+The shared runtime also provides `http`, `newContext`, `newContextWithTimeout`, `sleep`, `pathUtils`, `urlUtils`, `encUtils`, error constructors, and the Drive API. Complete type definitions are in the source repository:
 
 - [`docs/scripts/global.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/global.d.ts)
 - [`docs/scripts/env/jobs.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/env/jobs.d.ts)

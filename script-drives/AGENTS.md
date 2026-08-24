@@ -366,6 +366,7 @@ arguments before constructing the log message.
 ### Paths, time, encoding, and hashes
 
 - `pathUtils.clean/join/parent/base/ext/isRoot`.
+- `urlUtils.parse(url)` and `urlUtils.build(parts)` use Go's `net/url`; `urlUtils.parseSearchParams` and `urlUtils.buildSearchParams` handle query strings; `searchParams` maps keys to string arrays.
 - `dayjs` and `toDate(goTime)`; GoTime also has `UnixMilli()`.
 - `encUtils.toHex/fromHex`.
 - `encUtils.base64Encode/base64Decode` and `urlBase64Encode/urlBase64Decode`; second argument `padded` defaults to `true`. Pass `false` for raw encoding (JWT, PKCE).
