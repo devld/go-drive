@@ -269,6 +269,18 @@ func TestGetQueryPathRequiresParameterAndAllowsRoot(t *testing.T) {
 			t.Fatalf("getQueryPath() = %q, want %q", path, "a/c")
 		}
 	})
+
+	t.Run("backslash traversal", func(t *testing.T) {
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodGet, "/stat?path=files/users/bob/..%5C..%5C..%5CWindows%5CTemp%5Cx", nil)
+		path, e := getQueryPath(c, "path")
+		if e != nil {
+			t.Fatalf("getQueryPath() error = %v", e)
+		}
+		if path != "Windows/Temp/x" {
+			t.Fatalf("getQueryPath() = %q, want %q", path, "Windows/Temp/x")
+		}
+	})
 }
 
 func assertRegisteredRoutes(t *testing.T, router *gin.Engine, expected ...string) {

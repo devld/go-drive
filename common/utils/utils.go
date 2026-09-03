@@ -11,6 +11,7 @@ import (
 	"os"
 	path2 "path"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -40,8 +41,12 @@ var unsafePathCharsRegexp = regexp.MustCompile(`[\x00-\x1f\x7f-\x9f]+`)
 
 func CleanPath(path string) string {
 	path = unsafePathCharsRegexp.ReplaceAllLiteralString(strings.TrimSpace(path), "")
-	// Clean the path as if it were rooted. This prevents leading parent
-	// components (including a final "..") from surviving the cleanup.
+	path = strings.ReplaceAll(path, "\\", "/")
+	if runtime.GOOS == "windows" {
+		// Windows filenames cannot contain ':'. Removing it also turns volume
+		// paths like `C:/Windows` into a relative slash path.
+		path = strings.ReplaceAll(path, ":", "")
+	}
 	return strings.TrimPrefix(path2.Clean("/"+path), "/")
 }
 

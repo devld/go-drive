@@ -103,8 +103,8 @@ func (f *Drive) newFsFile(path string, file os.FileInfo) (types.IEntry, error) {
 }
 
 func (f *Drive) getPath(path string) string {
-	path = filepath.Clean(path)
-	return filepath.Join(f.path, path)
+	path = utils.CleanPath(path)
+	return filepath.Join(f.path, filepath.FromSlash(path))
 }
 
 func (f *Drive) isRootPath(path string) bool {
