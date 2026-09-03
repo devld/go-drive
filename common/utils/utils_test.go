@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -46,6 +49,61 @@ func TestCleanPathRemovesParentTraversal(t *testing.T) {
 	}
 	if got := CleanPath("../../safe/file"); got != "safe/file" {
 		t.Errorf("CleanPath traversal result = %q", got)
+	}
+}
+
+func TestCleanPathNormalizesBackslashTraversal(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{input: `files\..\..\..\Windows\Temp\evil.txt`, want: `Windows/Temp/evil.txt`},
+		{input: `files/..\..\..\Windows\Temp\evil.txt`, want: `Windows/Temp/evil.txt`},
+		{input: `files/users/bob/..\..\..\Windows\Temp\x`, want: `Windows/Temp/x`},
+		{input: `files/users/bob/..\foo`, want: `files/users/foo`},
+		{input: `a\b\c`, want: `a/b/c`},
+		{input: `a/b\../c`, want: `a/c`},
+		{input: `..\..\Windows\Temp\victim.txt`, want: `Windows/Temp/victim.txt`},
+		{input: `C:\Windows\Temp\x`, want: windowsColonPath(`C:/Windows/Temp/x`)},
+		{input: `C:/Windows/Temp/x`, want: windowsColonPath(`C:/Windows/Temp/x`)},
+		{input: `files/C:\Windows\Temp\x`, want: windowsColonPath(`files/C:/Windows/Temp/x`)},
+		{input: `C:foo`, want: windowsColonPath(`C:foo`)},
+	}
+	for _, tt := range tests {
+		if got := CleanPath(tt.input); got != tt.want {
+			t.Errorf("CleanPath(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func windowsColonPath(slashPath string) string {
+	if runtime.GOOS == "windows" {
+		return strings.ReplaceAll(slashPath, ":", "")
+	}
+	return slashPath
+}
+
+func TestCleanPathResultCannotLexicallyEscape(t *testing.T) {
+	root := filepath.FromSlash("/drive/root")
+	inputs := []string{
+		`files/users/bob/..\..\..\Windows\Temp\evil.txt`,
+		`../outside/evil.txt`,
+		`C:\Windows\Temp\x`,
+		`files/C:\Windows\Temp\x`,
+		`..\..\..\..\Windows\Temp\victim.txt`,
+		``,
+		`a/b/c`,
+	}
+	for _, input := range inputs {
+		cleaned := CleanPath(input)
+		if strings.Contains(cleaned, `\`) {
+			t.Errorf("CleanPath(%q) still contains backslash: %q", input, cleaned)
+		}
+		resolved := filepath.Join(root, filepath.FromSlash(cleaned))
+		rel, e := filepath.Rel(root, resolved)
+		if e != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+			t.Errorf("CleanPath(%q)=%q joined to %q, escapes %q", input, cleaned, resolved, root)
+		}
 	}
 }
 

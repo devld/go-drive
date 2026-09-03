@@ -164,6 +164,15 @@ func TestPermMap_ResolvePath(t *testing.T) {
 			wantRead:    false,
 			wantWrite:   false,
 		},
+		{
+			name: "backslash traversal does not inherit writable ancestor",
+			permissions: []types.PathPermission{
+				{Path: ptr("files/users/bob"), Subject: types.AnySubject, Permission: types.PermissionReadWrite, Policy: types.PolicyAccept},
+			},
+			path:      `files/users/bob/..\..\secret`,
+			wantRead:  false,
+			wantWrite: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

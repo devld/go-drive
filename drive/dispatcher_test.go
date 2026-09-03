@@ -1672,3 +1672,46 @@ func TestMount_Move_PhantomDirectoryMaterializesDestination(t *testing.T) {
 		t.Errorf("moved child mount does not resolve: %v", e)
 	}
 }
+
+func TestDispatcher_FsBackslashTraversalStaysInsideDrive(t *testing.T) {
+	d, _, config, cleanup := newTestDispatcher(t, []string{"driveA"})
+	defer cleanup()
+	ctx := context.Background()
+
+	localRoot, e := config.GetDir("local", false)
+	if e != nil {
+		t.Fatal(e)
+	}
+	outside := filepath.Join(filepath.Dir(localRoot), "outside")
+	if e := os.MkdirAll(outside, 0755); e != nil {
+		t.Fatal(e)
+	}
+	victim := filepath.Join(outside, "victim.txt")
+	if e := os.WriteFile(victim, []byte("keep"), 0644); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := d.lower.MakeDir(ctx, "driveA/users"); e != nil {
+		t.Fatalf("MakeDir users: %v", e)
+	}
+	if _, e := d.lower.MakeDir(ctx, "driveA/users/bob"); e != nil {
+		t.Fatalf("MakeDir bob: %v", e)
+	}
+
+	payload := `driveA/users/bob/..\..\..\..\outside\evil.txt`
+	_, _ = d.lower.Save(task.DummyContext(), payload, 4, true, bytes.NewReader([]byte("evil")))
+	got, e := os.ReadFile(victim)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if string(got) != "keep" {
+		t.Fatalf("outside victim mutated: %q", got)
+	}
+	if _, e := os.Stat(filepath.Join(outside, "evil.txt")); e == nil {
+		t.Fatal("backslash traversal wrote a file outside the fs drive root")
+	}
+	_ = d.lower.Delete(task.DummyContext(), `driveA/users/bob/..\..\..\..\outside\victim.txt`)
+	if _, e := os.Stat(victim); e != nil {
+		t.Fatalf("backslash traversal deleted the outside victim: %v", e)
+	}
+}
+
