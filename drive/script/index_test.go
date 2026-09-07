@@ -16,7 +16,7 @@ func TestScriptDriveCallUsesCallerContext(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = vm.Dispose() })
 
-	if _, e = vm.Run(context.Background(), `function __drive_get() { while (true) {} }`); e != nil {
+	if _, e = vm.Run(context.Background(), `function __drive_get() { while (true) {} }`, ""); e != nil {
 		t.Fatal(e)
 	}
 

@@ -1,9 +1,8 @@
 /// <reference path="../global.d.ts"/>
 
-/** This Drive as a host Drive API (for calling back into go-drive). */
-declare const selfDrive: DriveInstance;
+/** This script Drive as a host `Drive` (call back into go-drive). Distinct from `this` (`DriveThis`). */
+declare const selfDrive: Drive;
 
-declare type JSONPrimitive = string | number | boolean | null;
 declare type JSONValue =
   | JSONPrimitive
   | JSONValue[]
@@ -11,108 +10,77 @@ declare type JSONValue =
 
 /** Drive-level metadata (`meta()`). */
 declare interface DriveMeta {
-  Writable: boolean;
-  Props?: M;
+  readonly writable: boolean;
+  readonly props?: M;
 }
 
-/** Entry exchanged between JavaScript and Go. */
-declare interface Entry {
-  Meta?: EntryMeta;
-  IsDir: boolean;
-  Path: string;
-  Size: number;
+/**
+ * Plain entry returned by `defineDrive` methods (fields, not the host `Entry` class).
+ */
+declare interface EntryRecord {
+  meta?: EntryMeta;
+  isDir: boolean;
+  path: string;
+  size: number;
   /** Unix milliseconds; use `-1` if unknown. */
-  ModTime: number;
+  modTime: number;
   /** Opaque data stored with the cache entry. */
-  Data?: SM;
+  data?: SM;
 }
 
 declare interface DriveUploadConfig {
   /** `local`, `localChunk`, or `custom`. */
-  Provider: string;
-  Path?: string;
-  Config?: SM;
-}
-
-/** Runtime Drive API on `this` after `defineDrive`. */
-declare interface Drive {
-  cache: DriveCache;
-  /** `from` if it belongs to this instance; otherwise `null`. */
-  own(from: DriveEntry): Entry | null;
-  meta(ctx: Context): DriveMeta;
-  get(ctx: Context, path: string): Entry;
-  save?(
-    ctx: TaskCtx,
-    path: string,
-    size: number,
-    override: boolean,
-    reader: Reader
-  ): Entry;
-  makeDir?(ctx: Context, path: string): Entry;
-  copy?(ctx: TaskCtx, from: Entry, to: string, override: boolean): Entry;
-  move?(ctx: TaskCtx, from: Entry, to: string, override: boolean): Entry;
-  list(ctx: Context, path: string): Entry[];
-  delete?(ctx: TaskCtx, path: string): void;
-  upload?(
-    ctx: Context,
-    path: string,
-    size: number,
-    override: boolean,
-    config: SM
-  ): DriveUploadConfig | undefined;
-
-  /** Range read. Negative `start`/`size` means the whole file. */
-  getReader(
-    ctx: Context,
-    entry: Entry,
-    start: number,
-    size: number
-  ): ReadCloser;
-  getURL?(ctx: Context, entry: Entry): ContentURL;
-  getThumbnail?(ctx: Context, entry: Entry): ReadCloser | ContentURL;
+  provider: string;
+  path?: string;
+  config?: SM;
 }
 
 /** Persistent Drive data (tokens, etc.). Keys starting with `_` are reserved. */
 declare interface DriveDataStore extends GoHandle<"DriveDataStore"> {
-  Save(data: SM): void;
-  Load<K extends string, T extends { [key in K]: string | undefined }>(
+  save(data: SM): void;
+  load<K extends string, T extends { [key in K]: string | undefined }>(
     key: K,
     ...keys: K[]
   ): T;
 }
 
 declare interface DriveCacheItem {
-  ModTime: number;
-  Size: number;
-  Path: string;
-  Type: EntryType;
-  Data?: SM;
+  readonly modTime: number;
+  readonly size: number;
+  readonly path: string;
+  readonly type: EntryType;
+  readonly data?: SM;
+  readonly meta?: EntryMeta;
 }
 
 declare interface DriveCache extends GoHandle<"DriveCache"> {
-  PutEntries(entries: Entry[], ttl: DurationLike): void;
-  PutEntry(entry: Entry, ttl: DurationLike): void;
-  PutChildren(parentPath: string, entries: Entry[], ttl: DurationLike): void;
-  Evict(path: string, descendants: boolean): void;
-  EvictAll(): void;
-  GetEntry(path: string): DriveCacheItem | null;
-  GetChildren(path: string): DriveCacheItem[] | null;
+  putEntries(entries: EntryRecord[], ttl: DurationLike): void;
+  putEntry(entry: EntryRecord, ttl: DurationLike): void;
+  putChildren(
+    parentPath: string,
+    entries: EntryRecord[],
+    ttl: DurationLike
+  ): void;
+  evict(path: string, descendants: boolean): void;
+  evictAll(): void;
+  getEntry(path: string): DriveCacheItem | null;
+  getChildren(path: string): readonly DriveCacheItem[] | null;
 }
 
 /** Dynamic init UI returned by `initConfig`. */
 declare interface DriveInitConfiguration {
-  Configured: boolean;
-  OAuth?: OAuthConfig;
-  Form?: FormItem[];
-  /** Current values for `Form`. */
-  Value?: SM;
+  readonly configured: boolean;
+  readonly oauth?: OAuthConfig;
+  readonly form?: readonly FormItem[];
+  /** Current values for `form`. */
+  readonly value?: SM;
 }
 
 /** OAuth step shown in the admin UI (not the token holder). */
 declare interface OAuthConfig {
-  URL: string;
-  Text: string;
-  Principal: string;
+  readonly url: string;
+  readonly text: string;
+  readonly principal: string;
 }
 
 declare enum OAuthStyle {
@@ -122,80 +90,80 @@ declare enum OAuthStyle {
 }
 
 declare interface OAuthEndpoint {
-  AuthURL: string;
-  TokenURL: string;
-  AuthStyle?: OAuthStyle;
+  authUrl: string;
+  tokenUrl: string;
+  authStyle?: OAuthStyle;
 }
 
 declare interface OAuthRequest {
-  Endpoint: OAuthEndpoint;
-  RedirectURL: string;
-  Scopes: string[];
+  endpoint: OAuthEndpoint;
+  redirectUrl: string;
+  scopes: string[];
   /** Button label in the admin UI. */
-  Text: string;
+  text: string;
 }
 
 declare interface OAuthCredentials {
-  ClientID: string;
-  ClientSecret: string;
+  clientID: string;
+  clientSecret: string;
 }
 
 declare interface OAuthToken {
-  AccessToken: string;
-  TokenType: string;
-  RefreshToken?: string;
-  Expiry: GoTime;
+  readonly accessToken: string;
+  readonly tokenType: string;
+  readonly refreshToken?: string;
+  readonly expiry: Date;
 }
 
 /** Persisted OAuth token; refreshes on demand. */
 declare interface OAuthHolder extends GoHandle<"OAuthHolder"> {
-  /** Current token. Pass the method `ctx` (`Context`, `TaskCtx`, or timeout context); refreshes when expired. */
-  Token(ctx: Context): OAuthToken;
+  /** Current token; refreshes when expired using the VM run context. */
+  token(): OAuthToken;
   /**
    * Force a refresh-token exchange even if the access token is still valid.
    * Updates this holder's memory cache and the Drive data store. Use from
-   * `onInterval`; ordinary requests should keep calling `Token`.
+   * `onInterval`; ordinary requests should keep calling `token`.
    */
-  Refresh(ctx: Context): OAuthToken;
+  refresh(): OAuthToken;
 }
 
 declare interface OAuthInitConfigResult {
-  Config: DriveInitConfiguration & { OAuth: OAuthConfig };
+  readonly config: DriveInitConfiguration & { readonly oauth: OAuthConfig };
   /** Set when a stored token already exists. */
-  OAuthHolder?: OAuthHolder;
+  readonly oauthHolder?: OAuthHolder;
 }
 
 declare interface RootConfig {
-  OAuthRedirectURI: string;
-  Version: string;
-  RevHash: string;
-  BuildAt: string;
+  readonly oauthRedirectURI: string;
+  readonly version: string;
+  readonly revHash: string;
+  readonly buildAt: string;
 }
 
 declare interface DriveUtils extends GoHandle<"DriveUtils"> {
-  Config: RootConfig;
-  Data: DriveDataStore;
+  readonly config: RootConfig;
+  data: DriveDataStore;
   /** `defineDrive` already assigns `this.cache`. */
-  CreateCache(): DriveCache;
-  /** Build the OAuth UI step; `OAuthHolder` is set if a token is already stored. */
-  OAuthInitConfig(
+  createCache(): DriveCache;
+  /** Build the OAuth UI step; `oauthHolder` is set if a token is already stored. */
+  oauthInitConfig(
     req: OAuthRequest,
     cred: OAuthCredentials
   ): OAuthInitConfigResult;
   /** Exchange the submitted auth code and persist the token. */
-  OAuthInit(
-    ctx: Context,
+  oauthInit(
     data: SM,
     req: OAuthRequest,
     cred: OAuthCredentials
   ): OAuthHolder | null;
   /** Load the persisted token. Throws if the Drive is not configured. */
-  OAuthLoad(req: OAuthRequest, cred: OAuthCredentials): OAuthHolder;
+  oauthLoad(req: OAuthRequest, cred: OAuthCredentials): OAuthHolder;
 }
 
 /**
  * Cross-VM fields. Names must start with `$`. Values must be JSON-serializable.
- * Nested mutation is not persisted; reassign the whole property.
+ * Values read from Go are read-only views. Nested mutation is not persisted;
+ * reassign the whole property.
  */
 declare type DriveSharedState = {
   [key: `$${string}`]: JSONValue | undefined;
@@ -211,10 +179,10 @@ declare interface DriveInterval {
   immediately?: boolean;
 }
 
-declare interface DriveInstanceState extends DriveSharedState {
+declare interface DriveAdapterState extends DriveSharedState {
   /** Omit, `""`, `null`/`undefined`, or `<= 0` to disable. */
   entryCacheTTL?: DurationLike;
-  /** `meta().Writable`. Defaults to `true`. */
+  /** `meta().writable`. Defaults to `true`. */
   writable?: boolean;
   /**
    * Repeating background work started with the Drive instance and stopped on dispose.
@@ -232,74 +200,90 @@ declare type DriveSharedProps<T> = {
 };
 
 /**
- * `this` in Drive methods: `createInstance` fields plus `cache` / `own` / ops.
- * Non-`$` fields are frozen; `$` fields stay writable and sync across VMs.
+ * Report absolute task progress from a Drive write method.
+ * Omit `total` to update loaded only.
  */
-declare type DriveThis<T extends DriveInstanceState = DriveInstanceState> =
-  DriveConfigProps<T> & DriveSharedProps<T> & Drive;
-
-declare interface DriveSetup<T extends DriveInstanceState = DriveInstanceState> {
-  /** Static admin form. Field names must not start with `_`. */
-  configForm?: FormItem[];
-  /** Validate static config before `createInstance`. */
-  validateConfig?(config: SM): void;
-  /** Dynamic init UI (OAuth / extra form). */
-  initConfig?(
-    ctx: Context,
-    config: SM,
-    utils: DriveUtils
-  ): DriveInitConfiguration | undefined;
-  /** Persist submitted dynamic init data. */
-  init?(ctx: Context, data: SM, config: SM, utils: DriveUtils): void;
-  /** Build instance state from static config. Load dynamic data here. */
-  createInstance(ctx: Context, config: SM, utils: DriveUtils): T;
-}
+declare type DriveOnProgress = (loaded: number, total?: number) => void;
 
 /**
  * User-implemented ops. Write methods return void; the runtime re-stats the path.
  * `get` and `list` are required; also implement `getURL` or `getReader`.
  */
 declare interface DriveMethods {
-  meta?(ctx: Context): DriveMeta;
-  get(ctx: Context, path: string): Entry;
-  list(ctx: Context, path: string): Entry[];
+  meta?(): DriveMeta;
+  get(path: string): EntryRecord;
+  list(path: string): EntryRecord[];
   save?(
-    ctx: TaskCtx,
     path: string,
     size: number,
     override: boolean,
-    reader: Reader
+    reader: Reader,
+    onProgress: DriveOnProgress
   ): void;
-  makeDir?(ctx: Context, path: string): void;
-  copy?(ctx: TaskCtx, from: Entry, to: string, override: boolean): void;
-  move?(ctx: TaskCtx, from: Entry, to: string, override: boolean): void;
-  delete?(ctx: TaskCtx, path: string): void;
+  makeDir?(path: string): void;
+  copy?(
+    from: EntryRecord,
+    to: string,
+    override: boolean,
+    onProgress: DriveOnProgress
+  ): void;
+  move?(
+    from: EntryRecord,
+    to: string,
+    override: boolean,
+    onProgress: DriveOnProgress
+  ): void;
+  delete?(path: string, onProgress: DriveOnProgress): void;
   upload?(
-    ctx: Context,
     path: string,
     size: number,
     override: boolean,
     config: SM
   ): DriveUploadConfig | undefined;
   getReader?(
-    ctx: Context,
-    entry: Entry,
+    entry: EntryRecord,
     start: number,
     size: number
-  ): ReadCloser;
-  getURL?(ctx: Context, entry: Entry): ContentURL;
-  getThumbnail?(
-    ctx: Context,
-    entry: Entry
-  ): ReadCloser | ContentURL;
+  ): Reader;
+  getURL?(entry: EntryRecord): ContentURL;
+  getThumbnail?(entry: EntryRecord): Reader | ContentURL;
   /**
    * Periodic work declared in `createInstance.intervals`. Go owns the clock and
    * borrows a VM like other methods. Return `"25m"` or `ms(...)` to reschedule;
    * omit to keep `interval`. Keep this short. For OAuth, call
-   * `this.oauth.Refresh(ctx)` on the holder from `createInstance` — do not
-   * `OAuthLoad` again.
+   * `this.oauth.refresh()` on the holder from `createInstance` — do not
+   * `oauthLoad` again.
    */
-  onInterval?(ctx: Context, name: string): DurationLike | void;
+  onInterval?(name: string): DurationLike | void;
+}
+
+/**
+ * `this` in adapter methods: `createInstance` fields, injected `cache`,
+ * and bound ops. Distinct from the host `Drive` class (`selfDrive`).
+ * Non-`$` fields are frozen; `$` fields stay writable and sync across VMs.
+ * `cache` is runtime-injected; do not pass it in `DriveMethods`.
+ */
+declare type DriveThis<T extends DriveAdapterState = DriveAdapterState> =
+  DriveConfigProps<T> &
+    DriveSharedProps<T> &
+    DriveMethods & {
+      readonly cache: DriveCache;
+    };
+
+declare interface DriveSetup<T extends DriveAdapterState = DriveAdapterState> {
+  /** Static admin form. Field names must not start with `_`. */
+  configForm?: FormItem[];
+  /** Validate static config before `createInstance`. */
+  validateConfig?(config: SM): void;
+  /** Dynamic init UI (OAuth / extra form). */
+  initConfig?(
+    config: SM,
+    utils: DriveUtils
+  ): DriveInitConfiguration | undefined;
+  /** Persist submitted dynamic init data. */
+  init?(data: SM, config: SM, utils: DriveUtils): void;
+  /** Build instance state from static config. Load dynamic data here. */
+  createInstance(config: SM, utils: DriveUtils): T;
 }
 
 /** Keep `this` inferred from `createInstance`, not widened by `methods`. */
@@ -307,16 +291,19 @@ declare type DriveNoInfer<T> = [T][T extends unknown ? 0 : never];
 
 /**
  * Define a script Drive. `setup` runs before the instance exists; `methods` run on it.
- * Runtime supplies entry cache, write-path eviction, root `get("")`, copy/move `own` checks,
+ * Runtime supplies entry cache, write-path eviction, root `get("")`, copy/move ownership checks,
  * and default `meta` / `upload` / `getReader`.
  */
-declare function defineDrive<T extends DriveInstanceState>(
+declare function defineDrive<T extends DriveAdapterState>(
   setup: DriveSetup<T>,
   methods: DriveMethods & ThisType<DriveThis<DriveNoInfer<T>>>
 ): void;
 
 /** Standard `cache_ttl` form item. */
 declare function entryCacheTTLFormItem(defaultValue?: string): FormItem;
+
+/** 5 MiB. `useLocalProvider` uses `localChunk` above this size. */
+declare const LOCAL_PROVIDER_CHUNK_SIZE: number;
 
 /** Server-side upload: `local` or `localChunk` depending on `size`. */
 declare function useLocalProvider(size: number): DriveUploadConfig;

@@ -57,6 +57,13 @@ assets.
   document platform assumptions for external commands.
 - After transport or protocol failures, discard pooled resources unless their
   health is known.
+- Only the `script/` package may import `github.com/dop251/goja`. Other
+  packages must go through `go-drive/script` (`VM`, `Value`, `JSValue`,
+  `NativeFunction`).
+- Functions passed into JavaScript must be `script.NativeFunction`, host class
+  `Method`s, or exported methods with the NativeFunction signature
+  (`func(*VM, Values) any`). Do not expose other Go methods through goja
+  reflection; `ToJSValue` panics on them.
 
 ## Commits
 

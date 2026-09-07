@@ -1,21 +1,21 @@
 /// <reference path="../global.d.ts"/>
 
-/** Root Drive of this go-drive instance. */
-declare const drive: DriveInstance;
+/** Root host `Drive` of this go-drive instance (not `defineDrive` `this`). */
+declare const drive: Drive;
 
 /** Write a log line for this job run. */
 declare function log(...msg: any[]): void;
 
 /** Copy `from` to `to`. Paths may include wildcards. */
-declare function cp(from: string, to: string, override: boolean): DriveEntry;
+declare function cp(from: string, to: string, override: boolean): Entry;
 /** Move `from` to `to`. Paths may include wildcards. */
-declare function mv(from: string, to: string, override: boolean): DriveEntry;
+declare function mv(from: string, to: string, override: boolean): Entry;
 /** Delete a path. Supports wildcards. */
 declare function rm(path: string): void;
 /** List a directory. */
-declare function ls(path: string): DriveEntry[];
+declare function ls(path: string): readonly Entry[];
 /** Create a directory. */
-declare function mkdir(path: string): DriveEntry;
+declare function mkdir(path: string): Entry;
 
 /**
  * Trigger that started this run.
@@ -23,14 +23,14 @@ declare function mkdir(path: string): DriveEntry;
  */
 declare const $event:
   | {
-      type: "entry";
-      data?: {
-        eventType: "updated" | "deleted";
-        includeDescendants: boolean;
-        path: string;
+      readonly type: "entry";
+      readonly data?: {
+        readonly eventType: "updated" | "deleted";
+        readonly includeDescendants: boolean;
+        readonly path: string;
       };
     }
   | {
-      type: "cron";
+      readonly type: "cron";
     }
   | undefined;

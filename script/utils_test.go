@@ -2,9 +2,13 @@ package script
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"go-drive/common/types"
 )
 
 func TestFormatConsoleArgSerializesObjects(t *testing.T) {
@@ -87,11 +91,11 @@ func TestFormatConsoleArgKeepsDateReadable(t *testing.T) {
 
 func TestFormatConsoleArgIncludesErrorStack(t *testing.T) {
 	vm := newPoolTestVM(t)
-	_, e := vm.RunNamed(context.Background(), "err.js", `
+	_, e := vm.Run(context.Background(), `
 function boom() {
 	return new Error("boom");
 }
-`)
+`, "err.js")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -107,15 +111,15 @@ function boom() {
 
 func TestFormatConsoleArgsJoinsValues(t *testing.T) {
 	root := newPoolTestVM(t)
-	vm := root.Fork()
+	vm := root
 	t.Cleanup(func() { _ = vm.Dispose() })
 
 	var got string
-	vm.Set("capture", WrapVmCall(vm, func(_ *VM, args Values) any {
+	mustDefineGlobal(t, vm, "capture", NativeFunction(func(_ *VM, args Values) any {
 		got = FormatConsoleArgs(args)
 		return nil
 	}))
-	if _, e := vm.Run(context.Background(), `capture("hello", {a: 1}, null)`); e != nil {
+	if _, e := vm.Run(context.Background(), `capture("hello", {a: 1}, null)`, ""); e != nil {
 		t.Fatal(e)
 	}
 	if got != `hello {"a":1} null` {
@@ -125,23 +129,24 @@ func TestFormatConsoleArgsJoinsValues(t *testing.T) {
 
 func evalConsoleArg(t *testing.T, vm *VM, code string) string {
 	t.Helper()
-	value, e := vm.Run(context.Background(), code)
+	value, e := vm.Run(context.Background(), code, "")
 	if e != nil {
 		t.Fatal(e)
 	}
 	return formatConsoleArg(value)
 }
 
-func TestRequireDurationStringAndMs(t *testing.T) {
+func TestGetDurationStringAndMs(t *testing.T) {
 	vm := newScriptTestVM(t)
 
 	must := func(src string, want time.Duration) {
 		t.Helper()
-		v, e := vm.Run(context.Background(), src)
+		v, e := vm.Run(context.Background(), src, "")
 		if e != nil {
 			t.Fatal(e)
 		}
-		if d := RequireDuration(v, "test"); d != want {
+		d := GetDuration(vm, v, "test requires a Duration or duration string")
+		if d != want {
 			t.Fatalf("%s = %v want %v", src, d, want)
 		}
 	}
@@ -151,7 +156,7 @@ func TestRequireDurationStringAndMs(t *testing.T) {
 	must(`"2d3h4m5s"`, 2*24*time.Hour+3*time.Hour+4*time.Minute+5*time.Second)
 	must(`""`, 0)
 
-	v, e := vm.Run(context.Background(), `parseDuration("2s")`)
+	v, e := vm.Run(context.Background(), `parseDuration("2s")`, "")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -159,7 +164,7 @@ func TestRequireDurationStringAndMs(t *testing.T) {
 		t.Fatalf("parseDuration(2s) = %d", v.Integer())
 	}
 
-	v, e = vm.Run(context.Background(), `parseDuration("")`)
+	v, e = vm.Run(context.Background(), `parseDuration("")`, "")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -167,11 +172,11 @@ func TestRequireDurationStringAndMs(t *testing.T) {
 		t.Fatalf("parseDuration empty = %d", v.Integer())
 	}
 
-	if _, e := vm.Run(context.Background(), `parseDuration("nope")`); e == nil {
+	if _, e := vm.Run(context.Background(), `parseDuration("nope")`, ""); e == nil {
 		t.Fatal("expected parseDuration(\"nope\") to fail")
 	}
 
-	v, e = vm.Run(context.Background(), `"nope"`)
+	v, e = vm.Run(context.Background(), `"nope"`, "")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -180,5 +185,296 @@ func TestRequireDurationStringAndMs(t *testing.T) {
 			t.Fatal("expected TypeError for invalid duration")
 		}
 	}()
-	RequireDuration(v, "test")
+	GetDuration(vm, v, "test requires a Duration or duration string")
+}
+
+func TestValueArrayRequiresArrayClass(t *testing.T) {
+	vm := newPoolTestVM(t)
+
+	obj, e := vm.Run(context.Background(), `({length: 2, 0: "a", 1: "b"})`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if obj.Array() != nil {
+		t.Fatal("plain object must not be treated as an array")
+	}
+
+	arr, e := vm.Run(context.Background(), `["a", "b"]`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	got := arr.Array()
+	if len(got) != 2 || got[0].String() != "a" || got[1].String() != "b" {
+		t.Fatalf("array = %v", got)
+	}
+}
+
+func TestParseIntoJSONTagAndInterfaceMap(t *testing.T) {
+	vm := newPoolTestVM(t)
+	v, e := vm.Run(context.Background(), `({
+		oauth: { url: "https://example.com", principal: "user" },
+		props: { kind: "doc", n: 1 }
+	})`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	var parsed struct {
+		OAuth *struct {
+			URL       string `json:"url"`
+			Principal string
+		} `json:"oauth"`
+		Props types.M
+	}
+	if e := v.ParseInto(&parsed); e != nil {
+		t.Fatal(e)
+	}
+	if parsed.OAuth == nil || parsed.OAuth.URL != "https://example.com" || parsed.OAuth.Principal != "user" {
+		t.Fatalf("oauth = %#v", parsed.OAuth)
+	}
+	if parsed.Props["kind"] != "doc" {
+		t.Fatalf("props.kind = %#v", parsed.Props["kind"])
+	}
+	switch n := parsed.Props["n"].(type) {
+	case int64:
+		if n != 1 {
+			t.Fatalf("props.n = %d", n)
+		}
+	case float64:
+		if n != 1 {
+			t.Fatalf("props.n = %v", n)
+		}
+	default:
+		t.Fatalf("props.n type = %T", parsed.Props["n"])
+	}
+}
+
+func TestParseThrowsInHostFunction(t *testing.T) {
+	vm := newPoolTestVM(t)
+	type payload struct {
+		Style int
+	}
+	mustDefineGlobal(t, vm, "read", NativeFunction(func(_ *VM, args Values) any {
+		return Parse[payload](args.Get(0)).Style
+	}))
+	got, e := vm.Run(context.Background(), `String(read({ style: 2 }))`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if got.String() != "2" {
+		t.Fatalf("Parse = %q", got.String())
+	}
+}
+
+func TestParseIntoDetachesNestedProxy(t *testing.T) {
+	vm := newPoolTestVM(t)
+	v, e := vm.Run(context.Background(), `({
+		props: { nested: new Proxy({ kind: "doc" }, {}) }
+	})`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	var parsed struct {
+		Props types.M
+	}
+	if e := v.ParseInto(&parsed); e != nil {
+		t.Fatal(e)
+	}
+	nested, ok := parsed.Props["nested"].(types.M)
+	if !ok {
+		t.Fatalf("nested type = %T", parsed.Props["nested"])
+	}
+	if nested["kind"] != "doc" {
+		t.Fatalf("nested.kind = %#v", nested["kind"])
+	}
+}
+
+func TestParseIntoDoesNotRerunNestedGetters(t *testing.T) {
+	vm := newScriptTestVM(t)
+	v, e := vm.Run(context.Background(), `
+		var f = new TempFile();
+		f.write(Bytes.fromString("payload"));
+		f.seekTo(0, SEEK_START);
+		var n = 0;
+		({
+			props: {
+				nested: {
+					get payload() { n++; return f.readAsString(); }
+				}
+			}
+		})
+	`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	var parsed struct {
+		Props types.M
+	}
+	if e := v.ParseInto(&parsed); e != nil {
+		t.Fatal(e)
+	}
+	nested, ok := parsed.Props["nested"].(types.M)
+	if !ok {
+		t.Fatalf("nested type = %T", parsed.Props["nested"])
+	}
+	if nested["payload"] != "payload" {
+		t.Fatalf("payload = %#v", nested["payload"])
+	}
+	got, e := vm.Run(context.Background(), `n`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if got.Integer() != 1 {
+		t.Fatalf("getter ran %d times", got.Integer())
+	}
+}
+
+func TestParseIntoDetachesErrorCustomProps(t *testing.T) {
+	vm := newPoolTestVM(t)
+	v, e := vm.Run(context.Background(), `({
+		props: {
+			err: Object.assign(new Error("oops"), {
+				nested: new Proxy({ kind: "doc" }, {})
+			})
+		}
+	})`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	var parsed struct {
+		Props types.M
+	}
+	if e := v.ParseInto(&parsed); e != nil {
+		t.Fatal(e)
+	}
+	errObj, ok := parsed.Props["err"].(types.M)
+	if !ok {
+		t.Fatalf("err type = %T", parsed.Props["err"])
+	}
+	if errObj["message"] != "oops" {
+		t.Fatalf("err.message = %#v", errObj["message"])
+	}
+	nested, ok := errObj["nested"].(types.M)
+	if !ok {
+		t.Fatalf("nested type = %T", errObj["nested"])
+	}
+	if nested["kind"] != "doc" {
+		t.Fatalf("nested.kind = %#v", nested["kind"])
+	}
+
+	vm2 := newPoolTestVM(t)
+	if e := vm2.DefineGlobal("err", parsed.Props["err"]); e != nil {
+		t.Fatal(e)
+	}
+	got, e := vm2.Run(context.Background(), `err.nested.kind`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if got.String() != "doc" {
+		t.Fatalf("cross-VM kind = %q", got.String())
+	}
+}
+
+func TestFinalizeScriptErrorDoesNotUnwrapGenericErrors(t *testing.T) {
+	inner := errors.New("inner")
+	wrapped := fmt.Errorf("outer: %w", inner)
+	if got := finalizeScriptError(nil, wrapped, nil); got != wrapped {
+		t.Fatalf("finalizeScriptError unwrapped generic error: %v", got)
+	}
+}
+
+func TestValueMissingPropertyAccessors(t *testing.T) {
+	vm := newPoolTestVM(t)
+	obj, e := vm.Run(context.Background(), `({path: "file"})`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if obj.Get("isDir").Bool() {
+		t.Fatal("missing isDir should be false")
+	}
+	if obj.Get("size").Integer() != 0 {
+		t.Fatalf("missing size = %d", obj.Get("size").Integer())
+	}
+	if obj.Get("missing").Float() != 0 {
+		t.Fatalf("missing float = %v", obj.Get("missing").Float())
+	}
+	if !obj.Get("nope").IsUndefined() {
+		t.Fatal("missing property should be undefined")
+	}
+}
+
+func TestStringMapHandlesDisappearingKeys(t *testing.T) {
+	for _, source := range []string{
+		`({get A(){delete this.B;return "a"},B:"b"})`,
+		`new Proxy({}, {ownKeys(){return ["B"]},getOwnPropertyDescriptor(){return {enumerable:true,configurable:true}}})`,
+	} {
+		t.Run(source, func(t *testing.T) {
+			vm := newScriptTestVM(t)
+			var got types.SM
+			e := vm.Do(context.Background(), func() error {
+				v, e := vm.Run(context.Background(), source, "")
+				if e != nil {
+					return e
+				}
+				got = v.SM()
+				return nil
+			})
+			if e != nil {
+				t.Fatal(e)
+			}
+			if _, ok := got["B"]; ok {
+				t.Fatalf("deleted key retained: %#v", got)
+			}
+		})
+	}
+}
+
+func TestProxyArraysPreserveShape(t *testing.T) {
+	vm := newPoolTestVM(t)
+	e := vm.Do(context.Background(), func() error {
+		v, e := vm.Run(context.Background(), `new Proxy(["x", "y"], {})`, "")
+		if e != nil {
+			return e
+		}
+		if !v.IsArray() || len(v.Array()) != 2 {
+			t.Fatal("proxy array rejected")
+		}
+		var array []string
+		if e := v.ParseInto(&array); e != nil {
+			return e
+		}
+		if len(array) != 2 || array[1] != "y" {
+			t.Fatalf("array=%v", array)
+		}
+		var detached any
+		if e := v.ParseInto(&detached); e != nil {
+			return e
+		}
+		if _, ok := detached.([]any); !ok {
+			t.Fatalf("detached array is %T", detached)
+		}
+		_, e = vm.Run(context.Background(), `
+     if (urlUtils.buildSearchParams({a: new Proxy(["x", "y"], {})}) !== "?a=x&a=y")
+       throw new Error("proxy query values lost");
+     for (const f of [urlUtils.build, urlUtils.buildSearchParams]) {
+       let rejected = false;
+       try { f(new Proxy([], {})); } catch (e) { rejected = e instanceof TypeError; }
+       if (!rejected) throw new Error("array accepted as object");
+     }
+     Array.isArray = () => false;
+   `, "")
+		if e != nil {
+			return e
+		}
+		if !v.IsArray() {
+			t.Fatal("array intrinsic was overwritten")
+		}
+		return nil
+	})
+	if e != nil {
+		t.Fatal(e)
+	}
 }

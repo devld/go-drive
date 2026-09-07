@@ -1,5 +1,5 @@
 // @name GitHub
-// @version 1.0.3
+// @version 1.0.4
 // @description Map a GitHub repository branch as a read-only virtual drive.
 //
 // Configure the repository owner, repository name, and optionally a branch
@@ -12,13 +12,13 @@
 // Git LFS objects and git submodules are not downloaded. GitHub also rejects
 // files larger than 100 MB outside LFS.
 
-var API_BASE = "https://api.github.com";
-var RAW_BASE = "https://raw.githubusercontent.com";
-var READONLY_META = { Readable: true, Writable: false };
-var UNREADABLE_META = { Readable: false, Writable: false };
+const API_BASE = "https://api.github.com";
+const RAW_BASE = "https://raw.githubusercontent.com";
+const READONLY_META = { readable: true, writable: false };
+const UNREADABLE_META = { readable: false, writable: false };
 
 /**
- * @typedef {DriveInstanceState & {
+ * @typedef {DriveAdapterState & {
  *   owner: string,
  *   repo: string,
  *   branch: string,
@@ -31,51 +31,50 @@ defineDrive(
   {
     configForm: [
       {
-        Label: "Repository Owner",
-        Description: "The owner of the GitHub repository (e.g. 'devld' or 'facebook')",
-        Type: "text",
-        Field: "owner",
-        Required: true,
+        label: "Repository Owner",
+        description: "The owner of the GitHub repository (e.g. 'devld' or 'facebook')",
+        type: "text",
+        field: "owner",
+        required: true,
       },
       {
-        Label: "Repository Name",
-        Description: "The name of the GitHub repository (e.g. 'go-drive' or 'react')",
-        Type: "text",
-        Field: "repo",
-        Required: true,
+        label: "Repository Name",
+        description: "The name of the GitHub repository (e.g. 'go-drive' or 'react')",
+        type: "text",
+        field: "repo",
+        required: true,
       },
       {
-        Label: "Branch",
-        Description: "Branch, tag, or commit SHA. Leave empty to use the repository default branch.",
-        Type: "text",
-        Field: "branch",
-        Required: false,
+        label: "Branch",
+        description: "Branch, tag, or commit SHA. Leave empty to use the repository default branch.",
+        type: "text",
+        field: "branch",
+        required: false,
       },
       {
-        Label: "GitHub Token",
-        Description: "Personal access token for private repositories and higher rate limits",
-        Type: "password",
-        Field: "token",
-        Required: false,
+        label: "GitHub Token",
+        description: "Personal access token for private repositories and higher rate limits",
+        type: "password",
+        field: "token",
+        required: false,
       },
       entryCacheTTLFormItem("5m"),
     ],
 
-    validateConfig: function (config) {
+    validateConfig(config) {
       if (config.owner && /[/\s]/.test(config.owner)) {
-        throw ErrBadRequest("invalid repository owner");
+        throw new BadRequestError("invalid repository owner");
       }
       if (config.repo && /[/\s]/.test(config.repo)) {
-        throw ErrBadRequest("invalid repository name");
+        throw new BadRequestError("invalid repository name");
       }
     },
 
     /**
-     * @param {Context} ctx
      * @param {SM} config
      * @returns {GitHubDriveState}
      */
-    createInstance: function (ctx, config) {
+    createInstance(config) {
       return {
         entryCacheTTL: config.cache_ttl,
         writable: false,
@@ -88,57 +87,45 @@ defineDrive(
     },
   },
   {
-    get: function (ctx, path) {
+    get(path) {
       console.debug("get", path);
-      var result = getContents(this, ctx, path);
+      const result = getContents(this, path);
       if (result.tooMany) {
         return makeEntry(true, path, -1, true);
       }
       return toEntry(result.data, path);
     },
 
-    list: function (ctx, path) {
+    list(path) {
       console.debug("list", path);
-      var result = getContents(this, ctx, path);
+      const result = getContents(this, path);
       if (result.tooMany) {
-        return listViaTree(this, ctx, path);
+        return listViaTree(this, path);
       }
       if (!Array.isArray(result.data)) {
-        throw ErrNotFound();
+        throw new NotFoundError();
       }
-      var entries = [];
-      for (var i = 0; i < result.data.length; i++) {
-        entries.push(toEntry(result.data[i]));
-      }
-      return entries;
+      return result.data.map((item) => toEntry(item));
     },
 
-    getURL: function (ctx, entry) {
-      console.debug("getURL", entry.Path);
-      if (entry.IsDir || entry.Meta && entry.Meta.Readable === false) {
-        throw ErrUnsupported();
+    getURL(entry) {
+      console.debug("getURL", entry.path);
+      if (entry.isDir || entry.meta?.readable === false) {
+        throw new UnsupportedError();
       }
-      var ref = rawRef(this, ctx);
-      var url =
-        RAW_BASE +
-        "/" +
-        encodeURIComponent(this.owner) +
-        "/" +
-        encodeURIComponent(this.repo) +
-        "/" +
-        ref +
-        "/" +
-        encodePath(entry.Path);
+      const ref = rawRef(this);
+      const url =
+        `${RAW_BASE}/${encodeURIComponent(this.owner)}/${encodeURIComponent(this.repo)}/${ref}/${encodePath(entry.path)}`;
       if (!this.token) {
-        return { URL: url };
+        return { url };
       }
       return {
-        URL: url,
-        Header: {
+        url,
+        header: {
           Authorization: "Bearer " + this.token,
           "User-Agent": "go-drive",
         },
-        Proxy: true,
+        proxy: true,
       };
     },
   }
@@ -149,24 +136,18 @@ defineDrive(
  * @returns {string}
  */
 function repoAPI(drive) {
-  return (
-    "/repos/" +
-    encodeURIComponent(drive.owner) +
-    "/" +
-    encodeURIComponent(drive.repo)
-  );
+  return `/repos/${encodeURIComponent(drive.owner)}/${encodeURIComponent(drive.repo)}`;
 }
 
 /**
  * @param {GitHubDriveState} drive
- * @param {Context} ctx
  * @returns {string}
  */
-function branchRef(drive, ctx) {
+function branchRef(drive) {
   if (drive.branch) return drive.branch;
   if (drive.$resolvedBranch) return drive.$resolvedBranch;
-  var repo = requestJSON(drive, ctx, "GET", repoAPI(drive));
-  var resolved = repo.default_branch || "main";
+  const repo = requestJSON(drive, "GET", repoAPI(drive));
+  const resolved = repo.default_branch || "main";
   drive.$resolvedBranch = resolved;
   return resolved;
 }
@@ -175,17 +156,15 @@ function branchRef(drive, ctx) {
  * raw.githubusercontent.com treats `/` in the ref as extra path segments, so
  * refs that contain slashes are resolved to a commit SHA.
  * @param {GitHubDriveState} drive
- * @param {Context} ctx
  * @returns {string}
  */
-function rawRef(drive, ctx) {
-  var ref = branchRef(drive, ctx);
-  if (ref.indexOf("/") < 0) {
+function rawRef(drive) {
+  const ref = branchRef(drive);
+  if (!ref.includes("/")) {
     return encodeURIComponent(ref);
   }
-  var commit = requestJSON(
+  const commit = requestJSON(
     drive,
-    ctx,
     "GET",
     repoAPI(drive) + "/commits/" + encodeURIComponent(ref)
   );
@@ -198,12 +177,7 @@ function rawRef(drive, ctx) {
  */
 function encodePath(path) {
   if (!path) return "";
-  return path
-    .split("/")
-    .map(function (segment) {
-      return encodeURIComponent(segment);
-    })
-    .join("/");
+  return path.split("/").map(encodeURIComponent).join("/");
 }
 
 /**
@@ -219,38 +193,36 @@ function fileSize(n) {
  * @param {string} path
  * @param {number} size
  * @param {boolean} readable
- * @returns {Entry}
+ * @returns {EntryRecord}
  */
 function makeEntry(isDir, path, size, readable) {
   return {
-    IsDir: isDir,
-    Path: pathUtils.clean(path || ""),
-    Size: isDir ? -1 : size,
-    ModTime: -1,
-    Meta: readable ? READONLY_META : UNREADABLE_META,
+    isDir,
+    path: pathUtils.clean(path || ""),
+    size: isDir ? -1 : size,
+    modTime: -1,
+    meta: readable ? READONLY_META : UNREADABLE_META,
   };
 }
 
 /**
  * @param {GitHubDriveState} drive
- * @param {Context} ctx
  * @param {string} path
  */
-function contentsPath(drive, ctx, path) {
-  var url = repoAPI(drive) + "/contents";
+function contentsPath(drive, path) {
+  let url = repoAPI(drive) + "/contents";
   if (path) url += "/" + encodePath(path);
-  return url + "?ref=" + encodeURIComponent(branchRef(drive, ctx));
+  return url + "?ref=" + encodeURIComponent(branchRef(drive));
 }
 
 /**
  * @param {GitHubDriveState} drive
- * @param {Context} ctx
  * @param {string} path
  * @returns {{ tooMany?: boolean, data?: any }}
  */
-function getContents(drive, ctx, path) {
-  var parsed = parseGitHubResponse(
-    request(drive, ctx, "GET", contentsPath(drive, ctx, path))
+function getContents(drive, path) {
+  const parsed = parseGitHubResponse(
+    request(drive, "GET", contentsPath(drive, path))
   );
   if (parsed.status === 403 && isTooManyFiles(parsed.data)) {
     return { tooMany: true };
@@ -261,79 +233,56 @@ function getContents(drive, ctx, path) {
 
 /**
  * @param {GitHubDriveState} drive
- * @param {Context} ctx
  * @param {string} path
- * @returns {Entry[]}
+ * @returns {EntryRecord[]}
  */
-function listViaTree(drive, ctx, path) {
-  var tree = requestJSON(
+function listViaTree(drive, path) {
+  const tree =     requestJSON(
     drive,
-    ctx,
     "GET",
-    repoAPI(drive) + "/git/trees/" + encodeURIComponent(treeShaAt(drive, ctx, path))
+    repoAPI(drive) + "/git/trees/" + encodeURIComponent(treeShaAt(drive, path))
   );
   if (tree.truncated) {
-    throw ErrRemoteApi(403, "GitHub tree listing is truncated for this directory");
+    throw new RemoteApiError(403, "GitHub tree listing is truncated for this directory");
   }
-  var entries = [];
-  var items = tree.tree || [];
-  for (var i = 0; i < items.length; i++) {
-    var item = items[i];
+  return (tree.tree || []).map((item) => {
     if (item.type === "commit") {
-      entries.push(
-        makeEntry(false, path ? pathUtils.join(path, item.path) : item.path, -1, false)
-      );
-      continue;
+      return makeEntry(false, path ? pathUtils.join(path, item.path) : item.path, -1, false);
     }
-    var isDir = item.type === "tree";
-    entries.push(
-      makeEntry(
-        isDir,
-        path ? pathUtils.join(path, item.path) : item.path,
-        fileSize(item.size),
-        true
-      )
+    const isDir = item.type === "tree";
+    return makeEntry(
+      isDir,
+      path ? pathUtils.join(path, item.path) : item.path,
+      fileSize(item.size),
+      true
     );
-  }
-  return entries;
+  });
 }
 
 /**
  * @param {GitHubDriveState} drive
- * @param {Context} ctx
  * @param {string} path
  * @returns {string}
  */
-function treeShaAt(drive, ctx, path) {
-  var current = branchRef(drive, ctx);
+function treeShaAt(drive, path) {
+  let current = branchRef(drive);
   if (!path) {
-    var root = requestJSON(
-      drive,
-      ctx,
+    const root =     requestJSON(
+    drive,
       "GET",
       repoAPI(drive) + "/git/trees/" + encodeURIComponent(current)
     );
     return root.sha;
   }
-  var parts = path.split("/");
-  for (var i = 0; i < parts.length; i++) {
-    ctx.Err();
-    var tree = requestJSON(
-      drive,
-      ctx,
+  for (const part of path.split("/")) {
+    const tree =     requestJSON(
+    drive,
       "GET",
       repoAPI(drive) + "/git/trees/" + encodeURIComponent(current)
     );
-    var found = null;
-    var items = tree.tree || [];
-    for (var j = 0; j < items.length; j++) {
-      if (items[j].path === parts[i] && items[j].type === "tree") {
-        found = items[j].sha;
-        break;
-      }
-    }
-    if (!found) throw ErrNotFound();
-    current = found;
+    const found = (tree.tree || []).find((item) => item.path === part && item.type === "tree");
+    if (!found) throw new NotFoundError();
+    current = found.sha;
   }
   return current;
 }
@@ -341,13 +290,13 @@ function treeShaAt(drive, ctx, path) {
 /**
  * @param {any} data
  * @param {string} [path]
- * @returns {Entry}
+ * @returns {EntryRecord}
  */
 function toEntry(data, path) {
   if (Array.isArray(data)) {
     return makeEntry(true, path || "", -1, true);
   }
-  var entryPath = data.path || path || "";
+  const entryPath = data.path || path || "";
   if (data.type === "dir") {
     return makeEntry(true, entryPath, -1, true);
   }
@@ -362,34 +311,28 @@ function toEntry(data, path) {
  * @returns {boolean}
  */
 function isTooManyFiles(data) {
-  return !!(
-    data &&
-    data.message &&
-    String(data.message).indexOf("too many files") >= 0
-  );
+  return !!data?.message && String(data.message).includes("too many files");
 }
 
 /**
  * @param {GitHubDriveState} drive
- * @param {Context} ctx
  * @param {HttpMethod} method
  * @param {string} path
  * @returns {any}
  */
-function requestJSON(drive, ctx, method, path) {
-  var parsed = parseGitHubResponse(request(drive, ctx, method, path));
+function requestJSON(drive, method, path) {
+  const parsed = parseGitHubResponse(request(drive, method, path));
   throwIfGitHubError(parsed);
   return parsed.data;
 }
 
 /**
  * @param {GitHubDriveState} drive
- * @param {Context} ctx
  * @param {HttpMethod} method
  * @param {string} path
  */
-function request(drive, ctx, method, path) {
-  var headers = {
+function request(drive, method, path) {
+  const headers = {
     Accept: "application/vnd.github+json",
     "User-Agent": "go-drive",
     "X-GitHub-Api-Version": "2022-11-28",
@@ -398,46 +341,45 @@ function request(drive, ctx, method, path) {
     headers.Authorization = "Bearer " + drive.token;
   }
   console.debug("http", method, path);
-  return http(ctx, method, API_BASE + path, { headers: headers });
+  return http(API_BASE + path, { method, headers });
 }
 
 /**
  * @param {HttpResponse} resp
  */
 function parseGitHubResponse(resp) {
-  var status = resp.Status;
-  var remaining = resp.Headers.Get("X-RateLimit-Remaining");
-  var text = resp.Text();
-  var data = null;
+  const status = resp.status;
+  const remaining = resp.headers.get("X-RateLimit-Remaining");
+  const text = resp.text();
+  let data = null;
   if (text) {
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw ErrRemoteApi(status, "Failed to parse JSON");
+      throw new RemoteApiError(status, "Failed to parse JSON");
     }
   }
-  return { status: status, remaining: remaining, data: data };
+  return { status, remaining, data };
 }
 
 /**
  * @param {{ status: number, remaining: string, data: any }} parsed
  */
 function throwIfGitHubError(parsed) {
-  var status = parsed.status;
-  var data = parsed.data;
-  var message = (data && data.message) || "GitHub API error";
-  if (status === 404) throw ErrNotFound();
-  if (status === 401) throw ErrNotAllowed("Invalid GitHub token");
+  const { status, data } = parsed;
+  const message = data?.message || "GitHub API error";
+  if (status === 404) throw new NotFoundError();
+  if (status === 401) throw new NotAllowedError("Invalid GitHub token");
   if (status === 403) {
     if (parsed.remaining === "0" || /rate limit/i.test(message)) {
-      throw ErrRemoteApi(
+      throw new RemoteApiError(
         403,
         "GitHub API rate limit exceeded. Provide a GitHub token for higher limits."
       );
     }
-    throw ErrNotAllowed(message);
+    throw new NotAllowedError(message);
   }
   if (status < 200 || status >= 400) {
-    throw ErrRemoteApi(status, message);
+    throw new RemoteApiError(status, message);
   }
 }

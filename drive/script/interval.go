@@ -39,7 +39,7 @@ func (sd *ScriptDrive) prepareIntervals(raw *s.Value) error {
 	intervals := make([]*driveInterval, 0, len(specs))
 	for _, spec := range specs {
 		name := ""
-		if nv := spec.Get("Name"); nv != nil && !nv.IsNil() {
+		if nv := spec.Get("name"); !nv.IsNil() {
 			name = nv.String()
 		}
 		if name == "" {
@@ -49,13 +49,13 @@ func (sd *ScriptDrive) prepareIntervals(raw *s.Value) error {
 			return err.NewNotAllowedMessageError("duplicate interval name: " + name)
 		}
 		seen[name] = struct{}{}
-		interval, ok := s.DurationFrom(spec.Get("Interval"))
+		interval, ok := s.ParseDuration(spec.Get("interval"))
 		if !ok || interval < minInterval {
 			return err.NewNotAllowedMessageError("interval must be a duration >= 1ms: " + name)
 		}
 		timeout := defaultIntervalTimeout
-		if tv := spec.Get("Timeout"); tv != nil && !tv.IsNil() {
-			timeout, ok = s.DurationFrom(tv)
+		if tv := spec.Get("timeout"); !tv.IsNil() {
+			timeout, ok = s.ParseDuration(tv)
 			if !ok {
 				return err.NewNotAllowedMessageError("interval timeout must be a duration >= 1ms: " + name)
 			}
@@ -66,7 +66,7 @@ func (sd *ScriptDrive) prepareIntervals(raw *s.Value) error {
 			}
 		}
 		immediately := false
-		if iv := spec.Get("Immediately"); iv != nil && !iv.IsNil() {
+		if iv := spec.Get("immediately"); !iv.IsNil() {
 			immediately = iv.Bool()
 		}
 		intervals = append(intervals, &driveInterval{
@@ -130,20 +130,23 @@ func (sd *ScriptDrive) fireInterval(job *driveInterval) time.Duration {
 	defer cancel()
 
 	next := job.interval
-	_, e := sd.withVM(ctx, func(vm *s.VM) (*s.Value, error) {
-		v, e := sd.call(ctx, vm, "onInterval", s.NewContext(vm, ctx), job.name)
+	e := sd.withVM(ctx, func(vm *s.VM) error {
+		v, e := sd.call(ctx, vm, "onInterval", job.name)
 		if e != nil {
-			return nil, e
+			return e
 		}
 		if v == nil || v.IsNil() {
-			return nil, nil
+			return nil
 		}
-		d := s.RequireDuration(v, "onInterval")
+		d, ok := s.ParseDuration(v)
+		if !ok {
+			return err.NewNotAllowedMessageError("onInterval requires a Duration or duration string")
+		}
 		if d < minInterval {
-			vm.ThrowTypeError("onInterval must return a duration >= 1ms")
+			return err.NewNotAllowedMessageError("onInterval must return a duration >= 1ms")
 		}
 		next = d
-		return nil, nil
+		return nil
 	})
 	if e != nil {
 		if sd.intervalCtx.Err() != nil || errors.Is(e, s.ErrVMPoolClosed) {

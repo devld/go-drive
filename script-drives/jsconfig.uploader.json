@@ -5,16 +5,14 @@
     "strict": true,
     "noImplicitAny": false,
     "skipLibCheck": true,
-    "target": "ES2016",
-    "lib": ["ES2016"],
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
     "types": [],
     "module": "ES2015",
     "moduleDetection": "force"
   },
   "include": [
-    "./*.js",
-    "../docs/scripts/global.d.ts",
-    "../docs/scripts/env/drive.d.ts"
-  ],
-  "exclude": ["./*-uploader.js"]
+    "./*-uploader.js",
+    "../docs/drive-uploaders/types.d.ts"
+  ]
 }

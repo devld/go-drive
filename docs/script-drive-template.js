@@ -14,20 +14,20 @@
 
 function oauthRequest(utils) {
   return {
-    Endpoint: {
-      AuthURL: "https://example.com/oauth/authorize",
-      TokenURL: "https://example.com/oauth/token",
+    endpoint: {
+      authUrl: "https://example.com/oauth/authorize",
+      tokenUrl: "https://example.com/oauth/token",
     },
-    RedirectURL: utils.Config.OAuthRedirectURI,
-    Scopes: ["files.read"],
-    Text: "Authorize Example Cloud",
+    redirectUrl: utils.config.oauthRedirectURI,
+    scopes: ["files.read"],
+    text: "Authorize Example Cloud",
   };
 }
 
 function oauthCredentials(config) {
   return {
-    ClientID: config.client_id,
-    ClientSecret: config.client_secret,
+    clientID: config.client_id,
+    clientSecret: config.client_secret,
   };
 }
 
@@ -37,87 +37,86 @@ defineDrive(
     // runs. Field names beginning with '_' are reserved by the runtime.
     configForm: [
       {
-        Label: "Client ID",
-        Description: "The OAuth application's client ID.",
-        Type: "text",
-        Field: "client_id",
-        Required: true,
+        label: "Client ID",
+        description: "The OAuth application's client ID.",
+        type: "text",
+        field: "client_id",
+        required: true,
       },
       {
-        Label: "Client Secret",
-        Description: "The OAuth application's client secret.",
-        Type: "password",
-        Field: "client_secret",
-        Required: true,
+        label: "Client Secret",
+        description: "The OAuth application's client secret.",
+        type: "password",
+        field: "client_secret",
+        required: true,
       },
       entryCacheTTLFormItem("2h"),
     ],
 
-    initConfig: function (ctx, config, utils) {
-      var result = utils.OAuthInitConfig(
+    initConfig(config, utils) {
+      const result = utils.oauthInitConfig(
         oauthRequest(utils),
         oauthCredentials(config)
       );
-      return result.Config;
+      return result.config;
     },
 
-    init: function (ctx, data, config, utils) {
-      utils.OAuthInit(
-        ctx,
+    init(data, config, utils) {
+      utils.oauthInit(
         data,
         oauthRequest(utils),
         oauthCredentials(config)
       );
     },
 
-    createInstance: function (ctx, config, utils) {
+    createInstance(config, utils) {
       return {
         entryCacheTTL: config.cache_ttl,
-        oauth: utils.OAuthLoad(oauthRequest(utils), oauthCredentials(config)),
+        oauth: utils.oauthLoad(oauthRequest(utils), oauthCredentials(config)),
       };
     },
   },
   {
-    get: function (ctx, path) {
+    get(path) {
       console.debug("get", path);
       // TODO request
       return {
-        Path: path,
-        IsDir: false,
-        Size: -1,
-        ModTime: -1,
+        path,
+        isDir: false,
+        size: -1,
+        modTime: -1,
       };
     },
 
-    list: function (ctx, path) {
+    list(path) {
       console.debug("list", path);
       // TODO request
       return [];
     },
 
-    save: function (ctx, path, size, override, reader) {
+    save(path, size, override, reader, onProgress) {
       // TODO upload
     },
 
-    makeDir: function (ctx, path) {
+    makeDir(path) {
       // TODO request
     },
 
-    copy: function (ctx, from, to, override) {
-      throw ErrUnsupported();
+    copy(from, to, override, onProgress) {
+      throw new UnsupportedError();
     },
 
-    move: function (ctx, from, to, override) {
-      throw ErrUnsupported();
+    move(from, to, override, onProgress) {
+      throw new UnsupportedError();
     },
 
-    delete: function (ctx, path) {
+    delete(path, onProgress) {
       console.debug("delete", path);
       // TODO request
     },
 
-    getURL: function (ctx, entry) {
-      console.debug("getURL", entry.Path);
+    getURL(entry) {
+      console.debug("getURL", entry.path);
       // TODO
     },
   }

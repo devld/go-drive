@@ -2,6 +2,8 @@ package script
 
 import (
 	"context"
+	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -15,7 +17,7 @@ func TestURLUtilsParseAndBuild(t *testing.T) {
     "https://alice:secret@example.com:8443/a%2Fb/file.txt" +
     "?tag=a&tag=b&q=hello+world#frag%20ment"
   );
-  return [
+  return JSON.stringify([
     parsed.origin,
     parsed.protocol,
     parsed.username,
@@ -25,14 +27,33 @@ func TestURLUtilsParseAndBuild(t *testing.T) {
     parsed.port,
     parsed.pathname,
     typeof parsed.search,
-    JSON.stringify(parsed.searchParams),
+    parsed.searchParams,
     parsed.hash
-  ].join("|");
+  ]);
 })()
 `)
-	want := "https://example.com:8443|https:|alice|secret|example.com:8443|example.com|8443|/a%2Fb/file.txt|undefined|{\"q\":[\"hello world\"],\"tag\":[\"a\",\"b\"]}|#frag%20ment"
-	if got != want {
-		t.Fatalf("urlUtils.parse() = %q, want %q", got, want)
+	var parts []any
+	if e := json.Unmarshal([]byte(got), &parts); e != nil {
+		t.Fatal(e)
+	}
+	if len(parts) != 11 {
+		t.Fatalf("parse parts = %#v", parts)
+	}
+	wantPrefix := []any{
+		"https://example.com:8443", "https:", "alice", "secret",
+		"example.com:8443", "example.com", "8443", "/a%2Fb/file.txt", "undefined",
+	}
+	for i, w := range wantPrefix {
+		if parts[i] != w {
+			t.Fatalf("parse[%d] = %#v, want %#v", i, parts[i], w)
+		}
+	}
+	assertJSONEqual(t, parts[9], map[string]any{
+		"q":   []any{"hello world"},
+		"tag": []any{"a", "b"},
+	})
+	if parts[10] != "#frag%20ment" {
+		t.Fatalf("hash = %#v", parts[10])
 	}
 
 	got = evalJSString(t, vm, `
@@ -41,12 +62,13 @@ func TestURLUtilsParseAndBuild(t *testing.T) {
     "https://alice:secret@example.com:8443/a%2Fb/file.txt" +
     "?tag=a&tag=b&q=hello+world#frag%20ment"
   );
-  parsed.pathname = "/changed%2Ffile";
-  parsed.searchParams.q = ["x", "y"];
-  return urlUtils.build(parsed);
+  return urlUtils.build(Object.assign({}, parsed, {
+    pathname: "/changed%2Ffile",
+    searchParams: Object.assign({}, parsed.searchParams, {q: ["x", "y"]})
+  }));
 })()
 `)
-	want = "https://alice:secret@example.com:8443/changed%2Ffile?q=x&q=y&tag=a&tag=b#frag%20ment"
+	want := "https://alice:secret@example.com:8443/changed%2Ffile?q=x&q=y&tag=a&tag=b#frag%20ment"
 	if got != want {
 		t.Fatalf("urlUtils.build() after JS mutation = %q, want %q", got, want)
 	}
@@ -56,13 +78,15 @@ func TestURLUtilsSearchParams(t *testing.T) {
 	vm := newScriptTestVM(t)
 
 	got := evalJSString(t, vm, `JSON.stringify(urlUtils.parseSearchParams("?b=2&a=1&a=two&space=hello+world&flag"))`)
-	want := "{\"a\":[\"1\",\"two\"],\"b\":[\"2\"],\"flag\":[\"\"],\"space\":[\"hello world\"]}"
-	if got != want {
-		t.Fatalf("urlUtils.parseSearchParams() = %q, want %q", got, want)
-	}
+	assertJSONEqual(t, json.RawMessage(got), map[string]any{
+		"a":     []any{"1", "two"},
+		"b":     []any{"2"},
+		"flag":  []any{""},
+		"space": []any{"hello world"},
+	})
 
 	got = evalJSString(t, vm, `urlUtils.buildSearchParams({b: ["2"], a: ["1", "two"], space: ["hello world"]})`)
-	want = "?a=1&a=two&b=2&space=hello+world"
+	want := "?a=1&a=two&b=2&space=hello+world"
 	if got != want {
 		t.Fatalf("urlUtils.buildSearchParams() = %q, want %q", got, want)
 	}
@@ -104,8 +128,31 @@ func TestURLUtilsRejectsInvalidInput(t *testing.T) {
 
 func assertURLUtilsError(t *testing.T, vm *VM, code, want string) {
 	t.Helper()
-	_, e := vm.Run(context.Background(), code)
+	_, e := vm.Run(context.Background(), code, "")
 	if e == nil || !strings.Contains(e.Error(), want) {
 		t.Fatalf("running %s error = %v, want an error containing %q", code, e, want)
+	}
+}
+
+func assertJSONEqual(t *testing.T, got, want any) {
+	t.Helper()
+	normalize := func(v any) any {
+		switch v := v.(type) {
+		case string:
+			var parsed any
+			if e := json.Unmarshal([]byte(v), &parsed); e == nil {
+				return parsed
+			}
+		case json.RawMessage:
+			var parsed any
+			if e := json.Unmarshal(v, &parsed); e == nil {
+				return parsed
+			}
+		}
+		return v
+	}
+	g, w := normalize(got), normalize(want)
+	if !reflect.DeepEqual(g, w) {
+		t.Fatalf("JSON = %#v, want %#v", g, w)
 	}
 }

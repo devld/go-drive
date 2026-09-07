@@ -3,7 +3,7 @@ title: 自动任务
 description: 使用 Cron 计划或文件事件触发 go-drive 的复制、移动、删除和 JavaScript 操作，并查看执行历史。
 lang: zh-CN
 translation_key: jobs
-source_hash: d378f0aa8a657538ffbaee9a3c00027955053a2d50db178fa3f53fb98647f70e
+source_hash: 7347155ee00a551d8a796f26d63f0e956d2daf59226f1a6f4f27b0c632ea55a5
 ---
 
 # 自动任务
@@ -79,7 +79,7 @@ mkdir(path)
 log(message)
 ```
 
-以及通用运行时中的 `http`、`newContext`、`newContextWithTimeout`、`sleep`、`pathUtils`、`urlUtils`、`encUtils`、错误构造与 Drive API。完整类型定义位于代码仓库：
+以及通用运行时中的 `http`、`sleep`、`pathUtils`、`urlUtils`、`Bytes`、`Hash`、错误类与 Drive API。Go 传给脚本的值（包括 `$event` 和 `urlUtils.parse` 的结果）是只读的，修改前需要先复制。完整类型定义位于代码仓库：
 
 - [`docs/scripts/global.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/global.d.ts)
 - [`docs/scripts/env/jobs.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/env/jobs.d.ts)
@@ -94,19 +94,16 @@ log('trigger: ' + JSON.stringify($event))
 cp('incoming/**/*.jpg', 'archive', true)
 
 // 调用外部 webhook
-var ctx = newContextWithTimeout(newContext(), ms(10000))
+const resp = http('https://example.com/hook', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify($event),
+  timeout: '10s'
+})
 try {
-  var resp = http(ctx, 'POST', 'https://example.com/hook', {
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify($event)
-  })
-  try {
-    log('webhook: ' + resp.Status)
-  } finally {
-    resp.Dispose()
-  }
+  log('webhook: ' + resp.status)
 } finally {
-  ctx.Cancel()
+  resp.dispose()
 }
 ```
 

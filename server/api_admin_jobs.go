@@ -7,6 +7,7 @@ import (
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	s "go-drive/script"
 	"go-drive/server/job"
 	"go-drive/storage"
 	"io"
@@ -234,7 +235,7 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 				w.Flush()
 			})
 			if e != nil {
-				w.Write([]byte("ERROR: " + e.Error()))
+				_, _ = w.Write([]byte("ERROR: " + s.FormatError(e)))
 			}
 			return nil, e
 		},

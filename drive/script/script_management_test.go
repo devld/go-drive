@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"go-drive/common"
 	"go-drive/common/driveutil"
@@ -38,13 +40,13 @@ func TestRegisterAllScriptDrivesRegistersExpandedFactory(t *testing.T) {
 
 defineDrive(
   {
-    configForm: [{ Label: "Token", Field: "token", Type: "password" }],
+    configForm: [{ label: "Token", field: "token", type: "password" }],
     createInstance: function () { return {}; }
   },
   {
-    get: function () { return { Path: "x", IsDir: false, Size: 1, ModTime: -1 }; },
+    get: function () { return { path: "x", isDir: false, size: 1, modTime: -1 }; },
     list: function () { return []; },
-    getURL: function () { return { URL: "https://example.com" }; }
+    getURL: function () { return { url: "https://example.com" }; }
   }
 );
 `
@@ -241,12 +243,12 @@ func TestGetDriveScriptConfigForm(t *testing.T) {
 // @description Example description
 
 defineDrive({
-  configForm: [{ Label: "Token", Field: "token", Type: "password", Required: true }],
+  configForm: [{ label: "Token", field: "token", type: "password", required: true }],
   createInstance: function () { return {}; }
 }, {
-  get: function () { return { Path: "x", IsDir: false, Size: 1, ModTime: -1 }; },
+  get: function () { return { path: "x", isDir: false, size: 1, modTime: -1 }; },
   list: function () { return []; },
-  getURL: function () { return { URL: "https://example.com" }; }
+  getURL: function () { return { url: "https://example.com" }; }
 });
 `
 	if e := os.WriteFile(filepath.Join(drivesDir, "example.js"), []byte(source), 0644); e != nil {
@@ -263,6 +265,45 @@ defineDrive({
 
 	if e := validateScriptForm([]types.FormItem{{Field: "_reserved"}}); e == nil {
 		t.Fatal("expected reserved field validation error")
+	}
+}
+
+func TestGetDriveScriptConfigFormHonorsContextDeadline(t *testing.T) {
+	config := testConfig(t)
+	drivesDir := filepath.Join(config.DataDir, config.DrivesDir)
+	if e := os.MkdirAll(drivesDir, 0755); e != nil {
+		t.Fatal(e)
+	}
+	const source = `// @name Example
+// @version 1.0.0
+
+defineDrive({
+  configForm: [{
+    get label() { sleep("100ms"); return "Token"; },
+    field: "token",
+    type: "password"
+  }],
+  createInstance: function () { return {}; }
+}, {
+  get: function () { return { path: "x", isDir: false, size: 1, modTime: -1 }; },
+  list: function () { return []; },
+  getURL: function () { return { url: "https://example.com" }; }
+});
+`
+	if e := os.WriteFile(filepath.Join(drivesDir, "slow.js"), []byte(source), 0644); e != nil {
+		t.Fatal(e)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	started := time.Now()
+	_, e := GetDriveScriptConfigForm(ctx, config, "slow")
+	elapsed := time.Since(started)
+	if !errors.Is(e, context.DeadlineExceeded) {
+		t.Fatalf("expected deadline exceeded, got %v after %s", e, elapsed)
+	}
+	if elapsed >= 80*time.Millisecond {
+		t.Fatalf("form getter sleep was not interrupted: %s", elapsed)
 	}
 }
 
@@ -568,5 +609,37 @@ func TestListAllDriveScriptsMergesInstalledAndAvailable(t *testing.T) {
 	extra := byName["extra"]
 	if extra.Installed != nil || extra.Version != "1.0.0" || extra.UpdateAvailable {
 		t.Fatalf("extra = %#v", extra)
+	}
+}
+
+func TestLifecycleEntryAccessIsProtected(t *testing.T) {
+	for _, entry := range []string{"__driveInitConfig", "__driveInit"} {
+		for _, getter := range []string{`throw new Error("getter failure")`, `while (true) {}`} {
+			t.Run(entry+getter, func(t *testing.T) {
+				config := testConfig(t)
+				dir, e := config.GetDir(config.DrivesDir, true)
+				if e != nil {
+					t.Fatal(e)
+				}
+				code := `Object.defineProperty(globalThis, "` + entry + `", {get(){` + getter + `}});`
+				if e := os.WriteFile(filepath.Join(dir, "probe.js"), []byte(code), 0600); e != nil {
+					t.Fatal(e)
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+				defer cancel()
+				utils := driveutil.DriveUtils{Config: config}
+				if entry == "__driveInitConfig" {
+					_, e = initConfig(ctx, types.SM{scriptConfigField: "probe"}, utils)
+				} else {
+					e = init_(ctx, nil, types.SM{scriptConfigField: "probe"}, utils)
+				}
+				if e == nil {
+					t.Fatal("expected getter error")
+				}
+				if getter == `while (true) {}` && !errors.Is(e, context.DeadlineExceeded) {
+					t.Fatalf("deadline error=%v", e)
+				}
+			})
+		}
 	}
 }

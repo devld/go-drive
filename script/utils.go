@@ -1,47 +1,51 @@
 package script
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	err "go-drive/common/errors"
-	"go-drive/common/logging"
-	"go-drive/common/types"
-	"go-drive/common/utils"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/robertkrimen/otto"
+	err "go-drive/common/errors"
+	"go-drive/common/logging"
+	"go-drive/common/task"
+	"go-drive/common/types"
+
+	"github.com/dop251/goja"
 )
 
-func newValue(vm *VM, v otto.Value) *Value {
+func newValue(vm *VM, v goja.Value) *Value {
+	if v == nil {
+		v = goja.Undefined()
+	}
 	return &Value{vm, v, nil}
 }
 
-func newValues(vm *VM, vs []otto.Value) Values {
-	return Values{vm, utils.ArrayMap(vs, func(t *otto.Value) *Value { return newValue(vm, *t) })}
+func newValues(vm *VM, vs []goja.Value) Values {
+	return Values{vm, vs}
 }
 
 type Values struct {
 	vm *VM
-	vs []*Value
+	vs []goja.Value
 }
 
 func (vs Values) Get(index int) *Value {
 	if index >= len(vs.vs) {
-		return newValue(vs.vm, otto.UndefinedValue())
+		return newValue(vs.vm, goja.Undefined())
 	}
-	return vs.vs[index]
+	return newValue(vs.vm, vs.vs[index])
 }
 
 func (vs Values) Len() int {
 	return len(vs.vs)
 }
 
-// FormatConsoleArgs formats JS values the same way console.log does:
-// primitives as-is, objects/arrays as JSON, errors with their stack.
-// Types that implement ConsoleStringer print that summary instead.
+// FormatConsoleArgs formats arguments like console.log.
 func FormatConsoleArgs(args Values) string {
 	return formatConsoleArgs(args, 0)
 }
@@ -58,8 +62,8 @@ func formatConsoleArgs(args Values, start int) string {
 	return strings.Join(msg, " ")
 }
 
-// ConsoleStringer is a readable summary for log() / console.
-// It is not fmt.Stringer: some script types already use String() as a content API.
+// ConsoleStringer is a log/console summary. It is not fmt.Stringer: some
+// script types already use String() as a content API.
 type ConsoleStringer interface {
 	ConsoleString() string
 }
@@ -68,18 +72,22 @@ func formatConsoleArg(v *Value) string {
 	return formatConsoleArgSeen(v, nil)
 }
 
-func formatConsoleArgSeen(v *Value, seen map[otto.Value]struct{}) string {
+func formatConsoleArgSeen(v *Value, seen map[goja.Value]struct{}) string {
 	ov := v.v
-	if ov.IsUndefined() {
+	if goja.IsUndefined(ov) {
 		return "undefined"
 	}
-	if ov.IsNull() {
+	if goja.IsNull(ov) {
 		return "null"
 	}
-	if !ov.IsObject() || ov.IsFunction() {
+	obj, isObject := ov.(*goja.Object)
+	if !isObject {
 		return ov.String()
 	}
-	switch ov.Class() {
+	if _, ok := goja.AssertFunction(ov); ok {
+		return ov.String()
+	}
+	switch obj.ClassName() {
 	case "Date", "RegExp", "String", "Number", "Boolean":
 		return ov.String()
 	case "Error":
@@ -90,11 +98,6 @@ func formatConsoleArgSeen(v *Value, seen map[otto.Value]struct{}) string {
 	if s, ok := consoleStringOf(v); ok {
 		return s
 	}
-	obj := ov.Object()
-	if obj == nil {
-		return ov.String()
-	}
-	// otto.Object.MarshalJSON uses the runtime JSON.stringify for JS objects.
 	encoded, e := obj.MarshalJSON()
 	if e != nil || len(encoded) == 0 {
 		return ov.String()
@@ -104,9 +107,9 @@ func formatConsoleArgSeen(v *Value, seen map[otto.Value]struct{}) string {
 
 const maxConsoleArrayItems = 100
 
-func formatConsoleArray(v *Value, seen map[otto.Value]struct{}) string {
+func formatConsoleArray(v *Value, seen map[goja.Value]struct{}) string {
 	if seen == nil {
-		seen = make(map[otto.Value]struct{})
+		seen = make(map[goja.Value]struct{})
 	}
 	if _, ok := seen[v.v]; ok {
 		return "[ ... ]"
@@ -142,22 +145,13 @@ func consoleArrayLen(v *Value) int {
 }
 
 func consoleStringOf(v *Value) (string, bool) {
-	if v == nil || v.IsNil() || !v.v.IsObject() || v.v.IsFunction() {
+	if v == nil || v.IsNil() {
 		return "", false
 	}
-	fn := v.Get("ConsoleString")
-	if fn == nil || fn.IsNil() || !fn.v.IsFunction() {
-		return "", false
+	if stringer, ok := v.Raw().(ConsoleStringer); ok {
+		return stringer.ConsoleString(), true
 	}
-	obj := v.object()
-	if obj == nil {
-		return "", false
-	}
-	ret, e := obj.Call("ConsoleString")
-	if e != nil {
-		return "", false
-	}
-	return ret.String(), true
+	return "", false
 }
 
 func formatGoInspect(kind string, parts []string, more bool) string {
@@ -184,22 +178,54 @@ func formatConsoleError(v *Value) string {
 	return v.v.String()
 }
 
+// Value is a JavaScript value bound to one VM. It cannot cross VM or goroutine
+// boundaries.
 type Value struct {
-	vm  *VM
-	v   otto.Value
-	obj *otto.Object
+	vm *VM
+	v  goja.Value
+
+	obj *goja.Object
 }
 
 func (v *Value) IsNil() bool {
-	return v.v.IsUndefined() || v.v.IsNull()
+	return v == nil || v.v == nil || goja.IsUndefined(v.v) || goja.IsNull(v.v)
 }
 
 func (v *Value) IsNumber() bool {
-	return v != nil && !v.IsNil() && v.v.IsNumber()
+	if v == nil || v.IsNil() || v.v.ExportType() == nil {
+		return false
+	}
+	switch v.v.ExportType().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return false
+	}
 }
 
 func (v *Value) IsString() bool {
-	return v != nil && !v.IsNil() && v.v.IsString()
+	return v != nil && !v.IsNil() && v.v.ExportType() != nil && v.v.ExportType().Kind() == reflect.String
+}
+
+func (v *Value) IsUndefined() bool {
+	return v == nil || v.v == nil || goja.IsUndefined(v.v)
+}
+
+func (v *Value) IsObject() bool {
+	if v == nil {
+		return false
+	}
+	_, ok := v.v.(*goja.Object)
+	return ok
+}
+
+func (v *Value) Class() string {
+	if obj := v.object(); obj != nil {
+		return obj.ClassName()
+	}
+	return ""
 }
 
 func (v *Value) String() string {
@@ -210,49 +236,45 @@ func (v *Value) String() string {
 }
 
 func (v *Value) Bool() bool {
-	b, e := v.v.ToBoolean()
-	if e != nil {
-		v.vm.ThrowTypeError(e.Error())
+	if v.IsNil() {
+		return false
 	}
-	return b
+	return v.v.ToBoolean()
 }
 
 func (v *Value) Integer() int64 {
-	i, e := v.v.ToInteger()
-	if e != nil {
-		v.vm.ThrowTypeError(e.Error())
+	if v.IsNil() {
+		return 0
 	}
-	return i
+	return v.v.ToInteger()
 }
 
 func (v *Value) Float() float64 {
-	f, e := v.v.ToFloat()
-	if e != nil {
-		v.vm.ThrowTypeError(e.Error())
+	if v.IsNil() {
+		return 0
 	}
-	return f
+	return v.v.ToFloat()
 }
 
-func (v *Value) object() *otto.Object {
+func (v *Value) object() *goja.Object {
 	if v.IsNil() {
 		return nil
 	}
 	if v.obj == nil {
-		v.obj = v.v.Object()
+		v.obj, _ = v.v.(*goja.Object)
 	}
 	return v.obj
 }
 
 func (v *Value) Get(prop string) *Value {
+	if v == nil {
+		return newValue(nil, goja.Undefined())
+	}
 	obj := v.object()
 	if obj == nil {
-		return nil
+		return newValue(v.vm, goja.Undefined())
 	}
-	ov, e := obj.Get(prop)
-	if e != nil {
-		return nil
-	}
-	return newValue(v.vm, ov)
+	return newValue(v.vm, obj.Get(prop))
 }
 
 func (v *Value) Has(prop string) bool {
@@ -275,39 +297,52 @@ func (v *Value) SM() types.SM {
 	r := make(types.SM)
 
 	for _, k := range obj.Keys() {
-		p, e := obj.Get(k)
-		if e != nil {
-			v.vm.ThrowTypeError(e.Error())
+		p := obj.Get(k)
+		// An earlier getter (or a Proxy trap) may remove an enumerated key.
+		if p == nil {
+			continue
 		}
 		r[k] = p.String()
 	}
 	return r
 }
 
+func (v *Value) IsArray() bool {
+	if v == nil || !v.IsObject() {
+		return false
+	}
+	// Use the captured intrinsic: Proxy arrays have ClassName "Object".
+	result, e := v.vm.jsVars.arrayIsArray(goja.Undefined(), v.v)
+	if e != nil {
+		panic(e)
+	}
+	return result.ToBoolean()
+}
+
+func (v *Value) isPromise() bool {
+	if v == nil || v.IsNil() {
+		return false
+	}
+	if v.Class() == "Promise" {
+		return true
+	}
+	t := v.v.ExportType()
+	return t != nil && t == reflect.TypeFor[*goja.Promise]()
+}
+
 func (v *Value) Array() []*Value {
-	obj := v.object()
-	if obj == nil {
+	if !v.IsArray() {
 		return nil
 	}
-	// Read elements directly from the underlying otto object to avoid the
-	// per-index *Value allocation and object re-resolution that v.Get would
-	// incur. otto has no indexed accessor, so string keys are unavoidable, but
-	// this keeps the hot path (listing large directories) as lean as possible.
-	lengthVal, e := obj.Get("length")
-	if e != nil {
-		v.vm.ThrowTypeError("not a valid array")
-	}
-	length, e := lengthVal.ToInteger()
-	if e != nil || length < 0 {
-		v.vm.ThrowTypeError("not a valid array")
+	obj := v.object()
+	length := obj.Get("length").ToInteger()
+	if length < 0 {
+		return nil
 	}
 	n := int(length)
 	r := make([]*Value, n)
 	for i := range n {
-		ev, e := obj.Get(strconv.Itoa(i))
-		if e != nil {
-			v.vm.ThrowTypeError(e.Error())
-		}
+		ev := obj.Get(strconv.Itoa(i))
 		r[i] = newValue(v.vm, ev)
 	}
 	return r
@@ -324,47 +359,121 @@ func (v *Value) M() types.M {
 	r := make(types.M)
 
 	for _, k := range obj.Keys() {
-		p, e := obj.Get(k)
-		if e != nil {
-			v.vm.ThrowTypeError(e.Error())
-		}
-		r[k], _ = p.Export()
+		p := obj.Get(k)
+		r[k] = unwrapHost(p)
 	}
 	return r
 }
 
-func (v *Value) ParseInto(dest any) {
+func (v *Value) ParseInto(dest any) (err error) {
 	defer func() {
 		if er := recover(); er != nil {
 			if ee, ok := er.(error); ok {
-				v.vm.ThrowTypeError(ee.Error())
+				err = ee
 			} else {
-				v.vm.ThrowTypeError(fmt.Sprintf("%v", er))
+				err = fmt.Errorf("%v", er)
 			}
 		}
 	}()
 	parseValue(v, reflect.ValueOf(dest))
+	return nil
+}
+
+// Parse is ParseInto for host functions: failure throws in the Value's VM.
+func Parse[T any](v *Value) T {
+	var out T
+	if e := v.ParseInto(&out); e != nil {
+		v.vm.ThrowError(e)
+	}
+	return out
 }
 
 func (v *Value) Raw() any {
-	r, _ := v.v.Export()
-	return r
-}
-
-func (v *Value) InternalValue() any {
-	return v.v
+	if v == nil || v.IsNil() {
+		return nil
+	}
+	return unwrapExported(v.v.Export())
 }
 
 func (v *Value) Call(thisValue any, args ...any) *Value {
-	thisV, e := v.vm.o.ToValue(thisValue)
+	rv, e := v.vm.callValue(v.vm.ExecutionContext(), v, v.vm.j.ToValue(thisValue), args...)
 	if e != nil {
-		v.vm.ThrowTypeError(e.Error())
+		v.vm.ThrowError(e)
 	}
-	rv, e := v.v.Call(thisV, args...)
-	if e != nil {
-		v.vm.ThrowTypeError(e.Error())
+	return rv
+}
+
+// detachJSValue copies a JS value into Go data that does not hold Runtime
+// objects (Proxy, Object, exported functions). Nested maps and slices are
+// walked so entry meta can be read after the producing VM is returned.
+func detachJSValue(ov *Value, seen map[goja.Value]any) any {
+	if ov == nil || ov.IsNil() {
+		return nil
 	}
-	return newValue(v.vm, rv)
+	if ov.IsObject() {
+		if cached, ok := seen[ov.v]; ok {
+			return cached
+		}
+	}
+
+	if ov.v.ExportType() == hostObjectType {
+		if handle := unwrapExported(ov.v.Export()); handle != nil && isJSClassHandleType(reflect.TypeOf(handle)) {
+			if b, ok := HostAs[jsBytes](handle); ok {
+				return append([]byte(nil), b.NativeBytes()...)
+			}
+			if cs, ok := handle.(ConsoleStringer); ok {
+				return cs.ConsoleString()
+			}
+			return ov.Class()
+		}
+	}
+
+	if _, ok := goja.AssertFunction(ov.v); ok {
+		return ov.String()
+	}
+
+	if ov.IsArray() {
+		arr := ov.Array()
+		out := make([]any, len(arr))
+		seen[ov.v] = out
+		for i, item := range arr {
+			out[i] = detachJSValue(item, seen)
+		}
+		return out
+	}
+
+	if ov.IsObject() {
+		switch ov.Class() {
+		case "Date":
+			return ov.v.Export()
+		case "RegExp", "String", "Number", "Boolean":
+			return unwrapExported(ov.v.Export())
+		}
+		keys := ov.Keys()
+		out := make(types.M, len(keys)+3)
+		seen[ov.v] = out
+		if strings.HasSuffix(ov.Class(), "Error") {
+			if msg := ov.Get("message"); msg != nil && !msg.IsUndefined() {
+				out["message"] = msg.String()
+			}
+			if name := ov.Get("name"); name != nil && !name.IsUndefined() {
+				out["name"] = name.String()
+			}
+			if stack := ov.Get("stack"); stack != nil && !stack.IsUndefined() {
+				out["stack"] = stack.String()
+			}
+		}
+		for _, k := range keys {
+			p := ov.Get(k)
+			if p == nil || p.IsUndefined() {
+				continue
+			}
+			out[k] = detachJSValue(p, seen)
+		}
+		return out
+	}
+
+	return unwrapExported(ov.v.Export())
 }
 
 func parseValue(ov *Value, v reflect.Value) {
@@ -405,7 +514,7 @@ func parseValue(ov *Value, v reflect.Value) {
 		n := len(arr)
 		r := reflect.MakeSlice(vt, 0, n)
 
-		for i := 0; i < n; i++ {
+		for i := range n {
 			value := reflect.New(vt.Elem())
 			parseValue(arr[i], value.Elem())
 			r = reflect.Append(r, value.Elem())
@@ -426,6 +535,21 @@ func parseValue(ov *Value, v reflect.Value) {
 			r.Elem().Index(i).Set(value.Elem())
 		}
 		v.Set(r.Elem())
+	case reflect.Interface:
+		if ov.IsNil() {
+			v.Set(reflect.Zero(vt))
+			return
+		}
+		exported := detachJSValue(ov, make(map[goja.Value]any))
+		if exported == nil {
+			v.Set(reflect.Zero(vt))
+			return
+		}
+		val := reflect.ValueOf(exported)
+		if !val.IsValid() || !val.Type().AssignableTo(vt) {
+			return
+		}
+		v.Set(val)
 	case reflect.Struct:
 		n := v.NumField()
 		for i := 0; i < n; i++ {
@@ -433,188 +557,232 @@ func parseValue(ov *Value, v reflect.Value) {
 			if !fv.CanSet() {
 				continue
 			}
-			fName := vt.Field(i).Name
-			value := ov.Get(fName)
+			var value *Value
+			for _, fName := range jsObjectFieldNames(vt.Field(i)) {
+				value = ov.Get(fName)
+				if value != nil && !value.IsNil() {
+					break
+				}
+			}
 			if value == nil || value.IsNil() {
 				continue
 			}
 			parseValue(value, fv)
 		}
 	case reflect.Bool:
-		v.Set(reflect.ValueOf(ov.Bool()))
-	case reflect.Int:
-		v.Set(reflect.ValueOf(int(ov.Integer())))
-	case reflect.Uint:
-		v.Set(reflect.ValueOf(uint(ov.Integer())))
-	case reflect.Int8:
-		v.Set(reflect.ValueOf(int8(ov.Integer())))
-	case reflect.Uint8:
-		v.Set(reflect.ValueOf(uint8(ov.Integer())))
-	case reflect.Int16:
-		v.Set(reflect.ValueOf(int16(ov.Integer())))
-	case reflect.Uint16:
-		v.Set(reflect.ValueOf(uint16(ov.Integer())))
-	case reflect.Int32:
-		v.Set(reflect.ValueOf(int32(ov.Integer())))
-	case reflect.Uint32:
-		v.Set(reflect.ValueOf(uint32(ov.Integer())))
-	case reflect.Int64:
-		v.Set(reflect.ValueOf(int64(ov.Integer())))
-	case reflect.Uint64:
-		v.Set(reflect.ValueOf(uint64(ov.Integer())))
-	case reflect.Float32:
-		v.Set(reflect.ValueOf(float32(ov.Float())))
-	case reflect.Float64:
-		v.Set(reflect.ValueOf(ov.Float()))
+		v.SetBool(ov.Bool())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v.SetInt(ov.Integer())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		v.SetUint(uint64(ov.Integer()))
+	case reflect.Float32, reflect.Float64:
+		v.SetFloat(ov.Float())
 	case reflect.String:
-		v.Set(reflect.ValueOf(ov.String()))
+		v.SetString(ov.String())
 	}
 }
 
-func WrapVmCall(vm *VM, fn func(vm *VM, args Values) any) any {
-	return func(c otto.FunctionCall) otto.Value {
-		// Resolve into a local variable instead of reassigning the captured
-		// vm: the closure is shared across all forked VMs (otto copies the
-		// runtime but not the Go closure), so writing the captured variable
-		// would race between concurrent VM runs.
-		actualVM := vm.resolveVM(c.Otto)
-		if actualVM == nil {
-			panic("detached vm")
-		}
-
-		defer func() {
-			if e := recover(); e != nil {
-				actualVM.ThrowError(e)
-			}
-		}()
-
-		ret := fn(actualVM, newValues(actualVM, c.ArgumentList))
-		ov, e := actualVM.o.ToValue(ret)
-		if e != nil {
-			actualVM.ThrowTypeError(e.Error())
-		}
-		return ov
-	}
+func captureScriptResult(vm *VM, fn func() error) (e error) {
+	defer func() {
+		e = finalizeScriptError(vm, e, recover())
+	}()
+	return fn()
 }
 
-func wrapVmRun(ctx context.Context, vm *VM, fn func() (otto.Value, error)) (value *Value, e error) {
-	if ctx == nil {
-		ctx = context.Background()
+// finalizeScriptError turns a JS panic or goja error into a Go error.
+// Native panics propagate. Conversion may read JS; conversionFallback
+// handles a second throw without touching JS objects.
+func finalizeScriptError(vm *VM, runErr error, panicVal any) (e error) {
+	if panicVal != nil && !isJSException(panicVal) {
+		panic(panicVal)
 	}
-
 	defer func() {
 		if r := recover(); r != nil {
-			if ee, ok := r.(error); ok {
-				e = ee
-				return
-			}
-			e = fmt.Errorf("%s", r)
+			e = conversionFallback(vm, runErr, r)
 		}
-
-		e = mapError(e)
 	}()
-
-	// Drain any interrupt left over from a previous run. The interrupt sender
-	// below can lose a race with fn() finishing, leaving a stale interrupt in
-	// the buffered channel. Since a VM is never run concurrently, it is safe to
-	// clear it here before running, preventing an unrelated request (this VM is
-	// reused from a pool) from being wrongly interrupted.
-	select {
-	case <-vm.o.Interrupt:
-	default:
+	if panicVal != nil {
+		switch x := panicVal.(type) {
+		case error:
+			runErr = x
+		case goja.Value:
+			if original := errorFromGojaValue(vm, x); original != nil {
+				runErr = original
+			} else {
+				runErr = fmt.Errorf("%s", x.String())
+			}
+		}
 	}
-
-	finished := make(chan struct{})
-	go func() {
-		select {
-		case <-ctx.Done():
-			// If fn() already finished, prefer that branch so we don't leave a
-			// stale interrupt behind.
-			select {
-			case vm.o.Interrupt <- func() { panic(ctx.Err()) }:
-			case <-finished:
-			}
-		case <-finished:
-		}
-	}()
-	var ottoValue otto.Value
-	defer close(finished)
-	ottoValue, e = fn()
-	value = newValue(vm, ottoValue)
-	return
+	return convertScriptError(vm, runErr)
 }
 
-func mapError(e error) error {
+func isJSException(r any) bool {
+	switch r.(type) {
+	case goja.Value, *goja.InterruptedError, *goja.Exception:
+		return true
+	default:
+		return false
+	}
+}
+
+func convertScriptError(vm *VM, e error) error {
 	if e == nil {
 		return nil
 	}
-
-	if oe, ok := e.(*otto.Error); ok {
-		logging.For("script").Errorf("otto runtime error: %s", oe.String())
+	switch x := e.(type) {
+	case *goja.InterruptedError:
+		return unwrapInterrupted(x)
+	case *goja.Exception:
+		if original := errorFromGojaValue(vm, x.Value()); original != nil {
+			return snapshotException(x, convertScriptError(vm, original))
+		}
+		return snapshotException(x, nil)
 	}
-
-	if re, ok := e.(err.Error); ok {
+	if re, ok := errors.AsType[err.Error](e); ok {
 		return re
-	}
-	data := e.Error()
-	if !strings.HasPrefix(data, "Error: E:") {
-		return e
-	}
-
-	parts := strings.SplitN(data, ":", 5)
-	if len(parts) != 5 {
-		return e
-	}
-	typ := parts[2]
-	status := utils.ToInt(parts[3], 0)
-	msg := parts[4]
-
-	switch typ {
-	case "BAD_REQUEST":
-		return err.NewBadRequestError(msg)
-	case "NOT_FOUND":
-		if msg == "" {
-			return err.NewNotFoundError()
-		} else {
-			return err.NewNotFoundMessageError(msg)
-		}
-	case "NOT_ALLOWED":
-		if msg == "" {
-			return err.NewNotAllowedError()
-		} else {
-			return err.NewNotAllowedMessageError(msg)
-		}
-	case "UNSUPPORTED":
-		if msg == "" {
-			return err.NewUnsupportedError()
-		} else {
-			return err.NewUnsupportedMessageError(msg)
-		}
-	case "REMOTE_API":
-		return err.NewRemoteApiError(status, msg)
 	}
 	return e
 }
 
-// RequireDuration reads a JS Duration (`ms()` / nanoseconds) or Go duration
-// string (`2s`, `1h30m`, optional `2d` prefix). Invalid values throw TypeError
-// when v carries a VM; otherwise they panic a detached error.
-func RequireDuration(v any, what string) time.Duration {
-	d, ok := DurationFrom(v)
-	if ok {
-		return d
-	}
-	msg := what + " requires a Duration or duration string"
-	if ov, ok := v.(*Value); ok && ov != nil && ov.vm != nil {
-		ov.vm.ThrowTypeError(msg)
-	}
-	ThrowDetachedError(msg)
-	return 0
+// jsRuntimeError is a JavaScript exception copied into Go text. It does not
+// hold Runtime or goja values, so Error/String are safe after Dispose.
+type jsRuntimeError struct {
+	text  string
+	cause error
 }
 
-// DurationFrom reads a JS Duration (`ms()` / nanoseconds) or Go duration
-// string. Missing or invalid values return false.
-func DurationFrom(v any) (time.Duration, bool) {
+func (e *jsRuntimeError) Error() string {
+	if e.cause != nil {
+		return e.cause.Error()
+	}
+	return e.text
+}
+
+func (e *jsRuntimeError) Unwrap() error { return e.cause }
+
+func (e *jsRuntimeError) String() string { return e.text }
+
+func (e *jsRuntimeError) scriptStack() string { return e.text }
+
+type jsRuntimeAPIError struct {
+	*jsRuntimeError
+	apiError err.Error
+}
+
+func (e *jsRuntimeAPIError) Code() int { return e.apiError.Code() }
+
+type jsRuntimeAPIDataError struct {
+	*jsRuntimeAPIError
+	apiDataError err.ErrorWithData
+}
+
+func (e *jsRuntimeAPIDataError) Data() types.M { return e.apiDataError.Data() }
+
+// FormatError returns the JavaScript exception and its call stack when e was
+// produced by Run or Call. For other errors it returns Error().
+func FormatError(e error) string {
+	if e == nil {
+		return ""
+	}
+	var stacked interface{ scriptStack() string }
+	if errors.As(e, &stacked) {
+		return stacked.scriptStack()
+	}
+	return e.Error()
+}
+
+func snapshotException(exception *goja.Exception, cause error) error {
+	text := exception.String()
+	logging.For("script").Errorf("goja runtime error: %s", text)
+	runtimeError := &jsRuntimeError{text: text, cause: cause}
+	if apiDataError, ok := errors.AsType[err.ErrorWithData](cause); ok {
+		return &jsRuntimeAPIDataError{
+			jsRuntimeAPIError: &jsRuntimeAPIError{runtimeError, apiDataError},
+			apiDataError:      apiDataError,
+		}
+	}
+	if apiError, ok := errors.AsType[err.Error](cause); ok {
+		return &jsRuntimeAPIError{runtimeError, apiError}
+	}
+	return runtimeError
+}
+
+func unwrapInterrupted(interrupted *goja.InterruptedError) error {
+	if cause := interrupted.Unwrap(); cause != nil {
+		return cause
+	}
+	return interrupted
+}
+
+func runContextError(vm *VM) error {
+	if vm == nil || vm.runCtx == nil {
+		return nil
+	}
+	return vm.runCtx.Err()
+}
+
+func stackSnapshot(exception *goja.Exception) error {
+	var b bytes.Buffer
+	b.WriteString("javascript exception\n")
+	for _, frame := range exception.Stack() {
+		b.WriteString("\tat ")
+		frame.Write(&b)
+		b.WriteByte('\n')
+	}
+	return &jsRuntimeError{text: b.String()}
+}
+
+func opaqueScriptError(e error) error {
+	if e == nil {
+		return errors.New("javascript exception")
+	}
+	if exception, ok := e.(*goja.Exception); ok {
+		return stackSnapshot(exception)
+	}
+	return e
+}
+
+// conversionFallback must not read JS objects. Proxy traps and getters can
+// throw again, and this already runs inside recover.
+func conversionFallback(vm *VM, runErr error, r any) (e error) {
+	defer func() {
+		if recover() != nil {
+			if ctxErr := runContextError(vm); ctxErr != nil {
+				e = ctxErr
+				return
+			}
+			e = errors.New("javascript exception")
+		}
+	}()
+	if ctxErr := runContextError(vm); ctxErr != nil {
+		return ctxErr
+	}
+	switch x := r.(type) {
+	case *goja.InterruptedError:
+		return unwrapInterrupted(x)
+	case *goja.Exception:
+		return stackSnapshot(x)
+	}
+	return opaqueScriptError(runErr)
+}
+
+// ParseDuration parses a JS Duration or Go duration string (`2s`, `1h30m`,
+// optional `2d`) without throwing.
+func ParseDuration(v any) (time.Duration, bool) {
+	return durationFrom(v)
+}
+
+// GetDuration parses a duration for a host function. A missing or invalid value
+// throws a TypeError with required as its message.
+func GetDuration(vm *VM, v any, required string) time.Duration {
+	d, ok := durationFrom(v)
+	if !ok {
+		vm.ThrowTypeError(required)
+	}
+	return d
+}
+
+func durationFrom(v any) (time.Duration, bool) {
 	switch x := v.(type) {
 	case nil:
 		return 0, false
@@ -622,13 +790,13 @@ func DurationFrom(v any) (time.Duration, bool) {
 		if x == nil || x.IsNil() {
 			return 0, false
 		}
-		if x.v.IsString() {
+		if x.IsString() {
 			return types.ParseDuration(x.String())
 		}
-		if x.v.IsNumber() {
+		if x.IsNumber() {
 			return time.Duration(x.Integer()), true
 		}
-		return DurationFrom(x.Raw())
+		return durationFrom(x.Raw())
 	case time.Duration:
 		return x, true
 	case string:
@@ -646,4 +814,11 @@ func DurationFrom(v any) (time.Duration, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func runTaskCtx(ctx context.Context) types.TaskCtx {
+	if tc, ok := ctx.(types.TaskCtx); ok {
+		return tc
+	}
+	return task.NewContextWrapper(ctx)
 }

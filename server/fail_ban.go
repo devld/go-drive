@@ -91,7 +91,3 @@ func (failBanError) Code() int {
 func (f failBanError) Error() string {
 	return i18n.T("error.fail_ban_message")
 }
-
-func (failBanError) Name() string {
-	return "FAIL_BAN"
-}

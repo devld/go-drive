@@ -13,7 +13,7 @@ Prefer a script Drive when the service meets most of these conditions:
 - Listing, uploading, downloading, directory creation, and deletion are available over HTTP.
 - Authentication uses an API key, bearer token, HMAC signature, or OAuth 2.0.
 - It does not require a Node.js package, native vendor SDK, dynamic library, or operating-system command.
-- Each API operation can finish synchronously, or an asynchronous operation can be polled until completion.
+- Each API operation can finish synchronously, or a remote operation can be polled until completion.
 - Large files can be streamed, uploaded in parts, or uploaded directly from the browser.
 
 Typical candidates include file APIs such as Dropbox, object-storage APIs such as Qiniu, self-hosted HTTP file services, and cloud drives that have a complete REST API but no built-in go-drive implementation.
@@ -21,9 +21,9 @@ Typical candidates include file APIs such as Dropbox, object-storage APIs such a
 ### Technically possible, but usually not worthwhile
 
 - WebDAV is HTTP-based, but the runtime has no DOM or XML parser. Use the built-in WebDAV Drive unless responses are exceptionally small and stable.
-- S3-compatible storage can be signed with `encUtils`, but the built-in S3 Drive handles regions, multipart uploads, and compatibility differences more reliably.
-- A service exposed only through a vendor JavaScript SDK is viable only if the SDK can be rewritten as ES5 without Node.js or DOM dependencies. Calling the REST API directly is usually better.
-- Long-polling asynchronous APIs can work, but occupy a VM while polling. Check `ctx.Err()` and apply a timeout.
+- S3-compatible storage can be signed with `Hash` / `Hmac` and `Bytes` encodings, but the built-in S3 Drive handles regions, multipart uploads, and compatibility differences more reliably.
+- A service exposed only through a vendor JavaScript SDK is viable only if the SDK can run in the Goja ES6 runtime without Node.js or DOM dependencies. Calling the REST API directly is usually better.
+- A synchronous long-poll endpoint can work, but occupies a VM while polling. Check `ctx.err()` and apply a timeout.
 
 ### Poor candidates
 
@@ -33,10 +33,10 @@ Implement these as Go Drives, or use an existing built-in Drive:
 - Local filesystems, FUSE, block devices, and tape systems require operating-system or device access.
 - SDKs that require native libraries, external commands, Node.js `require`, `Buffer`, streams, or npm packages.
 - Services that require WebSocket, HTTP/2-specific flow control, client certificates, or a custom transport stack without an equivalent ordinary HTTP API.
-- Workloads requiring heavy CPU processing, complex compression/encryption, or large in-memory buffers. The ES5 interpreter is not designed for them.
+- Workloads requiring heavy CPU processing, complex compression/encryption, or large in-memory buffers. The Goja runtime is not designed for them.
 - Services that cannot reliably list a hierarchy, read file contents, or expose stable paths.
 
-Rule of thumb: use a script Drive when the core task is “construct HTTP requests and map JSON to Entry objects.” Use Go when the core task is “implement a transport protocol, integrate with the operating system, or reuse a native SDK.”
+Rule of thumb: use a script Drive when the core task is “construct HTTP requests and map JSON to `EntryRecord` objects.” Use Go when the core task is “implement a transport protocol, integrate with the operating system, or reuse a native SDK.”
 
 ## 2. Sources of truth to read before editing
 
@@ -44,7 +44,7 @@ Check these sources in order. Do not rely only on old adapter examples:
 
 1. `docs/scripts/env/drive.d.ts` — Drive lifecycle, interfaces, and Drive-specific APIs.
 2. `docs/scripts/global.d.ts` — global HTTP, IO, error, encoding, path, and form APIs.
-3. `script-drives/jsconfig.json` — loads those declarations for every adapter `.js` in this directory.
+3. `script-drives/jsconfig.json` and `script-drives/jsconfig.uploader.json` — load the server-adapter and browser-uploader declarations respectively.
 4. `drive/script/helper.js` — required methods, method binding, and the actual behavior of `$` shared properties.
 5. `drive/script/index.go` and `drive/script/utils.go` — Go/JavaScript value conversion, entry cache, write-path eviction, and resource ownership.
 6. `script-drives/dropbox.js` — OAuth, pagination, streaming uploads, and temporary download URLs.
@@ -82,22 +82,22 @@ Use a stable, short, lowercase identifier for `<name>`. Files with the same base
 - Scripts without `@name` or `@version` are ignored when listing installed scripts or syncing the repository.
 - An optional `// @uploader example-uploader.js` line names the browser uploader in the same repository.
 - `// @description` starts the Markdown description. Following `//` lines that are not `@` directives continue the description until a blank non-comment line.
-- Editor types come from `script-drives/jsconfig.json` (no `/// <reference>` needed).
+- Editor types for server scripts come from `script-drives/jsconfig.json`; browser uploaders use `script-drives/jsconfig.uploader.json` (no `/// <reference>` needed).
 - After saving a script, create or reload the Drive from the administration UI.
 
 ## 4. Runtime constraints
 
 ### JavaScript version
 
-Server scripts run in Otto and must be ES5. Do not use:
+Server scripts run in Goja with ES6+ syntax (`let`/`const`, arrow functions, classes, rest/spread, and modern array methods). The runtime does not provide:
 
-- `let`, `const`, arrow functions, classes, template literals, destructuring, or spread syntax;
-- `async`/`await`, Promise, generators;
 - `import`, `export`, or `require`;
 - DOM APIs, `window`, `fetch`, or `XMLHttpRequest`;
 - Node.js `Buffer`, `process`, `fs`, `crypto`, or npm packages.
 
-ES5 standard objects, JSON, Date, RegExp, and the go-drive APIs declared in the `.d.ts` files are available. `dayjs` is built in.
+Goja provides standard `Promise` objects, but all go-drive host APIs are synchronous and do not return Promises. There is no JavaScript event loop, timer API, or asynchronous HTTP API; top-level `await` is not supported. ES6 standard objects, JSON, Date, RegExp, and the go-drive APIs declared in the `.d.ts` files are available. `dayjs` is built in.
+
+Built-in go-drive globals and utility objects are immutable. After a pooled VM finishes initialization, the global object is frozen. Do not monkey-patch or extend `http`, `console`, `pathUtils`, `urlUtils`, `dayjs`, or other host-provided bindings. Objects and arrays that originate in Go (`urlUtils.parse`, `resp.json()`, `cache.getEntry`, `createInstance` `config`, `$` reads, `$event`) are read-only; copy with object/array spread before changing them.
 
 Browser uploader scripts have a separate runtime and may use modern JavaScript, Promise, Blob, FormData, and browser APIs. Never mix browser APIs into the server script.
 
@@ -108,63 +108,61 @@ Browser uploader scripts have a separate runtime and may use modern JavaScript, 
 - The object returned by `createInstance` is frozen after methods are bound. Ordinary properties assigned there should be treated as read-only configuration.
 - Only instance properties whose names begin with `$` are synchronized between VMs through go-drive shared storage.
 - A `$` value must be JSON-serializable. Objects and arrays are read as copies. Mutating a nested value does not persist it; reassign the complete `$` property.
-- A single shared-property read or write is protected, but a read-modify-write sequence is not atomic. `newLocker()` protects only its current VM and is not a cross-VM lock. Prefer concurrency control provided by the remote API.
-- Never place response bodies, readers, contexts, or functions in a `$` property.
+- A single shared-property read or write is protected, but a read-modify-write sequence is not atomic. Prefer concurrency control provided by the remote API.
+- Never place response bodies, readers, or functions in a `$` property.
 - Periodic work uses `intervals` / `onInterval`. Go holds the clock; ticks borrow a VM like `get`. Do not occupy a VM with `sleep` loops.
 
 ```js
-var next = this.$state;
+const next = this.$state;
 next.count += 1;
 this.$state = next; // Reassignment writes the complete value back.
 ```
 
 Administrators may configure the VM pool as `MaxTotal,MaxIdle,MinIdle,IdleTime`; its default is `100,50,10,30m`. An adapter must not depend on a particular pool size.
 
-### Contexts and resources
+### Cancellation and resources
 
-- Use the method's `ctx` for every remote request. Do not use `newContext()` for normal requests.
-- Call `ctx.Err()` inside pagination, polling, and multipart loops so cancellation is noticed promptly.
-- A context returned by `newContextWithTimeout(parent, timeout)` must call `Cancel()` on every path.
-- `HttpResponse.Text()` reads the complete body and disposes the response.
-- If `Text()` is not called, call `Dispose()`. The usual exception is returning a successful `resp.Body` directly from `getReader` or `getThumbnail`; go-drive then owns and closes it.
+- Host I/O (`http`, OAuth, Drive) uses the VM run context. Cancelling the Go task interrupts the VM; there is no JavaScript `Context` object.
+- `HttpResponse.text()` reads the complete body and disposes the response.
+- If `text()` is not called, call `dispose()`. The usual exception is returning a successful `resp.body` directly from `getReader` or `getThumbnail`; go-drive then owns and closes it.
 - Explicitly obtained `ReadCloser` and `TempFile` values must be closed after use.
-- Never call `ReadAsString()` for a large upload. Pass the Reader to `http()` or upload it in parts.
+- Never call `readAsString()` for a large upload. Pass the Reader to `http()` or upload it in parts.
 
-### Paths and Entry objects
+### Paths and EntryRecord objects
 
 - The root path is always the empty string `""`. Other paths never start with `/`.
 - Return normalized `/`-separated paths. Use `pathUtils.join/parent/base/clean`, not operating-system path rules.
-- `get("")` is served by the runtime as a directory Entry. Do not special-case the root in `get`.
+- `get("")` is served by the runtime as a directory `EntryRecord`. Do not special-case the root in `get`.
 - `list(path)` returns direct children only. It neither includes the listed directory nor recurses.
-- File `Size` is in bytes; use `-1` when unknown. Directory size is normally `-1`.
-- `ModTime` is Unix time in milliseconds; use `-1` when unknown. Do not return seconds.
-- Omitting `Meta` defaults to `{Readable: true, Writable: true}`. A read-only Drive or Entry must explicitly set `Writable: false`.
-- Store only small string values needed by native copy/move in `Data` (remote file ids, revisions). Never store tokens or signed URLs there. Instance ownership is detected by the runtime; do not put a drive id in `Data`.
+- File `size` is in bytes; use `-1` when unknown. Directory size is normally `-1`.
+- `modTime` is Unix time in milliseconds; use `-1` when unknown. Do not return seconds.
+- Omitting `meta` defaults to `{readable: true, writable: true}`. A read-only Drive or entry must explicitly set `writable: false`.
+- Store only small string values needed by native copy/move in `data` (remote file ids, revisions). Never store tokens or signed URLs there. Instance ownership is detected by the runtime; do not put a drive id in `data`.
 
-A normal Entry looks like:
+A normal `EntryRecord` looks like:
 
 ```js
 {
-  IsDir: false,
-  Path: "folder/file.txt",
-  Size: 123,
-  ModTime: 1710000000000,
-  Meta: { Readable: true, Writable: true },
-  Data: { id: "remote-id" }
+  isDir: false,
+  path: "folder/file.txt",
+  size: 123,
+  modTime: 1710000000000,
+  meta: { readable: true, writable: true },
+  data: { id: "remote-id" }
 }
 ```
 
 ### Errors
 
-Use these constructors for expected failures:
+Use these Error subclasses for expected failures:
 
-- `ErrBadRequest(message)` — invalid user input or configuration.
-- `ErrNotFound(message)` — a missing path. `get` must map a remote 404 to this error.
-- `ErrNotAllowed(message)` — insufficient permissions, conflict, or prohibited operation.
-- `ErrUnsupported(message)` — an unavailable capability; selected callers may apply a fallback.
-- `ErrRemoteApi(status, message)` — other remote API failures.
+- `new BadRequestError(message)` — invalid user input or configuration.
+- `new NotFoundError(message)` — a missing path. `get` must map a remote 404 to this error.
+- `new NotAllowedError(message)` — insufficient permissions, conflict, or prohibited operation.
+- `new UnsupportedError(message)` — an unavailable capability; selected callers may apply a fallback.
+- `new RemoteApiError(status, message)` — other remote API failures.
 
-Use the matching `isBadRequestErr`, `isNotFoundErr`, `isNotAllowedErr`, `isUnsupportedErr`, and `isRemoteApiErr` predicates when catching errors. Never include tokens, secrets, Authorization headers, complete signed URLs, or private response bodies in errors or logs.
+Use `instanceof` when catching errors (`e instanceof NotFoundError`). Never include tokens, secrets, Authorization headers, complete signed URLs, or private response bodies in errors or logs.
 
 ## 5. Lifecycle
 
@@ -176,128 +174,123 @@ Define the adapter with `defineDrive(setup, methods)`.
 
 `configForm` is the static admin form. It is always an array, and its field names must not begin with `_`; those names are reserved by the Script Drive wrapper. Required fields are saved as part of the Drive config before initialization.
 
-`initConfig(ctx, config, utils)` is optional and is called after the static config has been saved. It returns the same `DriveInitConfiguration` shape as a native Drive, including a dynamic `Form`, its current `Value`, `Configured`, and optional `OAuth`. Use `utils.Data.Load("key", ...)` to inspect only the previously saved dynamic fields needed for the current step and return different forms for later steps. Dynamic form field names must also not begin with `_`.
+`initConfig(config, utils)` is optional and is called after the static config has been saved. It returns the same `DriveInitConfiguration` shape as a native Drive, including a dynamic `form`, its current `value`, `configured`, and optional `oauth`. Use `utils.data.load("key", ...)` to inspect only the previously saved dynamic fields needed for the current step and return different forms for later steps. Dynamic form field names must also not begin with `_`.
 
-`init(ctx, data, config, utils)` is optional and receives the submitted dynamic data. It is responsible for saving dynamic values with `utils.Data.Save`, or for calling the low-level OAuth helpers. Empty strings are passed through unchanged; saving an empty string clears that key from the data store.
+`init(data, config, utils)` is optional and receives the submitted dynamic data. It is responsible for saving dynamic values with `utils.data.save`, or for calling the low-level OAuth helpers. Empty strings are passed through unchanged; saving an empty string clears that key from the data store.
 
-OAuth is explicit: call `utils.OAuthInitConfig`, `utils.OAuthInit`, and `utils.OAuthLoad` from `initConfig` / `init` / `createInstance`. There is no automatic OAuth request/principal hook. See `dropbox.js`.
+OAuth is explicit: call `utils.oauthInitConfig`, `utils.oauthInit`, and `utils.oauthLoad` from `initConfig` / `init` / `createInstance`. There is no automatic OAuth request/principal hook. See `dropbox.js`.
 
 `validateConfig(config)` runs before `createInstance` and validates the static config.
 
 Include `entryCacheTTLFormItem("2h")` when users should set the entry cache TTL. Pass the raw form value through as `entryCacheTTL` from `createInstance`; the runtime accepts duration strings or `ms(...)`. Omit / `""` / `undefined` / `null` / `<= 0` disables caching. The form item is not inserted automatically.
 
-### `createInstance(ctx, config, utils)` (required)
+### `createInstance(config, utils)` (required)
 
-Return instance state from the static config, loading only the dynamic fields needed by the Drive through `utils.Data.Load("key", ...)`: credentials, clients, `entryCacheTTL: config.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). Optional `intervals` declare Drive-local periodic work (see `onInterval`). `ctx` is the Drive-creation context; use it for any remote requests during setup. The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
+Return instance state from the static config, loading only the dynamic fields needed by the Drive through `utils.data.load("key", ...)`: credentials, clients, `entryCacheTTL: config.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). Optional `intervals` declare Drive-local periodic work (see `onInterval`). The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
 
-Required methods: `get` and `list`, plus `getReader` or `getURL`. `upload` defaults to `useLocalProvider`. `getReader` defaults to `ErrUnsupported()` when `getURL` exists. `meta` defaults to `{ Writable: this.writable !== false }`.
+Required methods: `get` and `list`, plus `getReader` or `getURL`. `upload` defaults to `useLocalProvider`. `getReader` defaults to `new UnsupportedError()` when `getURL` exists. `meta` defaults to `{ writable: this.writable !== false }`.
 
 ## 6. Drive method contracts
 
 ### Required methods
 
-#### `meta(ctx) -> DriveMeta`
+#### `meta() -> DriveMeta`
 
-Optional. Defaults to `{ Writable: instance.writable !== false }`.
+Optional. Defaults to `{ writable: instance.writable !== false }`.
 
-#### `get(ctx, path) -> Entry`
+#### `get(path) -> EntryRecord`
 
-Return the Entry at one non-root path. The Go runtime serves `get("")` and caches successful results (including `Data`) using `entryCacheTTL` without entering the JS VM on hit. A missing path must throw `ErrNotFound()`.
+Return the `EntryRecord` at one non-root path. The Go runtime serves `get("")` and caches successful results (including `data`) using `entryCacheTTL` without entering the JS VM on hit. A missing path must throw `new NotFoundError()`.
 
-#### `list(ctx, path) -> Entry[]`
+#### `list(path) -> EntryRecord[]`
 
-Return all direct children. Handle every remote page, marker, or cursor rather than returning only the first page. Call `ctx.Err()` in the loop. Return `[]` for an empty directory.
+Return all direct children. Handle every remote page, marker, or cursor rather than returning only the first page. Return `[]` for an empty directory.
 
-#### `getReader(ctx, entry, start, size) -> ReadCloser`
+#### `getReader(entry, start, size) -> ReadCloser`
 
-Read file content. `start === -1 && size === -1` means the complete content. For range reads, send an appropriate Range header and validate the response status. If `getURL` is implemented, omit `getReader`; the runtime throws `ErrUnsupported()`.
+Read file content. `start === -1 && size === -1` means the complete content. For range reads, send an appropriate Range header and validate the response status. If `getURL` is implemented, omit `getReader`; the runtime throws `new UnsupportedError()`.
 
 ### Write methods
 
-#### `save(ctx, path, size, override, reader)`
+#### `save(path, size, override, reader, onProgress)`
 
-Stream the Reader to the remote service and report total size and progress:
-
-```js
-ctx.Total(size, true);
-var body = reader.ProgressReader(ctx);
-```
+Stream the Reader to the remote service. Go reports `size` as the task total before the call. Passing the Reader to `http()` reports upload progress automatically. For progress that is not a Reader (chunked APIs, copy/move/delete), call `onProgress(loaded, total?)` with **absolute** values; omit `total` to update loaded only.
 
 Honor `override`. Prefer a conditional remote write over a check-then-write sequence that introduces a race. Do not evict caches or return `get`; the runtime evicts the target and parent, then re-gets.
 
-#### `makeDir(ctx, path)`
+#### `makeDir(path)`
 
 Create one directory. The dispatcher ensures that parents exist. Object storage may create a zero-byte object with a trailing `/`; if the service has implicit directories, follow its native semantics.
 
-#### `delete(ctx, path) -> void`
+#### `delete(path, onProgress) -> void`
 
 Delete the path and all descendants. If remote directory deletion is not recursive, enumerate with `buildEntriesTree` and `flattenEntriesTree`, then delete depth-first.
 
 ### Native copy and move
 
-#### `copy(ctx, from, to, override)`
+#### `copy(from, to, override, onProgress)`
 
-The runtime calls this only when `from` belongs to this Drive instance. `from` is a plain Entry (`Path`, `IsDir`, `Size`, `ModTime`, `Data`). Throw `ErrUnsupported()` when native copy is unavailable (for example directories). The dispatcher will fall back to reading the source and calling destination `save`. Never disguise an actual remote failure as Unsupported.
+The runtime calls this only when `from` belongs to this Drive instance. `from` is an `EntryRecord` (`path`, `isDir`, `size`, `modTime`, `data`). Throw `new UnsupportedError()` when native copy is unavailable (for example directories). The dispatcher will fall back to reading the source and calling destination `save`. Never disguise an actual remote failure as Unsupported.
 
-#### `move(ctx, from, to, override)`
+#### `move(from, to, override, onProgress)`
 
-Same ownership wrapping as `copy`. `ErrUnsupported()` from `move` does **not** trigger automatic copy-and-delete.
+Same ownership wrapping as `copy`. `new UnsupportedError()` from `move` does **not** trigger automatic copy-and-delete.
 
 ### Upload strategy
 
-#### `upload(ctx, path, size, override, config) -> DriveUploadConfig | undefined`
+#### `upload(path, size, override, config) -> DriveUploadConfig | undefined`
 
 Chooses the frontend upload strategy; it does not replace `save`. Defaults to `useLocalProvider(size)`.
 
 - Return `useCustomProvider(safeConfig)` for direct browser uploads (no uploader name).
 - After a successful browser upload the runtime calls this again with `config.action === "Completed"` and evicts the target and parent. Return immediately for that action unless the Drive must finish a server-side commit.
-- `Config` sent to the browser is fully visible to the user. Include only short-lived, least-privilege upload credentials, never a long-lived secret.
+- `config` sent to the browser is fully visible to the user. Include only short-lived, least-privilege upload credentials, never a long-lived secret.
 
 ### Downloads and thumbnails
 
-#### `getURL(ctx, entry) -> ContentURL` (optional)
+#### `getURL(entry) -> ContentURL` (optional)
 
 Return:
 
 ```js
 {
-  URL: "https://...",
-  Header: { Authorization: "Bearer ..." }, // Optional
-  Proxy: true,                             // Optional
-  DownloadFileName: "name.txt"            // Optional
+  url: "https://...",
+  header: { Authorization: "Bearer ..." }, // Optional
+  proxy: true,                             // Optional
+  downloadFileName: "name.txt"            // Optional
 }
 ```
 
-With no Header and `Proxy: false`, the client receives a redirect. If a Header is present, proxying is forced, or `Proxy: true`, go-drive proxies the response. Private headers are not exposed to the browser. Do not cache a short-lived signed URL in Entry.Data.
+With no `header` and `proxy: false`, the client receives a redirect. If a `header` is present, proxying is forced, or `proxy: true`, go-drive proxies the response. Private headers are not exposed to the browser. Do not cache a short-lived signed URL in `entry.data`.
 
-#### `getThumbnail(ctx, entry) -> ReadCloser | ContentURL` (optional)
+#### `getThumbnail(entry) -> ReadCloser | ContentURL` (optional)
 
-Return a remote thumbnail response body or URL configuration. When returning the body, do not dispose it first. Mark eligible entries with `Meta.SelfThumbnail: true` in `get`/`list` (type, extension, size only; no network). Omit `getThumbnail` when the service has no thumbnail capability.
+Return a remote thumbnail response body or URL configuration. When returning the body, do not dispose it first. Mark eligible entries with `meta.selfThumbnail: true` in `get`/`list` (type, extension, size only; no network). Omit `getThumbnail` when the service has no thumbnail capability.
 
 ### Background intervals
 
-#### `onInterval(ctx, name)` (optional)
+#### `onInterval(name)` (optional)
 
-Required when `createInstance` returns `intervals`. Go owns the clock; the callback runs on a borrowed VM and must finish within `timeout` (default `30s`). Use `ctx` for HTTP. Return `"25m"` or `ms(...)` to choose the next delay; omit to keep `interval`.
+Required when `createInstance` returns `intervals`. Go owns the clock; the callback runs on a borrowed VM and must finish within `timeout` (default `30s`). Return `"25m"` or `ms(...)` to choose the next delay; omit to keep `interval`.
 
 ```js
-createInstance: function (ctx, config, utils) {
+createInstance: function (config, utils) {
   return {
-    oauth: utils.OAuthLoad(oauthReq(utils.Config), {
-      ClientID: config.client_id,
-      ClientSecret: config.client_secret
+    oauth: utils.oauthLoad(oauthReq(utils.config), {
+      clientID: config.client_id,
+      clientSecret: config.client_secret
     }),
     intervals: [{ name: "refresh", interval: "30m", immediately: false }]
   };
 }
 
-onInterval: function (ctx, name) {
+onInterval: function (name) {
   if (name !== "refresh") return;
-  this.oauth.Refresh(ctx);
+  this.oauth.refresh();
 }
 ```
 
-Do not call `OAuthLoad` inside `onInterval`. Standard OAuth request paths should keep using `Token(ctx)`.
+Do not call `oauthLoad` inside `onInterval`. Standard OAuth request paths should keep using `token()`.
 
 ## 7. Available JavaScript APIs
 
@@ -305,88 +298,84 @@ The following runtime surface is safe to depend on. Refer to the two `.d.ts` fil
 
 ### Configuration, state, and cache
 
-- `utils.Config`: `OAuthRedirectURI`, `Version`, `RevHash`, and `BuildAt`.
-- `utils.Data.Load(...keys)` / `utils.Data.Save(map)`: persistent string configuration.
+- `utils.config`: `oauthRedirectURI`, `version`, `revHash`, and `buildAt`.
+- `utils.data.load(...keys)` / `utils.data.save(map)`: persistent string configuration.
 - `this.cache`: entry cache created for the instance. Use it only for extra invalidation; `get`/`list` and write methods are wrapped automatically.
 - `parseDuration(value)`: `ms(...)` or a duration string (`"2s"`, `"2d3h"`). Empty → `0`; invalid throws TypeError.
-- `DriveCache.PutEntry`, `PutEntries`, and `PutChildren` (`ttl` is `ms(...)` or a duration string).
-- `DriveCache.GetEntry` and `GetChildren`; a miss returns `null`.
-- `DriveCache.Evict(path, descendants)` and `EvictAll()`.
+- `DriveCache.putEntry`, `putEntries`, and `putChildren` (`ttl` is `ms(...)` or a duration string).
+- `DriveCache.getEntry` and `getChildren`; a miss returns `null`.
+- `DriveCache.evict(path, descendants)` and `evictAll()`.
 - Cross-VM shared state: assign `$` properties on the instance (`this.$foo = …`).
-- `selfDrive`: the Go wrapper of the current script Drive, with Get/Save/MakeDir/Copy/Move/List/Delete methods.
+- `selfDrive`: a host `Drive` wrapping the current script Drive (`selfDrive instanceof Drive`). Use `get`/`save`/`makeDir`/`copy`/`move`/`list`/`delete`. Distinct from `this` (`DriveThis`).
 
 ### OAuth
 
-- `utils.OAuthInitConfig(request, credentials)`: produce a configuration/OAuth step and possibly an existing `OAuthHolder`.
-- `utils.OAuthInit(ctx, data, request, credentials)`: handle the OAuth callback during initialization.
-- `utils.OAuthLoad(request, credentials)`: construct the runtime `OAuthHolder` from a stored token.
-- `OAuthHolder.Token(ctx)`: retrieve an automatically refreshed token. `ctx` is required; refresh uses it.
-- `OAuthHolder.Refresh(ctx)`: force a token-endpoint exchange even if the access token is still valid. Call this from `onInterval` on the holder created in `createInstance`. Do not call `OAuthLoad` again.
-- An OAuth request contains Endpoint, RedirectURL, Scopes, and Text; credentials contain ClientID and ClientSecret.
+- `utils.oauthInitConfig(request, credentials)`: produce a configuration/OAuth step and possibly an existing `OAuthHolder`. The result is read-only; copy fields into a new object if `initConfig` needs to change `configured` / `oauth.principal`. `OAuthHolder.token` / `refresh` on `oauthHolder` still work.
+- `utils.oauthInit(data, request, credentials)`: handle the OAuth callback during initialization.
+- `utils.oauthLoad(request, credentials)`: construct the runtime `OAuthHolder` from a stored token.
+- `OAuthHolder.token()`: retrieve an automatically refreshed token.
+- `OAuthHolder.refresh()`: force a token-endpoint exchange even if the access token is still valid. Call this from `onInterval` on the holder created in `createInstance`. Do not call `oauthLoad` again.
+- An OAuth request contains `endpoint`, `redirectUrl`, `scopes`, and `text`; credentials contain `clientID` and `clientSecret`.
 - Endpoint authentication styles are `OAuthStyle.AutoDetect`, `InParams`, and `InHeader`. Prefer auto-detection unless the provider requires otherwise.
 
-Follow `dropbox.js`. Do not persist OAuth state manually or duplicate refresh-token logic. Ordinary request methods should keep using `Token`; `Refresh` is for keep-alive when a provider expires unused refresh tokens.
+Follow `dropbox.js`. Do not persist OAuth state manually or duplicate refresh-token logic. Ordinary request methods should keep using `token`; `refresh` is for keep-alive when a provider expires unused refresh tokens.
 
 ### HTTP
 
-- `http(ctx, method, url, { headers, body }?) -> HttpResponse`; methods are HEAD, GET, POST, PUT, DELETE, PATCH, and OPTIONS.
+- `http(url, { method, headers, body, timeout }?) -> HttpResponse`; `method` defaults to GET. Allowed methods are HEAD, GET, POST, PUT, DELETE, PATCH, and OPTIONS. `timeout` is `ms(...)` or a duration string and defaults to `"30s"`; `0` disables it (the VM run context still applies). Other host network APIs do not add a timeout. Uploads that may run longer than 30s must set `timeout: 0` (or a longer duration).
 - The body may be a Reader, string, Bytes, or HttpFormData.
-- For a Reader body, `Content-Length` comes from `headers` when set (the body is truncated to that size). Otherwise a known size is used (`TempFile` remaining bytes, including `ProgressReader` / `LimitReader` wrapping one) so object-storage PUT is not chunked. String and Bytes always use their actual length. FormData is multipart. Set `Transfer-Encoding: chunked` to skip auto `Content-Length`.
-- `newFormData()`, with `AppendField` and `AppendFile`.
-- `HttpResponse.Status`, `Body`, `BodySize()`, `Text()`, `JSON()`, and `Dispose()`.
-- `HttpResponse.Headers.Get(key)`, `Values(key)`, and `GetAll()`.
+- For a Reader body, `Content-Length` comes from `headers` when set (the body is truncated to that size). Otherwise a known size is used (`TempFile` remaining bytes, including `limitReader` wrapping one) so object-storage PUT is not chunked. String and Bytes always use their actual length. HttpFormData is multipart. Set `Transfer-Encoding: chunked` to skip auto `Content-Length`. Reader bodies report upload progress to the Go task automatically.
+- `new HttpFormData()`, with `appendField` and `appendFile`.
+- `HttpResponse.status`, `body`, `bodySize()`, `text()`, `json()`, and `dispose()`.
+- `HttpResponse.headers.get(key)`, `values(key)`, and `getAll()`.
 
 The HTTP client does not follow redirects automatically. Handle 3xx responses according to the service API. For every unexpected status, read or dispose the response and map it to a go-drive error.
 
 ### Logging and debugging
 
 - `console.debug/error/info/log/warn(...)`: write to the server log.
-- `consoleWrite(level, ...messages)`: low-level logging; normally use `console`.
 
 Use the appropriate `console.debug/info/warn/error` level directly, and redact
 arguments before constructing the log message.
 
 ### IO
 
-- `newBytes(string)` and `newEmptyBytes(size)`; Bytes has `Len()`, `Slice(start, end)` with an exclusive end, and `String()`.
-- Reader has `Read(bytes)` (returns `-1` at EOF), `ReadAsString()`, `LimitReader(n)`, and `ProgressReader(ctx)`.
-- ReadCloser additionally has `Close()`.
-- `newTempFile()`; TempFile has all Reader methods plus `Write(bytes)`, `CopyFrom(reader)`, `SeekTo(offset, whence)`, `Size()`, and `Close()`.
+- `new Bytes(size)` allocates zeroed bytes. `Bytes.fromString(s)` copies UTF-8. Bytes has `length`, `slice(start, end)` with an exclusive end, and `toString(encoding?, options?)` (`utf8`, `hex`, `base64`, `base64url`; `options.padded` defaults to `true`).
+- `Bytes.fromHex(s)`, `Bytes.fromBase64(s, options?)`, `Bytes.fromBase64Url(s, options?)`, and `Bytes.random(n)` (CSPRNG; `n` in `[0, 1MiB]`).
+- Reader has `read(bytes)` (returns `-1` at EOF), `readAsString()`, and `limitReader(n)`.
+- ReadCloser additionally has `close()`.
+- `new TempFile()`; TempFile has all Reader methods plus `write(bytes)`, `copyFrom(reader)`, `seekTo(offset, whence)`, `size()`, and `close()`.
+- Host values are JS classes: `value instanceof Bytes`, `tmp instanceof TempFile && tmp instanceof Reader`, `selfDrive instanceof Drive`, `entry instanceof Entry`. `defineDrive` `get`/`list` return plain `EntryRecord` objects, not host `Entry`.
 - `SEEK_START`, `SEEK_CURRENT`, and `SEEK_END`.
 
-### Context, progress, and synchronization
+### Progress and synchronization
 
-- Context has `Err()`; a timeout context also has a required `Cancel()`.
-- TaskCtx has `Progress(value, absolute)` and `Total(value, absolute)`.
-- `newContext()`, `newContextWithTimeout(parent, timeout)`, and `newTaskCtx(ctx, callback)`. `timeout` is `ms(...)` or a duration string (`"2s"`).
-- `sleep(duration)`; `newLocker()` returns a current-VM mutex with `Lock()` and `Unlock()`.
-- Drive intervals: `createInstance` may return `intervals: [{ name, interval, timeout?, immediately? }]`. Go schedules them; `onInterval(ctx, name)` runs on a borrowed VM. `interval` / `timeout` / the return value are `ms(...)` or duration strings (`"30m"`); timeout defaults to `"30s"`. Overlapping ticks are skipped. A returned duration reschedules the next run; omitting it keeps `interval`. Stopped when the Drive is disposed. Do not emulate this with `sleep` loops or Admin Jobs.
+- Write methods receive `onProgress(loaded, total?)` as the last argument. Values are absolute. Reader uploads via `http` do not need it.
+- `sleep(duration)`.
+- Drive intervals: `createInstance` may return `intervals: [{ name, interval, timeout?, immediately? }]`. Go schedules them; `onInterval(name)` runs on a borrowed VM. `interval` / `timeout` / the return value are `ms(...)` or duration strings (`"30m"`); timeout defaults to `"30s"`. Overlapping ticks are skipped. A returned duration reschedules the next run; omitting it keeps `interval`. Stopped when the Drive is disposed. Do not emulate this with `sleep` loops or Admin Jobs.
 - `ms(milliseconds)` converts milliseconds to a Go Duration.
 
 ### Paths, time, encoding, and hashes
 
 - `pathUtils.clean/join/parent/base/ext/isRoot`.
-- `urlUtils.parse(url)` and `urlUtils.build(parts)` use Go's `net/url`; `urlUtils.parseSearchParams` and `urlUtils.buildSearchParams` handle query strings; `searchParams` maps keys to string arrays.
-- `dayjs` and `toDate(goTime)`; GoTime also has `UnixMilli()`.
-- `encUtils.toHex/fromHex`.
-- `encUtils.base64Encode/base64Decode` and `urlBase64Encode/urlBase64Decode`; second argument `padded` defaults to `true`. Pass `false` for raw encoding (JWT, PKCE).
-- `encUtils.randomBytes(n)` (CSPRNG; `n` in `[0, 1MiB]`).
-- `encUtils.newHash(HASH.*)`; Hasher has `Write`, `WriteReader`, and `Sum`.
-- `encUtils.newHmac(HASH.*, keyBytes)` returns a streaming Hasher.
-- HASH supports MD5, SHA1, SHA256, and SHA512. `WriteReader` hashes from the current offset to EOF (it does not seek to the start). On a seekable `TempFile` it restores that same offset, so hashing from the middle (`SeekTo` then `WriteReader`) and then continuing from that point works. After `Write`, call `SeekTo(0, SEEK_START)` if the whole file must be hashed or uploaded. One-shot Readers (response bodies) are consumed; copy them to a TempFile first if they must be reused. When a digest must appear in request headers (`Content-MD5`), hash the TempFile, then `http()`.
+- `urlUtils.parse(url)` and `urlUtils.build(parts)` use Go's `net/url`; `urlUtils.parseSearchParams` and `urlUtils.buildSearchParams` handle query strings; `searchParams` maps keys to string arrays. Parsed objects are read-only; copy with `Object.assign` / spread before changing fields and calling `build`.
+- `dayjs`; Go `time.Time` values appear as JavaScript `Date`.
+- `new Hash("md5")` / `"sha1"` / `"sha256"` / `"sha512"`; Hash has `write`, `writeFrom`, and `sum`.
+- `new Hmac("sha1", keyBytes)` returns a streaming Hmac (`hmac instanceof Hash`).
+- `writeFrom` hashes from the current offset to EOF (it does not seek to the start). On a seekable `TempFile` it restores that same offset, so hashing from the middle (`seekTo` then `writeFrom`) and then continuing from that point works. After `write`, call `seekTo(0, SEEK_START)` if the whole file must be hashed or uploaded. One-shot Readers (response bodies) are consumed; copy them to a TempFile first if they must be reused. When a digest must appear in request headers (`Content-MD5`), hash the TempFile, then `http()`.
 
 ### Traversal helpers
 
-- `buildEntriesTree(ctx, entry, byteProgress?)`.
+- `buildEntriesTree(entry, byteProgress?)`.
 - `flattenEntriesTree(node, deepFirst?)`.
-- `findEntries(ctx, rootDrive, pattern, bytesProgress?)`.
-- DriveEntry methods: `Path/Name/Type/Size/Meta/ModTime/GetURL/GetReader/Unwrap/Data/Drive`.
+- `findEntries(rootDrive, pattern, bytesProgress?)`.
+- `Entry` (host class from `Drive.list` / `selfDrive.get`, not `EntryRecord`): getters `path/name/type/size/meta/modTime/unwrap/data/drive`; methods `getUrl/getReader`.
 
 ### Forms
 
-Supported types are `md`, `textarea`, `text`, `password`, `checkbox`, `checkboxes`, `select`, `path`, `form`, and `code`. Drive credentials normally need only text/password/select/checkbox. Use `Type: "password"` for secrets. When an existing secret is returned through `DriveInitConfiguration.Value`, the admin API replaces it with a reserved placeholder; submitting that unchanged placeholder preserves the stored secret.
+Supported types are `md`, `textarea`, `text`, `password`, `checkbox`, `checkboxes`, `select`, `path`, `form`, and `code`. Drive credentials normally need only text/password/select/checkbox. Use `type: "password"` for secrets. When an existing secret is returned through `DriveInitConfiguration.value`, the admin API replaces it with a reserved placeholder; submitting that unchanged placeholder preserves the stored secret.
 
-Common fields are `Label/Type/Field/Required/Description/Disabled/DefaultValue`. A select uses `Options`, a path uses `PathOptions`, a nested form uses `Forms`, and a code editor uses `Code`. Use the capitalized Go-bridge field names declared in the `.d.ts` files.
+Common fields are `label/type/field/required/description/disabled/defaultValue`. A select uses `options`, a path uses `pathOptions`, a nested form uses `forms`, and a code editor uses `code`. Use the lowerCamel Go-bridge field names declared in the `.d.ts` files.
 
 ## 8. Minimal complete example
 
@@ -412,18 +401,18 @@ It demonstrates the interface contract and does not represent a real service:
 defineDrive(
   {
     configForm: [
-      { Label: "API URL", Field: "base_url", Type: "text", Required: true },
-      { Label: "Token", Field: "token", Type: "password", Required: true },
+      { label: "API URL", field: "base_url", type: "text", required: true },
+      { label: "Token", field: "token", type: "password", required: true },
       entryCacheTTLFormItem("5m")
     ],
 
-    validateConfig: function (config) {
+    validateConfig(config) {
       if (!/^https:\/\/[^/]+(?:\/.*)?$/.test(config.base_url || "")) {
-        throw ErrBadRequest("API URL must use HTTPS");
+        throw new BadRequestError("API URL must use HTTPS");
       }
     },
 
-    createInstance: function (ctx, config) {
+    createInstance(config) {
       return {
         entryCacheTTL: config.cache_ttl,
         baseURL: config.base_url.replace(/\/+$/, ""),
@@ -432,122 +421,118 @@ defineDrive(
     }
   },
   {
-    get: function (ctx, path) {
-      var result = requestJSON(
+    get(path) {
+      const result = requestJson(
         this,
-        ctx,
         "GET",
         "/v1/entries?path=" + encodeURIComponent(path)
       );
       return toEntry(result.entry);
     },
 
-    list: function (ctx, path) {
-      var all = [];
-      var cursor = "";
+    list(path) {
+      const all = [];
+      let cursor = "";
       do {
-        ctx.Err();
-        var route = "/v1/children?path=" + encodeURIComponent(path);
+        let route = "/v1/children?path=" + encodeURIComponent(path);
         if (cursor) route += "&cursor=" + encodeURIComponent(cursor);
-        var page = requestJSON(this, ctx, "GET", route);
-        for (var i = 0; i < page.items.length; i++) {
-          all.push(toEntry(page.items[i]));
-        }
+        const page = requestJson(this, "GET", route);
+        all.push(...page.items.map(toEntry));
         cursor = page.nextCursor || "";
       } while (cursor);
       return all;
     },
 
-    save: function (ctx, path, size, override, reader) {
-      ctx.Total(size, true);
-      var route = "/v1/content?path=" + encodeURIComponent(path) +
+    save(path, size, override, reader, onProgress) {
+      const route = "/v1/content?path=" + encodeURIComponent(path) +
         "&override=" + (override ? "true" : "false");
-      var resp = http(ctx, "PUT", this.baseURL + route, {
+      const resp = http(this.baseURL + route, {
+        method: "PUT",
         headers: {
           Authorization: "Bearer " + this.token,
           "Content-Type": "application/octet-stream"
         },
-        body: reader.ProgressReader(ctx)
+        body: reader,
+        timeout: 0
       });
-      var status = resp.Status;
-      var message = resp.Text();
-      if (status === 409) throw ErrNotAllowed("destination already exists");
-      if (status < 200 || status >= 300) throw ErrRemoteApi(status, message);
+      const status = resp.status;
+      const message = resp.text();
+      if (status === 409) throw new NotAllowedError("destination already exists");
+      if (status < 200 || status >= 300) throw new RemoteApiError(status, message);
     },
 
-    makeDir: function (ctx, path) {
-      requestJSON(this, ctx, "POST", "/v1/directories", { path: path });
+    makeDir(path) {
+      requestJson(this, "POST", "/v1/directories", { path });
     },
 
-    copy: function (ctx, from, to, override) {
-      throw ErrUnsupported();
+    copy(from, to, override, onProgress) {
+      throw new UnsupportedError();
     },
 
-    move: function (ctx, from, to, override) {
-      throw ErrUnsupported();
+    move(from, to, override, onProgress) {
+      throw new UnsupportedError();
     },
 
-    delete: function (ctx, path) {
-      requestJSON(
+    delete(path, onProgress) {
+      requestJson(
         this,
-        ctx,
         "DELETE",
         "/v1/entries?recursive=true&path=" + encodeURIComponent(path)
       );
     },
 
-    getURL: function (ctx, entry) {
-      var data = requestJSON(
+    getURL(entry) {
+      const data = requestJson(
         this,
-        ctx,
         "GET",
-        "/v1/download-url?path=" + encodeURIComponent(entry.Path)
+        "/v1/download-url?path=" + encodeURIComponent(entry.path)
       );
-      return { URL: data.url };
+      return { url: data.url };
     }
   }
 );
 
 
-function requestJSON(drive, ctx, method, route, body) {
-  var headers = {
+function requestJson(drive, method, route, body) {
+  const headers = {
     Authorization: "Bearer " + drive.token,
     Accept: "application/json"
   };
-  var payload;
+  let payload;
   if (body !== undefined) {
     headers["Content-Type"] = "application/json";
     payload = JSON.stringify(body);
   }
-  var resp = http(ctx, method, drive.baseURL + route, {
-    headers: headers,
+  const resp = http(drive.baseURL + route, {
+    method,
+    headers,
     body: payload
   });
-  var status = resp.Status;
-  var text = resp.Text();
-  var data = {};
+  const status = resp.status;
+  const text = resp.text();
+  let data = {};
   if (text) {
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw ErrRemoteApi(status, "remote returned invalid JSON");
+      throw new RemoteApiError(status, "remote returned invalid JSON");
     }
   }
-  if (status === 404) throw ErrNotFound();
-  if (status === 401 || status === 403) throw ErrNotAllowed("remote denied access");
+  if (status === 404) throw new NotFoundError();
+  if (status === 401 || status === 403) throw new NotAllowedError("remote denied access");
   if (status < 200 || status >= 300) {
-    throw ErrRemoteApi(status, data.message || "remote request failed");
+    throw new RemoteApiError(status, data.message || "remote request failed");
   }
   return data;
 }
 
 function toEntry(remote) {
   return {
-    IsDir: remote.type === "dir",
-    Path: pathUtils.clean(remote.path),
-    Size: remote.type === "dir" ? -1 : remote.size,
-    ModTime: remote.modified_at ? dayjs(remote.modified_at).valueOf() : -1,
-    Data: { id: String(remote.id) }
+    isDir: remote.type === "dir",
+    path: pathUtils.clean(remote.path),
+    size: remote.type === "dir" ? -1 : remote.size,
+    modTime: remote.modified_at ? dayjs(remote.modified_at).valueOf() : -1,
+    data: { id: String(remote.id) }
   };
 }
 ```
@@ -574,7 +559,7 @@ defineUploader({
   chunkSize: 5 * 1024 * 1024,
   async start(ctx) {
     if (ctx.chunks === 1) return null;
-    var res = await ctx.request({ method: "post", url: ctx.config.initURL });
+    const res = await ctx.request({ method: "post", url: ctx.config.initURL });
     return { uploadId: res.data.uploadId };
   },
   async upload(ctx, args) {
@@ -598,7 +583,7 @@ An agent must proceed in this order:
 
 1. Read the target service's official API. Record authentication, metadata, pagination, upload, download, directory, copy, move, delete, rate-limit, and error semantics.
 2. Perform the suitability assessment first. If the service is unsuitable, explain why it needs a Go Drive instead of generating a plausible-looking placeholder script.
-3. Define one unambiguous remote-object-to-Entry mapping, including root path, directory emulation, and time units.
+3. Define one unambiguous remote-object-to-`EntryRecord` mapping, including root path, directory emulation, and time units.
 4. Implement the configuration lifecycle and least-privilege credentials.
 5. Implement `get`/`list` and downloads (`getURL` or `getReader`), then write methods.
 6. Implement native copy/move only when the remote service truly supports them.

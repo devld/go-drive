@@ -64,15 +64,15 @@ Start with the current templates and definitions:
 - [`docs/drive-uploaders`](https://github.com/devld/go-drive/tree/master/docs/drive-uploaders)
 - [`script-drives/AGENTS.md`](https://github.com/devld/go-drive/blob/master/script-drives/AGENTS.md): the complete implementation contract, API catalog, suitability guide, and end-to-end example for AI agents and developers.
 
-The template uses TypeScript references for editor completion, but the runtime is still server-side JavaScript. An implementation should:
+The template uses TypeScript references for editor completion, but the runtime is still server-side JavaScript. It runs on Goja with ES6+ syntax (`let`/`const`, arrow functions, classes, rest/spread, and modern array methods). Host APIs are fully synchronous and never return Promises; there is no event loop, asynchronous HTTP, timers, or top-level await. The old PascalCase Go wrapper API is incompatible; use the lowerCamel names exposed by the current mapper, after converting `URL` to `Url`, `JSON` to `Json`, and `OAuth` to `Oauth` before lowercasing the first letter. An implementation should:
 
 - Define a unique type name, display name, description, and configuration form.
-- Keep `configForm` static. Dynamic multi-step configuration belongs in explicit `initConfig(ctx, config, utils)` and `init(ctx, data, config, utils)` callbacks, following the native Drive lifecycle. Form fields beginning with `_` are reserved.
-- Handle OAuth explicitly with `utils.OAuthInitConfig`, `utils.OAuthInit`, and `utils.OAuthLoad`; there is no automatic OAuth hook.
-- Implement `createInstance(ctx, config, utils)`, loading only the dynamic initialization fields needed by the Drive with `utils.Data.Load("key", ...)`.
+- Keep `configForm` static. Dynamic multi-step configuration belongs in explicit `initConfig(config, utils)` and `init(data, config, utils)` callbacks, following the native Drive lifecycle. Form fields beginning with `_` are reserved.
+- Handle OAuth explicitly with `utils.oauthInitConfig`, `utils.oauthInit`, and `utils.oauthLoad`; there is no automatic OAuth hook.
+- Implement `createInstance(config, utils)`, loading only the dynamic initialization fields needed by the Drive with `utils.data.load("key", ...)`.
 - Implement `defineDrive` with `get` and `list`, plus `getURL` or `getReader`, then the write, upload, download, and thumbnail methods supported by the service.
 - Return Unsupported from unavailable native `copy` operations so the dispatcher can stream-copy; note that `move` does not have a copy-and-delete fallback.
-- Use the provided context and propagate cancellation through cancellable operations.
+- Host operations inherit the current execution context and its cancellation. Use `http(url, { timeout })` to set a request-specific timeout.
 - Promptly close response bodies, readers, and remote connections.
 - Never write tokens, passwords, or signed URLs to logs.
 

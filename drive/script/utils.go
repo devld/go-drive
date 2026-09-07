@@ -3,12 +3,13 @@ package script
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"io"
 	"maps"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"go-drive/common"
@@ -23,7 +24,7 @@ import (
 
 //go:embed helper.js
 var helperScript []byte
-var baseVM *s.VM
+var helperProgram = s.MustCompile("helper.js", helperScript)
 
 const (
 	DefaultPoolMaxTotal = 100
@@ -31,20 +32,6 @@ const (
 	DefaultPoolMinIdle  = 10
 	DefaultPoolIdleTime = time.Duration(30 * time.Minute)
 )
-
-func init() {
-	vm, e := s.NewVM()
-	if e != nil {
-		panic(e)
-	}
-
-	_, e = vm.RunNamed(context.Background(), "helper.js", helperScript)
-	if e != nil {
-		panic(e)
-	}
-
-	baseVM = vm
-}
 
 var t = i18n.TPrefix("drive.script.")
 
@@ -101,13 +88,21 @@ func GetDriveScriptConfigForm(ctx context.Context, config common.Config, name st
 	}
 	defer func() { _ = vm.Dispose() }()
 
-	formValue, e := vm.GetValue("__driveConfigForm")
+	form := make([]types.FormItem, 0)
+	e = vm.Do(ctx, func() error {
+		formValue, e := vm.GetValue("__driveConfigForm")
+		if e != nil {
+			return e
+		}
+		if formValue != nil && !formValue.IsNil() {
+			if e := formValue.ParseInto(&form); e != nil {
+				return e
+			}
+		}
+		return nil
+	})
 	if e != nil {
 		return nil, e
-	}
-	form := make([]types.FormItem, 0)
-	if formValue != nil && !formValue.IsNil() {
-		formValue.ParseInto(&form)
 	}
 	if e := validateScriptForm(form); e != nil {
 		return nil, e
@@ -126,38 +121,61 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.D
 		return nil, err.NewNotAllowedMessageError(i18n.T("drive.script.invalid_pool_config", e.Error()))
 	}
 
-	vm, e := createVm(ctx, driveUtils.Config, selectedScript)
+	compiled, e := compileDriveScript(driveUtils.Config, selectedScript)
 	if e != nil {
 		return nil, e
 	}
 
 	d := &ScriptDrive{
 		name:     config[scriptConfigField],
-		baseVM:   vm,
-		data:     make(map[string]json.RawMessage),
+		data:     make(map[string]any),
 		writable: true,
 	}
 	d.cache = driveUtils.CreateCache(d.deserializeEntry)
 
-	vm.Set("__setData", s.WrapVmCall(vm, d.setData))
-	vm.Set("__getData", s.WrapVmCall(vm, d.getData))
+	var initializeOnce sync.Once
+	var initializeErr error
+	initializer := func(vmCtx context.Context, vm *s.VM) error {
+		if e := initializeDriveScriptVM(vmCtx, vm, compiled, d); e != nil {
+			return e
+		}
 
-	scriptUtils := newScriptDriveUtils(driveUtils)
-	scriptUtils.cache = &scriptDriveCache{d.cache}
+		runtimeConfig := vm.ToJSValue(config)
+		scriptUtils := newScriptDriveUtils(vm, driveUtils, &d.oauth, newScriptDriveCache(vm, d.cache))
+		return vm.Do(vmCtx, func() error {
+			createdVal, e := vm.Call(vmCtx, "__driveCreate", runtimeConfig, scriptUtils)
+			if e != nil {
+				return e
+			}
+			initializeOnce.Do(func() {
+				initializeErr = d.applyCreated(createdVal)
+				if initializeErr == nil {
+					d.inspectMethods(vm)
+				}
+			})
+			if initializeErr != nil {
+				return initializeErr
+			}
+			return vm.DefineGlobal("selfDrive", d)
+		})
+	}
 
-	createdVal, e := vm.Call(ctx, "__driveCreate", s.NewContext(vm, ctx), config, scriptUtils)
-
+	d.pool, e = s.NewVMPool(ctx, initializer, poolConfig)
 	if e != nil {
 		_ = d.Dispose()
 		return nil, e
 	}
-	if e := d.applyCreated(createdVal); e != nil {
+	// MinIdle may be zero; force one initialization so metadata and supported
+	// methods are known before the Drive becomes visible.
+	vm, e := d.pool.Get(ctx)
+	if e != nil {
 		_ = d.Dispose()
 		return nil, e
 	}
-	d.inspectMethods(vm)
-	vm.Set("selfDrive", s.NewDrive(d))
-	d.pool = s.NewVMPool(vm, poolConfig)
+	if e := d.pool.Return(context.Background(), vm); e != nil {
+		_ = d.Dispose()
+		return nil, e
+	}
 	if e := d.startIntervals(); e != nil {
 		_ = d.Dispose()
 		return nil, e
@@ -166,16 +184,34 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.D
 	return d, nil
 }
 
+func (sd *ScriptDrive) jsFunInitData(vm *s.VM, args s.Values) any {
+	data := args.Get(0)
+	keys := data.Keys()
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+	for _, key := range keys {
+		if _, exists := sd.data[key]; exists {
+			continue
+		}
+		cloned, e := vm.FromJSValue(data.Get(key))
+		if e != nil {
+			vm.ThrowTypeError("shared state must be JSON serializable: " + e.Error())
+		}
+		sd.data[key] = cloned
+	}
+	return nil
+}
+
 func (sd *ScriptDrive) applyCreated(createdVal *s.Value) error {
 	if createdVal == nil || createdVal.IsNil() {
 		return nil
 	}
 	sd.writable = true
-	if v := createdVal.Get("Writable"); v != nil && !v.IsNil() {
+	if v := createdVal.Get("writable"); !v.IsNil() {
 		sd.writable = v.Bool()
 	}
-	if v := createdVal.Get("EntryCacheTTL"); v != nil && !v.IsNil() {
-		ttl, ok := s.DurationFrom(v)
+	if v := createdVal.Get("entryCacheTTL"); !v.IsNil() {
+		ttl, ok := s.ParseDuration(v)
 		if !ok {
 			return err.NewNotAllowedMessageError("entryCacheTTL requires a Duration or duration string")
 		}
@@ -183,7 +219,7 @@ func (sd *ScriptDrive) applyCreated(createdVal *s.Value) error {
 			sd.cacheTTL = ttl
 		}
 	}
-	return sd.prepareIntervals(createdVal.Get("Intervals"))
+	return sd.prepareIntervals(createdVal.Get("intervals"))
 }
 
 func (sd *ScriptDrive) hasMethod(vm *s.VM, name string) bool {
@@ -217,25 +253,30 @@ func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.Drive
 	}
 	defer func() { _ = vm.Dispose() }()
 
-	initConfigVal, e := vm.GetValue("__driveInitConfig")
+	var vmCfg *driveutil.DriveInitConfig
+	e = vm.Do(ctx, func() error {
+		entry, e := vm.GetValue("__driveInitConfig")
+		if e != nil || entry.IsNil() {
+			return e
+		}
+		v, e := vm.Call(ctx, "__driveInitConfig", vm.ToJSValue(config), newScriptDriveUtils(vm, driveUtils, nil, nil))
+		if e != nil {
+			return e
+		}
+		if v == nil || v.IsNil() {
+			return nil
+		}
+		cfg := &driveutil.DriveInitConfig{}
+		if e := v.ParseInto(cfg); e != nil {
+			return e
+		}
+		if e := validateScriptForm(cfg.Form); e != nil {
+			return e
+		}
+		vmCfg = cfg
+		return nil
+	})
 	if e != nil {
-		return nil, e
-	}
-	if initConfigVal == nil || initConfigVal.IsNil() {
-		return nil, nil
-	}
-
-	v, e := vm.Call(ctx, "__driveInitConfig", s.NewContext(vm, ctx), config, newScriptDriveUtils(driveUtils))
-	if e != nil {
-		return nil, e
-	}
-
-	if v == nil || v.IsNil() {
-		return nil, nil
-	}
-	vmCfg := &driveutil.DriveInitConfig{}
-	v.ParseInto(vmCfg)
-	if e := validateScriptForm(vmCfg.Form); e != nil {
 		return nil, e
 	}
 	return vmCfg, nil
@@ -252,16 +293,14 @@ func init_(ctx context.Context, data, config types.SM, driveUtils driveutil.Driv
 	}
 	defer func() { _ = vm.Dispose() }()
 
-	initConfigVal, e := vm.GetValue("__driveInit")
-	if e != nil {
+	return vm.Do(ctx, func() error {
+		entry, e := vm.GetValue("__driveInit")
+		if e != nil || entry.IsNil() {
+			return e
+		}
+		_, e = vm.Call(ctx, "__driveInit", vm.ToJSValue(data), vm.ToJSValue(config), newScriptDriveUtils(vm, driveUtils, nil, nil))
 		return e
-	}
-	if initConfigVal == nil || initConfigVal.IsNil() {
-		return nil
-	}
-
-	_, e = vm.Call(ctx, "__driveInit", s.NewContext(vm, ctx), data, config, newScriptDriveUtils(driveUtils))
-	return e
+	})
 }
 
 // parsePoolConfig parses config like this: MaxTotal,MaxIdle,MinIdle,IdleTime
@@ -305,139 +344,280 @@ func parsePoolConfig(arg string) (*s.VMPoolConfig, error) {
 	return c, nil
 }
 
-func newScriptDriveUtils(utils driveutil.DriveUtils) *scriptDriveUtils {
-	return &scriptDriveUtils{utils.CreateCache, nil, driveDataStore{utils.Data}, utils.Config}
+func newScriptDriveUtils(vm *s.VM, utils driveutil.DriveUtils, oauth *oauthHolderShare, cache *scriptDriveCache) *scriptDriveUtils {
+	return &scriptDriveUtils{
+		vm:          vm,
+		createCache: utils.CreateCache,
+		cache:       cache,
+		oauth:       oauth,
+		Data:        &driveDataStore{vm, utils.Data},
+		Config: rootConfig{
+			OAuthRedirectURI: utils.Config.OAuthRedirectURI,
+			Version:          utils.Config.Version,
+			RevHash:          utils.Config.RevHash,
+			BuildAt:          utils.Config.BuildAt,
+		},
+	}
+}
+
+// rootConfig is the script-facing subset of common.Config (RootConfig in drive.d.ts).
+// It is a value type so each VM gets an independent copy without JSON cloning, and
+// scripts cannot read unrelated server settings such as database credentials.
+type rootConfig struct {
+	OAuthRedirectURI string
+	Version          string
+	RevHash          string
+	BuildAt          string
 }
 
 type scriptDriveUtils struct {
+	vm          *s.VM
 	createCache driveutil.DriveCacheFactory
 	cache       *scriptDriveCache
+	oauth       *oauthHolderShare
 
-	Data   driveDataStore
-	Config common.Config
+	Data   *driveDataStore
+	Config rootConfig
 }
 
-func (sdu *scriptDriveUtils) CreateCache() *scriptDriveCache {
+// oauthHolderShare keeps one *driveutil.OAuthHolder per credentials/endpoint
+// for a Drive. Pooled VMs only wrap it for their own Runtime.
+type oauthHolderShare struct {
+	mu      sync.Mutex
+	holders map[string]*driveutil.OAuthHolder
+}
+
+func oauthShareKey(o driveutil.OAuthRequest, cred driveutil.OAuthCredentials) string {
+	return strings.Join([]string{
+		cred.ClientID,
+		cred.ClientSecret,
+		o.Endpoint.AuthURL,
+		o.Endpoint.TokenURL,
+		strconv.Itoa(int(o.Endpoint.AuthStyle)),
+		o.RedirectURL,
+		strings.Join(o.Scopes, " "),
+	}, "\x00")
+}
+
+func (c *oauthHolderShare) get(key string, load func() (*driveutil.OAuthHolder, error)) (*driveutil.OAuthHolder, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if h, ok := c.holders[key]; ok {
+		return h, nil
+	}
+	h, e := load()
+	if e != nil || h == nil {
+		return h, e
+	}
+	if c.holders == nil {
+		c.holders = make(map[string]*driveutil.OAuthHolder)
+	}
+	c.holders[key] = h
+	return h, nil
+}
+
+func (c *oauthHolderShare) put(key string, h *driveutil.OAuthHolder) {
+	if h == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.holders == nil {
+		c.holders = make(map[string]*driveutil.OAuthHolder)
+	}
+	c.holders[key] = h
+}
+
+func (sdu *scriptDriveUtils) CreateCache(_ *s.VM, _ s.Values) any {
 	if sdu.cache != nil {
 		return sdu.cache
 	}
-	return &scriptDriveCache{sdu.createCache(nil)}
+	return newScriptDriveCache(sdu.vm, sdu.createCache(nil))
 }
 
-func (sdu *scriptDriveUtils) OAuthInitConfig(or driveutil.OAuthRequest,
-	cred driveutil.OAuthCredentials) *oauthInitConfigResult {
-	c, oauthHolder, e := driveutil.OAuthInitConfig(or, cred, sdu.Data.data)
+func (d *driveDataStore) Save(_ *s.VM, args s.Values) any {
+	if e := d.data.Save(args.Get(0).SM()); e != nil {
+		d.vm.ThrowError(e)
+	}
+	return nil
+}
+
+func (d *driveDataStore) Load(_ *s.VM, args s.Values) any {
+	if args.Len() == 0 {
+		d.vm.ThrowTypeError("data.load requires a key")
+	}
+	extra := make([]string, 0, args.Len()-1)
+	for i := 1; i < args.Len(); i++ {
+		extra = append(extra, args.Get(i).String())
+	}
+	r, e := d.data.Load(args.Get(0).String(), extra...)
 	if e != nil {
-		s.ThrowDetachedError(e)
-	}
-	var wrapped *oauthHolderWrapper
-	if oauthHolder != nil {
-		wrapped = &oauthHolderWrapper{oauthHolder}
-	}
-	return &oauthInitConfigResult{c, wrapped}
-}
-
-func (sdu *scriptDriveUtils) OAuthInit(ctx any,
-	data types.SM, or driveutil.OAuthRequest,
-	cred driveutil.OAuthCredentials) *oauthHolderWrapper {
-	c := s.GetContext(ctx)
-	if c == nil {
-		s.ThrowDetachedError(errors.New("OAuthInit requires a context"))
-	}
-	oauthHolder, e := driveutil.OAuthInit(c, or, data, cred, sdu.Data.data)
-	if e != nil {
-		s.ThrowDetachedError(e)
-	}
-	if oauthHolder == nil {
-		return nil
-	}
-	return &oauthHolderWrapper{oauthHolder}
-}
-
-func (sdu *scriptDriveUtils) OAuthLoad(o driveutil.OAuthRequest,
-	cred driveutil.OAuthCredentials) *oauthHolderWrapper {
-	oauthHolder, e := driveutil.OAuthLoad(o, cred, sdu.Data.data)
-	if e != nil {
-		s.ThrowDetachedError(e)
-	}
-	if oauthHolder == nil {
-		return nil
-	}
-	return &oauthHolderWrapper{oauthHolder}
-}
-
-type driveDataStore struct {
-	data driveutil.DriveDataStore
-}
-
-func (d driveDataStore) Save(data types.SM) {
-	if e := d.data.Save(data); e != nil {
-		s.ThrowDetachedError(e)
-	}
-}
-
-func (d driveDataStore) Load(key string, keys ...string) types.SM {
-	r, e := d.data.Load(key, keys...)
-	if e != nil {
-		s.ThrowDetachedError(e)
+		d.vm.ThrowError(e)
 	}
 	return r
 }
 
-type oauthInitConfigResult struct {
-	Config      *driveutil.DriveInitConfig
-	OAuthHolder *oauthHolderWrapper
+func (sdu *scriptDriveUtils) OAuthInitConfig(_ *s.VM, args s.Values) any {
+	req := s.Parse[driveutil.OAuthRequest](args.Get(0))
+	cred := s.Parse[driveutil.OAuthCredentials](args.Get(1))
+	c, holder, e := driveutil.OAuthInitConfig(req, cred, sdu.Data.data)
+	if e != nil {
+		sdu.vm.ThrowError(e)
+	}
+	if sdu.oauth != nil {
+		holder, e = sdu.oauth.get(oauthShareKey(req, cred), func() (*driveutil.OAuthHolder, error) {
+			return holder, nil
+		})
+		if e != nil {
+			sdu.vm.ThrowError(e)
+		}
+	}
+	result := map[string]any{"config": c}
+	if holder != nil {
+		result["oauthHolder"] = &oauthHolderWrapper{sdu.vm, holder}
+	}
+	return result
+}
+
+func (sdu *scriptDriveUtils) OAuthInit(_ *s.VM, args s.Values) any {
+	req := s.Parse[driveutil.OAuthRequest](args.Get(1))
+	cred := s.Parse[driveutil.OAuthCredentials](args.Get(2))
+	holder, e := driveutil.OAuthInit(sdu.vm.ExecutionContext(), req, args.Get(0).SM(), cred, sdu.Data.data)
+	if e != nil {
+		sdu.vm.ThrowError(e)
+	}
+	if sdu.oauth != nil {
+		sdu.oauth.put(oauthShareKey(req, cred), holder)
+	}
+	if holder == nil {
+		return nil
+	}
+	return &oauthHolderWrapper{sdu.vm, holder}
+}
+
+func (sdu *scriptDriveUtils) OAuthLoad(_ *s.VM, args s.Values) any {
+	req := s.Parse[driveutil.OAuthRequest](args.Get(0))
+	cred := s.Parse[driveutil.OAuthCredentials](args.Get(1))
+	load := func() (*driveutil.OAuthHolder, error) {
+		return driveutil.OAuthLoad(req, cred, sdu.Data.data)
+	}
+	var holder *driveutil.OAuthHolder
+	var e error
+	if sdu.oauth != nil {
+		holder, e = sdu.oauth.get(oauthShareKey(req, cred), load)
+	} else {
+		holder, e = load()
+	}
+	if e != nil {
+		sdu.vm.ThrowError(e)
+	}
+	if holder == nil {
+		return nil
+	}
+	return &oauthHolderWrapper{sdu.vm, holder}
+}
+
+type driveDataStore struct {
+	vm   *s.VM
+	data driveutil.DriveDataStore
 }
 
 type oauthHolderWrapper struct {
+	vm          *s.VM
 	oauthHolder *driveutil.OAuthHolder
 }
 
-func (or *oauthHolderWrapper) Token(ctx any) *oauth2.Token {
-	c := s.GetContext(ctx)
-	if c == nil {
-		s.ThrowDetachedError(errors.New("OAuthHolder.Token requires a context"))
-	}
+func (or *oauthHolderWrapper) Token(_ *s.VM, _ s.Values) any {
+	c := or.vm.ExecutionContext()
 	t, e := or.oauthHolder.Token(c)
 	if e != nil {
-		s.ThrowDetachedError(e)
+		or.vm.ThrowError(e)
 	}
-	return t
+	return oauthTokenJS(t)
 }
 
-func (or *oauthHolderWrapper) Refresh(ctx any) *oauth2.Token {
-	c := s.GetContext(ctx)
-	if c == nil {
-		s.ThrowDetachedError(errors.New("OAuthHolder.Refresh requires a context"))
-	}
+func (or *oauthHolderWrapper) Refresh(_ *s.VM, _ s.Values) any {
+	c := or.vm.ExecutionContext()
 	t, e := or.oauthHolder.Refresh(c)
 	if e != nil {
-		s.ThrowDetachedError(e)
+		or.vm.ThrowError(e)
 	}
-	return t
+	return oauthTokenJS(t)
 }
 
-func createVm(ctx context.Context, config common.Config, script string) (*s.VM, error) {
+func oauthTokenJS(t *oauth2.Token) map[string]any {
+	if t == nil {
+		return nil
+	}
+	return map[string]any{
+		"accessToken":  t.AccessToken,
+		"tokenType":    t.TokenType,
+		"refreshToken": t.RefreshToken,
+		"expiry":       t.Expiry,
+	}
+}
+
+type compiledDriveScript struct {
+	program *s.Program
+	version string
+	name    string
+}
+
+func compileDriveScript(config common.Config, script string) (*compiledDriveScript, error) {
 	scriptBytes, e := readDriveScriptFile(script, config)
 	if e != nil {
 		return nil, e
 	}
 
-	vm := baseVM.Fork()
 	meta, ok, e := parseDriveScriptMeta(scriptBytes, script)
 	if e != nil {
-		_ = vm.Dispose()
 		return nil, e
 	}
+	version := ""
 	if ok {
-		vm.Set("__driveScriptVersion", meta.Version)
-	} else {
-		vm.Set("__driveScriptVersion", "")
+		version = meta.Version
 	}
-	vm.Set("__driveUploaderName", strings.TrimSuffix(script, ".js"))
-	vm.Set("__ownEntry", s.WrapVmCall(vm, ownEntry))
+	program, e := s.Compile(script, scriptBytes)
+	if e != nil {
+		return nil, e
+	}
+	return &compiledDriveScript{
+		program: program,
+		version: version,
+		name:    strings.TrimSuffix(script, ".js"),
+	}, nil
+}
 
-	_, e = vm.RunNamed(ctx, script, scriptBytes)
+func initializeDriveScriptVM(ctx context.Context, vm *s.VM, compiled *compiledDriveScript, drive *ScriptDrive) error {
+	bridge := map[string]any{
+		"version": compiled.version,
+		"name":    compiled.name,
+	}
+	if drive != nil {
+		bridge["initData"] = s.NativeFunction(drive.jsFunInitData)
+		bridge["setData"] = s.NativeFunction(drive.jsFunSetData)
+		bridge["getData"] = s.NativeFunction(drive.jsFunGetData)
+	}
+	if e := vm.WithBridge(bridge, func() error {
+		_, e := vm.Run(ctx, helperProgram, "helper.js")
+		return e
+	}); e != nil {
+		return e
+	}
+	_, e := vm.Run(ctx, compiled.program, compiled.name+".js")
+	return e
+}
+
+func createVm(ctx context.Context, config common.Config, script string) (*s.VM, error) {
+	compiled, e := compileDriveScript(config, script)
+	if e != nil {
+		return nil, e
+	}
+	vm, e := s.NewVM()
+	if e != nil {
+		return nil, e
+	}
+	e = initializeDriveScriptVM(ctx, vm, compiled, nil)
 	if e != nil {
 		_ = vm.Dispose()
 		return nil, e
@@ -445,54 +625,8 @@ func createVm(ctx context.Context, config common.Config, script string) (*s.VM, 
 	return vm, nil
 }
 
-func ownEntry(vm *s.VM, args s.Values) any {
-	from := s.GetEntry(args.Get(0).Raw())
-	if from == nil {
-		return nil
-	}
-	selfVal, e := vm.GetValue("selfDrive")
-	if e != nil || selfVal.IsNil() {
-		return nil
-	}
-	self := s.GetDrive(selfVal.Raw())
-	if self == nil {
-		return nil
-	}
-	owned := driveutil.GetSelfEntry(self, from)
-	if owned == nil {
-		return nil
-	}
-	result := map[string]any{
-		"Path":    owned.Path(),
-		"IsDir":   owned.Type().IsDir(),
-		"Size":    owned.Size(),
-		"ModTime": owned.ModTime(),
-	}
-	if ce, ok := owned.(driveutil.CacheableEntry); ok {
-		result["Data"] = ce.EntryData()
-	}
-	return result
-}
-
-// wrapReader adapts an io.Reader into an io.ReadCloser. If reader already is a
-// ReadCloser it is returned as-is, otherwise a no-op Close is added.
-func wrapReader(reader io.Reader) io.ReadCloser {
-	if rc, ok := reader.(io.ReadCloser); ok {
-		return rc
-	}
-	return fakeCloseReader{reader}
-}
-
-type fakeCloseReader struct {
-	io.Reader
-}
-
-func (fcr fakeCloseReader) Close() error {
-	return nil
-}
-
-// wrapContentReader adapts an io.ReadCloser (already detached from the VM, so
-// the caller owns closing it) into an IContentReader for thumbnail responses.
+// wrapContentReader adapts an io.ReadCloser (already removed from the VM
+// disposables, so the caller owns closing it) into an IContentReader.
 func wrapContentReader(rc io.ReadCloser) types.IContentReader {
 	return readCloserContentReader{rc}
 }
@@ -512,4 +646,14 @@ func (r readCloserContentReader) GetReader(_ context.Context, start, size int64)
 
 func (r readCloserContentReader) GetURL(_ context.Context) (*types.ContentURL, error) {
 	return nil, err.NewUnsupportedError()
+}
+
+func jsOnProgress(ctx types.TaskCtx) s.NativeFunction {
+	return func(_ *s.VM, args s.Values) any {
+		ctx.Progress(args.Get(0).Integer(), true)
+		if t := args.Get(1); t != nil && !t.IsNil() {
+			ctx.Total(t.Integer(), true)
+		}
+		return nil
+	}
 }

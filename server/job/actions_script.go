@@ -19,21 +19,7 @@ const jobEventName = "$event"
 
 //go:embed script-helper.js
 var helperScript []byte
-var baseVM *s.VM
-
-func init() {
-	vm, e := s.NewVM()
-	if e != nil {
-		panic(e)
-	}
-
-	_, e = vm.RunNamed(context.Background(), "script-helper.js", helperScript)
-	if e != nil {
-		panic(e)
-	}
-
-	baseVM = vm
-}
+var helperProgram = s.MustCompile("script-helper.js", helperScript)
 
 func init() {
 	t := i18n.TPrefix("jobs.script.")
@@ -66,24 +52,45 @@ func init() {
 func ExecuteJobCode(ctx context.Context, code any, globals types.M, ch *registry.ComponentsHolder, onLog func(string)) error {
 	started := time.Now()
 	logging.For("job").Debugf("job script started")
-	vm := baseVM.Fork()
+	vm, e := newJobVM(ctx)
+	if e != nil {
+		return e
+	}
 	defer func() { _ = vm.Dispose() }()
 
-	vm.Set("drive", s.NewDrive(ch.Get(registry.KeyDriveAccess).(*drive.Access).GetRootDrive(nil)))
-	bindJobLog(vm, onLog)
-	setJobGlobals(vm, globals)
+	if e = vm.DefineGlobal("drive", ch.Get(registry.KeyDriveAccess).(*drive.Access).GetRootDrive(nil)); e != nil {
+		return e
+	}
+	if e = bindJobLog(vm, onLog); e != nil {
+		return e
+	}
+	if e = setJobGlobals(vm, globals); e != nil {
+		return e
+	}
 
-	_, e := vm.RunNamed(ctx, "job.js", code)
+	_, e = vm.Run(ctx, code, "job.js")
 	if e != nil {
-		logging.For("job").Errorf("job script failed duration=%s: %v", time.Since(started), e)
+		logging.For("job").Errorf("job script failed duration=%s: %s", time.Since(started), s.FormatError(e))
 	} else {
 		logging.For("job").Debugf("job script completed duration=%s", time.Since(started))
 	}
 	return e
 }
 
-func bindJobLog(vm *s.VM, onLog func(string)) {
-	vm.Set("log", s.WrapVmCall(vm, func(_ *s.VM, args s.Values) any {
+func newJobVM(ctx context.Context) (*s.VM, error) {
+	vm, e := s.NewVM()
+	if e != nil {
+		return nil, e
+	}
+	if _, e = vm.Run(ctx, helperProgram, "script-helper.js"); e != nil {
+		_ = vm.Dispose()
+		return nil, e
+	}
+	return vm, nil
+}
+
+func bindJobLog(vm *s.VM, onLog func(string)) error {
+	return vm.DefineGlobal("log", s.NativeFunction(func(_ *s.VM, args s.Values) any {
 		if onLog != nil {
 			onLog(s.FormatConsoleArgs(args))
 		}
@@ -91,17 +98,20 @@ func bindJobLog(vm *s.VM, onLog func(string)) {
 	}))
 }
 
-func setJobGlobals(vm *s.VM, globals types.M) {
+func setJobGlobals(vm *s.VM, globals types.M) error {
 	hasEvent := false
 	for k, v := range globals {
-		vm.Set(k, v)
+		if e := vm.DefineGlobal(k, v); e != nil {
+			return e
+		}
 		if k == jobEventName {
 			hasEvent = true
 		}
 	}
 	if !hasEvent {
-		vm.SetUndefined(jobEventName)
+		return vm.DefineGlobal(jobEventName, nil)
 	}
+	return nil
 }
 
 var defaultCodeValue = strings.TrimLeft(fmt.Sprintf(`
@@ -139,6 +149,6 @@ log('triggered by event:', %s)
 // drive.
 
 // or send a http request
-// log(http(newContext(), 'GET', 'https://example.com').Text())
+// log(http('https://example.com').text())
 
 `, jobEventName), "\t\n\r ")

@@ -1,5 +1,5 @@
 // @name Dropbox
-// @version 1.0.6
+// @version 1.0.9
 // @description Dropbox drive
 
 /**
@@ -8,20 +8,20 @@
  */
 function oauthReq(config) {
   return {
-    Endpoint: {
-      AuthURL:
+    endpoint: {
+      authUrl:
         "https://www.dropbox.com/oauth2/authorize?token_access_type=offline",
-      TokenURL: "https://api.dropboxapi.com/oauth2/token",
+      tokenUrl: "https://api.dropboxapi.com/oauth2/token",
     },
-    RedirectURL: config.OAuthRedirectURI,
-    Scopes: [
+    redirectUrl: config.oauthRedirectURI,
+    scopes: [
       "files.metadata.write",
       "files.metadata.read",
       "files.content.write",
       "files.content.read",
       "account_info.read",
     ],
-    Text: "Connect To Dropbox",
+    text: "Connect To Dropbox",
   };
 }
 
@@ -29,149 +29,141 @@ defineDrive(
   {
     configForm: [
       {
-        Label: "Client ID",
-        Type: "text",
-        Field: "client_id",
-        Required: true,
+        label: "Client ID",
+        type: "text",
+        field: "client_id",
+        required: true,
       },
       {
-        Label: "Client Secret",
-        Type: "password",
-        Field: "client_secret",
-        Required: true,
+        label: "Client Secret",
+        type: "password",
+        field: "client_secret",
+        required: true,
       },
       entryCacheTTLFormItem("2h"),
     ],
 
-    initConfig: function (ctx, config, utils) {
-      var result = utils.OAuthInitConfig(oauthReq(utils.Config), {
-        ClientID: config.client_id,
-        ClientSecret: config.client_secret,
+    initConfig(config, utils) {
+      const result = utils.oauthInitConfig(oauthReq(utils.config), {
+        clientID: config.client_id,
+        clientSecret: config.client_secret,
       });
-      if (!result.OAuthHolder) return result.Config;
+      if (!result.oauthHolder) return result.config;
 
-      var data = request(result.OAuthHolder, ctx, "POST", "/users/get_current_account");
-      result.Config.OAuth.Principal =
-        data.name.display_name + "<" + data.email + ">";
-      result.Config.Configured = true;
-      return result.Config;
+      const data = request(result.oauthHolder, "POST", "/users/get_current_account");
+      return {
+        configured: true,
+        oauth: {
+          url: result.config.oauth.url,
+          text: result.config.oauth.text,
+          principal: data.name.display_name + "<" + data.email + ">",
+        },
+        form: result.config.form,
+        value: result.config.value,
+      };
     },
 
-    init: function (ctx, data, config, utils) {
-      utils.OAuthInit(ctx, data, oauthReq(utils.Config), {
-        ClientID: config.client_id,
-        ClientSecret: config.client_secret,
+    init(data, config, utils) {
+      utils.oauthInit(data, oauthReq(utils.config), {
+        clientID: config.client_id,
+        clientSecret: config.client_secret,
       });
     },
 
-    createInstance: function (ctx, config, utils) {
+    createInstance(config, utils) {
       return {
         entryCacheTTL: config.cache_ttl,
-        oauth: utils.OAuthLoad(oauthReq(utils.Config), {
-          ClientID: config.client_id,
-          ClientSecret: config.client_secret,
+        oauth: utils.oauthLoad(oauthReq(utils.config), {
+          clientID: config.client_id,
+          clientSecret: config.client_secret,
         }),
       };
     },
   },
   {
-    get: function (ctx, path) {
+    get(path) {
       console.debug("get", path);
-      var data = request(this.oauth, ctx, "POST", "/files/get_metadata", null, {
+      const data = request(this.oauth, "POST", "/files/get_metadata", null, {
         path: "/" + path,
       });
       return toEntry(data);
     },
 
-    save: function (ctx, path, size, override, reader) {
+    save(path, size, override, reader, onProgress) {
       if (size <= 150 * 1025 * 1024) {
-        ctx.Total(size, true);
-        uploadSmall(this, ctx, "/" + path, size, reader.ProgressReader(ctx));
+        uploadSmall(this, "/" + path, size, reader);
       } else {
-        uploadLarge(this, ctx, "/" + path, size, reader);
+        uploadLarge(this, "/" + path, size, reader);
       }
     },
 
-    makeDir: function (ctx, path) {
-      request(this.oauth, ctx, "POST", "/files/create_folder_v2", null, {
+    makeDir(path) {
+      request(this.oauth, "POST", "/files/create_folder_v2", null, {
         path: "/" + path,
       });
     },
 
-    copy: function (ctx, from, to, override) {
-      request(this.oauth, ctx, "POST", "/files/copy_v2", null, {
-        from_path: "/" + from.Path,
+    copy(from, to, override) {
+      request(this.oauth, "POST", "/files/copy_v2", null, {
+        from_path: "/" + from.path,
         to_path: "/" + to,
       });
     },
 
-    move: function (ctx, from, to, override) {
-      request(this.oauth, ctx, "POST", "/files/move_v2", null, {
-        from_path: "/" + from.Path,
+    move(from, to, override) {
+      request(this.oauth, "POST", "/files/move_v2", null, {
+        from_path: "/" + from.path,
         to_path: "/" + to,
       });
     },
 
-    list: function (ctx, path) {
+    list(path) {
       console.debug("list", path);
-      var hasMore = true;
-      var cursor;
-      var result = [];
+      let hasMore = true;
+      let cursor;
+      const result = [];
       while (hasMore) {
-        var data = cursor
-          ? request(
-              this.oauth,
-              ctx,
-              "POST",
-              "/files/list_folder/continue",
-              null,
-              {
-                cursor: cursor,
-              }
-            )
-          : request(this.oauth, ctx, "POST", "/files/list_folder", null, {
+        const data = cursor
+          ? request(this.oauth, "POST", "/files/list_folder/continue", null, {
+              cursor,
+            })
+          : request(this.oauth, "POST", "/files/list_folder", null, {
               path: path ? "/" + path : "",
             });
         hasMore = data.has_more;
         cursor = data.cursor;
-        result = result.concat(
-          data.entries.map(function (e) {
-            return toEntry(e);
-          })
-        );
+        result.push(...data.entries.map(toEntry));
       }
       return result;
     },
 
-    delete: function (ctx, path) {
+    delete(path) {
       console.debug("delete", path);
-      request(this.oauth, ctx, "POST", "/files/delete_v2", null, {
+      request(this.oauth, "POST", "/files/delete_v2", null, {
         path: "/" + path,
       });
     },
 
-    getURL: function (ctx, entry) {
-      console.debug("getURL", entry.Path);
-      var data = request(
+    getURL(entry) {
+      console.debug("getURL", entry.path);
+      const data = request(
         this.oauth,
-        ctx,
         "POST",
         "/files/get_temporary_link",
         null,
         {
-          path: "/" + entry.Path,
+          path: "/" + entry.path,
         }
       );
-      return { URL: data.link };
+      return { url: data.link };
     },
 
-    getThumbnail: function (ctx, entry) {
+    getThumbnail(entry) {
       if (!dropboxCanThumbnail(entry)) {
-        throw ErrUnsupported();
+        throw new UnsupportedError();
       }
-      var resp = request(
+      const resp = request(
         this.oauth,
-        ctx,
         "POST",
         "/files/get_thumbnail_v2",
         {
@@ -180,7 +172,7 @@ defineDrive(
             mode: "strict",
             resource: {
               ".tag": "path",
-              path: "/" + entry.Path,
+              path: "/" + entry.path,
             },
             size: "w256h256",
           }),
@@ -188,26 +180,25 @@ defineDrive(
         null,
         true
       );
-      return resp.Body;
+      return resp.body;
     },
   }
 );
 
 /**
  * @param {{ oauth: OAuthHolder }} drive
- * @param {TaskCtx} ctx
+ * @param {string} path
  * @param {number} size
  * @param {Reader} reader
  */
-function uploadSmall(drive, ctx, path, size, reader) {
+function uploadSmall(drive, path, size, reader) {
   request(
     drive.oauth,
-    ctx,
     "POST",
     "/files/upload",
     {
       "Dropbox-API-Arg": JSON.stringify({
-        path: path,
+        path,
         mode: "overwrite",
         mute: true,
       }),
@@ -220,14 +211,13 @@ function uploadSmall(drive, ctx, path, size, reader) {
 
 /**
  * @param {{ oauth: OAuthHolder }} drive
- * @param {TaskCtx} ctx
+ * @param {string} path
  * @param {number} size
  * @param {Reader} reader
  */
-function uploadLarge(drive, ctx, path, size, reader) {
-  var sessionId = request(
+function uploadLarge(drive, path, size, reader) {
+  const sessionId = request(
     drive.oauth,
-    ctx,
     "POST",
     "/files/upload_session/start",
     {
@@ -238,26 +228,25 @@ function uploadLarge(drive, ctx, path, size, reader) {
     true
   ).session_id;
 
-  var chunkSize = 150 * 1024 * 1024;
-  var offset = 0;
+  const chunkSize = 150 * 1024 * 1024;
+  let offset = 0;
   while (offset < size) {
-    var length = Math.min(chunkSize, size - offset);
+    const length = Math.min(chunkSize, size - offset);
     request(
       drive.oauth,
-      ctx,
       "POST",
       "/files/upload_session/append_v2",
       {
         "Dropbox-API-Arg": JSON.stringify({
           cursor: {
-            offset: offset,
+            offset,
             session_id: sessionId,
           },
         }),
         "Content-Type": "application/octet-stream",
         "Content-Length": "" + length,
       },
-      reader.LimitReader(length).ProgressReader(ctx),
+      reader.limitReader(length),
       true
     );
     offset += length;
@@ -265,18 +254,17 @@ function uploadLarge(drive, ctx, path, size, reader) {
 
   request(
     drive.oauth,
-    ctx,
     "POST",
     "/files/upload_session/finish",
     {
       "Dropbox-API-Arg": JSON.stringify({
         commit: {
-          path: path,
+          path,
           mode: "overwrite",
           mute: true,
         },
         cursor: {
-          offset: offset,
+          offset,
           session_id: sessionId,
         },
       }),
@@ -288,99 +276,98 @@ function uploadLarge(drive, ctx, path, size, reader) {
 }
 
 function toEntry(data) {
-  var isDir = data[".tag"] === "folder";
-  var entry = {
-    IsDir: isDir,
-    Path: data.path_display.substring(1),
-    Size: isDir ? -1 : data.size,
-    ModTime: isDir ? -1 : dayjs(data.server_modified).toDate().getTime(),
+  const isDir = data[".tag"] === "folder";
+  const entry = {
+    isDir,
+    path: data.path_display.substring(1),
+    size: isDir ? -1 : data.size,
+    modTime: isDir ? -1 : dayjs(data.server_modified).toDate().getTime(),
   };
   if (dropboxCanThumbnail(entry)) {
-    entry.Meta = { Readable: true, Writable: true, SelfThumbnail: true };
+    entry.meta = { readable: true, writable: true, selfThumbnail: true };
   }
   return entry;
 }
 
 function dropboxCanThumbnail(entry) {
-  if (entry.IsDir) return false;
-  if (entry.Size > 20 * 1024 * 1024) return false;
-  var ext = pathUtils.ext(entry.Path);
-  return (
-    [
-      "jpg",
-      "jpeg",
-      "png",
-      "tiff",
-      "tif",
-      "gif",
-      "webp",
-      "ppm",
-      "bmp",
-    ].indexOf(ext) !== -1
-  );
+  if (entry.isDir) return false;
+  if (entry.size > 20 * 1024 * 1024) return false;
+  const ext = pathUtils.ext(entry.path);
+  return [
+    "jpg",
+    "jpeg",
+    "png",
+    "tiff",
+    "tif",
+    "gif",
+    "webp",
+    "ppm",
+    "bmp",
+  ].includes(ext);
 }
 
 /**
  * @param {OAuthHolder} oauthHolder
- * @param {Context} ctx
  * @param {HttpMethod} method
  * @param {string} [url]
  * @param {SM|null} [headers]
  * @param {any} [body]
  * @param {boolean} [contentApi]
  */
-function request(oauthHolder, ctx, method, url, headers, body, contentApi) {
-  var token = oauthHolder.Token(ctx);
-  headers = Object.assign(
+function request(oauthHolder, method, url, headers, body, contentApi) {
+  const token = oauthHolder.token();
+  /** @type {{ [key: string]: string }} */
+  const reqHeaders = Object.assign(
     {
-      Authorization: token.TokenType + " " + token.AccessToken,
+      Authorization: token.tokenType + " " + token.accessToken,
     },
     headers
   );
 
   if (!contentApi && body && typeof body === "object") {
     body = JSON.stringify(body);
-    headers["Content-Type"] = "application/json";
+    reqHeaders["Content-Type"] = "application/json";
   }
 
-  var r = http(
-    ctx,
-    method,
+  const r = http(
     (contentApi
       ? "https://content.dropboxapi.com/2"
       : "https://api.dropboxapi.com/2") + url,
-    { headers: headers, body: body }
+    contentApi
+      ? { method, headers: reqHeaders, body, timeout: 0 }
+      : { method, headers: reqHeaders, body }
   );
-  var isJSON =
-    r.Headers.Get("Content-Type").toLowerCase().indexOf("application/json") >=
-    0;
+  const isJSON = r.headers
+    .get("Content-Type")
+    .toLowerCase()
+    .includes("application/json");
 
-  var dataStr = isJSON ? r.Text() : undefined;
+  const dataStr = isJSON ? r.text() : undefined;
 
-  console.debug("http response", method, url, r.Status);
+  console.debug("http response", method, url, r.status);
 
-  var data;
+  let data;
   if (isJSON && dataStr) {
     try {
       data = JSON.parse(dataStr);
     } catch (e) {
-      throw ErrRemoteApi(500, "Failed to parse JSON: " + e);
+      throw new RemoteApiError(500, "Failed to parse JSON: " + e);
     }
   }
 
-  if (r.Status < 200 || r.Status >= 400) {
-    r.Dispose();
-    var error = data && data.error_summary;
+  if (r.status < 200 || r.status >= 400) {
+    r.dispose();
+    const error = data?.error_summary;
     if (typeof error === "string") {
-      if (error.indexOf("not_found") >= 0) {
-        throw ErrNotFound();
+      if (error.includes("not_found")) {
+        throw new NotFoundError();
       }
-      if (error.indexOf("conflict") >= 0) {
-        throw ErrNotAllowed();
+      if (error.includes("conflict")) {
+        throw new NotAllowedError();
       }
     }
 
-    throw ErrRemoteApi(r.Status, error || data);
+    throw new RemoteApiError(r.status, error || data);
   }
 
   return data || r;

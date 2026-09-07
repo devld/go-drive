@@ -1,13 +1,13 @@
 package err
 
 import (
+	"errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"net/http"
 )
 
 type Error interface {
-	Name() string
 	Code() int
 	Error() string
 }
@@ -30,10 +30,6 @@ func (b BadRequestError) Code() int {
 	return http.StatusBadRequest
 }
 
-func (b BadRequestError) Name() string {
-	return "BAD_REQUEST"
-}
-
 // UnauthorizedError 401
 type UnauthorizedError struct {
 	msg string
@@ -45,10 +41,6 @@ func (i UnauthorizedError) Error() string {
 
 func (i UnauthorizedError) Code() int {
 	return http.StatusUnauthorized
-}
-
-func (b UnauthorizedError) Name() string {
-	return "UNAUTHORIZED"
 }
 
 // NotFoundError 404
@@ -65,10 +57,6 @@ func (d NotFoundError) Code() int {
 	return http.StatusNotFound
 }
 
-func (d NotFoundError) Name() string {
-	return "NOT_FOUND"
-}
-
 // NotAllowedError 403
 type NotAllowedError struct {
 	msg  string
@@ -81,10 +69,6 @@ func (d NotAllowedError) Error() string {
 
 func (d NotAllowedError) Code() int {
 	return http.StatusForbidden
-}
-
-func (d NotAllowedError) Name() string {
-	return "NOT_ALLOWED"
 }
 
 func (d NotAllowedError) Data() types.M {
@@ -104,10 +88,6 @@ func (p PermissionDeniedError) Error() string {
 	return p.msg
 }
 
-func (p PermissionDeniedError) Name() string {
-	return "PERMISSION_DENIED"
-}
-
 // UnsupportedError 405
 type UnsupportedError struct {
 	msg string
@@ -119,10 +99,6 @@ func (n UnsupportedError) Error() string {
 
 func (n UnsupportedError) Code() int {
 	return http.StatusMethodNotAllowed
-}
-
-func (n UnsupportedError) Name() string {
-	return "UNSUPPORTED"
 }
 
 type RemoteApiError struct {
@@ -141,22 +117,23 @@ func (r RemoteApiError) Code() int {
 	return r.code
 }
 
-func (r RemoteApiError) Name() string {
-	return "REMOTE_API"
+// Status is the remote HTTP status originally recorded for this error.
+func (r RemoteApiError) Status() int {
+	return r.code
 }
 
 func IsUnauthorizedError(e error) bool {
-	_, ok := e.(UnauthorizedError)
+	_, ok := errors.AsType[UnauthorizedError](e)
 	return ok
 }
 
 func IsUnsupportedError(e error) bool {
-	_, ok := e.(UnsupportedError)
+	_, ok := errors.AsType[UnsupportedError](e)
 	return ok
 }
 
 func IsNotFoundError(e error) bool {
-	_, ok := e.(NotFoundError)
+	_, ok := errors.AsType[NotFoundError](e)
 	return ok
 }
 
@@ -164,12 +141,12 @@ func IsNotFoundError(e error) bool {
 // hides a path permission failure from callers that should not learn whether
 // the path exists.
 func IsPermissionDeniedNotFoundError(e error) bool {
-	d, ok := e.(NotFoundError)
+	d, ok := errors.AsType[NotFoundError](e)
 	return ok && d.permissionDenied
 }
 
 func IsNotAllowedError(e error) bool {
-	_, ok := e.(NotAllowedError)
+	_, ok := errors.AsType[NotAllowedError](e)
 	return ok
 }
 

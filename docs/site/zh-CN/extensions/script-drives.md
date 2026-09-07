@@ -3,7 +3,7 @@ title: 脚本 Drive 开发与安装
 description: 安装第三方脚本 Drive，或使用 JavaScript 开发 go-drive 存储适配器和浏览器直传集成。
 lang: zh-CN
 translation_key: script-drives
-source_hash: ca35d2135b0bdc8fd283104a565d8c45e13df456c44db8eb7ca4edd485cdb390
+source_hash: 52b5be4c764e754216f276642a97bc7d1417f4768f57dcb379e4fbe319984d41
 ---
 
 # 脚本 Drive 开发与安装
@@ -65,15 +65,15 @@ drive-repository-url: https://example.com/my-drives.json
 - [`docs/drive-uploaders`](https://github.com/devld/go-drive/tree/master/docs/drive-uploaders)
 - [`script-drives/AGENTS.md`](https://github.com/devld/go-drive/blob/master/script-drives/AGENTS.md)：供 AI Agent 和开发者使用的完整适用性判断、实现契约、API 清单与端到端示例。
 
-模板通过 TypeScript reference 提供编辑器补全，但运行时仍是服务器端 JavaScript。实现应：
+模板通过 TypeScript reference 提供编辑器补全，但运行时仍是服务器端 JavaScript。运行时基于支持 ES6+ 语法的 Goja（`let`/`const`、箭头函数、class、rest/spread 以及较新的数组方法）。Host API 全部同步执行且不会返回 Promise；没有 event loop、异步 HTTP、定时器或 top-level await。旧的 PascalCase Go wrapper API 不兼容；请使用当前 mapper 暴露的 lowerCamel 名称，并在首字母小写前先将 `URL` 转为 `Url`、将 `JSON` 转为 `Json`、将 `OAuth` 转为 `Oauth`。实现应：
 
 - 定义唯一类型名、显示名、说明和配置表单。
-- `configForm` 只用于静态配置；多步动态配置应按照原生 Drive 生命周期实现显式的 `initConfig(ctx, config, utils)` 和 `init(ctx, data, config, utils)` 回调。以下划线开头的表单字段名是保留字段。
-- 通过 `utils.OAuthInitConfig`、`utils.OAuthInit` 和 `utils.OAuthLoad` 显式处理 OAuth，没有自动 OAuth 回调。
-- 实现 `createInstance(ctx, config, utils)`，通过 `utils.Data.Load("key", ...)` 按需读取 Drive 所需的动态初始化字段。
+- `configForm` 只用于静态配置；多步动态配置应按照原生 Drive 生命周期实现显式的 `initConfig(config, utils)` 和 `init(data, config, utils)` 回调。以下划线开头的表单字段名是保留字段。
+- 通过 `utils.oauthInitConfig`、`utils.oauthInit` 和 `utils.oauthLoad` 显式处理 OAuth，没有自动 OAuth 回调。
+- 实现 `createInstance(config, utils)`，通过 `utils.data.load("key", ...)` 按需读取 Drive 所需的动态初始化字段。
 - 用 `defineDrive` 实现 `get`、`list`，以及 `getURL` 或 `getReader`，再按服务能力实现写入、上传、下载和缩略图方法。
 - 原生 `copy` 不可用时返回 Unsupported，调度层会流式复制；`move` 没有 copy-and-delete 回退。
-- 使用传入的 context，并在可中止操作中传播取消。
+- Host 操作自动继承当前执行的 context 及其取消信号。使用 `http(url, { timeout })` 设置单次请求的超时。
 - 及时关闭响应体、reader 和远端连接。
 - 不把 Token、密码或签名 URL 输出到日志。
 

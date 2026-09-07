@@ -1,7 +1,6 @@
 package script
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -19,10 +18,10 @@ defineDrive(
     }
   },
   {
-    get: function (ctx, path) { return { Path: path, IsDir: false, Size: 1, ModTime: -1 }; },
+    get: function (path) { return { path: path, isDir: false, size: 1, modTime: -1 }; },
     list: function () { return []; },
-    getURL: function () { return { URL: "https://example.com" }; },
-    onInterval: function (ctx, name) {
+    getURL: function () { return { url: "https://example.com" }; },
+    onInterval: function (name) {
       if (name !== "tick") throw new Error("unexpected interval " + name);
       var n = this.$n;
       n += 1;
@@ -55,9 +54,9 @@ defineDrive(
     }
   },
   {
-    get: function (ctx, path) { return { Path: path, IsDir: false, Size: 1, ModTime: -1 }; },
+    get: function (path) { return { path: path, isDir: false, size: 1, modTime: -1 }; },
     list: function () { return []; },
-    getURL: function () { return { URL: "https://example.com" }; },
+    getURL: function () { return { url: "https://example.com" }; },
     onInterval: function () {
       var n = this.$n;
       n += 1;
@@ -87,9 +86,9 @@ defineDrive(
     }
   },
   {
-    get: function (ctx, path) { return { Path: path, IsDir: false, Size: 1, ModTime: -1 }; },
+    get: function (path) { return { path: path, isDir: false, size: 1, modTime: -1 }; },
     list: function () { return []; },
-    getURL: function () { return { URL: "https://example.com" }; },
+    getURL: function () { return { url: "https://example.com" }; },
     onInterval: function () {
       var n = this.$n;
       n += 1;
@@ -117,9 +116,9 @@ defineDrive(
     }
   },
   {
-    get: function (ctx, path) { return { Path: path, IsDir: false, Size: 1, ModTime: -1 }; },
+    get: function (path) { return { path: path, isDir: false, size: 1, modTime: -1 }; },
     list: function () { return []; },
-    getURL: function () { return { URL: "https://example.com" }; }
+    getURL: function () { return { url: "https://example.com" }; }
   }
 );
 `)
@@ -142,9 +141,9 @@ defineDrive(
     }
   },
   {
-    get: function (ctx, path) { return { Path: path, IsDir: false, Size: 1, ModTime: -1 }; },
+    get: function (path) { return { path: path, isDir: false, size: 1, modTime: -1 }; },
     list: function () { return []; },
-    getURL: function () { return { URL: "https://example.com" }; },
+    getURL: function () { return { url: "https://example.com" }; },
     onInterval: function () {}
   }
 );
@@ -163,9 +162,9 @@ defineDrive(
     }
   },
   {
-    get: function (ctx, path) { return { Path: path, IsDir: false, Size: 1, ModTime: -1 }; },
+    get: function (path) { return { path: path, isDir: false, size: 1, modTime: -1 }; },
     list: function () { return []; },
-    getURL: function () { return { URL: "https://example.com" }; },
+    getURL: function () { return { url: "https://example.com" }; },
     onInterval: function () {}
   }
 );
@@ -178,14 +177,14 @@ defineDrive(
 func sharedInt(t *testing.T, d *ScriptDrive, key string) int {
 	t.Helper()
 	d.mu.RLock()
-	encoded, ok := d.data[key]
+	value, ok := d.data[key]
 	d.mu.RUnlock()
 	if !ok {
 		return 0
 	}
-	var n float64
-	if e := json.Unmarshal(encoded, &n); e != nil {
-		t.Fatal(e)
+	n, ok := value.(float64)
+	if !ok {
+		t.Fatalf("shared %s = %#v", key, value)
 	}
 	return int(n)
 }

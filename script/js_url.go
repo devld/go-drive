@@ -4,17 +4,55 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"sort"
-	"strconv"
 	"strings"
-
-	"github.com/robertkrimen/otto"
 )
 
-// parsedURL is the script-facing, serialized view of a net/url.URL. The
-// object returned to JavaScript is a native JS object rather than a Go struct;
-// this keeps script-side edits local to that object and avoids exposing Go
-// reflection mutability or method-name differences.
+var jsURLUtils = map[string]any{
+	"parse":             jsURLParse,
+	"build":             jsURLBuild,
+	"parseSearchParams": jsURLParseSearchParams,
+	"buildSearchParams": jsURLBuildSearchParams,
+}
+
+var jsURLParse = NativeFunction(func(vm *VM, args Values) any {
+	raw := requireURLString(vm, args.Get(0), "urlUtils.parse")
+	parsed, e := parseURL(raw)
+	if e != nil {
+		vm.ThrowTypeError(fmt.Sprintf("urlUtils.parse: %v", e))
+	}
+	return newURLPartsValue(vm, parsed)
+})
+
+var jsURLBuild = NativeFunction(func(vm *VM, args Values) any {
+	parts := args.Get(0)
+	if parts == nil || parts.IsNil() || !parts.IsObject() || parts.IsArray() {
+		vm.ThrowTypeError("urlUtils.build requires a URL parts object")
+	}
+	built, e := buildURL(vm, parts)
+	if e != nil {
+		vm.ThrowTypeError(fmt.Sprintf("urlUtils.build: %v", e))
+	}
+	return built
+})
+
+var jsURLParseSearchParams = NativeFunction(func(vm *VM, args Values) any {
+	raw := requireURLString(vm, args.Get(0), "urlUtils.parseSearchParams")
+	values, e := parseURLSearchParams(raw)
+	if e != nil {
+		vm.ThrowTypeError(fmt.Sprintf("urlUtils.parseSearchParams: %v", e))
+	}
+	return newURLSearchParamsValue(vm, values)
+})
+
+var jsURLBuildSearchParams = NativeFunction(func(vm *VM, args Values) any {
+	values, e := parseURLSearchParamsObject(args.Get(0))
+	if e != nil {
+		vm.ThrowTypeError(fmt.Sprintf("urlUtils.buildSearchParams: %v", e))
+	}
+	return buildURLSearchParams(values)
+})
+
+// parsedURL is the read-only JS view of a URL. Copy before editing for build.
 type parsedURL struct {
 	origin       string
 	protocol     string
@@ -26,52 +64,6 @@ type parsedURL struct {
 	pathname     string
 	searchParams url.Values
 	hash         string
-}
-
-// vm_urlParse parses a URL with net/url and returns a mutable native JS object.
-func vm_urlParse(vm *VM, args Values) any {
-	raw := requireURLString(vm, args.Get(0), "urlUtils.parse")
-	parsed, e := parseURL(raw)
-	if e != nil {
-		vm.ThrowTypeError(fmt.Sprintf("urlUtils.parse: %v", e))
-	}
-	return newURLPartsValue(vm, parsed)
-}
-
-// vm_urlParseSearchParams parses a URL search string and returns the same
-// string-array map used by urlUtils.parse.
-func vm_urlParseSearchParams(vm *VM, args Values) any {
-	raw := requireURLString(vm, args.Get(0), "urlUtils.parseSearchParams")
-	values, e := parseURLSearchParams(raw)
-	if e != nil {
-		vm.ThrowTypeError(fmt.Sprintf("urlUtils.parseSearchParams: %v", e))
-	}
-	return newURLSearchParamsValue(vm, values)
-}
-
-// vm_urlBuild rebuilds a URL from the serialized URL parts object. Derived
-// fields (origin, and host when hostname/port are present) are validated rather
-// than silently winning over their component fields.
-func vm_urlBuild(vm *VM, args Values) any {
-	parts := args.Get(0)
-	if parts == nil || parts.IsNil() || !parts.v.IsObject() || parts.v.Class() == "Array" {
-		vm.ThrowTypeError("urlUtils.build requires a URL parts object")
-	}
-
-	built, e := buildURL(vm, parts)
-	if e != nil {
-		vm.ThrowTypeError(fmt.Sprintf("urlUtils.build: %v", e))
-	}
-	return built
-}
-
-// vm_urlBuildSearchParams encodes the string-array map as a URL search string.
-func vm_urlBuildSearchParams(vm *VM, args Values) any {
-	values, e := parseURLSearchParamsObject(args.Get(0))
-	if e != nil {
-		vm.ThrowTypeError(fmt.Sprintf("urlUtils.buildSearchParams: %v", e))
-	}
-	return buildURLSearchParams(values)
 }
 
 func requireURLString(vm *VM, value *Value, name string) string {
@@ -135,55 +127,23 @@ func parseURL(raw string) (parsedURL, error) {
 	}, nil
 }
 
-func newURLPartsValue(vm *VM, value parsedURL) otto.Value {
-	parts := newURLJSObject(vm, "({})")
-	setURLJSProperty(vm, parts, "origin", value.origin)
-	setURLJSProperty(vm, parts, "protocol", value.protocol)
-	setURLJSProperty(vm, parts, "username", value.username)
-	setURLJSProperty(vm, parts, "password", value.password)
-	setURLJSProperty(vm, parts, "host", value.host)
-	setURLJSProperty(vm, parts, "hostname", value.hostname)
-	setURLJSProperty(vm, parts, "port", value.port)
-	setURLJSProperty(vm, parts, "pathname", value.pathname)
-	setURLJSProperty(vm, parts, "searchParams", newURLSearchParamsValue(vm, value.searchParams))
-	setURLJSProperty(vm, parts, "hash", value.hash)
-	return parts.Value()
+func newURLPartsValue(vm *VM, value parsedURL) *Value {
+	return vm.ToJSValue(map[string]any{
+		"origin":       value.origin,
+		"protocol":     value.protocol,
+		"username":     value.username,
+		"password":     value.password,
+		"host":         value.host,
+		"hostname":     value.hostname,
+		"port":         value.port,
+		"pathname":     value.pathname,
+		"searchParams": newURLSearchParamsValue(vm, value.searchParams),
+		"hash":         value.hash,
+	})
 }
 
-func newURLSearchParamsValue(vm *VM, values url.Values) otto.Value {
-	params := newURLJSObject(vm, "Object.create(null)")
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		setURLJSProperty(vm, params, key, newURLJSStringArray(vm, values[key]))
-	}
-	return params.Value()
-}
-
-func newURLJSStringArray(vm *VM, values []string) otto.Value {
-	array := newURLJSObject(vm, "[]")
-	for i, value := range values {
-		setURLJSProperty(vm, array, strconv.Itoa(i), value)
-	}
-	return array.Value()
-}
-
-func newURLJSObject(vm *VM, source string) *otto.Object {
-	object, e := vm.o.Object(source)
-	if e != nil {
-		vm.ThrowError(e)
-	}
-	return object
-}
-
-func setURLJSProperty(vm *VM, object *otto.Object, name string, value any) {
-	if e := object.Set(name, value); e != nil {
-		vm.ThrowError(e)
-	}
+func newURLSearchParamsValue(vm *VM, values url.Values) *Value {
+	return vm.ToJSValue(map[string][]string(values))
 }
 
 func buildURL(vm *VM, parts *Value) (string, error) {
@@ -253,7 +213,7 @@ func buildURL(vm *VM, parts *Value) (string, error) {
 	}
 
 	searchParams := parts.Get("searchParams")
-	if searchParams != nil && !searchParams.v.IsUndefined() {
+	if searchParams != nil && !searchParams.IsUndefined() {
 		values, e := parseURLSearchParamsObject(searchParams)
 		if e != nil {
 			return "", e
@@ -276,7 +236,7 @@ func buildURL(vm *VM, parts *Value) (string, error) {
 
 func urlPartString(vm *VM, parts *Value, name string) (string, bool) {
 	value := parts.Get(name)
-	if value == nil || value.v.IsUndefined() {
+	if value == nil || value.IsUndefined() {
 		return "", false
 	}
 	if !value.IsString() {
@@ -425,7 +385,7 @@ func buildURLSearchParams(values url.Values) string {
 }
 
 func parseURLSearchParamsObject(value *Value) (url.Values, error) {
-	if value == nil || value.IsNil() || !value.v.IsObject() || value.v.Class() == "Array" {
+	if value == nil || value.IsNil() || !value.IsObject() || value.IsArray() {
 		return nil, fmt.Errorf("searchParams must be an object of string arrays")
 	}
 
@@ -435,7 +395,7 @@ func parseURLSearchParamsObject(value *Value) (url.Values, error) {
 		if item == nil || item.IsNil() {
 			return nil, fmt.Errorf("searchParams[%q] must be a string array", key)
 		}
-		if !item.v.IsObject() || item.v.Class() != "Array" {
+		if !item.IsObject() || !item.IsArray() {
 			return nil, fmt.Errorf("searchParams[%q] must be a string array", key)
 		}
 		array := item.Array()

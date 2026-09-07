@@ -12,8 +12,8 @@ import {
 export const serverBaseOptions = (
   libs: JavaScriptLibItem[]
 ): JavaScriptSetupOptions => ({
-  target: 'es5',
-  lib: ['es5'],
+  target: 'es6',
+  lib: ['es2016'],
   extraLibs: [...D_SERVER_LIBS, D_SERVER_GLOBAL, ...libs],
 })
 

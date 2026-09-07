@@ -78,7 +78,7 @@ mkdir(path)
 log(message)
 ```
 
-The shared runtime also provides `http`, `newContext`, `newContextWithTimeout`, `sleep`, `pathUtils`, `urlUtils`, `encUtils`, error constructors, and the Drive API. Complete type definitions are in the source repository:
+The shared runtime also provides `http`, `sleep`, `pathUtils`, `urlUtils`, `Bytes`, `Hash`, error classes, and the Drive API. Values produced by Go, including `$event` and `urlUtils.parse`, are read-only; copy them before editing. Complete type definitions are in the source repository:
 
 - [`docs/scripts/global.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/global.d.ts)
 - [`docs/scripts/env/jobs.d.ts`](https://github.com/devld/go-drive/blob/master/docs/scripts/env/jobs.d.ts)
@@ -93,19 +93,16 @@ log('trigger: ' + JSON.stringify($event))
 cp('incoming/**/*.jpg', 'archive', true)
 
 // Call an external webhook
-var ctx = newContextWithTimeout(newContext(), ms(10000))
+const resp = http('https://example.com/hook', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify($event),
+  timeout: '10s'
+})
 try {
-  var resp = http(ctx, 'POST', 'https://example.com/hook', {
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify($event)
-  })
-  try {
-    log('webhook: ' + resp.Status)
-  } finally {
-    resp.Dispose()
-  }
+  log('webhook: ' + resp.status)
 } finally {
-  ctx.Cancel()
+  resp.dispose()
 }
 ```
 

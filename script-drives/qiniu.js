@@ -1,47 +1,47 @@
 // @name Qiniu
-// @version 1.0.5
+// @version 1.0.9
 // @uploader qiniu-uploader.js
 // @description Qiniu Kodo
 
-var utcOffset = dayjs().utcOffset();
+const utcOffset = dayjs().utcOffset();
 
-var baseURLRegex = /^https?:\/\/([^/]+)/i;
+const baseURLRegex = /^https?:\/\/([^/]+)/i;
 
 defineDrive(
   {
     configForm: [
-      { Label: "Bucket", Field: "bucket", Type: "text", Required: true },
-      { Label: "AccessKey", Field: "ak", Type: "text", Required: true },
-      { Label: "SecretKey", Field: "sk", Type: "password", Required: true },
+      { label: "Bucket", field: "bucket", type: "text", required: true },
+      { label: "AccessKey", field: "ak", type: "text", required: true },
+      { label: "SecretKey", field: "sk", type: "password", required: true },
       {
-        Label: "Upload URL",
-        Description:
+        label: "Upload URL",
+        description:
           "See https://developer.qiniu.com/kodo/1671/region-endpoint-fq",
-        Field: "uploadURL",
-        Type: "text",
-        Required: true,
+        field: "uploadURL",
+        type: "text",
+        required: true,
       },
       {
-        Label: "Download Base URL",
-        Description:
+        label: "Download Base URL",
+        description:
           "The domain name bound to the bucket must starts with http or https and cannot end with /. For example https://example.com",
-        Field: "downloadBaseURL",
-        Type: "text",
-        Required: true,
+        field: "downloadBaseURL",
+        type: "text",
+        required: true,
       },
       entryCacheTTLFormItem("2h"),
     ],
 
-    validateConfig: function (config) {
+    validateConfig(config) {
       if (
         config.downloadBaseURL &&
         !/^https?:\/\/[^/]+$/i.test(config.downloadBaseURL)
       ) {
-        throw ErrBadRequest("invalid Download Base URL");
+        throw new BadRequestError("invalid Download Base URL");
       }
     },
 
-    createInstance: function (ctx, config) {
+    createInstance(config) {
       return {
         entryCacheTTL: config.cache_ttl,
         ak: config.ak,
@@ -53,45 +53,41 @@ defineDrive(
     },
   },
   {
-    get: function (ctx, path) {
-      var entry;
+    get(path) {
+      let entry;
       try {
-        var data = request(
+        const data = request(
           this,
-          ctx,
           "GET",
           "https://rs.qiniu.com/stat/" + buildURI(this.bucket, path)
         );
         entry = toEntry(data, path);
       } catch (e) {
-        if (!isNotFoundErr(e)) throw e;
-        var entries = this.list(ctx, pathUtils.parent(path)).filter(function (
-          item
-        ) {
-          return item.Path === path;
-        });
-        if (entries.length === 0) throw ErrNotFound();
-        entry = entries[0];
+        if (!(e instanceof NotFoundError)) throw e;
+        const found = this.list(pathUtils.parent(path)).find(
+          (item) => item.path === path
+        );
+        if (!found) throw new NotFoundError();
+        entry = found;
       }
       return entry;
     },
 
-    save: function (ctx, path, size, override, reader) {
-      saveSmall(this, ctx, path, reader);
+    save(path, size, override, reader, onProgress) {
+      saveSmall(this, path, reader);
     },
 
-    makeDir: function (ctx, path) {
-      saveSmall(this, ctx, path + "/", "");
+    makeDir(path) {
+      saveSmall(this, path + "/", "");
     },
 
-    copy: function (ctx, from, to, override) {
-      if (from.IsDir) throw ErrUnsupported();
+    copy(from, to, override, onProgress) {
+      if (from.isDir) throw new UnsupportedError();
       request(
         this,
-        ctx,
         "POST",
         "https://rs.qiniuapi.com/copy/" +
-          buildURI(this.bucket, from.Path) +
+          buildURI(this.bucket, from.path) +
           "/" +
           buildURI(this.bucket, to) +
           "/force/" +
@@ -101,14 +97,13 @@ defineDrive(
       );
     },
 
-    move: function (ctx, from, to, override) {
-      if (from.IsDir) throw ErrUnsupported();
+    move(from, to, override, onProgress) {
+      if (from.isDir) throw new UnsupportedError();
       request(
         this,
-        ctx,
         "POST",
         "https://rs.qiniuapi.com/move/" +
-          buildURI(this.bucket, from.Path) +
+          buildURI(this.bucket, from.path) +
           "/" +
           buildURI(this.bucket, to) +
           "/force/" +
@@ -118,28 +113,27 @@ defineDrive(
       );
     },
 
-    list: function (ctx, path) {
-      var entries = [];
-      var marker;
+    list(path) {
+      const entries = [];
+      let marker;
       do {
-        var data = request(
+        const data = request(
           this,
-          ctx,
           "GET",
           "https://rsf.qiniu.com/list?delimiter=%2F&bucket=" +
             encodeURIComponent(this.bucket) +
-            (path ? "&prefix=" + encodeURIComponent(path + "/") : "")
+            (path ? "&prefix=" + encodeURIComponent(path + "/") : "") +
+            (marker ? "&marker=" + encodeURIComponent(marker) : "")
         );
         if (data.commonPrefixes) {
-          data.commonPrefixes.forEach(function (k) {
-            entries.push(toEntry(k));
-          });
+          entries.push(...data.commonPrefixes.map((k) => toEntry(k)));
         }
         if (data.items) {
-          data.items.forEach(function (item) {
-            if (item.key === path + "/") return;
-            entries.push(toEntry(item));
-          });
+          entries.push(
+            ...data.items
+              .filter((item) => item.key !== path + "/")
+              .map((item) => toEntry(item))
+          );
         }
         marker = data.marker;
       } while (marker);
@@ -147,94 +141,79 @@ defineDrive(
       return entries;
     },
 
-    delete: function (ctx, path) {
-      var this_ = this;
-      var entry = selfDrive.Get(ctx, path);
-      var entries = flattenEntriesTree(buildEntriesTree(ctx, entry));
-      var payload = entries
-        .map(function (e) {
-          return (
+    delete(path, onProgress) {
+      const entry = selfDrive.get(path);
+      const payload = flattenEntriesTree(buildEntriesTree(entry))
+        .map(
+          (e) =>
             "op=/delete/" +
             buildURI(
-              this_.bucket,
-              e.Entry.Path() + (e.Entry.Type() === "dir" ? "/" : "")
+              this.bucket,
+              e.entry.path + (e.entry.type === "dir" ? "/" : "")
             )
-          );
-        })
+        )
         .join("&");
-      request(
-        this,
-        ctx,
-        "POST",
-        "https://rs.qiniuapi.com/batch",
-        null,
-        payload
-      );
+      request(this, "POST", "https://rs.qiniuapi.com/batch", null, payload);
     },
 
-    upload: function (ctx, path, size, override, config) {
+    upload(path, size, override, config) {
       if (config && config.action === "Completed") return;
       return useCustomProvider({
         baseURL: this.uploadURL,
         key: path,
         bucket: this.bucket,
-        encodedKey: encUtils.urlBase64Encode(newBytes(path)),
+        encodedKey: Bytes.fromString(path).toString("base64url"),
         token: getUploadSignature(this.ak, this.sk, this.bucket, path),
       });
     },
 
-    getURL: function (ctx, entry) {
-      var url = getDownloadURL(
+    getURL(entry) {
+      const url = getDownloadURL(
         this.downloadBaseURL,
-        entry.Path,
+        entry.path,
         this.ak,
         this.sk
       );
-      return { URL: url };
+      return { url };
     },
   }
 );
 
 /**
  * @param {{ ak: string, sk: string, bucket: string, uploadURL: string }} drive
- * @param {Context} ctx
  * @param {string} path
  * @param {Exclude<HttpBody, HttpFormData>} reader
  */
-function saveSmall(drive, ctx, path, reader) {
-  var data = newFormData();
-  data.AppendField("key", path);
-  data.AppendField(
+function saveSmall(drive, path, reader) {
+  const data = new HttpFormData();
+  data.appendField("key", path);
+  data.appendField(
     "token",
     getUploadSignature(drive.ak, drive.sk, drive.bucket, path)
   );
-  data.AppendFile("file", pathUtils.base(path), reader);
+  data.appendFile("file", pathUtils.base(path), reader);
 
-  var resp = http(ctx, "POST", drive.uploadURL, { body: data });
-  var respStr = resp.Text();
-  var respData;
+  const resp = http(drive.uploadURL, { method: "POST", body: data, timeout: 0 });
+  const respStr = resp.text();
+  let respData;
   try {
     respData = JSON.parse(respStr);
   } catch (e) {
     // ignore
   }
-  if (resp.Status !== 200) {
-    throw ErrRemoteApi(resp.Status, (respData && respData.error) || respData);
+  if (resp.status !== 200) {
+    throw new RemoteApiError(resp.status, respData?.error || respData);
   }
 }
 
 function getDownloadURL(baseURL, key, ak, sk) {
-  var url = baseURL + "/" + key;
+  const e = Math.round(Date.now() / 1000) + 2 * 60 * 60; // two hours
+  const url = `${baseURL}/${key}?e=${e}`;
 
-  var e = Math.round(Date.now() / 1000) + 2 * 60 * 60; // two hours
-  url += "?e=" + e;
-
-  var sign =
+  const sign =
     ak +
     ":" +
-    encUtils.urlBase64Encode(
-      encUtils.newHmac(HASH.SHA1, newBytes(sk)).Write(newBytes(url)).Sum()
-    );
+    new Hmac("sha1", Bytes.fromString(sk)).write(Bytes.fromString(url)).sum().toString("base64url");
 
   return url + "&token=" + encodeURIComponent(sign);
 }
@@ -242,41 +221,38 @@ function getDownloadURL(baseURL, key, ak, sk) {
 function toEntry(data, path) {
   if (typeof data === "string") {
     return {
-      IsDir: true,
-      Path: data.substring(0, data.length - 1), // remove suffix /
-      Size: -1,
-      ModTime: -1,
+      isDir: true,
+      path: data.substring(0, data.length - 1), // remove suffix /
+      size: -1,
+      modTime: -1,
     };
   }
   return {
-    IsDir: false,
-    Path: data.key || path,
-    Size: data.fsize,
-    ModTime: dayjs(data.putTime / 10000)
-      .toDate()
-      .getTime(),
+    isDir: false,
+    path: data.key || path,
+    size: data.fsize,
+    modTime: dayjs(data.putTime / 10000).toDate().getTime(),
   };
 }
 
 /**
  * @param {{ ak: string, sk: string }} drive
- * @param {Context} ctx
  * @param {HttpMethod} method
  * @param {string} url
- * @param {SM|null} [headers]
+ * @param {Record<string, string>|null} [headers]
  * @param {Exclude<HttpBody, HttpFormData>|null} [body]
  */
-function request(drive, ctx, method, url, headers, body) {
+function request(drive, method, url, headers, body) {
   headers = Object.assign({}, headers, {
     "X-Qiniu-Date":
       dayjs().subtract(utcOffset, "minute").format("YYYYMMDDTHHmmss") + "Z",
     "Content-Type": "application/x-www-form-urlencoded",
   });
 
-  var urlParts = baseURLRegex.exec(url);
-  if (!urlParts) throw ErrBadRequest("invalid URL");
+  const urlParts = baseURLRegex.exec(url);
+  if (!urlParts) throw new BadRequestError("invalid URL");
 
-  var signature = getManagementSignature(
+  const signature = getManagementSignature(
     drive.ak,
     drive.sk,
     urlParts[1],
@@ -287,14 +263,15 @@ function request(drive, ctx, method, url, headers, body) {
   );
   headers["Authorization"] = "Qiniu " + signature;
   console.debug("http request", method, url);
-  var r = http(ctx, method, url, { headers: headers, body: body || undefined });
+  const r = http(url, { method, headers, body: body || undefined });
 
-  var isJSON =
-    r.Headers.Get("Content-Type").toLowerCase().indexOf("application/json") >=
-    0;
-  var dataStr = isJSON ? r.Text() : undefined;
-  console.debug("http response", r.Status);
-  var data;
+  const isJSON = r.headers
+    .get("Content-Type")
+    .toLowerCase()
+    .includes("application/json");
+  const dataStr = isJSON ? r.text() : undefined;
+  console.debug("http response", r.status);
+  let data;
   if (isJSON) {
     try {
       if (dataStr) {
@@ -302,13 +279,13 @@ function request(drive, ctx, method, url, headers, body) {
         data = JSON.parse(dataStr);
       }
     } catch (e) {
-      throw ErrRemoteApi(500, "Failed to parse JSON: " + e);
+      throw new RemoteApiError(500, "Failed to parse JSON: " + e);
     }
   }
-  if (r.Status < 200 || r.Status >= 400) {
-    r.Dispose();
-    if (r.Status === 404 || r.Status === 612) throw ErrNotFound();
-    throw ErrRemoteApi(r.Status, (data && data.error) || data);
+  if (r.status < 200 || r.status >= 400) {
+    r.dispose();
+    if (r.status === 404 || r.status === 612) throw new NotFoundError();
+    throw new RemoteApiError(r.status, data?.error || data);
   }
   return data;
 }
@@ -321,15 +298,13 @@ function request(drive, ctx, method, url, headers, body) {
  * @param {string} [returnBody]
  */
 function getUploadSignature(ak, sk, bucket, key, returnBody) {
-  var putPolicy = JSON.stringify({
+  const putPolicy = JSON.stringify({
     scope: bucket + ":" + key,
     deadline: Math.round(Date.now() / 1000) + 3 * 24 * 3600, // three days
-    returnBody: returnBody,
+    returnBody,
   });
-  var encodedPutPolicy = encUtils.urlBase64Encode(newBytes(putPolicy));
-  var sign = encUtils.urlBase64Encode(
-    encUtils.newHmac(HASH.SHA1, newBytes(sk)).Write(newBytes(encodedPutPolicy)).Sum()
-  );
+  const encodedPutPolicy = Bytes.fromString(putPolicy).toString("base64url");
+  const sign = new Hmac("sha1", Bytes.fromString(sk)).write(Bytes.fromString(encodedPutPolicy)).sum().toString("base64url");
   return ak + ":" + sign + ":" + encodedPutPolicy;
 }
 
@@ -342,21 +317,15 @@ function getUploadSignature(ak, sk, bucket, key, returnBody) {
  * @param {SM} headers
  */
 function getManagementSignature(ak, sk, host, method, url, headers, bodyStr) {
-  var payload = method + " " + url; // url with or without query
+  let payload = method + " " + url; // url with or without query
   payload += "\nHost: " + host;
   if (headers) {
     payload += "\nContent-Type: " + headers["Content-Type"];
     Object.keys(headers)
-      .filter(function (key) {
-        return key.indexOf("X-Qiniu-") === 0;
-      })
-      .map(function (key) {
-        return { key: key, value: headers[key] };
-      })
-      .sort(function (a, b) {
-        return a.key.localeCompare(b.key);
-      })
-      .forEach(function (v) {
+      .filter((key) => key.startsWith("X-Qiniu-"))
+      .map((key) => ({ key, value: headers[key] }))
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .forEach((v) => {
         payload += "\n" + v.key + ": " + v.value;
       });
   }
@@ -364,13 +333,11 @@ function getManagementSignature(ak, sk, host, method, url, headers, bodyStr) {
   if (bodyStr) {
     payload += bodyStr;
   }
-  var s =
+  return (
     ak +
     ":" +
-    encUtils.urlBase64Encode(
-      encUtils.newHmac(HASH.SHA1, newBytes(sk)).Write(newBytes(payload)).Sum()
-    );
-  return s;
+    new Hmac("sha1", Bytes.fromString(sk)).write(Bytes.fromString(payload)).sum().toString("base64url")
+  );
 }
 
 /**
@@ -378,5 +345,5 @@ function getManagementSignature(ak, sk, host, method, url, headers, bodyStr) {
  * @param {string} key
  */
 function buildURI(bucket, key) {
-  return encUtils.urlBase64Encode(newBytes(bucket + ":" + key));
+  return Bytes.fromString(bucket + ":" + key).toString("base64url");
 }
