@@ -2,22 +2,25 @@ package job
 
 import "fmt"
 
-var registeredActionDefs = make(map[string]*JobActionDef)
+var registeredActionDefs []*JobActionDef
 
 func RegisterActionDef(def JobActionDef) {
-	if _, exists := registeredActionDefs[def.Name]; exists {
-		panic(fmt.Sprintf("action '%s' already registered", def.Name))
+	for _, registered := range registeredActionDefs {
+		if registered.Name == def.Name {
+			panic(fmt.Sprintf("action '%s' already registered", def.Name))
+		}
 	}
-	registeredActionDefs[def.Name] = &def
+	registeredActionDefs = append(registeredActionDefs, &def)
 }
 
 func GetActionDef(name string) *JobActionDef {
-	def, exists := registeredActionDefs[name]
-	if !exists {
-		return nil
+	for _, def := range registeredActionDefs {
+		if def.Name == name {
+			d := *def
+			return &d
+		}
 	}
-	d := *def
-	return &d
+	return nil
 }
 
 func GetActionDefs() []JobActionDef {

@@ -2,26 +2,41 @@ package job
 
 import "fmt"
 
-var registeredTriggerDefs = make(map[JobTriggerType]*JobTriggerDef)
+type triggerDefRegistration struct {
+	triggerType JobTriggerType
+	def         *JobTriggerDef
+}
+
+var registeredTriggerDefs []triggerDefRegistration
 
 // RegisterTriggerDef registers a trigger type
 func RegisterTriggerDef(triggerType JobTriggerType, def JobTriggerDef) {
-	if _, exists := registeredTriggerDefs[triggerType]; exists {
-		panic(fmt.Sprintf("trigger type already registered: %s", triggerType))
+	for _, registered := range registeredTriggerDefs {
+		if registered.triggerType == triggerType {
+			panic(fmt.Sprintf("trigger type already registered: %s", triggerType))
+		}
 	}
-	registeredTriggerDefs[triggerType] = &def
+	registeredTriggerDefs = append(registeredTriggerDefs, triggerDefRegistration{
+		triggerType: triggerType,
+		def:         &def,
+	})
 }
 
 // GetTriggerDef returns a trigger definition by type
 func GetTriggerDef(triggerType JobTriggerType) *JobTriggerDef {
-	return registeredTriggerDefs[triggerType]
+	for _, registered := range registeredTriggerDefs {
+		if registered.triggerType == triggerType {
+			return registered.def
+		}
+	}
+	return nil
 }
 
 // GetTriggerTypes returns all registered trigger types
 func GetTriggerTypes() []JobTriggerType {
 	types := make([]JobTriggerType, 0, len(registeredTriggerDefs))
-	for t := range registeredTriggerDefs {
-		types = append(types, t)
+	for _, registered := range registeredTriggerDefs {
+		types = append(types, registered.triggerType)
 	}
 	return types
 }
@@ -29,8 +44,8 @@ func GetTriggerTypes() []JobTriggerType {
 // GetTriggerDefs returns all registered trigger definitions (for API / definitions)
 func GetTriggerDefs() []JobTriggerDef {
 	defs := make([]JobTriggerDef, 0, len(registeredTriggerDefs))
-	for _, d := range registeredTriggerDefs {
-		defs = append(defs, *d)
+	for _, registered := range registeredTriggerDefs {
+		defs = append(defs, *registered.def)
 	}
 	return defs
 }
