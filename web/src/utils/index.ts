@@ -3,7 +3,7 @@ import { getTask } from '@/api'
 import focus from './directives/focus'
 import markdown from './directives/markdown'
 import lazySrc from './directives/lazy-src'
-import { Entry, Task, User } from '../types'
+import { Entry, Task, TaskProgress, User } from '../types'
 import { Directive, Plugin } from 'vue'
 import { LocationQuery } from 'vue-router'
 
@@ -35,6 +35,15 @@ export function formatTime(d: any) {
   minute = minute < 10 ? '0' + minute : minute
   second = second < 10 ? '0' + second : second
   return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+}
+
+export function formatProgressPercent(progress?: TaskProgress) {
+  if (!progress || (progress.loaded === 0 && progress.total === 0)) return ''
+  const value =
+    progress.total > 0
+      ? Math.round((progress.loaded / progress.total) * 100)
+      : 0
+  return `${Math.max(0, Math.min(100, value))}%`
 }
 
 // from https://stackoverflow.com/a/18650828/8749466

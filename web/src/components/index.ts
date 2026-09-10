@@ -10,6 +10,7 @@ import SimpleFormItem from './Form/FormItem.vue'
 import SimpleForm from './Form/index.vue'
 import SimpleDropdown from './SimpleDropdown.vue'
 import ProgressBar from './ProgressBar.vue'
+import Pagination from './Pagination.vue'
 
 const components: O<Component> = {
   Icon,
@@ -26,6 +27,7 @@ const components: O<Component> = {
   DialogView,
   FloatButton,
   ProgressBar,
+  Pagination,
 }
 
 export default {

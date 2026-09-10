@@ -9,6 +9,7 @@ import {
   Job,
   JobDefinitions,
   JobExecution,
+  PageResult,
   PathMeta,
   PathMountSource,
   PathPermission,
@@ -152,6 +153,12 @@ export function getJobDefinitions() {
   return http.get<JobDefinitions>('/admin/job-definitions')
 }
 
+export function getTasks<T>(group: string) {
+  return http.get<Task<T>[]>('/admin/tasks', {
+    params: { group },
+  })
+}
+
 export function getJobs() {
   return http.get<Job[]>('/admin/jobs')
 }
@@ -168,9 +175,9 @@ export function deleteJob(id: number) {
   return http.delete<void>(`/admin/jobs/${id}`)
 }
 
-export function getJobExecutions(jobId: number) {
-  return http.get<JobExecution[]>('/admin/job-executions', {
-    params: { jobId },
+export function getJobExecutions(jobId: number, page = 1, pageSize = 20) {
+  return http.get<PageResult<JobExecution>>('/admin/job-executions', {
+    params: { jobId, page, pageSize },
   })
 }
 

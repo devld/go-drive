@@ -1,7 +1,6 @@
 package job
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"go-drive/common/i18n"
@@ -42,12 +41,14 @@ func init() {
 				Forms:   flowForms,
 			}, Required: true},
 		},
-		Do: func(ctx context.Context, params types.SM, ch *registry.ComponentsHolder, logFn func(string)) error {
+		Do: func(ctx types.TaskCtx, params types.SM, ch *registry.ComponentsHolder, logFn func(string)) error {
 			ops := params.GetMapList("ops")
 			if len(ops) == 0 {
 				return errors.New("empty ops")
 			}
 			for i, op := range ops {
+				ctx.Progress(0, true)
+				ctx.Total(0, true)
 				actionKey := op["$key"]
 				ignoreError := op.GetBool("_ignoreErr")
 				actionDef := GetActionDef(actionKey)

@@ -144,12 +144,12 @@
                 {{ (e.completedAt && formatTime(e.completedAt)) || '' }}
               </td>
               <td class="center">
-                {{
-                  e.completedAt
-                    ? new Date(e.completedAt).getTime() -
-                      new Date(e.startedAt).getTime()
-                    : ''
-                }}ms
+                <template v-if="e.status === JobExecutionStatus.Running">
+                  {{ formatExecutionProgress(e) }}
+                </template>
+                <template v-else-if="e.completedAt">
+                  {{ e.completedAt - e.startedAt }}ms
+                </template>
               </td>
               <td :title="e.logs">
                 <div class="job-log-text">
@@ -175,6 +175,12 @@
           </tbody>
         </table>
       </div>
+      <Pagination
+        :page="jobExecutionsPage"
+        :page-size="jobExecutionsPageSize"
+        :total="jobExecutionsTotal"
+        @update:page="changeJobExecutionsPage"
+      />
     </div>
   </div>
 </template>
@@ -200,9 +206,9 @@ import {
   JobExecutionStatus,
   ParsedJobTrigger,
 } from '@/types'
-import { formatTime, mapOf } from '@/utils'
+import { formatProgressPercent, formatTime, mapOf } from '@/utils'
 import { alert, confirm, loading } from '@/utils/ui-utils'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { showExecutionDialog } from './execution-log-dialog'
 
@@ -232,6 +238,14 @@ const jobEdit = ref<O>()
 const jobActionParams = ref<O>()
 const jobExecutionsShowing = ref<Job>()
 const jobExecutions = ref<JobExecution[]>([])
+const jobExecutionsPage = ref(1)
+const jobExecutionsPageSize = 20
+const jobExecutionsTotal = ref(0)
+let executionPollTimer: ReturnType<typeof setTimeout> | undefined
+let executionsRequest = 0
+
+const runningPollInterval = 1000
+const idlePollInterval = 5000
 
 const addJob = () => {
   hideJobExecutions()
@@ -262,21 +276,71 @@ const editJob = (job: Job) => {
   edit.value = true
 }
 
-const showJobExecutions = async (job: Job) => {
-  jobExecutionsShowing.value = job
-  loading(true)
+const clearExecutionPollTimer = () => {
+  if (executionPollTimer) clearTimeout(executionPollTimer)
+  executionPollTimer = undefined
+}
+
+const scheduleExecutionPoll = () => {
+  clearExecutionPollTimer()
+  if (!jobExecutionsShowing.value) return
+  const hasRunning = jobExecutions.value.some(
+    (execution) => execution.status === JobExecutionStatus.Running
+  )
+  if (!hasRunning && jobExecutionsPage.value !== 1) return
+  executionPollTimer = setTimeout(
+    () => void loadJobExecutions(false),
+    hasRunning ? runningPollInterval : idlePollInterval
+  )
+}
+
+const loadJobExecutions = async (showLoading = true) => {
+  const job = jobExecutionsShowing.value
+  if (!job) return
+  const request = ++executionsRequest
+  if (showLoading) loading(true)
   try {
-    jobExecutions.value = await getJobExecutions(job.id)
+    const result = await getJobExecutions(
+      job.id,
+      jobExecutionsPage.value,
+      jobExecutionsPageSize
+    )
+    if (
+      request !== executionsRequest ||
+      jobExecutionsShowing.value?.id !== job.id
+    )
+      return
+    jobExecutions.value = result.items
+    jobExecutionsTotal.value = result.total
   } catch (e: any) {
-    alert(e.message)
+    if (showLoading) alert(e.message)
   } finally {
-    loading()
+    if (showLoading) loading()
+    scheduleExecutionPoll()
   }
 }
 
+const showJobExecutions = async (job: Job) => {
+  jobExecutionsShowing.value = job
+  jobExecutionsPage.value = 1
+  await loadJobExecutions()
+}
+
+const changeJobExecutionsPage = async (page: number) => {
+  jobExecutionsPage.value = page
+  await loadJobExecutions()
+}
+
 const hideJobExecutions = () => {
+  executionsRequest++
+  clearExecutionPollTimer()
   jobExecutionsShowing.value = undefined
   jobExecutions.value = []
+  jobExecutionsTotal.value = 0
+}
+
+const formatExecutionProgress = (execution: JobExecution) => {
+  return formatProgressPercent(execution.progress)
 }
 
 const cancelEdit = () => {
@@ -352,7 +416,8 @@ const clearExecutions = async () => {
   executionsClearing.value = true
   try {
     await deleteJobExecutions(jobExecutionsShowing.value!.id)
-    showJobExecutions(jobExecutionsShowing.value!)
+    jobExecutionsPage.value = 1
+    loadJobExecutions()
   } catch (e: any) {
     alert(e.message)
   } finally {
@@ -516,6 +581,7 @@ const loadJobDefinitions = async () => {
 
 loadJobsList()
 loadJobDefinitions()
+onBeforeUnmount(clearExecutionPollTimer)
 </script>
 <style lang="scss">
 .jobs-manager {

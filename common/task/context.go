@@ -74,28 +74,36 @@ func (d *TaskContextWrapper) GetTotal() int64 {
 	return d.total
 }
 
-func NewCtxWrapper(ctx types.TaskCtx, mutableLoaded, mutableTotal bool) types.TaskCtx {
-	return &ctxWrapper{
-		TaskCtx:       ctx,
+func NewTaskCtxWrapper(ctx types.TaskCtx, mutableLoaded, mutableTotal bool) types.TaskCtx {
+	return &taskCtxWrapper{
+		Context:       ctx,
+		taskCtx:       ctx,
 		mutableLoaded: mutableLoaded,
 		mutableTotal:  mutableTotal,
 	}
 }
 
-type ctxWrapper struct {
-	types.TaskCtx
+// WithContext keeps a TaskCtx's progress sink while replacing its cancellation
+// and deadline context.
+func WithContext(ctx context.Context, taskCtx types.TaskCtx) types.TaskCtx {
+	return &taskCtxWrapper{Context: ctx, taskCtx: taskCtx, mutableLoaded: true, mutableTotal: true}
+}
+
+type taskCtxWrapper struct {
+	context.Context
+	taskCtx       types.TaskCtx
 	mutableLoaded bool
 	mutableTotal  bool
 }
 
-func (c *ctxWrapper) Progress(loaded int64, abs bool) {
+func (c *taskCtxWrapper) Progress(loaded int64, abs bool) {
 	if c.mutableLoaded {
-		c.TaskCtx.Progress(loaded, abs)
+		c.taskCtx.Progress(loaded, abs)
 	}
 }
 
-func (c *ctxWrapper) Total(total int64, abs bool) {
+func (c *taskCtxWrapper) Total(total int64, abs bool) {
 	if c.mutableTotal {
-		c.TaskCtx.Total(total, abs)
+		c.taskCtx.Total(total, abs)
 	}
 }

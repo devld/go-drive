@@ -132,12 +132,6 @@ export function moveEntry(from: string, to: string, override?: boolean) {
   })
 }
 
-export function getTasks<T>(group: string) {
-  return http.get<Task<T>[]>('/tasks', {
-    params: { group },
-  })
-}
-
 export function getTask<T>(id: string) {
   return http.get<Task<T>>(`/tasks/${id}`)
 }

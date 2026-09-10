@@ -9,15 +9,24 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, nextTick, type PropType, onMounted, watch } from 'vue'
+import {
+  ref,
+  nextTick,
+  type PropType,
+  onBeforeUnmount,
+  onMounted,
+  watch,
+} from 'vue'
 import { useI18n } from 'vue-i18n'
-import { deleteTask } from '@/api'
+import { deleteTask, getTask } from '@/api'
+import { s } from '@/i18n'
 import type { ExecutionLogDialogOptions } from './execution-log-dialog'
 import type { StreamHttpResponse } from '@/api/http'
 import type { RequestTask } from '@/utils/http'
 import type { BaseDialogOptionsData } from '@/utils/ui-utils/base-dialog'
 import type { Task } from '@/types'
 import LoadingIndicator from '@/components/LoadingIndicator.vue'
+import { formatProgressPercent } from '@/utils'
 
 const { t } = useI18n()
 
@@ -38,6 +47,38 @@ const logContent = ref('')
 const executing = ref(false)
 let requestTask: RequestTask<StreamHttpResponse<Task>> | undefined
 let executionTask: Task | undefined
+let aborted = false
+let progressPollTimer: ReturnType<typeof setTimeout> | undefined
+let progressPolling = false
+const baseTitle = s(props.opts.title) || ''
+
+const stopProgressPolling = () => {
+  progressPolling = false
+  if (progressPollTimer) clearTimeout(progressPollTimer)
+  progressPollTimer = undefined
+}
+
+const pollProgress = async () => {
+  if (!progressPolling || !executionTask) return
+  try {
+    const task = await getTask(executionTask.id)
+    if (!progressPolling) return
+    executionTask = task
+    const progress = formatProgressPercent(task.progress)
+    emit('options', {
+      title: progress ? `${baseTitle} (${progress})` : baseTitle,
+    })
+    if (
+      progressPolling &&
+      (task.status === 'pending' || task.status === 'running')
+    ) {
+      progressPollTimer = setTimeout(pollProgress, 1000)
+    }
+  } catch {
+    // The streaming request remains authoritative if polling briefly fails.
+    if (progressPolling) progressPollTimer = setTimeout(pollProgress, 1000)
+  }
+}
 
 const emitExecuting = () => {
   emit('options', {
@@ -48,7 +89,9 @@ const emitExecuting = () => {
 }
 
 const emitNormal = () => {
+  stopProgressPolling()
   emit('options', {
+    title: baseTitle,
     confirmText: '',
     confirmType: undefined,
   })
@@ -73,6 +116,8 @@ const doExecute = async () => {
       throw new Error(`Request failed with status: ${resp.status}`)
     }
     executionTask = resp.data
+    progressPolling = true
+    void pollProgress()
     const reader = resp.stream.getReader()
     if (!reader) throw new Error('reader is undefined')
 
@@ -85,7 +130,7 @@ const doExecute = async () => {
     }
     logContent.value += textDecoder.decode()
   } catch (e: any) {
-    logContent.value += '\nError' + (e?.message || '') + '\n'
+    if (!aborted) logContent.value += '\nError' + (e?.message || '') + '\n'
   } finally {
     emitNormal()
   }
@@ -95,14 +140,19 @@ onMounted(() => {
   doExecute()
 })
 
+onBeforeUnmount(stopProgressPolling)
+
 defineExpose({
   beforeConfirm: async () => {
     if (!executing.value) return
+    aborted = true
     if (requestTask) requestTask.cancel()
-    if (executionTask) deleteTask(executionTask.id)
+    if (executionTask) await deleteTask(executionTask.id)
+    return false
   },
   beforeCancel: async () => {
     if (!executing.value) return
+    aborted = true
     if (requestTask) requestTask.cancel()
   },
 })

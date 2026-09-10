@@ -71,8 +71,8 @@
   </div>
 </template>
 <script setup lang="ts">
-import { deleteTask, getTasks } from '@/api'
-import { getOptions, searchIndex, setOptions } from '@/api/admin'
+import { deleteTask } from '@/api'
+import { getOptions, getTasks, searchIndex, setOptions } from '@/api/admin'
 import { useInterval } from '@/utils/hooks/timer'
 import { alert } from '@/utils/ui-utils'
 import { formatTime } from '@/utils'

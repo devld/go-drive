@@ -59,6 +59,12 @@
     "toggle_sort": "Toggle sort mode",
     "entry_actions": "File actions",
     "loading": "Loading",
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous page",
+      "next": "Next page",
+      "summary": "{page} / {pages} · {total} items"
+    },
     "password_protected": "Password Required",
     "input_password": "Please input the password",
     "sort": {

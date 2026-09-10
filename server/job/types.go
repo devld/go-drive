@@ -1,7 +1,6 @@
 package job
 
 import (
-	"context"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 )
@@ -25,7 +24,7 @@ type JobActionDef struct {
 	Description string           `json:"description" i18n:""`
 	ParamsForm  []types.FormItem `json:"paramsForm"`
 
-	Do func(context.Context, types.SM, *registry.ComponentsHolder, func(string)) error `json:"-"`
+	Do func(types.TaskCtx, types.SM, *registry.ComponentsHolder, func(string)) error `json:"-"`
 }
 
 type IJobTriggerInstance interface {

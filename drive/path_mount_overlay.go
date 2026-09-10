@@ -451,7 +451,7 @@ func (d *PathMountOverlayDrive) Copy(ctx types.TaskCtx, from types.IEntry, to st
 
 	e = driveutil.CopyAll(ctx, from, d, to,
 		func(entry types.IEntry, _ types.IDrive, target string, taskCtx types.TaskCtx) error {
-			_, copyErr := d.copyWithoutMountChildren(task.NewCtxWrapper(taskCtx, true, false), entry, target, override, 0)
+			_, copyErr := d.copyWithoutMountChildren(task.NewTaskCtxWrapper(taskCtx, true, false), entry, target, override, 0)
 			return copyErr
 		}, nil)
 	if e != nil {

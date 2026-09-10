@@ -56,6 +56,13 @@ export interface Task<R = any> {
   group: string
 }
 
+export interface PageResult<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export type EntryType = 'dir' | 'file'
 
 export type EntryMetaUseProxy = boolean | 'cors' | 'referrer'

@@ -8,7 +8,6 @@ import (
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
 	"go-drive/common/registry"
-	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/drive"
 	s "go-drive/script"
@@ -36,7 +35,7 @@ func init() {
 				DefaultValue: defaultCodeValue, Required: true,
 			},
 		},
-		Do: func(ctx context.Context, params types.SM, ch *registry.ComponentsHolder, onLog func(s string)) error {
+		Do: func(ctx types.TaskCtx, params types.SM, ch *registry.ComponentsHolder, onLog func(s string)) error {
 			code := params["code"]
 			eventJson := params[jobEventName]
 			event := make(types.M, 2)
@@ -50,7 +49,7 @@ func init() {
 }
 
 // ExecuteJobCode executes the code, and return the log and error
-func ExecuteJobCode(ctx context.Context, code any, globals types.M, ch *registry.ComponentsHolder, onLog func(string)) error {
+func ExecuteJobCode(ctx types.TaskCtx, code any, globals types.M, ch *registry.ComponentsHolder, onLog func(string)) error {
 	started := time.Now()
 	logging.For("job").Debugf("job script started")
 	vm, e := newJobVM(ctx)
@@ -62,11 +61,7 @@ func ExecuteJobCode(ctx context.Context, code any, globals types.M, ch *registry
 	if e = vm.DefineGlobal("drive", ch.Get(registry.KeyDriveAccess).(*drive.Access).GetRootDrive(nil)); e != nil {
 		return e
 	}
-	taskCtx, ok := ctx.(types.TaskCtx)
-	if !ok {
-		taskCtx = task.NewContextWrapper(ctx)
-	}
-	progress := s.NewProgressReporter(taskCtx, true, true)
+	progress := s.NewProgressReporter(ctx, true, true)
 	if e = vm.DefineGlobal("progress", progress); e != nil {
 		return e
 	}

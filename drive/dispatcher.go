@@ -220,7 +220,7 @@ func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 	e = driveutil.CopyAll(ctx, from, d, to,
 		func(from types.IEntry, _ types.IDrive, to string, ctx types.TaskCtx) error {
 			_, driveTo, pathTo, e := d.resolve(to)
-			ctxWrapper := task.NewCtxWrapper(ctx, true, false)
+			ctxWrapper := task.NewTaskCtxWrapper(ctx, true, false)
 			if e != nil {
 				return e
 			}

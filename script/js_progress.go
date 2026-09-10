@@ -197,7 +197,7 @@ func GetTaskCtx(vm *VM, v any, required string) types.TaskCtx {
 	if ctx == nil {
 		vm.ThrowError(fmt.Errorf("ProgressReporter is no longer active"))
 	}
-	return task.NewCtxWrapper(ctx, p.allowLoaded, p.allowTotal)
+	return task.NewTaskCtxWrapper(ctx, p.allowLoaded, p.allowTotal)
 }
 
 func (p jsObjProgressReporter) ConsoleString() string {

@@ -58,13 +58,18 @@ func (s *JobDAO) DeleteJob(id uint) error {
 	})
 }
 
-func (s *JobDAO) GetJobExecutions(jobId uint) ([]types.JobExecution, error) {
+func (s *JobDAO) GetJobExecutions(jobId uint, page, pageSize int) ([]types.JobExecution, int64, error) {
 	jes := make([]types.JobExecution, 0)
-	tx := s.db.C().Order("`started_at` DESC")
+	tx := s.db.C().Model(&types.JobExecution{})
 	if jobId != 0 {
 		tx = tx.Where("`job_id` = ?", jobId)
 	}
-	return jes, tx.Find(&jes).Error
+	var total int64
+	if e := tx.Count(&total).Error; e != nil {
+		return nil, 0, e
+	}
+	e := tx.Order("`started_at` DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&jes).Error
+	return jes, total, e
 }
 
 func (s *JobDAO) AddJobExecution(je *types.JobExecution) error {

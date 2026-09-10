@@ -24,7 +24,7 @@ type JobExecutor struct {
 	triggers   map[JobTriggerType]IJobTriggerInstance
 	executions map[uint]*jobExecutionItem
 
-	mu sync.Mutex
+	mu sync.RWMutex
 }
 
 func NewJobExecutor(jobDAO *storage.JobDAO, ch *registry.ComponentsHolder) (*JobExecutor, error) {
@@ -121,7 +121,7 @@ func (je *JobExecutor) TriggerExecution(jobID uint, event TriggerEvent) (task.Ta
 	return created, nil
 }
 
-func (je *JobExecutor) ExecuteJobSync(ctx context.Context, job types.Job, event TriggerEvent, onLog func(string)) error {
+func (je *JobExecutor) ExecuteJobSync(ctx types.TaskCtx, job types.Job, event TriggerEvent, onLog func(string)) error {
 	started := time.Now()
 	jobExecution, e := je.newJobExecution(job)
 	if e != nil {
@@ -135,10 +135,14 @@ func (je *JobExecutor) ExecuteJobSync(ctx context.Context, job types.Job, event 
 	return e
 }
 
-func (je *JobExecutor) executeJob(ctx context.Context, job types.Job,
+func (je *JobExecutor) executeJob(ctx types.TaskCtx, job types.Job,
 	jobExecution *types.JobExecution, logger *jobExecutionLogger, event *TriggerEvent) (e error) {
-	executionCtx, cancel := context.WithCancel(ctx)
+	cancelCtx, cancel := context.WithCancel(ctx)
+	executionCtx := task.WithContext(cancelCtx, ctx)
 	item := &jobExecutionItem{JobExecution: jobExecution, cancel: cancel, logger: logger}
+	if provider, ok := ctx.(task.TaskIDProvider); ok {
+		item.TaskID = provider.TaskID()
+	}
 	je.addJobExecution(item)
 
 	defer func() {
@@ -256,7 +260,9 @@ func (je *JobExecutor) GetJobTriggersInfo(jobID uint) (map[JobTriggerType][]type
 }
 
 func (je *JobExecutor) CancelJobExecution(id uint) error {
+	je.mu.RLock()
 	item := je.executions[id]
+	je.mu.RUnlock()
 	if item != nil {
 		item.cancel()
 		logging.For("job").Debugf("job execution canceled execution_id=%d job_id=%d", id, item.JobId)
@@ -265,11 +271,31 @@ func (je *JobExecutor) CancelJobExecution(id uint) error {
 }
 
 func (je *JobExecutor) IsJobExecutionRunning(id uint) bool {
+	je.mu.RLock()
 	item := je.executions[id]
+	je.mu.RUnlock()
 	if item == nil {
 		return false
 	}
-	return item.Status == types.JobExecutionRunning
+	return true
+}
+
+// GetExecutionProgress returns the live task progress for a running execution.
+func (je *JobExecutor) GetExecutionProgress(id uint) (task.Progress, bool) {
+	je.mu.RLock()
+	item := je.executions[id]
+	if item == nil || item.TaskID == "" {
+		je.mu.RUnlock()
+		return task.Progress{}, false
+	}
+	taskID := item.TaskID
+	je.mu.RUnlock()
+
+	t, e := je.runner.GetTask(taskID)
+	if e != nil {
+		return task.Progress{}, false
+	}
+	return t.Progress, true
 }
 
 func (je *JobExecutor) addJobExecution(exec *jobExecutionItem) {
@@ -301,6 +327,7 @@ func (je *JobExecutor) Dispose() error {
 
 type jobExecutionItem struct {
 	*types.JobExecution
+	TaskID string
 	cancel func()
 	logger *jobExecutionLogger
 }

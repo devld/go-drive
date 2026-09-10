@@ -45,6 +45,10 @@ func (t Task) Finished() bool {
 
 type Runnable = func(ctx types.TaskCtx) (any, error)
 
+type TaskIDProvider interface {
+	TaskID() string
+}
+
 type Runner interface {
 	Execute(runnable Runnable, options ...Option) (Task, error)
 	ExecuteAndWait(runnable Runnable, timeout time.Duration, options ...Option) (Task, error)

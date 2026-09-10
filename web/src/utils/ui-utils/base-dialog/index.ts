@@ -246,6 +246,8 @@ export function createDialog(name: string, component: any) {
           return
         }
 
+        if (val === false) return
+
         if (result.hasCallbacks()) {
           try {
             await runWithLoading(confirm, () =>

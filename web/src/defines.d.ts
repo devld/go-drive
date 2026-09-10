@@ -16,6 +16,7 @@ import ErrorView from '@/components/ErrorView.vue'
 import DialogView from '@/components/DialogView'
 import FloatButton from '@/components/FloatButton'
 import ProgressBar from '@/components/ProgressBar.vue'
+import Pagination from '@/components/Pagination.vue'
 
 import { s } from '@/i18n'
 
@@ -74,6 +75,7 @@ declare module 'vue' {
     DialogView: typeof DialogView
     FloatButton: typeof FloatButton
     ProgressBar: typeof ProgressBar
+    Pagination: typeof Pagination
   }
 }
 

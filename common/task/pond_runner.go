@@ -224,6 +224,10 @@ type pondTaskCtx struct {
 	mux      sync.RWMutex
 }
 
+func (w *pondTaskCtx) TaskID() string {
+	return w.task.Id
+}
+
 func (w *pondTaskCtx) Progress(loaded int64, abs bool) {
 	w.mux.Lock()
 	defer w.mux.Unlock()

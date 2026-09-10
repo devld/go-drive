@@ -1,4 +1,4 @@
-import { FormItem } from '..'
+import { FormItem, TaskProgress } from '..'
 
 export interface DriveFactoryConfig {
   type: string
@@ -125,6 +125,7 @@ export interface JobExecution {
   status: JobExecutionStatus
   logs?: string
   errorMsg?: string
+  progress?: TaskProgress
 }
 
 export interface DriveScript {

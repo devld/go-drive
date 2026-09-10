@@ -59,6 +59,12 @@
     "toggle_sort": "切换排序方式",
     "entry_actions": "文件操作",
     "loading": "正在加载",
+    "pagination": {
+      "label": "分页",
+      "previous": "上一页",
+      "next": "下一页",
+      "summary": "第 {page} / {pages} 页，共 {total} 条"
+    },
     "password_protected": "密码保护",
     "input_password": "请输入密码",
     "sort": {

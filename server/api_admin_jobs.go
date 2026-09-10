@@ -122,18 +122,34 @@ func (jr *jobsRoute) deleteJob(c *gin.Context) {
 	}
 }
 
-func (jr *jobsRoute) getAllExecutions(c *gin.Context) {
+func (jr *jobsRoute) getExecutions(c *gin.Context) {
 	jobId := utils.ToInt(c.Query("jobId"), -1)
 	if jobId < 0 {
 		_ = c.Error(err.NewBadRequestError(""))
 		return
 	}
-	result, e := jr.jobDAO.GetJobExecutions(uint(jobId))
+	page, pageSize, e := getPagination(c)
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, result)
+	items, total, e := jr.jobDAO.GetJobExecutions(uint(jobId), page, pageSize)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	results := make([]jobExecutionView, 0, len(items))
+	for _, item := range items {
+		view := jobExecutionView{JobExecution: item}
+		if item.Status == types.JobExecutionRunning {
+			if progress, ok := jr.jobExecutor.GetExecutionProgress(item.ID); ok &&
+				(progress.Loaded != 0 || progress.Total != 0) {
+				view.Progress = &progress
+			}
+		}
+		results = append(results, view)
+	}
+	SetResult(c, newPageResult(results, total, page, pageSize))
 }
 
 func (jr *jobsRoute) executeJob(c *gin.Context) {
@@ -250,4 +266,9 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 type jobItem struct {
 	types.Job
 	TriggersInfo map[job.JobTriggerType][]types.SM `json:"triggersInfo"`
+}
+
+type jobExecutionView struct {
+	types.JobExecution
+	Progress *task.Progress `json:"progress,omitempty"`
 }

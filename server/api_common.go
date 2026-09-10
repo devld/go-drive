@@ -33,10 +33,6 @@ func InitCommonRoutes(
 	// cancel and delete task
 	authR.DELETE("/tasks/:id", cr.cancelAndDeleteTask)
 
-	authAdmin := authR.Group("/", AdminGroupRequired())
-	// get tasks
-	authAdmin.GET("/tasks", cr.getTasks)
-
 	return nil
 }
 
@@ -102,14 +98,4 @@ func (cr *commonRoute) cancelAndDeleteTask(c *gin.Context) {
 	if e != nil {
 		_ = c.Error(e)
 	}
-}
-
-func (cr *commonRoute) getTasks(c *gin.Context) {
-	group := c.Query("group")
-	tasks, e := cr.runner.GetTasks(group)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
-	SetResult(c, tasks)
 }

@@ -95,11 +95,11 @@ func TestCommonRoutesUsePluralTaskResource(t *testing.T) {
 	}
 
 	assertRegisteredRoutes(t, router,
-		"GET /tasks",
 		"GET /tasks/:id",
 		"DELETE /tasks/:id",
 	)
 	assertRoutesNotRegistered(t, router,
+		"GET /tasks",
 		"GET /task/:id",
 		"DELETE /task/:id",
 	)
@@ -118,10 +118,11 @@ func TestAdminRoutesUseNormalizedResources(t *testing.T) {
 		t.Fatalf("InitAdminRoutes() error = %v", e)
 	}
 
-	if got := len(router.Routes()); got != 51 {
-		t.Fatalf("registered admin route count = %d, want 51", got)
+	if got := len(router.Routes()); got != 52 {
+		t.Fatalf("registered admin route count = %d, want 52", got)
 	}
 	assertRegisteredRoutes(t, router,
+		"GET /admin/tasks",
 		"GET /admin/users",
 		"POST /admin/users",
 		"GET /admin/users/:username",

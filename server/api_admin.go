@@ -38,6 +38,7 @@ func InitAdminRoutes(
 	fileBucketDAO *storage.FileBucketDAO) error {
 
 	r = r.Group("/admin", TokenAuth(tokenStore), AdminGroupRequired())
+	r.GET("/tasks", (&tasksRoute{runner: runner}).getTasks)
 
 	ur := &usersRoute{userDAO}
 	// list users
@@ -156,7 +157,7 @@ func InitAdminRoutes(
 	// delete job
 	jobsRoutesGroup.DELETE("/:id", jr.deleteJob)
 	// get all executions
-	r.GET("/job-executions", jr.getAllExecutions)
+	r.GET("/job-executions", jr.getExecutions)
 	// execute a job
 	r.POST("/job-executions", jr.executeJob)
 	// cancel job execution
@@ -179,4 +180,17 @@ func InitAdminRoutes(
 	r.DELETE("/file-buckets/:name", fbr.deleteBucket)
 
 	return nil
+}
+
+type tasksRoute struct {
+	runner task.Runner
+}
+
+func (tr *tasksRoute) getTasks(c *gin.Context) {
+	tasks, e := tr.runner.GetTasks(c.Query("group"))
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	SetResult(c, tasks)
 }
