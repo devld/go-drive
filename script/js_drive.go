@@ -13,7 +13,7 @@ import (
 var jsBuildEntriesTree = NativeFunction(func(vm *VM, args Values) any {
 	entry := GetEntry(vm, args.Get(0).Raw(), "buildEntriesTree requires an Entry")
 	byteProgress := args.Get(1).Bool()
-	r, e := driveutil.BuildEntriesTree(runTaskCtx(vm.ExecutionContext()), entry, byteProgress)
+	r, e := driveutil.BuildEntriesTree(GetTaskCtx(vm, args.Get(2).Raw(), ""), entry, byteProgress)
 	if e != nil {
 		vm.ThrowError(e)
 	}
@@ -24,7 +24,7 @@ var jsFindEntries = NativeFunction(func(vm *VM, args Values) any {
 	drive := GetDrive(vm, args.Get(0).Raw(), "findEntries requires a Drive")
 	pattern := args.Get(1).String()
 	byteProgress := args.Get(2).Bool()
-	r, e := driveutil.FindEntries(runTaskCtx(vm.ExecutionContext()), drive, pattern, byteProgress)
+	r, e := driveutil.FindEntries(GetTaskCtx(vm, args.Get(3).Raw(), ""), drive, pattern, byteProgress)
 	if e != nil {
 		vm.ThrowError(e)
 	}
@@ -56,7 +56,7 @@ var jsClassDrive = JSClass{
 		},
 		"save": func(vm *VM, this *Value, args Values) any {
 			return This[jsObjDrive](vm, this, "Drive.save").Save(
-				args.Get(0).String(), args.Get(1).Integer(), args.Get(2).Bool(), args.Get(3),
+				args.Get(0).String(), args.Get(1).Integer(), args.Get(2).Bool(), args.Get(3), args.Get(4),
 			)
 		},
 		"makeDir": func(vm *VM, this *Value, args Values) any {
@@ -64,19 +64,19 @@ var jsClassDrive = JSClass{
 		},
 		"copy": func(vm *VM, this *Value, args Values) any {
 			return This[jsObjDrive](vm, this, "Drive.copy").Copy(
-				args.Get(0), args.Get(1).String(), args.Get(2).Bool(),
+				args.Get(0), args.Get(1).String(), args.Get(2).Bool(), args.Get(3),
 			)
 		},
 		"move": func(vm *VM, this *Value, args Values) any {
 			return This[jsObjDrive](vm, this, "Drive.move").Move(
-				args.Get(0), args.Get(1).String(), args.Get(2).Bool(),
+				args.Get(0), args.Get(1).String(), args.Get(2).Bool(), args.Get(3),
 			)
 		},
 		"list": func(vm *VM, this *Value, args Values) any {
 			return This[jsObjDrive](vm, this, "Drive.list").List(args.Get(0).String())
 		},
 		"delete": func(vm *VM, this *Value, args Values) any {
-			This[jsObjDrive](vm, this, "Drive.delete").Delete(args.Get(0).String())
+			This[jsObjDrive](vm, this, "Drive.delete").Delete(args.Get(0).String(), args.Get(1))
 			return nil
 		},
 	},
@@ -163,11 +163,9 @@ func (d jsObjDrive) Get(path string) jsObjEntry {
 	return newEntry(d.VM(), entry)
 }
 
-func (d jsObjDrive) Save(path string, size int64, override bool, reader *Value) jsObjEntry {
-	ctx := d.VM().ExecutionContext()
-	// The destination Drive owns progress reporting for Save.
+func (d jsObjDrive) Save(path string, size int64, override bool, reader, progress *Value) jsObjEntry {
 	r := GetReader(d.VM(), reader, "Drive.save requires a Reader")
-	entry, e := d.d.Save(runTaskCtx(ctx), path, size, override, r)
+	entry, e := d.d.Save(GetTaskCtx(d.VM(), progress, "Drive.save requires a ProgressReporter"), path, size, override, r)
 	if e != nil {
 		d.VM().ThrowError(e)
 	}
@@ -182,9 +180,9 @@ func (d jsObjDrive) MakeDir(path string) jsObjEntry {
 	return newEntry(d.VM(), entry)
 }
 
-func (d jsObjDrive) Copy(from *Value, to string, override bool) jsObjEntry {
+func (d jsObjDrive) Copy(from *Value, to string, override bool, progress *Value) jsObjEntry {
 	entry, e := d.d.Copy(
-		runTaskCtx(d.VM().ExecutionContext()),
+		GetTaskCtx(d.VM(), progress, "Drive.copy requires a ProgressReporter"),
 		GetEntry(d.VM(), from, "Drive.copy requires an Entry"),
 		to,
 		override,
@@ -195,9 +193,9 @@ func (d jsObjDrive) Copy(from *Value, to string, override bool) jsObjEntry {
 	return newEntry(d.VM(), entry)
 }
 
-func (d jsObjDrive) Move(from *Value, to string, override bool) jsObjEntry {
+func (d jsObjDrive) Move(from *Value, to string, override bool, progress *Value) jsObjEntry {
 	entry, e := d.d.Move(
-		runTaskCtx(d.VM().ExecutionContext()),
+		GetTaskCtx(d.VM(), progress, "Drive.move requires a ProgressReporter"),
 		GetEntry(d.VM(), from, "Drive.move requires an Entry"),
 		to,
 		override,
@@ -216,8 +214,8 @@ func (d jsObjDrive) List(path string) []jsObjEntry {
 	return utils.ArrayMap(entries, func(t *types.IEntry) jsObjEntry { return newEntry(d.VM(), *t) })
 }
 
-func (d jsObjDrive) Delete(path string) {
-	if e := d.d.Delete(runTaskCtx(d.VM().ExecutionContext()), path); e != nil {
+func (d jsObjDrive) Delete(path string, progress *Value) {
+	if e := d.d.Delete(GetTaskCtx(d.VM(), progress, "Drive.delete requires a ProgressReporter"), path); e != nil {
 		d.VM().ThrowError(e)
 	}
 }

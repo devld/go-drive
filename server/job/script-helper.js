@@ -5,9 +5,9 @@
     for (const fromEntry of findEntries(drive, from)) {
       const toPath = pathUtils.join(to, fromEntry.name);
       if (isMove) {
-        drive.move(fromEntry, toPath, !!override);
+        drive.move(fromEntry, toPath, !!override, progress);
       } else {
-        drive.copy(fromEntry, toPath, !!override);
+        drive.copy(fromEntry, toPath, !!override, progress);
       }
     }
   };
@@ -24,7 +24,7 @@
     const entries = findEntries(drive, path);
     for (const entry of [...entries].reverse()) {
       try {
-        drive.delete(entry.path);
+        drive.delete(entry.path, progress);
       } catch (e) {
         if (!(e instanceof NotFoundError)) throw e;
       }

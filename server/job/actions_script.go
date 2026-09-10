@@ -8,6 +8,7 @@ import (
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
 	"go-drive/common/registry"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/drive"
 	s "go-drive/script"
@@ -59,6 +60,14 @@ func ExecuteJobCode(ctx context.Context, code any, globals types.M, ch *registry
 	defer func() { _ = vm.Dispose() }()
 
 	if e = vm.DefineGlobal("drive", ch.Get(registry.KeyDriveAccess).(*drive.Access).GetRootDrive(nil)); e != nil {
+		return e
+	}
+	taskCtx, ok := ctx.(types.TaskCtx)
+	if !ok {
+		taskCtx = task.NewContextWrapper(ctx)
+	}
+	progress := s.NewProgressReporter(taskCtx, true, true)
+	if e = vm.DefineGlobal("progress", progress); e != nil {
 		return e
 	}
 	if e = bindJobLog(vm, onLog); e != nil {

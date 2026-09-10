@@ -215,7 +215,8 @@ func (sd *ScriptDrive) Save(ctx types.TaskCtx, path string, size int64, override
 		ctx.Total(size, true)
 		// Save borrows the stream; the caller retains ownership of closing it.
 		borrowedReader := vm.NewInstance("Reader", reader)
-		_, e := sd.call(ctx, vm, "save", path, size, override, borrowedReader, jsOnProgress(ctx))
+		progress := s.NewProgressReporter(ctx, true, false)
+		_, e := sd.call(ctx, vm, "save", path, size, override, borrowedReader, progress)
 		return e
 	})
 	if e != nil {
@@ -249,7 +250,8 @@ func (sd *ScriptDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, ove
 		return nil, err.NewUnsupportedError()
 	}
 	e = sd.withVM(ctx, func(vm *s.VM) error {
-		_, e := sd.call(ctx, vm, "copy", src, to, override, jsOnProgress(ctx))
+		progress := s.NewProgressReporter(ctx, true, true)
+		_, e := sd.call(ctx, vm, "copy", src, to, override, progress)
 		return e
 	})
 	if e != nil {
@@ -268,7 +270,8 @@ func (sd *ScriptDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, ove
 		return nil, err.NewUnsupportedError()
 	}
 	e = sd.withVM(ctx, func(vm *s.VM) error {
-		_, e := sd.call(ctx, vm, "move", src, to, override, jsOnProgress(ctx))
+		progress := s.NewProgressReporter(ctx, true, true)
+		_, e := sd.call(ctx, vm, "move", src, to, override, progress)
 		return e
 	})
 	if e != nil {
@@ -350,7 +353,8 @@ func (sd *ScriptDrive) Delete(ctx types.TaskCtx, path string) error {
 		return err.NewUnsupportedError()
 	}
 	e := sd.withVM(ctx, func(vm *s.VM) error {
-		_, e := sd.call(ctx, vm, "delete", path, jsOnProgress(ctx))
+		progress := s.NewProgressReporter(ctx, true, true)
+		_, e := sd.call(ctx, vm, "delete", path, progress)
 		return e
 	})
 	if e != nil {

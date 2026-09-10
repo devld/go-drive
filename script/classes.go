@@ -83,6 +83,7 @@ func init() {
 		&jsClassReader,
 		&jsClassReadCloser,
 		&jsClassTempFile,
+		&jsClassProgressReporter,
 		&jsClassHash,
 		&jsClassHmac,
 		&jsClassHttpFormData,

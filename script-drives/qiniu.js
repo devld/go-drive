@@ -1,5 +1,5 @@
 // @name Qiniu
-// @version 1.0.9
+// @version 1.0.10
 // @uploader qiniu-uploader.js
 // @description Qiniu Kodo
 
@@ -73,16 +73,17 @@ defineDrive(
       return entry;
     },
 
-    save(path, size, override, reader, onProgress) {
-      saveSmall(this, path, reader);
+    save(path, size, override, reader, progress) {
+      saveSmall(this, path, reader.withProgress(progress));
     },
 
     makeDir(path) {
       saveSmall(this, path + "/", "");
     },
 
-    copy(from, to, override, onProgress) {
+    copy(from, to, override, progress) {
       if (from.isDir) throw new UnsupportedError();
+      progress.addTotal(Math.max(from.size, 0));
       request(
         this,
         "POST",
@@ -95,10 +96,12 @@ defineDrive(
         null,
         null
       );
+      progress.addLoaded(Math.max(from.size, 0));
     },
 
-    move(from, to, override, onProgress) {
+    move(from, to, override, progress) {
       if (from.isDir) throw new UnsupportedError();
+      progress.addTotal(Math.max(from.size, 0));
       request(
         this,
         "POST",
@@ -111,6 +114,7 @@ defineDrive(
         null,
         null
       );
+      progress.addLoaded(Math.max(from.size, 0));
     },
 
     list(path) {
@@ -141,9 +145,16 @@ defineDrive(
       return entries;
     },
 
-    delete(path, onProgress) {
+    delete(path, progress) {
       const entry = selfDrive.get(path);
-      const payload = flattenEntriesTree(buildEntriesTree(entry))
+      const entries = flattenEntriesTree(
+        buildEntriesTree(
+          entry,
+          false,
+          progress.derive({ loaded: false, total: true })
+        )
+      );
+      const payload = entries
         .map(
           (e) =>
             "op=/delete/" +
@@ -154,6 +165,7 @@ defineDrive(
         )
         .join("&");
       request(this, "POST", "https://rs.qiniuapi.com/batch", null, payload);
+      progress.addLoaded(entries.length);
     },
 
     upload(path, size, override, config) {

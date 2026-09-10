@@ -145,11 +145,14 @@ func TestHTTPProgressReaderPreservesLength(t *testing.T) {
 	srv, cap := startCaptureServer(t)
 	vm := newScriptTestVM(t)
 	mustDefineGlobal(t, vm, "url", srv.URL)
+	tc := task.NewTaskContext(context.Background())
+	progress := NewProgressReporter(tc, true, false)
+	mustDefineGlobal(t, vm, "progress", progress)
 	if _, e := vm.Run(context.Background(), `
-		var tmp = new TempFile();
-		tmp.write(Bytes.fromString("xyz"));
-		tmp.seekTo(0, SEEK_START);
-		var resp = http(url, { method: "PUT", body: tmp });
+			var tmp = new TempFile();
+			tmp.write(Bytes.fromString("xyz"));
+			tmp.seekTo(0, SEEK_START);
+			var resp = http(url, { method: "PUT", body: tmp.withProgress(progress) });
 		resp.dispose();
 		tmp.close();
 	`, ""); e != nil {
@@ -160,6 +163,9 @@ func TestHTTPProgressReaderPreservesLength(t *testing.T) {
 	}
 	if cap.body != "xyz" {
 		t.Fatalf("body = %q, want xyz", cap.body)
+	}
+	if tc.GetProgress() != 3 {
+		t.Fatalf("progress = %d, want 3", tc.GetProgress())
 	}
 }
 
@@ -346,10 +352,25 @@ func TestHTTPUploadReportsTaskProgress(t *testing.T) {
 	mustDefineGlobal(t, vm, "payload", bytes.Repeat([]byte("x"), 2<<20))
 	tc := task.NewTaskContext(context.Background())
 	if _, e := vm.Run(tc, `
-		var tmp = new TempFile();
-		tmp.write(payload);
-		tmp.seekTo(0, SEEK_START);
-		var resp = http(url, { method: "PUT", body: tmp });
+			var plain = new TempFile();
+			plain.write(payload);
+			plain.seekTo(0, SEEK_START);
+			var plainResp = http(url, { method: "PUT", body: plain });
+			plainResp.dispose();
+			plain.close();
+		`, ""); e != nil {
+		t.Fatal(e)
+	}
+	if tc.GetProgress() != 0 {
+		t.Fatalf("unwrapped HTTP progress = %d, want 0", tc.GetProgress())
+	}
+	progress := NewProgressReporter(tc, true, false)
+	mustDefineGlobal(t, vm, "progress", progress)
+	if _, e := vm.Run(tc, `
+			var tmp = new TempFile();
+			tmp.write(payload);
+			tmp.seekTo(0, SEEK_START);
+			var resp = http(url, { method: "PUT", body: tmp.withProgress(progress) });
 		resp.dispose();
 		tmp.close();
 	`, ""); e != nil {
@@ -357,6 +378,31 @@ func TestHTTPUploadReportsTaskProgress(t *testing.T) {
 	}
 	if tc.GetProgress() < 1 {
 		t.Fatalf("upload progress = %d, want at least 1", tc.GetProgress())
+	}
+}
+
+func TestHTTPFormDataReportsOnlyWrappedReader(t *testing.T) {
+	srv, _ := startCaptureServer(t)
+	vm := newScriptTestVM(t)
+	mustDefineGlobal(t, vm, "url", srv.URL)
+	tc := task.NewTaskContext(context.Background())
+	progress := NewProgressReporter(tc, true, false)
+	mustDefineGlobal(t, vm, "progress", progress)
+
+	if _, e := vm.Run(tc, `
+		const source = new TempFile();
+		source.write(Bytes.fromString("abc"));
+		source.seekTo(0, SEEK_START);
+		const fd = new HttpFormData();
+		fd.appendFile("file", "a.txt", source.withProgress(progress));
+		const resp = http(url, {method: "POST", body: fd});
+		resp.dispose();
+		source.close();
+	`, ""); e != nil {
+		t.Fatal(e)
+	}
+	if tc.GetProgress() != 3 || tc.GetTotal() != 0 {
+		t.Fatalf("multipart progress = %d/%d, want 3/0", tc.GetProgress(), tc.GetTotal())
 	}
 }
 
@@ -538,7 +584,7 @@ func TestProgressWrapperPreservesNestedRemainingLength(t *testing.T) {
 	}
 	value, _ := vm.GetValue("limited")
 	original := GetReader(vm, value.Raw(), "")
-	wrapped := wrapPreservingLength(original, original)
+	wrapped := progressReportingReader{r: original}
 	if _, e := io.ReadFull(wrapped, make([]byte, 2)); e != nil {
 		t.Fatal(e)
 	}

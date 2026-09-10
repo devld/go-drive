@@ -2,7 +2,6 @@ package script
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -12,7 +11,6 @@ import (
 
 	err "go-drive/common/errors"
 	"go-drive/common/logging"
-	"go-drive/common/task"
 	"go-drive/common/types"
 
 	"github.com/dop251/goja"
@@ -814,11 +812,4 @@ func durationFrom(v any) (time.Duration, bool) {
 	default:
 		return 0, false
 	}
-}
-
-func runTaskCtx(ctx context.Context) types.TaskCtx {
-	if tc, ok := ctx.(types.TaskCtx); ok {
-		return tc
-	}
-	return task.NewContextWrapper(ctx)
 }

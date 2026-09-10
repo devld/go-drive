@@ -60,6 +60,19 @@ declare class Bytes {
   toString(encoding?: BytesEncoding, options?: BytesEncodeOptions): string;
 }
 
+/**
+ * Operation-scoped task progress capability. Cannot be constructed from JavaScript.
+ * Derived reporters may only remove permissions, never add them.
+ */
+declare class ProgressReporter {
+  addLoaded(delta: number): void;
+  addTotal(delta: number): void;
+  derive(capabilities: {
+    loaded?: boolean;
+    total?: boolean;
+  }): ProgressReporter;
+}
+
 /** Go `io.Reader`. */
 declare class Reader {
   /** Read into `dest` (up to `dest.length`). Returns bytes read, or `-1` at EOF. */
@@ -67,6 +80,8 @@ declare class Reader {
   readAsString(): string;
   /** Limit remaining reads to `n` bytes. */
   limitReader(n: number): Reader;
+  /** Return a Reader that adds consumed bytes to `reporter.loaded`. */
+  withProgress(reporter: ProgressReporter): Reader;
 }
 
 /** Go `io.ReadCloser`. */
@@ -138,12 +153,28 @@ declare interface ContentURL {
  */
 declare class Drive {
   get(path: string): Entry;
-  save(path: string, size: number, override: boolean, reader: Reader): Entry;
+  save(
+    path: string,
+    size: number,
+    override: boolean,
+    reader: Reader,
+    progress: ProgressReporter
+  ): Entry;
   makeDir(path: string): Entry;
-  copy(from: Entry, to: string, override: boolean): Entry;
-  move(from: Entry, to: string, override: boolean): Entry;
+  copy(
+    from: Entry,
+    to: string,
+    override: boolean,
+    progress: ProgressReporter
+  ): Entry;
+  move(
+    from: Entry,
+    to: string,
+    override: boolean,
+    progress: ProgressReporter
+  ): Entry;
   list(path: string): readonly Entry[];
-  delete(path: string): void;
+  delete(path: string, progress: ProgressReporter): void;
 }
 
 /**
@@ -247,7 +278,7 @@ declare interface HttpRequestOptions {
  * (`TempFile` remaining bytes, including `limitReader` wrapping one).
  * String and Bytes always use their actual length. HttpFormData is
  * multipart. Set `Transfer-Encoding: chunked` to skip auto `Content-Length`.
- * Reader bodies report upload progress to the Go task context automatically.
+ * Progress is explicit: wrap a Reader body with `reader.withProgress(reporter)`.
  */
 declare function http(url: string, req?: HttpRequestOptions): HttpResponse;
 
@@ -406,14 +437,16 @@ declare interface EntryTreeNode {
 /** Walk a directory tree. `byteProgress` reports size instead of entry count. */
 declare function buildEntriesTree(
   entry: Entry,
-  byteProgress?: boolean
+  byteProgress?: boolean,
+  progress?: ProgressReporter
 ): EntryTreeNode;
 
 /** Glob under `root`. */
 declare function findEntries(
   root: Drive,
   pattern: string,
-  bytesProgress?: boolean
+  bytesProgress?: boolean,
+  progress?: ProgressReporter
 ): readonly Entry[];
 
 /** Flatten a tree. `deepFirst` visits children before the node. */

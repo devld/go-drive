@@ -1,13 +1,10 @@
 package script
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"go-drive/common/driveutil"
-	"go-drive/common/types"
 	"io"
 	"os"
 )
@@ -103,6 +100,9 @@ var jsClassReader = JSClass{
 		"limitReader": func(vm *VM, this *Value, args Values) any {
 			return This[jsReader](vm, this, "Reader.limitReader").LimitReader(args.Get(0).Integer())
 		},
+		"withProgress": func(vm *VM, this *Value, args Values) any {
+			return This[jsReader](vm, this, "Reader.withProgress").WithProgress(args.Get(0).Raw())
+		},
 	},
 }
 
@@ -163,6 +163,7 @@ type jsReader interface {
 	Read(dest any) int
 	ReadAsString() string
 	LimitReader(n int64) *Value
+	WithProgress(reporter any) *Value
 }
 
 type jsCloser interface {
@@ -327,12 +328,55 @@ func (r jsObjReader) LimitReader(n int64) *Value {
 	return newValue(r.vm, r.vm.instantiate(r.vm.classSet().classByName("Reader"), view))
 }
 
+func (r jsObjReader) WithProgress(reporter any) *Value {
+	p := GetProgressReporter(r.vm, reporter, "Reader.withProgress requires a ProgressReporter")
+	if !p.allowLoaded {
+		r.vm.ThrowTypeError("Reader.withProgress requires loaded permission")
+	}
+	if readerHasProgress(r.r) {
+		r.vm.ThrowTypeError("Reader already reports progress")
+	}
+	view := newReader(r.vm, progressReportingReader{r: r.r, p: p})
+	view.owner = r.owner
+	return newValue(r.vm, r.vm.instantiate(r.vm.classSet().classByName("Reader"), view))
+}
+
 func (r jsObjReader) ConsoleString() string {
 	return formatGoInspect("Reader", nil, true)
 }
 
 type contentLengthReader interface {
 	ContentLength() int64
+}
+
+type progressReportingReader struct {
+	r io.Reader
+	p *ProgressReporter
+}
+
+func (r progressReportingReader) Read(b []byte) (int, error) {
+	n, e := r.r.Read(b)
+	r.p.addLoadedFromIO(int64(n))
+	return n, e
+}
+
+func (r progressReportingReader) ContentLength() int64 {
+	return readerKnownLength(r.r)
+}
+
+func readerHasProgress(r io.Reader) bool {
+	switch r := r.(type) {
+	case progressReportingReader:
+		return true
+	case *progressReportingReader:
+		return true
+	case limitedReader:
+		return readerHasProgress(r.R)
+	case *limitedReader:
+		return readerHasProgress(r.R)
+	default:
+		return false
+	}
 }
 
 // limitedReader queries both the remaining limit and the underlying stream.
@@ -349,30 +393,6 @@ func (l limitedReader) ContentLength() int64 {
 		return min(n, l.N)
 	}
 	return -1
-}
-
-type lengthPreservingReader struct {
-	io.Reader
-	original io.Reader
-}
-
-func (r lengthPreservingReader) ContentLength() int64 {
-	return readerKnownLength(r.original)
-}
-
-func wrapPreservingLength(wrapped, orig io.Reader) io.Reader {
-	return lengthPreservingReader{Reader: wrapped, original: orig}
-}
-
-func wrapReaderProgress(ctx context.Context, r io.Reader) io.Reader {
-	if r == nil {
-		return nil
-	}
-	tc, ok := ctx.(types.TaskCtx)
-	if !ok {
-		return r
-	}
-	return wrapPreservingLength(driveutil.ProgressReader(r, tc), r)
 }
 
 func remainingFileSize(f *os.File) int64 {
@@ -445,7 +465,7 @@ func (tf jsObjTempFile) Write(b any) {
 
 func (tf jsObjTempFile) CopyFrom(r any) {
 	reader := GetReader(tf.vm, r, "CopyFrom requires a Reader")
-	if _, e := io.Copy(tf.f, wrapReaderProgress(tf.vm.ExecutionContext(), reader)); e != nil {
+	if _, e := io.Copy(tf.f, reader); e != nil {
 		tf.vm.ThrowError(e)
 	}
 }

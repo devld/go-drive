@@ -212,9 +212,9 @@ Read file content. `start === -1 && size === -1` means the complete content. For
 
 ### Write methods
 
-#### `save(path, size, override, reader, onProgress)`
+#### `save(path, size, override, reader, progress)`
 
-Stream the Reader to the remote service. Go reports `size` as the task total before the call. Passing the Reader to `http()` reports upload progress automatically. For progress that is not a Reader (chunked APIs, copy/move/delete), call `onProgress(loaded, total?)` with **absolute** values; omit `total` to update loaded only.
+Stream the Reader to the remote service. Go reports `size` as the task total before the call and passes a loaded-only `ProgressReporter`. Progress is explicit: pass `reader.withProgress(progress)` to `http()` or `HttpFormData`. Do not report the same Reader at more than one layer.
 
 Honor `override`. Prefer a conditional remote write over a check-then-write sequence that introduces a race. Do not evict caches or return `get`; the runtime evicts the target and parent, then re-gets.
 
@@ -222,17 +222,17 @@ Honor `override`. Prefer a conditional remote write over a check-then-write sequ
 
 Create one directory. The dispatcher ensures that parents exist. Object storage may create a zero-byte object with a trailing `/`; if the service has implicit directories, follow its native semantics.
 
-#### `delete(path, onProgress) -> void`
+#### `delete(path, progress) -> void`
 
-Delete the path and all descendants. If remote directory deletion is not recursive, enumerate with `buildEntriesTree` and `flattenEntriesTree`, then delete depth-first.
+Delete the path and all descendants. If remote directory deletion is not recursive, enumerate with `buildEntriesTree` and `flattenEntriesTree`, using a total-only derived reporter while planning, then call `progress.addLoaded(delta)` after successful batches.
 
 ### Native copy and move
 
-#### `copy(from, to, override, onProgress)`
+#### `copy(from, to, override, progress)`
 
 The runtime calls this only when `from` belongs to this Drive instance. `from` is an `EntryRecord` (`path`, `isDir`, `size`, `modTime`, `data`). Throw `new UnsupportedError()` when native copy is unavailable (for example directories). The dispatcher will fall back to reading the source and calling destination `save`. Never disguise an actual remote failure as Unsupported.
 
-#### `move(from, to, override, onProgress)`
+#### `move(from, to, override, progress)`
 
 Same ownership wrapping as `copy`. `new UnsupportedError()` from `move` does **not** trigger automatic copy-and-delete.
 
@@ -324,7 +324,7 @@ Follow `dropbox.js`. Do not persist OAuth state manually or duplicate refresh-to
 
 - `http(url, { method, headers, body, timeout }?) -> HttpResponse`; `method` defaults to GET. Allowed methods are HEAD, GET, POST, PUT, DELETE, PATCH, and OPTIONS. `timeout` is `ms(...)` or a duration string and defaults to `"30s"`; `0` disables it (the VM run context still applies). Other host network APIs do not add a timeout. Uploads that may run longer than 30s must set `timeout: 0` (or a longer duration).
 - The body may be a Reader, string, Bytes, or HttpFormData.
-- For a Reader body, `Content-Length` comes from `headers` when set (the body is truncated to that size). Otherwise a known size is used (`TempFile` remaining bytes, including `limitReader` wrapping one) so object-storage PUT is not chunked. String and Bytes always use their actual length. HttpFormData is multipart. Set `Transfer-Encoding: chunked` to skip auto `Content-Length`. Reader bodies report upload progress to the Go task automatically.
+- For a Reader body, `Content-Length` comes from `headers` when set (the body is truncated to that size). Otherwise a known size is used (`TempFile` remaining bytes, including `limitReader` wrapping one) so object-storage PUT is not chunked. String and Bytes always use their actual length. HttpFormData is multipart. Set `Transfer-Encoding: chunked` to skip auto `Content-Length`. Wrap a Reader with `reader.withProgress(progress)` when its consumption should update the Go task.
 - `new HttpFormData()`, with `appendField` and `appendFile`.
 - `HttpResponse.status`, `body`, `bodySize()`, `text()`, `json()`, and `dispose()`.
 - `HttpResponse.headers.get(key)`, `values(key)`, and `getAll()`.
@@ -344,13 +344,13 @@ arguments before constructing the log message.
 - `Bytes.fromHex(s)`, `Bytes.fromBase64(s, options?)`, `Bytes.fromBase64Url(s, options?)`, and `Bytes.random(n)` (CSPRNG; `n` in `[0, 1MiB]`).
 - Reader has `read(bytes)` (returns `-1` at EOF), `readAsString()`, and `limitReader(n)`.
 - ReadCloser additionally has `close()`.
-- `new TempFile()`; TempFile has all Reader methods plus `write(bytes)`, `copyFrom(reader)`, `seekTo(offset, whence)`, `size()`, and `close()`.
+- `new TempFile()`; TempFile has all Reader methods plus `write(bytes)`, `copyFrom(reader)`, `seekTo(offset, whence)`, `size()`, and `close()`. `copyFrom` only reports progress when its Reader argument was explicitly wrapped with `withProgress`.
 - Host values are JS classes: `value instanceof Bytes`, `tmp instanceof TempFile && tmp instanceof Reader`, `selfDrive instanceof Drive`, `entry instanceof Entry`. `defineDrive` `get`/`list` return plain `EntryRecord` objects, not host `Entry`.
 - `SEEK_START`, `SEEK_CURRENT`, and `SEEK_END`.
 
 ### Progress and synchronization
 
-- Write methods receive `onProgress(loaded, total?)` as the last argument. Values are absolute. Reader uploads via `http` do not need it.
+- Write methods receive an operation-scoped `ProgressReporter` as the last argument. `addLoaded(delta)` and `addTotal(delta)` are incremental. `derive({loaded, total})` may only remove permissions. `save` receives a loaded-only reporter because Go establishes its total; Reader consumption reports only when explicitly wrapped with `withProgress`.
 - `sleep(duration)`.
 - Drive intervals: `createInstance` may return `intervals: [{ name, interval, timeout?, immediately? }]`. Go schedules them; `onInterval(name)` runs on a borrowed VM. `interval` / `timeout` / the return value are `ms(...)` or duration strings (`"30m"`); timeout defaults to `"30s"`. Overlapping ticks are skipped. A returned duration reschedules the next run; omitting it keeps `interval`. Stopped when the Drive is disposed. Do not emulate this with `sleep` loops or Admin Jobs.
 - `ms(milliseconds)` converts milliseconds to a Go Duration.
@@ -366,9 +366,9 @@ arguments before constructing the log message.
 
 ### Traversal helpers
 
-- `buildEntriesTree(entry, byteProgress?)`.
+- `buildEntriesTree(entry, byteProgress?, progress?)`.
 - `flattenEntriesTree(node, deepFirst?)`.
-- `findEntries(rootDrive, pattern, bytesProgress?)`.
+- `findEntries(rootDrive, pattern, bytesProgress?, progress?)`.
 - `Entry` (host class from `Drive.list` / `selfDrive.get`, not `EntryRecord`): getters `path/name/type/size/meta/modTime/unwrap/data/drive`; methods `getUrl/getReader`.
 
 ### Forms
@@ -443,7 +443,7 @@ defineDrive(
       return all;
     },
 
-    save(path, size, override, reader, onProgress) {
+    save(path, size, override, reader, progress) {
       const route = "/v1/content?path=" + encodeURIComponent(path) +
         "&override=" + (override ? "true" : "false");
       const resp = http(this.baseURL + route, {
@@ -452,7 +452,7 @@ defineDrive(
           Authorization: "Bearer " + this.token,
           "Content-Type": "application/octet-stream"
         },
-        body: reader,
+        body: reader.withProgress(progress),
         timeout: 0
       });
       const status = resp.status;
@@ -465,15 +465,15 @@ defineDrive(
       requestJson(this, "POST", "/v1/directories", { path });
     },
 
-    copy(from, to, override, onProgress) {
+    copy(from, to, override, progress) {
       throw new UnsupportedError();
     },
 
-    move(from, to, override, onProgress) {
+    move(from, to, override, progress) {
       throw new UnsupportedError();
     },
 
-    delete(path, onProgress) {
+    delete(path, progress) {
       requestJson(
         this,
         "DELETE",

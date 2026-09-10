@@ -1,5 +1,5 @@
 // @name Dropbox
-// @version 1.0.9
+// @version 1.0.10
 // @description Dropbox drive
 
 /**
@@ -89,11 +89,12 @@ defineDrive(
       return toEntry(data);
     },
 
-    save(path, size, override, reader, onProgress) {
-      if (size <= 150 * 1025 * 1024) {
-        uploadSmall(this, "/" + path, size, reader);
+    save(path, size, override, reader, progress) {
+      const uploadReader = reader.withProgress(progress);
+      if (size <= 150 * 1024 * 1024) {
+        uploadSmall(this, "/" + path, size, uploadReader);
       } else {
-        uploadLarge(this, "/" + path, size, reader);
+        uploadLarge(this, "/" + path, size, uploadReader);
       }
     },
 
@@ -103,18 +104,24 @@ defineDrive(
       });
     },
 
-    copy(from, to, override) {
+    copy(from, to, override, progress) {
+      const amount = from.isDir ? 1 : Math.max(from.size, 0);
+      progress.addTotal(amount);
       request(this.oauth, "POST", "/files/copy_v2", null, {
         from_path: "/" + from.path,
         to_path: "/" + to,
       });
+      progress.addLoaded(amount);
     },
 
-    move(from, to, override) {
+    move(from, to, override, progress) {
+      const amount = from.isDir ? 1 : Math.max(from.size, 0);
+      progress.addTotal(amount);
       request(this.oauth, "POST", "/files/move_v2", null, {
         from_path: "/" + from.path,
         to_path: "/" + to,
       });
+      progress.addLoaded(amount);
     },
 
     list(path) {
@@ -137,11 +144,13 @@ defineDrive(
       return result;
     },
 
-    delete(path) {
+    delete(path, progress) {
       console.debug("delete", path);
+      progress.addTotal(1);
       request(this.oauth, "POST", "/files/delete_v2", null, {
         path: "/" + path,
       });
+      progress.addLoaded(1);
     },
 
     getURL(entry) {

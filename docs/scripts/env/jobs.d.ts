@@ -3,6 +3,9 @@
 /** Root host `Drive` of this go-drive instance (not `defineDrive` `this`). */
 declare const drive: Drive;
 
+/** Progress capability for the current job run. */
+declare const progress: ProgressReporter;
+
 /** Write a log line for this job run. */
 declare function log(...msg: any[]): void;
 

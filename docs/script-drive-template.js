@@ -1,5 +1,5 @@
 // @name My Drive
-// @version 1.0.1
+// @version 1.0.2
 // @uploader my-drive-uploader.js
 // @description
 // > Here and below is the drive's description
@@ -94,23 +94,23 @@ defineDrive(
       return [];
     },
 
-    save(path, size, override, reader, onProgress) {
-      // TODO upload
+    save(path, size, override, reader, progress) {
+      // TODO upload reader.withProgress(progress)
     },
 
     makeDir(path) {
       // TODO request
     },
 
-    copy(from, to, override, onProgress) {
+    copy(from, to, override, progress) {
       throw new UnsupportedError();
     },
 
-    move(from, to, override, onProgress) {
+    move(from, to, override, progress) {
       throw new UnsupportedError();
     },
 
-    delete(path, onProgress) {
+    delete(path, progress) {
       console.debug("delete", path);
       // TODO request
     },

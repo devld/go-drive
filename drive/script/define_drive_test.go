@@ -513,6 +513,9 @@ defineDrive({ createInstance() { return {}; } }, {
 			}
 			t.Cleanup(func() { _ = vm.Dispose() })
 			mustDefineGlobal(t, vm, "target", d)
+			tc := task.NewTaskContext(context.Background())
+			progress := s.NewProgressReporter(tc, true, false)
+			mustDefineGlobal(t, vm, "progress", progress)
 			_, e = vm.Run(context.Background(), `
 const file = new TempFile();
 try {
@@ -521,7 +524,7 @@ try {
     file.seekTo(0, SEEK_START);
     let failed = false;
     try {
-      target.save(path, 3, true, file);
+	  target.save(path, 3, true, file, progress);
     } catch (e) {
       if (path !== "fail" || !e.message.includes("upload failed")) throw e;
       failed = true;
@@ -541,16 +544,16 @@ try {
 	}
 }
 
-func TestScriptDriveOnProgressReportsTask(t *testing.T) {
+func TestScriptDriveProgressReporterAddsLoadedAndKeepsSaveTotal(t *testing.T) {
 	d := newTestScriptDrive(t, `
 defineDrive(
   { createInstance: function () { return {}; } },
   {
     get: function (path) { return { path: path, isDir: false, size: 1, modTime: 1 }; },
     list: function () { return []; },
-    save: function (path, size, override, reader, onProgress) {
-      onProgress(3);
-      onProgress(5, 10);
+	    save: function (path, size, override, reader, progress) {
+	      progress.addLoaded(3);
+	      progress.addLoaded(5);
     },
     getURL: function () { return { url: "https://example.com" }; }
   }
@@ -560,11 +563,11 @@ defineDrive(
 	if _, e := d.Save(tc, "a.txt", 7, true, bytes.NewReader(nil)); e != nil {
 		t.Fatal(e)
 	}
-	if tc.GetProgress() != 5 {
-		t.Fatalf("progress = %d, want 5", tc.GetProgress())
+	if tc.GetProgress() != 8 {
+		t.Fatalf("progress = %d, want 8", tc.GetProgress())
 	}
-	if tc.GetTotal() != 10 {
-		t.Fatalf("total = %d, want 10", tc.GetTotal())
+	if tc.GetTotal() != 7 {
+		t.Fatalf("total = %d, want 7", tc.GetTotal())
 	}
 }
 

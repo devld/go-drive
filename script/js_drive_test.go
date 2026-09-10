@@ -42,6 +42,16 @@ type inspectTestEntry struct {
 	meta    types.EntryMeta
 }
 
+type totalChangingDrive struct {
+	types.IDrive
+}
+
+func (d totalChangingDrive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
+	ctx.Total(99, true)
+	ctx.Total(7, false)
+	return d.IDrive.Save(ctx, path, size, override, reader)
+}
+
 func (e inspectTestEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
 	return nil, err.NewUnsupportedError()
 }
@@ -234,14 +244,16 @@ func TestDriveSaveReportsProgressOnce(t *testing.T) {
 		t.Fatal(e)
 	}
 	vm := newScriptTestVM(t)
-	mustDefineGlobal(t, vm, "drive", d)
+	mustDefineGlobal(t, vm, "drive", totalChangingDrive{IDrive: d})
 	ctx := task.NewTaskContext(context.Background())
 	ctx.Total(5, true)
+	progress := NewProgressReporter(ctx, true, false)
+	mustDefineGlobal(t, vm, "progress", progress)
 	if _, e := vm.Run(ctx, `
-		const tmp = new TempFile();
-		tmp.write(Bytes.fromString("hello"));
-		tmp.seekTo(0, SEEK_START);
-		drive.save("test.txt", 5, true, tmp);
+			const tmp = new TempFile();
+			tmp.write(Bytes.fromString("hello"));
+			tmp.seekTo(0, SEEK_START);
+			drive.save("test.txt", 5, true, tmp, progress);
 	`, ""); e != nil {
 		t.Fatal(e)
 	}

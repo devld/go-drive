@@ -79,7 +79,6 @@ var jsHTTP = NativeFunction(func(vm *VM, args Values) any {
 			if n >= 0 {
 				vr = io.LimitReader(vr, n)
 			}
-			vr = wrapReaderProgress(vm.ExecutionContext(), vr)
 			reqBody = newHTTPRequestBody(vr, n, "")
 		} else if b := GetBytes(vm, body, ""); b != nil {
 			reqBody = newHTTPRequestBody(bytes.NewReader(b), int64(len(b)), "")
@@ -224,8 +223,7 @@ func (fd *jsObjHttpFormData) AppendField(key string, v any) {
 
 func (fd *jsObjHttpFormData) AppendFile(key, filename string, reader any) {
 	if vr := GetReader(fd.vm, reader, ""); vr != nil {
-		r := wrapReaderProgress(fd.vm.ExecutionContext(), vr)
-		fd.data = append(fd.data, formDataField{field: key, filename: filename, file: true, data: r})
+		fd.data = append(fd.data, formDataField{field: key, filename: filename, file: true, data: vr})
 		return
 	}
 	var data []byte

@@ -647,13 +647,3 @@ func (r readCloserContentReader) GetReader(_ context.Context, start, size int64)
 func (r readCloserContentReader) GetURL(_ context.Context) (*types.ContentURL, error) {
 	return nil, err.NewUnsupportedError()
 }
-
-func jsOnProgress(ctx types.TaskCtx) s.NativeFunction {
-	return func(_ *s.VM, args s.Values) any {
-		ctx.Progress(args.Get(0).Integer(), true)
-		if t := args.Get(1); t != nil && !t.IsNil() {
-			ctx.Total(t.Integer(), true)
-		}
-		return nil
-	}
-}

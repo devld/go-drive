@@ -200,12 +200,6 @@ declare type DriveSharedProps<T> = {
 };
 
 /**
- * Report absolute task progress from a Drive write method.
- * Omit `total` to update loaded only.
- */
-declare type DriveOnProgress = (loaded: number, total?: number) => void;
-
-/**
  * User-implemented ops. Write methods return void; the runtime re-stats the path.
  * `get` and `list` are required; also implement `getURL` or `getReader`.
  */
@@ -218,22 +212,22 @@ declare interface DriveMethods {
     size: number,
     override: boolean,
     reader: Reader,
-    onProgress: DriveOnProgress
+    progress: ProgressReporter
   ): void;
   makeDir?(path: string): void;
   copy?(
     from: EntryRecord,
     to: string,
     override: boolean,
-    onProgress: DriveOnProgress
+    progress: ProgressReporter
   ): void;
   move?(
     from: EntryRecord,
     to: string,
     override: boolean,
-    onProgress: DriveOnProgress
+    progress: ProgressReporter
   ): void;
-  delete?(path: string, onProgress: DriveOnProgress): void;
+  delete?(path: string, progress: ProgressReporter): void;
   upload?(
     path: string,
     size: number,
