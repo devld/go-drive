@@ -107,7 +107,7 @@ func (vm *VM) DefineGlobal(name string, value any) error {
 	if value == nil {
 		jsValue = goja.Undefined()
 	} else {
-		jsValue = vm.ToJSValue(value).v
+		jsValue = vm.toJSValue(value, name)
 	}
 	return vm.j.GlobalObject().DefineDataProperty(
 		name,
@@ -124,7 +124,7 @@ const bridgeGlobal = "__goDrive_bridge__"
 func (vm *VM) WithBridge(values map[string]any, fn func() error) (err error) {
 	bridge := vm.j.NewObject()
 	for name, value := range values {
-		if e := bridge.Set(name, vm.ToJSValue(value).v); e != nil {
+		if e := bridge.Set(name, vm.toJSValue(value, name)); e != nil {
 			return e
 		}
 	}

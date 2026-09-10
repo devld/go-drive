@@ -522,7 +522,7 @@ func (vm *VM) installClassConstructor(class *JSClass) error {
 		return e
 	}
 	for _, key := range class.staticNames {
-		if e := ctor.Set(key, vm.ToJSValue(class.Statics[key]).v); e != nil {
+		if e := ctor.Set(key, vm.toJSValue(class.Statics[key], class.Name+"."+key)); e != nil {
 			return e
 		}
 	}
@@ -584,7 +584,7 @@ func (vm *VM) installClassPrototype(class *JSClass) error {
 	for _, key := range class.methodNames {
 		if e := proto.DefineDataProperty(
 			key,
-			vm.classMethodValue(class.Methods[key]),
+			vm.classMethodValue(class.Name+"."+key, class.Methods[key]),
 			goja.FLAG_TRUE,  // writable
 			goja.FLAG_TRUE,  // configurable
 			goja.FLAG_FALSE, // enumerable (ES class methods)
@@ -595,7 +595,7 @@ func (vm *VM) installClassPrototype(class *JSClass) error {
 	for _, key := range class.getterNames {
 		if e := proto.DefineAccessorProperty(
 			key,
-			vm.classMethodValue(class.Getters[key]),
+			vm.classMethodValue("get "+class.Name+"."+key, class.Getters[key]),
 			nil,
 			goja.FLAG_TRUE,  // configurable
 			goja.FLAG_FALSE, // enumerable (ES class getters)
@@ -606,14 +606,16 @@ func (vm *VM) installClassPrototype(class *JSClass) error {
 	return nil
 }
 
-func (vm *VM) classMethodValue(fn ClassMethod) goja.Value {
-	return vm.j.ToValue(func(call goja.FunctionCall) goja.Value {
+func (vm *VM) classMethodValue(name string, fn ClassMethod) goja.Value {
+	value := vm.j.ToValue(func(call goja.FunctionCall) goja.Value {
 		result := fn(vm, newValue(vm, call.This), newValues(vm, call.Arguments))
 		if result == nil {
 			return goja.Undefined()
 		}
 		return vm.ToJSValue(result).v
 	})
+	vm.nameNativeFunction(value, name)
+	return value
 }
 
 func (vm *VM) hostConstructor(class *JSClass) func(goja.ConstructorCall) *goja.Object {

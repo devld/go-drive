@@ -19,15 +19,17 @@ import (
 // or ToJSValue panics. Exported struct methods must have the NativeFunction
 // signature; other Go methods panic so goja reflection is never used.
 func (vm *VM) ToJSValue(value any) *Value {
-	return newValue(vm, vm.toJSValue(value))
+	return newValue(vm, vm.toJSValue(value, ""))
 }
 
-func (vm *VM) toJSValue(value any) goja.Value {
+// toJSValue is ToJSValue with the JavaScript binding path used to name native
+// functions. An empty path is used when the eventual binding is unknown.
+func (vm *VM) toJSValue(value any, name string) goja.Value {
 	if value == nil {
 		return goja.Null()
 	}
 	if fn, ok := value.(NativeFunction); ok {
-		return vm.nativeFunction(fn)
+		return vm.nativeFunction(name, fn)
 	}
 	switch value := value.(type) {
 	case *Value:
@@ -45,7 +47,7 @@ func (vm *VM) toJSValue(value any) goja.Value {
 	if t, ok := value.(time.Time); ok {
 		return vm.wrapGoTime(t)
 	}
-	return vm.wrapGoData(value, nil)
+	return vm.wrapGoDataNamed(value, nil, name)
 }
 
 func (vm *VM) wrapGoTime(t time.Time) goja.Value {
@@ -60,7 +62,7 @@ func panicNonNativeFunction(value any) {
 	panic(fmt.Sprintf("ToJSValue: function must be NativeFunction, got %T", value))
 }
 
-func (vm *VM) nativeFunction(fn NativeFunction) goja.Value {
+func (vm *VM) nativeFunction(name string, fn NativeFunction) goja.Value {
 	value := vm.j.ToValue(func(call goja.FunctionCall) goja.Value {
 		result := fn(vm, newValues(vm, call.Arguments))
 		if result == nil {
@@ -68,8 +70,24 @@ func (vm *VM) nativeFunction(fn NativeFunction) goja.Value {
 		}
 		return vm.ToJSValue(result).v
 	})
+	vm.nameNativeFunction(value, name)
 	_ = vm.freeze(value)
 	return value
+}
+
+func (vm *VM) nameNativeFunction(value goja.Value, name string) {
+	if name == "" {
+		name = "<native>"
+	}
+	if e := value.ToObject(vm.j).DefineDataProperty(
+		"name",
+		vm.j.ToValue(name),
+		goja.FLAG_FALSE,
+		goja.FLAG_FALSE,
+		goja.FLAG_FALSE,
+	); e != nil {
+		panic(e)
+	}
 }
 
 func sortedMapKeys[V any](value map[string]V) []string {

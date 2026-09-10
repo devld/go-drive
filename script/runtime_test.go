@@ -53,6 +53,75 @@ function driveBoom() {
 	}
 }
 
+func TestNativeFunctionStacksUseJavaScriptNames(t *testing.T) {
+	vm := newPoolTestVM(t)
+	raw := vm.ToJSValue(NativeFunction(func(vm *VM, _ Values) any {
+		vm.ThrowTypeError("fallback")
+		return nil
+	}))
+	mustDefineGlobal(t, vm, "fallback", raw)
+	mustDefineGlobal(t, vm, "api", &nativeMethodAPI{})
+
+	got, e := vm.Run(context.Background(), `
+		function stackOf(fn) {
+			try { fn(); } catch (e) { return String(e.stack); }
+			throw new Error("expected native call to throw");
+		}
+		var lengthGetter = Object.getOwnPropertyDescriptor(Bytes.prototype, "length").get;
+		[
+			sleep.name,
+			urlUtils.parse.name,
+			Bytes.fromString.name,
+			Bytes.prototype.toString.name,
+			lengthGetter.name,
+			api.add.name,
+			fallback.name,
+			stackOf(function () { sleep({}); }),
+			stackOf(function () { urlUtils.parse(); }),
+			stackOf(function () { Bytes.fromString(); }),
+			stackOf(function () { new Bytes(0).toString("invalid"); }),
+			stackOf(function () { fallback(); })
+		];
+	`, "native-names.js")
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	var values []string
+	if e := got.ParseInto(&values); e != nil {
+		t.Fatal(e)
+	}
+	wantNames := []string{
+		"sleep",
+		"urlUtils.parse",
+		"Bytes.fromString",
+		"Bytes.toString",
+		"get Bytes.length",
+		"api.add",
+		"<native>",
+	}
+	wantStackNames := []string{
+		"sleep",
+		"urlUtils.parse",
+		"Bytes.fromString",
+		"Bytes.toString",
+		"<native>",
+	}
+	if len(values) != len(wantNames)+len(wantStackNames) {
+		t.Fatalf("values = %#v", values)
+	}
+	for i, want := range wantNames {
+		if values[i] != want {
+			t.Errorf("function name %d = %q, want %q", i, values[i], want)
+		}
+	}
+	for i, want := range wantStackNames {
+		if frame := "at " + want + " (native)"; !strings.Contains(values[len(wantNames)+i], frame) {
+			t.Errorf("stack %d missing %q:\n%s", i, frame, values[len(wantNames)+i])
+		}
+	}
+}
+
 func TestRunSyntaxErrorUsesScriptName(t *testing.T) {
 	vm := newPoolTestVM(t)
 	_, e := vm.Run(context.Background(), `function {`, "broken.js")

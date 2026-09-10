@@ -51,6 +51,7 @@ func (s *viewIntern) put(rv reflect.Value, obj *goja.Object) {
 type readonlyObject struct {
 	vm      *VM
 	intern  *viewIntern
+	name    string
 	v       any
 	rv      reflect.Value
 	methods map[string]goja.Value
@@ -60,12 +61,13 @@ type readonlyObject struct {
 type readonlyArray struct {
 	vm     *VM
 	intern *viewIntern
+	name   string
 	v      any
 	rv     reflect.Value
 	elems  []goja.Value
 }
 
-func (vm *VM) wrapGoData(value any, intern *viewIntern) goja.Value {
+func (vm *VM) wrapGoDataNamed(value any, intern *viewIntern, name string) goja.Value {
 	if value == nil {
 		return goja.Null()
 	}
@@ -113,7 +115,7 @@ func (vm *VM) wrapGoData(value any, intern *viewIntern) goja.Value {
 		if !ok {
 			panicNonNativeFunction(value)
 		}
-		return internValue(intern, rv, vm.nativeFunction(fn))
+		return internValue(intern, rv, vm.nativeFunction(name, fn))
 	}
 	if wrapped := vm.wrapHostClass(value); wrapped != nil {
 		return internValue(intern, rv, wrapped)
@@ -143,11 +145,11 @@ func (vm *VM) wrapGoData(value any, intern *viewIntern) goja.Value {
 			_ = vm.freeze(obj)
 			return internValue(intern, rv, obj)
 		}
-		return internValue(intern, rv, vm.newReadonlyObject(value, rv, intern))
+		return internValue(intern, rv, vm.newReadonlyObject(value, rv, intern, name))
 	case reflect.Slice:
-		return internValue(intern, rv, vm.newReadonlyArray(value, rv, intern))
+		return internValue(intern, rv, vm.newReadonlyArray(value, rv, intern, name))
 	case reflect.Array:
-		return internValue(intern, rv, vm.newReadonlyArray(value, rv, intern))
+		return internValue(intern, rv, vm.newReadonlyArray(value, rv, intern, name))
 	case reflect.Pointer:
 		if rv.IsNil() {
 			return goja.Null()
@@ -155,16 +157,16 @@ func (vm *VM) wrapGoData(value any, intern *viewIntern) goja.Value {
 		elem := rv.Elem()
 		if elem.Kind() == reflect.Struct {
 			_ = structPlan(rv.Type())
-			return internValue(intern, rv, vm.newReadonlyObject(value, rv, intern))
+			return internValue(intern, rv, vm.newReadonlyObject(value, rv, intern, name))
 		}
-		return vm.wrapGoData(elem.Interface(), intern)
+		return vm.wrapGoDataNamed(elem.Interface(), intern, name)
 	case reflect.Struct:
 		ptr := reflect.New(rv.Type())
 		ptr.Elem().Set(rv)
 		_ = structPlan(ptr.Type())
 		// Value structs have no stable Go identity; a copied pointer must not
 		// enter the intern table or repeated reads grow it without reuse.
-		return vm.newReadonlyObject(value, ptr, intern)
+		return vm.newReadonlyObject(value, ptr, intern, name)
 	default:
 		return vm.j.ToValue(value)
 	}
@@ -179,12 +181,19 @@ func internValue(intern *viewIntern, rv reflect.Value, val goja.Value) goja.Valu
 	return obj
 }
 
-func (vm *VM) newReadonlyObject(value any, rv reflect.Value, intern *viewIntern) *goja.Object {
-	return vm.j.NewDynamicObject(&readonlyObject{vm: vm, intern: intern, v: value, rv: rv})
+func (vm *VM) newReadonlyObject(value any, rv reflect.Value, intern *viewIntern, name string) *goja.Object {
+	return vm.j.NewDynamicObject(&readonlyObject{vm: vm, intern: intern, name: name, v: value, rv: rv})
 }
 
-func (vm *VM) newReadonlyArray(value any, rv reflect.Value, intern *viewIntern) *goja.Object {
-	return vm.j.NewDynamicArray(&readonlyArray{vm: vm, intern: intern, v: value, rv: rv})
+func (vm *VM) newReadonlyArray(value any, rv reflect.Value, intern *viewIntern, name string) *goja.Object {
+	return vm.j.NewDynamicArray(&readonlyArray{vm: vm, intern: intern, name: name, v: value, rv: rv})
+}
+
+func childNativeName(parent, child string) string {
+	if parent == "" {
+		return child
+	}
+	return parent + "." + child
 }
 
 func goIdentity(rv reflect.Value) (internKey, bool) {
@@ -280,7 +289,7 @@ func (o *readonlyObject) mapGet(key string) goja.Value {
 	if !got.IsValid() || !got.CanInterface() {
 		return nil
 	}
-	wrapped := o.vm.wrapGoData(got.Interface(), o.intern)
+	wrapped := o.vm.wrapGoDataNamed(got.Interface(), o.intern, childNativeName(o.name, key))
 	if o.fields == nil {
 		o.fields = make(map[string]goja.Value)
 	}
@@ -311,7 +320,7 @@ func (o *readonlyObject) structGet(key string) goja.Value {
 		if !fv.IsValid() || !fv.CanInterface() {
 			return nil
 		}
-		wrapped := o.vm.wrapGoData(fv.Interface(), o.intern)
+		wrapped := o.vm.wrapGoDataNamed(fv.Interface(), o.intern, childNativeName(o.name, key))
 		if o.fields == nil {
 			o.fields = make(map[string]goja.Value)
 		}
@@ -329,7 +338,7 @@ func (o *readonlyObject) structGet(key string) goja.Value {
 	if !ok {
 		return nil
 	}
-	wrapped := o.vm.nativeFunction(bindNativeFunctionMethod(o.rv, m))
+	wrapped := o.vm.nativeFunction(childNativeName(o.name, key), bindNativeFunctionMethod(o.rv, m))
 	if o.methods == nil {
 		o.methods = make(map[string]goja.Value)
 	}
@@ -355,7 +364,11 @@ func (a *readonlyArray) Get(idx int) goja.Value {
 	if !fv.CanInterface() {
 		return nil
 	}
-	wrapped := a.vm.wrapGoData(fv.Interface(), a.intern)
+	name := ""
+	if a.name != "" {
+		name = fmt.Sprintf("%s[%d]", a.name, idx)
+	}
+	wrapped := a.vm.wrapGoDataNamed(fv.Interface(), a.intern, name)
 	if a.elems == nil {
 		a.elems = make([]goja.Value, a.Len())
 	}
