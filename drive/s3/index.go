@@ -176,7 +176,7 @@ func (s *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	return entry, nil
 }
 
-func (s *Drive) Save(ctx types.TaskCtx, path string, _ int64,
+func (s *Drive) Save(ctx types.TaskCtx, path string, size int64,
 	override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
 		if _, e := driveutil.RequireFileNotExists(ctx, s, path); e != nil {
@@ -184,6 +184,7 @@ func (s *Drive) Save(ctx types.TaskCtx, path string, _ int64,
 		}
 	}
 	uploader := s3manager.NewUploader(s.c)
+	ctx.Total(size, true)
 	_, e := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(path),

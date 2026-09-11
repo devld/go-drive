@@ -113,7 +113,7 @@ func (f *Drive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	return nil, err.NewNotFoundError()
 }
 
-func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, reader io.Reader) (types.IEntry, error) {
+func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
 	if !override {
 		if _, e := driveutil.RequireFileNotExists(ctx, f, path); e != nil {
 			return nil, e
@@ -123,6 +123,7 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, rea
 	if e != nil {
 		return nil, e
 	}
+	ctx.Total(size, true)
 	e = c.Stor(path, driveutil.ProgressReader(reader, ctx))
 	f.c.release(c, e == nil)
 	if e != nil {

@@ -209,6 +209,7 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, 
 		return nil, f.handleError(e)
 	}
 	defer func() { _ = file.Close() }()
+	ctx.Total(size, true)
 	writtenSize, e := file.ReadFrom(driveutil.ProgressReader(reader, ctx))
 	if e != nil {
 		return nil, f.handleError(e)

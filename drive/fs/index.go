@@ -123,7 +123,7 @@ func (f *Drive) Get(_ context.Context, path string) (types.IEntry, error) {
 	return f.newFsFile(path, stat)
 }
 
-func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, reader io.Reader) (types.IEntry, error) {
+func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
 	var fileMode os.FileMode = 0644
 	path = f.getPath(path)
 	var e error
@@ -145,6 +145,7 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, rea
 			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_exists"))
 		}
 	}
+	ctx.Total(size, true)
 	fileMoved := false
 	if tf, ok := reader.(*utils.TempFile); ok {
 		fileMoved, e = tf.TransferTo(path)
@@ -153,6 +154,7 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, _ int64, override bool, rea
 		}
 		if fileMoved {
 			_ = os.Chmod(path, fileMode)
+			ctx.Progress(size, false)
 		}
 	}
 	if !fileMoved {

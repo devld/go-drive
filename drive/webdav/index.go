@@ -144,6 +144,7 @@ func (w *Drive) Save(ctx types.TaskCtx, path string, size int64,
 			return nil, e
 		}
 	}
+	ctx.Total(size, true)
 	resp, e := w.c.Request(ctx, "PUT", path, nil,
 		req.NewReaderBody(driveutil.ProgressReader(reader, ctx), size))
 	if e != nil {

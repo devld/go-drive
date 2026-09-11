@@ -5,6 +5,7 @@ import (
 	"context"
 	err "go-drive/common/errors"
 	"go-drive/common/task"
+	"go-drive/common/utils"
 	"io"
 	"os"
 	"path/filepath"
@@ -89,6 +90,57 @@ func TestFsDriveBasicRoundTrip(t *testing.T) {
 	}
 	if _, e := d.Get(ctx, "users/moved.txt"); e == nil || !err.IsNotFoundError(e) {
 		t.Fatalf("Get after delete: %v", e)
+	}
+}
+
+func TestFsDriveSaveReportsProgress(t *testing.T) {
+	d, _, _ := newTestDrive(t)
+
+	tests := []struct {
+		name       string
+		reader     func(t *testing.T) io.Reader
+		wantLoaded int64
+	}{
+		{
+			name: "reader",
+			reader: func(t *testing.T) io.Reader {
+				return bytes.NewReader([]byte("hello"))
+			},
+			wantLoaded: 5,
+		},
+		{
+			name: "temp file move",
+			reader: func(t *testing.T) io.Reader {
+				file, e := os.CreateTemp(t.TempDir(), "save-progress")
+				if e != nil {
+					t.Fatal(e)
+				}
+				if _, e := file.WriteString("hello"); e != nil {
+					t.Fatal(e)
+				}
+				return utils.NewTempFile(file)
+			},
+			wantLoaded: 5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := task.NewTaskContext(context.Background())
+			path := filepath.Join("progress", tt.name+".txt")
+			if _, e := d.MakeDir(ctx, "progress"); e != nil {
+				t.Fatal(e)
+			}
+			if _, e := d.Save(ctx, path, tt.wantLoaded, true, tt.reader(t)); e != nil {
+				t.Fatalf("Save: %v", e)
+			}
+			if got := ctx.GetTotal(); got != tt.wantLoaded {
+				t.Fatalf("total = %d, want %d", got, tt.wantLoaded)
+			}
+			if got := ctx.GetProgress(); got != tt.wantLoaded {
+				t.Fatalf("progress = %d, want %d", got, tt.wantLoaded)
+			}
+		})
 	}
 }
 
