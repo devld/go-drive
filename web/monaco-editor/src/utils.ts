@@ -38,7 +38,10 @@ export function createEditor(language: string) {
     language,
     model,
     definitionLinkOpensInPeek: true,
+    quickSuggestions: { other: 'on', comments: 'off', strings: 'off' },
   })
+
+  setupSuggestTriggers(editor, language)
 
   monaco.editor.registerEditorOpener({
     openCodeEditor(source, resource) {
@@ -57,6 +60,77 @@ export function createEditor(language: string) {
   })
 
   return editor
+}
+
+const STRING_QUOTE_CHARS = new Set(["'", '"'])
+
+function setupSuggestTriggers(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  language: string
+) {
+  if (language !== 'javascript' && language !== 'typescript') return
+
+  let requestId = 0
+  editor.onDidChangeModelContent((event) => {
+    if (event.isUndoing || event.isRedoing || event.isFlush) return
+
+    const model = editor.getModel()
+    const position = editor.getPosition()
+    if (!model || !position || position.column < 2) return
+
+    const quote = model.getValueInRange({
+      startLineNumber: position.lineNumber,
+      startColumn: position.column - 1,
+      endLineNumber: position.lineNumber,
+      endColumn: position.column,
+    })
+    if (!STRING_QUOTE_CHARS.has(quote)) return
+
+    const nextCharacter = model.getValueInRange({
+      startLineNumber: position.lineNumber,
+      startColumn: position.column,
+      endLineNumber: position.lineNumber,
+      endColumn: position.column + 1,
+    })
+    if (nextCharacter !== quote) return
+
+    const id = ++requestId
+    const versionId = model.getVersionId()
+    void hasStringLiteralSuggestions(model, language, position).then(
+      (shouldSuggest) => {
+        if (!shouldSuggest || id !== requestId) return
+        if (editor.getModel() !== model || model.getVersionId() !== versionId) {
+          return
+        }
+        const current = editor.getPosition()
+        if (!current || !current.equals(position)) return
+        editor.trigger('keyboard', 'editor.action.triggerSuggest', null)
+      }
+    )
+  })
+}
+
+async function hasStringLiteralSuggestions(
+  model: monaco.editor.ITextModel,
+  language: string,
+  position: monaco.Position
+): Promise<boolean> {
+  try {
+    const getWorker =
+      language === 'javascript'
+        ? await monaco.typescript.getJavaScriptWorker()
+        : await monaco.typescript.getTypeScriptWorker()
+    const worker = await getWorker(model.uri)
+    const info = await worker.getCompletionsAtPosition(
+      model.uri.toString(),
+      model.getOffsetAt(position)
+    )
+    return !!info?.entries?.some(
+      (entry: { kind?: string }) => entry.kind === 'string'
+    )
+  } catch {
+    return false
+  }
 }
 
 const JsTargets: Record<string, monaco.typescript.ScriptTarget> = {
