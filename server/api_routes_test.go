@@ -189,13 +189,13 @@ func TestDriveRoutesUseRPCOperations(t *testing.T) {
 	router := gin.New()
 
 	if e := InitDriveRoutes(
-		router, nil, nil, common.Config{}, nil, nil, nil, nil, nil, nil, nil, nil,
+		router, nil, nil, common.Config{}, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	); e != nil {
 		t.Fatalf("InitDriveRoutes() error = %v", e)
 	}
 
-	if got := len(router.Routes()); got != 19 {
-		t.Fatalf("registered drive route count = %d, want 19", got)
+	if got := len(router.Routes()); got != 21 {
+		t.Fatalf("registered drive route count = %d, want 21", got)
 	}
 	assertRegisteredRoutes(t, router,
 		"GET /stat",
@@ -209,6 +209,8 @@ func TestDriveRoutesUseRPCOperations(t *testing.T) {
 		"GET /download",
 		"HEAD /download",
 		"GET /thumbnail",
+		"GET /archive/list",
+		"GET /archive/content",
 		"GET /search",
 		"POST /archive",
 		"POST /chunk-uploads",

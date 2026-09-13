@@ -49,6 +49,12 @@ const (
 	DefaultMaxConcurrentTask   = 100
 	DefaultFreeFs              = false
 	DefaultThumbnailTTL        = 30 * 24 * time.Hour
+	DefaultArchiveMaxSize      = int64(256 * 1024 * 1024)
+	DefaultArchiveMaxMembers   = int64(256 * 1024 * 1024)
+	DefaultArchiveMaxEntries   = 100000
+	DefaultArchiveCacheItems   = 16
+	DefaultArchiveCacheSize    = int64(1024 * 1024 * 1024)
+	DefaultArchiveIndexTTL     = 24 * time.Hour
 	DefaultAuthValidity        = 2 * time.Hour
 	DefaultAuthAutoRefresh     = true
 	DefaultSignatureTTL        = 12 * time.Hour
@@ -102,6 +108,7 @@ type Config struct {
 	FreeFs bool `yaml:"free-fs"`
 
 	Thumbnail ThumbnailConfig `yaml:"thumbnail"`
+	Archive   ArchiveConfig   `yaml:"archive"`
 	Auth      AuthConfig      `yaml:"auth"`
 
 	SignatureTTL time.Duration `yaml:"signature-ttl"`
@@ -135,6 +142,18 @@ type ThumbnailConfig struct {
 	TTL        time.Duration          `yaml:"ttl"`
 	Concurrent int                    `yaml:"concurrent"`
 	Handlers   []ThumbnailHandlerItem `yaml:"handlers"`
+}
+
+// ArchiveConfig limits the amount of archive data that the preview service may
+// inspect or stream. Size values use the same suffixes as other size settings,
+// for example 256m or 1g.
+type ArchiveConfig struct {
+	MaxSize       types.SV      `yaml:"max-size"`
+	MaxMemberSize types.SV      `yaml:"max-member-size"`
+	MaxEntries    int           `yaml:"max-entries"`
+	CacheItems    int           `yaml:"cache-items"`
+	CacheSize     types.SV      `yaml:"cache-size"`
+	IndexTTL      time.Duration `yaml:"index-ttl"`
 }
 
 type ThumbnailHandlerItem struct {
@@ -197,6 +216,14 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		FreeFs:            DefaultFreeFs,
 		Thumbnail: ThumbnailConfig{
 			TTL: DefaultThumbnailTTL,
+		},
+		Archive: ArchiveConfig{
+			MaxSize:       types.SV("256m"),
+			MaxMemberSize: types.SV("256m"),
+			MaxEntries:    DefaultArchiveMaxEntries,
+			CacheItems:    DefaultArchiveCacheItems,
+			CacheSize:     types.SV("1g"),
+			IndexTTL:      DefaultArchiveIndexTTL,
 		},
 		Auth: AuthConfig{
 			Validity:    DefaultAuthValidity,
@@ -261,6 +288,24 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 
 	if config.Thumbnail.Concurrent <= 0 {
 		config.Thumbnail.Concurrent = int(math.Max(float64(runtime.NumCPU()/2), 1))
+	}
+	if config.Archive.MaxSize == "" {
+		config.Archive.MaxSize = types.SV("256m")
+	}
+	if config.Archive.MaxMemberSize == "" {
+		config.Archive.MaxMemberSize = types.SV("256m")
+	}
+	if config.Archive.MaxEntries <= 0 {
+		config.Archive.MaxEntries = DefaultArchiveMaxEntries
+	}
+	if config.Archive.CacheItems <= 0 {
+		config.Archive.CacheItems = DefaultArchiveCacheItems
+	}
+	if config.Archive.CacheSize == "" {
+		config.Archive.CacheSize = types.SV("1g")
+	}
+	if config.Archive.IndexTTL <= 0 {
+		config.Archive.IndexTTL = DefaultArchiveIndexTTL
 	}
 
 	e := parseDbConfig(&config.Db)

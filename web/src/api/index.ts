@@ -25,6 +25,15 @@ export interface FileURLParams {
   useProxy?: EntryMetaUseProxy
 }
 
+export interface ArchiveEntry {
+  path: string
+  name: string
+  type: 'dir' | 'file'
+  size: number
+  modTime: number
+  mimeType?: string
+}
+
 export function listEntries(path: string) {
   return http.get<Entry[]>('/list', {
     headers: pathPasswordHeaders(path),
@@ -103,6 +112,29 @@ export function getBlobContent(
       { headers: pathPasswordHeaders(path) }
     )
     .then((blob) => blob)
+}
+
+export function listArchiveEntries(
+  path: string,
+  meta: EntryMeta,
+  dir = ''
+) {
+  const params = { path, dir } as O<any>
+  if (meta?.accessKey) params[ACCESS_KEY] = meta.accessKey
+  return http.get<ArchiveEntry[]>('/archive/list', {
+    headers: pathPasswordHeaders(path),
+    params,
+  })
+}
+
+export function archiveContentUrl(
+  path: string,
+  meta: EntryMeta,
+  entry: string
+) {
+  const params = { path, entry } as O<any>
+  if (meta?.accessKey) params[ACCESS_KEY] = meta.accessKey
+  return buildURL(`${API_PATH}/archive/content`, params)!
 }
 
 export function getContent(

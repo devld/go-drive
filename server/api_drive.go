@@ -1,9 +1,6 @@
 package server
 
 import (
-	"archive/zip"
-	"context"
-	"fmt"
 	"go-drive/common"
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
@@ -12,16 +9,15 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
+	archivepreview "go-drive/server/archive"
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
 	"go-drive/storage"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -40,6 +36,7 @@ func InitDriveRoutes(
 	searcher *search.Service,
 	config common.Config,
 	thumbnail *thumbnail.Maker,
+	archiveService *archivepreview.Service,
 	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
 	runner task.Runner,
@@ -48,7 +45,19 @@ func InitDriveRoutes(
 	optionsDAO *storage.OptionsDAO,
 	pathMetaDAO *storage.PathMetaDAO) error {
 
-	dr := driveRoute{config, access, searcher, tokenStore, chunkUploader, thumbnail, runner, signer, optionsDAO, pathMetaDAO}
+	dr := driveRoute{
+		config:        config,
+		access:        access,
+		searcher:      searcher,
+		tokenStore:    tokenStore,
+		chunkUploader: chunkUploader,
+		thumbnail:     thumbnail,
+		archive:       archiveService,
+		runner:        runner,
+		signer:        signer,
+		options:       optionsDAO,
+		pathMeta:      pathMetaDAO,
+	}
 
 	router.GET("/drive-uploader/:name", dr.getDriveUploader)
 	router.HEAD("/drive-uploader/:name", dr.getDriveUploader)
@@ -59,6 +68,8 @@ func InitDriveRoutes(
 	signatureAuthRoute.HEAD("/download", dr._getDrive, dr.getContent)
 	signatureAuthRoute.GET("/download", dr._getDrive, dr.getContent)
 	signatureAuthRoute.GET("/thumbnail", dr._getDrive, dr.getThumbnail)
+	signatureAuthRoute.GET("/archive/list", dr._getDrive, dr.listArchive)
+	signatureAuthRoute.GET("/archive/content", dr._getDrive, dr.getArchiveContent)
 
 	tokenAuth := TokenAuth(tokenStore)
 	r := router.Group("/", tokenAuth)
@@ -105,6 +116,7 @@ type driveRoute struct {
 	tokenStore    types.TokenStore
 	chunkUploader *ChunkUploader
 	thumbnail     *thumbnail.Maker
+	archive       *archivepreview.Service
 	runner        task.Runner
 	signer        *utils.Signer
 
@@ -361,120 +373,6 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-}
-
-func (dr *driveRoute) zipDownload(c *gin.Context) {
-	files := utils.SplitLines(c.PostForm("files"))
-	if len(files) == 0 {
-		_ = c.Error(err.NewBadRequestError(""))
-		return
-	}
-	prefix := c.PostForm("prefix")
-	drive := c.MustGet("drive").(types.IDrive)
-
-	entries := make([]types.IEntry, 0, len(files))
-	for _, f := range files {
-		if f == "" {
-			continue
-		}
-		file := utils.CleanPath(f)
-		entry, e := drive.Get(c.Request.Context(), file)
-		if e != nil {
-			_ = c.Error(e)
-			return
-		}
-		entries = append(entries, entry)
-	}
-
-	ctx := task.NewTaskContext(c.Request.Context())
-
-	entriesTrees := make([]driveutil.EntryTreeNode, 0, len(entries))
-	for _, entry := range entries {
-		rootNode, e := driveutil.BuildEntriesTree(ctx, entry, true)
-		if e != nil {
-			return
-		}
-		entriesTrees = append(entriesTrees, rootNode)
-	}
-
-	totalSize := ctx.GetTotal()
-	maxAllowedSizeOpt := dr.options.GetValue(maxZipSizeKey)
-	maxAllowSize := maxAllowedSizeOpt.DataSize(-1)
-	if maxAllowSize > 0 && totalSize > maxAllowSize {
-		_ = c.Error(err.NewNotAllowedMessageError(i18n.T("api.zip.size_exceed", string(maxAllowedSizeOpt))))
-		return
-	}
-
-	c.Writer.Header().Set("Content-Type", "application/zip")
-	c.Writer.Header().Set("Content-Disposition",
-		"attachment; filename=\""+
-			url.QueryEscape(fmt.Sprintf("packaged_%d.zip", len(files)))+"\"")
-
-	zipFile := zip.NewWriter(c.Writer)
-	defer func() {
-		_ = zipFile.Close()
-	}()
-
-	for _, node := range entriesTrees {
-		if e := driveutil.VisitEntriesTree(node, func(entry types.IEntry) error {
-			if e := ctx.Err(); e != nil {
-				return e
-			}
-			name := entry.Path()
-			if entry.Type().IsDir() {
-				name += "/"
-			}
-
-			if prefix != "" && strings.HasPrefix(name, prefix+"/") {
-				name = strings.TrimPrefix(name, prefix+"/")
-			}
-
-			file, e := zipFile.Create(name)
-			if e != nil {
-				return e
-			}
-			if entry.Type().IsFile() {
-				if e := driveutil.CopyIContent(task.NewContextWrapper(c.Request.Context()), entry, file); e != nil {
-					return e
-				}
-			}
-			return nil
-		}); e != nil {
-			return
-		}
-	}
-}
-
-func (dr *driveRoute) getThumbnail(c *gin.Context) {
-	path, e := getQueryPath(c, "path")
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
-	d := c.MustGet("drive").(types.IDrive)
-
-	entry, e := d.Get(c.Request.Context(), path)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
-	if entry.Meta().ThumbnailURL != "" {
-		c.Redirect(http.StatusFound, entry.Meta().ThumbnailURL)
-		return
-	}
-	makeCtx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
-	defer cancel()
-	file, e := dr.thumbnail.Make(
-		makeCtx, dr.wrapEntryWithAccessKey(entry, c.Query(common.SignatureQueryKey)),
-	)
-	if e != nil {
-		_ = c.Error(e)
-		return
-	}
-	defer func() { _ = file.Close() }()
-	c.Header("Cache-Control", fmt.Sprintf("max-age=%d", int(dr.config.Thumbnail.TTL.Seconds())))
-	c.Header("Content-Type", file.MimeType())
-	http.ServeContent(c.Writer, c.Request, "", file.ModTime(), file)
 }
 
 func (dr *driveRoute) writeContent(c *gin.Context) {

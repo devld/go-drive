@@ -410,6 +410,10 @@ func (o *oneDriveEntry) GetReader(ctx context.Context, start, size int64) (io.Re
 		return nil, e
 	}
 	if resp != nil {
+		if start >= 0 || size > 0 {
+			_ = resp.Dispose()
+			return nil, err.NewUnsupportedError()
+		}
 		return resp.Response().Body, nil
 	}
 	return driveutil.GetURL(ctx, u, nil, start, size)

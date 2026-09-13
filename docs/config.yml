@@ -162,6 +162,21 @@ thumbnail:
     #    timeout: 10m
     # docker-handlers:end
 
+# Archive preview supports zip, 7z, and rar files.
+archive:
+  # Maximum compressed archive size that may be inspected.
+  max-size: 256m
+  # Maximum uncompressed member size that may be streamed.
+  max-member-size: 256m
+  # Maximum number of entries indexed from one archive.
+  max-entries: 100000
+  # Maximum number of remote archive source files kept in the sparse cache.
+  cache-items: 16
+  # Maximum total compressed bytes kept in the sparse cache.
+  cache-size: 1g
+  # Validity period of the persisted archive member index.
+  index-ttl: 24h
+
 auth:
   # User session validity
   validity: 2h

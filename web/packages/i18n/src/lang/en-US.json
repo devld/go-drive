@@ -433,6 +433,13 @@
       "name": "Zip Download",
       "desc": "Create zip archive"
     },
+    "archive": {
+      "name": "Archive Preview",
+      "desc": "Browse archive contents",
+      "parent": "Up",
+      "empty": "This folder is empty",
+      "open": "Open"
+    },
     "delete": {
       "name": "Delete",
       "desc": "Delete files",
