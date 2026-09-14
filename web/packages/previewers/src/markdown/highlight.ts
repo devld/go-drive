@@ -27,7 +27,7 @@ import vim from 'highlight.js/lib/languages/vim'
 import xml from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
 
-const languages: O<LanguageFn> = {
+const languages: Record<string, LanguageFn> = {
   cpp,
   xml,
   bash,

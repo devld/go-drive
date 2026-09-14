@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import { deleteTask } from '@/api'
 import { getOptions, getTasks, searchIndex, setOptions } from '@/api/admin'
-import { useInterval } from '@/utils/hooks/timer'
+import { useInterval } from '@go-drive/utils'
 import { alert } from '@/utils/ui-utils'
 import { formatTime } from '@/utils'
 import { computed, ref } from 'vue'

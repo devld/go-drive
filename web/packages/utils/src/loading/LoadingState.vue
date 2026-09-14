@@ -9,7 +9,7 @@
     role="status"
     aria-live="polite"
     aria-busy="true"
-    :aria-label="accessibleLabel"
+    :aria-label="ariaLabel || displayText || 'Loading'"
   >
     <span
       class="loading-state__content"
@@ -26,27 +26,25 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { s } from '@/i18n'
+import type { TextLike } from '../types'
 import LoadingIndicator from './LoadingIndicator.vue'
 
-const props = defineProps({
-  text: {
-    type: [String, Object] as PropType<I18nText>,
-  },
-  variant: {
-    type: String as PropType<'inline' | 'panel' | 'overlay' | 'page' | 'dialog'>,
-    default: 'panel',
-  },
-  surface: {
-    type: Boolean,
-    default: true,
-  },
-})
+type LoadingVariant = 'inline' | 'panel' | 'overlay' | 'page' | 'dialog'
 
-const { t } = useI18n()
-const displayText = computed(() => s(props.text) || '')
-const accessibleLabel = computed(() => displayText.value || t('app.loading'))
+const props = withDefaults(
+  defineProps<{
+    text?: TextLike
+    ariaLabel?: string
+    variant?: LoadingVariant
+    surface?: boolean
+  }>(),
+  {
+    variant: 'panel',
+    surface: true,
+  }
+)
+
+const displayText = computed(() => props.text?.toString() ?? '')
 </script>
 
 <style lang="scss">

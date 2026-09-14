@@ -53,7 +53,7 @@ import { filename, formatBytes } from '@/utils'
 import { fileUrl } from '@/api'
 import { computed, ref } from 'vue'
 import { Entry } from '@/types'
-import { triggerDownloadFile } from '@/utils/file'
+import { triggerDownloadFile } from '@go-drive/utils'
 
 const props = defineProps({
   entry: {

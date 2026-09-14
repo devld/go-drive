@@ -1,69 +1,66 @@
 import type { Ref } from 'vue'
 
-const ratioFromEvent = (el: HTMLElement, e: PointerEvent) => {
+const ratioFromEvent = (el: HTMLElement, event: PointerEvent) => {
   const rect = el.getBoundingClientRect()
-  return Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
+  return Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
 }
 
 export const createDrag = (
   elRef: Ref<HTMLElement | undefined>,
   onChange: (ratio: number) => void
 ) => {
-  const onMove = (e: PointerEvent) => {
-    if (elRef.value) onChange(ratioFromEvent(elRef.value, e))
+  const onMove = (event: PointerEvent) => {
+    if (elRef.value) onChange(ratioFromEvent(elRef.value, event))
   }
   const onUp = () => {
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerup', onUp)
   }
-  return (e: PointerEvent) => {
+  return (event: PointerEvent) => {
     if (!elRef.value) return
-    onChange(ratioFromEvent(elRef.value, e))
+    onChange(ratioFromEvent(elRef.value, event))
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
   }
 }
 
-type ResizeCallback = (e: ResizeObserverEntry) => void
+export type ResizeCallback = (event: ResizeObserverEntry) => void
 
 interface ResizeObservedHTMLElement extends HTMLElement {
   __resizeListeners__?: ResizeCallback[]
   __ro__?: ResizeObserver
 }
 
-const resizeHandler: ResizeObserverCallback = function (entries) {
+const resizeHandler: ResizeObserverCallback = (entries) => {
   for (const entry of entries) {
     const listeners =
       (entry.target as ResizeObservedHTMLElement).__resizeListeners__ || []
-    if (listeners.length) {
-      listeners.forEach((fn) => {
-        fn(entry)
-      })
-    }
+    listeners.forEach((listener) => listener(entry))
   }
 }
 
-export const addResizeListener = function (
-  element: HTMLElement,
-  fn: ResizeCallback
-) {
+export function addResizeListener(element: HTMLElement, listener: ResizeCallback) {
   const el = element as ResizeObservedHTMLElement
   if (!el.__resizeListeners__) {
     el.__resizeListeners__ = []
     el.__ro__ = new ResizeObserver(resizeHandler)
     el.__ro__.observe(el)
   }
-  el.__resizeListeners__.push(fn)
+  el.__resizeListeners__.push(listener)
 }
 
-export const removeResizeListener = function (
+export function removeResizeListener(
   element: HTMLElement,
-  fn: ResizeCallback
+  listener: ResizeCallback
 ) {
   const el = element as ResizeObservedHTMLElement
-  if (!el || !el.__resizeListeners__) return
-  el.__resizeListeners__.splice(el.__resizeListeners__.indexOf(fn), 1)
+  if (!el.__resizeListeners__) return
+  const index = el.__resizeListeners__.indexOf(listener)
+  if (index < 0) return
+  el.__resizeListeners__.splice(index, 1)
   if (!el.__resizeListeners__.length) {
-    el.__ro__!.disconnect()
+    el.__ro__?.disconnect()
+    delete el.__resizeListeners__
+    delete el.__ro__
   }
 }

@@ -5,6 +5,8 @@ import { createHtmlPlugin } from 'vite-plugin-html'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { readFile } from 'node:fs/promises'
 
+const rootDir = import.meta.dirname
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   base: './',
@@ -31,7 +33,7 @@ export default defineConfig(({ mode }) => ({
       minify: true,
       inject: {
         data: {
-          ...loadEnv(mode, __dirname),
+          ...loadEnv(mode, rootDir),
           mode,
         },
       },
@@ -41,7 +43,7 @@ export default defineConfig(({ mode }) => ({
   ],
   resolve: {
     alias: {
-      '@': path.join(__dirname, 'src'),
+      '@': path.join(rootDir, 'src'),
     },
   },
   build: {

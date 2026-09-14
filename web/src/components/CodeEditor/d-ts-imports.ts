@@ -1,4 +1,4 @@
-import type { JavaScriptLibItem } from '../../../monaco-editor/src/types'
+import type { JavaScriptLibItem } from '@go-drive/monaco-editor'
 
 import { filename, mapOf } from '@/utils'
 import serverGlobal from '../../../../docs/scripts/global.d.ts?raw'

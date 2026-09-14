@@ -32,7 +32,7 @@
 import { getOptions, setOptions } from '@/api/admin'
 import { FormItem } from '@/types'
 import { alert } from '@/utils/ui-utils'
-import LoadingIndicator from '@/components/LoadingIndicator.vue'
+import { LoadingIndicator } from '@go-drive/utils'
 import { ComponentPublicInstance, onUpdated, ref, watch } from 'vue'
 
 export interface OptionsForm {

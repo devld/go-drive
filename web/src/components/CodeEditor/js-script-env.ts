@@ -1,7 +1,7 @@
 import type {
   JavaScriptLibItem,
   JavaScriptSetupOptions,
-} from '../../../monaco-editor/src/types'
+} from '@go-drive/monaco-editor'
 import {
   D_SERVER_ENVS_MAP,
   D_SERVER_GLOBAL,

@@ -2,7 +2,7 @@ import { useAppStore } from '@/store'
 import { Entry } from '@/types'
 import { isParentPath, pathClean, pathJoin } from '@/utils'
 import { addEntryIntoDataTransfer, DATA_TYPE_ENTRY } from '@/utils/entry'
-import { isPrimaryModifierPressed } from '@/utils/platform'
+import { isPrimaryModifierPressed } from '@go-drive/utils'
 import { Ref, ref } from 'vue'
 import { EntryEventData } from '.'
 

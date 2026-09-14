@@ -1,8 +1,12 @@
 {
-  "name": "go-drive-web-monaco-editor",
+  "name": "@go-drive/monaco-editor",
   "version": "0.0.0",
   "type": "module",
+  "private": true,
   "description": "Monaco editor of go-drive web",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
@@ -11,6 +15,9 @@
   },
   "dependencies": {
     "monaco-editor": "^0.55.1"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
   },
   "devDependencies": {
     "eslint": "^10.8.1",

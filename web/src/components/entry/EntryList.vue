@@ -120,8 +120,7 @@
 <script setup lang="ts">
 import { Entry } from '@/types'
 import { isRootPath as isRootPathFn, mapOf, pathClean, pathJoin } from '@/utils'
-import { useHotKey } from '@/utils/hooks/hotkey'
-import { isPrimaryModifierPressed } from '@/utils/platform'
+import { isPrimaryModifierPressed, useHotKey } from '@go-drive/utils'
 import {
   ComponentPublicInstance,
   computed,
