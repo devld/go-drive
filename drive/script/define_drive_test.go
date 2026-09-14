@@ -82,6 +82,15 @@ func newDriveTestVM(t *testing.T) *s.VM {
 	if e = vm.WithBridge(map[string]any{
 		"version": "",
 		"name":    "test",
+		"initData": s.NativeFunction(func(_ *s.VM, _ s.Values) any {
+			return nil
+		}),
+		"setData": s.NativeFunction(func(_ *s.VM, _ s.Values) any {
+			return nil
+		}),
+		"getData": s.NativeFunction(func(_ *s.VM, _ s.Values) any {
+			return nil
+		}),
 	}, func() error {
 		_, e := vm.Run(context.Background(), helperProgram, "helper.js")
 		return e
