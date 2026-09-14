@@ -14,12 +14,6 @@ export interface ProgressLike {
   total: number
 }
 
-export interface Stringifiable {
-  toString(): string
-}
-
-export type TextLike = string | Stringifiable
-
 export type MaybePromise<T> = T | Promise<T>
 
 export type AnyRecord = Record<string, any>

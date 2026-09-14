@@ -56,7 +56,7 @@
 import { FormItem } from '@/types'
 import { debounce, mapOf } from '@/utils'
 import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import SimpleForm from '.'
 import Form from './index.vue'
 

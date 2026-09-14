@@ -11,7 +11,7 @@ import {
   DEFAULT_VIDEO_FILE_EXTS,
   DEFAULT_EXTERNAL_FILE_PREVIEWERS,
 } from '@/config'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import OptionsConfigure, { OptionsForm } from './OptionsConfigure.vue'
 
 const { t } = useI18n()

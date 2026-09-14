@@ -1,5 +1,5 @@
 import { deleteEntry, deleteTask } from '@/api'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { Task } from '@/types'
 import { taskDone, TASK_CANCELLED } from '@/utils'
 import { EntryHandler } from '../types'

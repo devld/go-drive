@@ -98,7 +98,7 @@ import {
 import { ADMIN_GROUP, FormItem, Group, isGroupSyncedUser, User } from '@/types'
 import { alert, confirm } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 
 const { t } = useI18n()
 

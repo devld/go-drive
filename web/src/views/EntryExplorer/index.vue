@@ -111,7 +111,7 @@ import { triggerDownloadFile } from '@go-drive/utils'
 import { confirm, loading } from '@/utils/ui-utils'
 import EntryListView from '@/views/EntryListView/index.vue'
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import {
   onBeforeRouteLeave,
   onBeforeRouteUpdate,

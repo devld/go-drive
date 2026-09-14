@@ -1,4 +1,4 @@
-import { getLang } from '@/i18n'
+import { getLang } from '@go-drive/i18n'
 import {
   Http,
   HttpError,

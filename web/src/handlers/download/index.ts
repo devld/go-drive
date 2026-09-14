@@ -1,4 +1,4 @@
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { EntryHandler } from '../types'
 import DownloadView from './DownloadView.vue'
 

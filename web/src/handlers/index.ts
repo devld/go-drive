@@ -1,5 +1,5 @@
 import Components from '@/components'
-import i18n from '@/i18n'
+import i18n from '@go-drive/i18n'
 import store from '@/store'
 import Utils from '@/utils'
 import { App, ComponentPublicInstance, createApp } from 'vue'
