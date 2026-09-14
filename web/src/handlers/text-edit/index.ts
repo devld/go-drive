@@ -1,6 +1,6 @@
 import { wrapAsyncComponent } from '@/components/async'
 import { TEXT_EDITOR_MAX_FILE_SIZE } from '@/config'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { entryMatches } from '@/utils'
 import { EntryHandler } from '../types'
 

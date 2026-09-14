@@ -164,7 +164,7 @@ import { alert, confirm, loading } from '@/utils/ui-utils'
 import OAuthConfigure from './drive-configure/OAuth.vue'
 import { mapOf } from '@/utils'
 import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import { Drive, DriveFactoryConfig, DriveInitConfig, FormItem } from '@/types'
 
 const { t } = useI18n()

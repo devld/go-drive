@@ -39,7 +39,7 @@ import { ref, computed, watch } from 'vue'
 import { EntriesLoadData } from './types'
 import { EntryDragData } from '@/components/entry/useDrag'
 import { input } from '@/utils/ui-utils'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 
 const props = defineProps({
   path: {

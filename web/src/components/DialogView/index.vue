@@ -70,7 +70,7 @@ export default { name: 'DialogView', inheritAttrs: false }
 </script>
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { s, T } from '@/i18n'
+import { s, T } from '@go-drive/i18n'
 import {
   addScrollLockedCount,
   getScrollLockedCount,

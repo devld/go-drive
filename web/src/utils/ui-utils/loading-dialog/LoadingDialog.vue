@@ -22,7 +22,7 @@
 <script setup lang="ts">
 import { SimpleButtonType } from '@/components/SimpleButton'
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import type { LoadingOptions } from '.'
 import { LoadingState } from '@go-drive/utils'
 
