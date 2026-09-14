@@ -8,6 +8,7 @@ import {
 } from '@/utils/http'
 import { createHttp } from '@/utils/http/http'
 import {
+  transformBlobResponse,
   transformErrorResponse,
   transformJSONRequest,
   transformJSONResponse,
@@ -94,7 +95,7 @@ export function pathPasswordHeaders(path: string): Record<string, string> {
   return pw ? { [PATH_PASSWORD_HEADER]: pw } : {}
 }
 
-async function processConfig(config: HttpRequestConfig) {
+async function processConfig(config: HttpRequestConfig, useToken = true) {
   if (!config.context) config.context = {}
   if (config.context._t === undefined) config.context._t = -1
   config.context._t++
@@ -103,12 +104,17 @@ async function processConfig(config: HttpRequestConfig) {
 
   if (!config.headers) config.headers = {}
 
-  const token = getToken()
-  if (token) {
-    config.headers[AUTH_HEADER] = token
-    config.context._tokenUsing = token
+  if (useToken) {
+    const token = getToken()
+    if (token) {
+      config.headers[AUTH_HEADER] = token
+      config.context._tokenUsing = token
+    } else {
+      delete config.headers[AUTH_HEADER]
+    }
   } else {
     delete config.headers[AUTH_HEADER]
+    delete config.context._tokenUsing
   }
 
   config.headers['Accept-Language'] = getLang()
@@ -161,6 +167,19 @@ export const streamHttp = createHttp<StreamHttpResponse>({
         data: responseData,
         stream: resp.data,
       }
+    },
+  ],
+})
+
+export const binaryHttp = createHttp<Blob>({
+  ...BASE_CONFIG,
+  transformRequest: [(config) => processConfig(config, false)],
+  transformResponse: [
+    transformBlobResponse([]),
+    transformErrorResponse,
+    (error, resp) => {
+      if (error) return handlerError(error)
+      return resp.data
     },
   ],
 })

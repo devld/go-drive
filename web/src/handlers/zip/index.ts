@@ -10,7 +10,7 @@ export default {
     description: T('handler.zip.desc'),
     icon: 'archive',
   },
-  supports: () => true,
+  supports: [],
   multiple: true,
   handler: async ({ entry: entries, parent }) => {
     const form = document.createElement('form')
