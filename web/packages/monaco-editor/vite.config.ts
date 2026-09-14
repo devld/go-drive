@@ -7,7 +7,7 @@ export default defineConfig({
     port: 9804,
   },
   build: {
-    outDir: '../public/code-editor',
+    outDir: '../../public/code-editor',
     emptyOutDir: true,
   },
 })

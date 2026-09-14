@@ -1,5 +1,3 @@
-import { createEntryExtMatcher } from '@/utils'
-
 export const languages = {
   cpp: () => import('@codemirror/lang-cpp').then((m) => m.cpp()),
   css: () => import('@codemirror/lang-css').then((m) => m.css()),
@@ -53,7 +51,12 @@ const mapping: { [k in keyof typeof languages]: string[] } = {
   xml: ['xml', 'ant', 'plist', 'xsd'],
 }
 
-const matcher = createEntryExtMatcher(mapping)
+const extMapping: Record<string, keyof typeof languages> = {}
+Object.entries(mapping).forEach(([language, extensions]) => {
+  extensions.forEach((extension) => {
+    extMapping[extension] = language as keyof typeof languages
+  })
+})
 
 export const getLang = async (lang: string) => {
   const l = languages[lang as keyof typeof languages]
@@ -61,4 +64,8 @@ export const getLang = async (lang: string) => {
   return l()
 }
 
-export const getLangByEntry = (entry: string) => matcher(entry)
+export const getLangByFilename = (filename: string) => {
+  const name = filename.toLowerCase()
+  const extension = name.includes('.') ? name.split('.').pop() : undefined
+  return extension ? extMapping[extension] : undefined
+}

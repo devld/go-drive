@@ -21,7 +21,7 @@ import { Entry } from '@/types'
 import { getContent } from '@/api'
 import { dir } from '@/utils'
 import { useI18n } from 'vue-i18n'
-import LoadingState from '@/components/LoadingState.vue'
+import { LoadingState } from '@go-drive/utils'
 
 const README_FILENAME = 'readme.md'
 

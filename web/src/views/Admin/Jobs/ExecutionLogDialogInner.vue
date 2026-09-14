@@ -25,7 +25,7 @@ import type { StreamHttpResponse } from '@/api/http'
 import type { RequestTask } from '@/utils/http'
 import type { BaseDialogOptionsData } from '@/utils/ui-utils/base-dialog'
 import type { Task } from '@/types'
-import LoadingIndicator from '@/components/LoadingIndicator.vue'
+import { LoadingIndicator } from '@go-drive/utils'
 import { formatProgressPercent } from '@/utils'
 
 const { t } = useI18n()

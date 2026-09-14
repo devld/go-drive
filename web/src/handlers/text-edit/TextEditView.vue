@@ -21,7 +21,7 @@
         :disabled="readonly"
         @save="!readonly && saveFile()"
       />
-      <TextEditor
+      <CodeMirrorEditor
         v-else
         v-model="content"
         :filename="filename"
@@ -41,14 +41,13 @@ import { getContent } from '@/api'
 import uploadManager from '@/api/upload-manager'
 import CodeEditor from '@/components/CodeEditor/index.vue'
 import { getLang } from '@/components/CodeEditor/mapping'
+import CodeMirrorEditor from '@go-drive/code-mirror'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
-import TextEditor from '@/components/TextEditor/index.vue'
 import { Entry } from '@/types'
 import { entryMatches, filename as filenameFn, filenameExt } from '@/utils'
 import { HttpError } from '@/utils/http'
-import { isPrimaryModifierPressed } from '@/utils/platform'
+import { isPrimaryModifierPressed, LoadingState } from '@go-drive/utils'
 import { alert } from '@/utils/ui-utils'
-import LoadingState from '@/components/LoadingState.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { EntryHandlerContext } from '../types'
 

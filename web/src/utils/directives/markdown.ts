@@ -22,8 +22,8 @@ const onAnchorClicked = function (this: HTMLAnchorElement, e: MouseEvent) {
 
 const render: DirectiveHook = (el, binding) => {
   el._currentMarkdownContent = binding.value
-  import('@/utils/marked').then(
-    ({ default: render }) => {
+  import('@go-drive/previewers/markdown').then(
+    ({ renderMarkdown: render }) => {
       if (el._currentMarkdownContent === el._renderedMarkdownContent) return
       el.innerHTML = render(el._currentMarkdownContent)
       el._renderedMarkdownContent = el._currentMarkdownContent

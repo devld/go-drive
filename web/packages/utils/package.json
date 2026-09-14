@@ -1,0 +1,14 @@
+{
+  "name": "@go-drive/utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared utilities and Vue components used by the go-drive web workspaces",
+  "exports": {
+    ".": "./src/index.ts",
+    "./loading": "./src/loading/index.ts"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  }
+}

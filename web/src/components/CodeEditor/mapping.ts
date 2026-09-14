@@ -1,5 +1,5 @@
 // from https://gist.github.com/ppisarczyk/43962d06686722d26d176fad46879d41
-export const languages: O<string[]> = {
+export const languages: Record<string, string[]> = {
   abap: ['abap'],
   apex: ['cls'],
   bat: ['bat', 'cmd'],
@@ -63,7 +63,7 @@ export const languages: O<string[]> = {
   yaml: ['yaml', 'yml'],
 }
 
-const extToLanguage: O<string> = {}
+const extToLanguage: Record<string, string> = {}
 Object.keys(languages).forEach((lang) => {
   languages[lang].forEach((ext) => {
     extToLanguage[ext] = lang

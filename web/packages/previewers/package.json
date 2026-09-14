@@ -1,0 +1,25 @@
+{
+  "name": "@go-drive/previewers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser file preview components for the go-drive web application",
+  "exports": {
+    "./markdown": "./src/markdown/index.ts",
+    "./markdown/styles.scss": "./src/markdown/styles.scss",
+    "./markdown/dark.scss": "./src/markdown/dark.scss",
+    "./image": "./src/image/index.ts"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "@go-drive/utils": "0.0.0",
+    "dompurify": "^3.4.15",
+    "github-markdown-css": "^5.9.0",
+    "highlight.js": "^11.11.1",
+    "marked": "^18.0.5",
+    "marked-highlight": "^2.2.4",
+    "photoswipe": "^5.4.4"
+  }
+}

@@ -24,7 +24,7 @@ import { SimpleButtonType } from '@/components/SimpleButton'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { LoadingOptions } from '.'
-import LoadingState from '@/components/LoadingState.vue'
+import { LoadingState } from '@go-drive/utils'
 
 const showing = ref(false)
 const text = ref<I18nText>('')

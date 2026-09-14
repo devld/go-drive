@@ -35,7 +35,7 @@ import type {
   SimpleButtonNativeType,
 } from '.'
 import type { IconName } from '@/components/icons'
-import LoadingIndicator from '@/components/LoadingIndicator.vue'
+import { LoadingIndicator } from '@go-drive/utils'
 
 defineProps({
   loading: {

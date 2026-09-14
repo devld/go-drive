@@ -2,13 +2,13 @@ import {
   addPreferColorListener,
   isDarkMode,
   removePreferColorListener,
-} from '@/utils/theme'
-import { onMounted, onUnmounted, Ref } from 'vue'
+} from '@go-drive/utils'
+import { onMounted, onUnmounted, type Ref } from 'vue'
 import {
   MESSAGE_KEY_PREFIX,
-  MessageHandler,
-  EditorInMessageTypes,
-} from '../../../monaco-editor/src/types'
+  type EditorInMessageTypes,
+  type MessageHandler,
+} from '@go-drive/monaco-editor'
 
 export type EditorEmit = <K extends keyof EditorInMessageTypes>(
   fn: K,

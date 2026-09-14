@@ -196,7 +196,7 @@
 import { fileUrl } from '@/api'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { Entry } from '@/types'
-import { createDrag } from '@/utils/dom'
+import { createDrag } from '@go-drive/utils'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 defineProps({

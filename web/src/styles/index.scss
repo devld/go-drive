@@ -1,8 +1,7 @@
 @use 'sass:meta';
-@use 'highlight.js/scss/github.scss';
+@use '@go-drive/previewers/markdown/styles.scss';
 @use './themes/default.scss' as default-theme;
 @use './themes/dark.scss' as dark-theme;
-@import 'github-markdown-css/github-markdown.css';
 
 @mixin emit-theme($theme) {
   @each $prop, $val in $theme {
@@ -33,7 +32,7 @@
     @include emit-theme(dark-theme.$theme-dark);
 
     @include meta.load-css('./markdown-dark.scss');
-    @include meta.load-css('highlight.js/scss/agate.scss');
+    @include meta.load-css('@go-drive/previewers/markdown/dark.scss');
   }
 }
 
@@ -46,7 +45,7 @@
   color-scheme: dark;
   @include emit-theme(dark-theme.$theme-dark);
   @include meta.load-css('./markdown-dark.scss');
-  @include meta.load-css('highlight.js/scss/agate.scss');
+  @include meta.load-css('@go-drive/previewers/markdown/dark.scss');
 }
 
 :where(.glass-surface, [data-surface='glass']) {

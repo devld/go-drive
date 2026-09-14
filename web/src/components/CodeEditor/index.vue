@@ -13,17 +13,18 @@
       v-if="loading"
       variant="overlay"
       :text="$t('app.loading')"
+      :aria-label="$t('app.loading')"
     />
   </div>
 </template>
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { EditorOutMessageHandlers } from '../../../monaco-editor/src/types'
+import type { EditorOutMessageHandlers } from '@go-drive/monaco-editor'
 import { getEnv } from './js-script-env'
-import { useEditorSetup, useEditorTheme } from './utils'
 import { languages } from './mapping'
+import { useEditorSetup, useEditorTheme } from './host'
 import { stringSplitN } from '@/utils'
-import LoadingState from '@/components/LoadingState.vue'
+import { LoadingState } from '@go-drive/utils'
 
 const props = defineProps({
   modelValue: {

@@ -120,7 +120,7 @@ import {
   ResolvedEntry,
   resolveEntries,
   wrapFile,
-} from '@/utils/file'
+} from '@go-drive/utils'
 import { alert, confirm, input, loading } from '@/utils/ui-utils'
 import { computed, onBeforeMount, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

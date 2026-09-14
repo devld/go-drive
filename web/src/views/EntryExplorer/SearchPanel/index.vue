@@ -61,11 +61,11 @@ import { EntryEventData } from '@/components/entry'
 import { useAppStore } from '@/store'
 import { Entry, SearchHitItem } from '@/types'
 import { debounce } from '@/utils'
-import { useHotKey } from '@/utils/hooks/hotkey'
+import { useHotKey } from '@go-drive/utils'
 import { computed, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchItem from './SearchItem.vue'
-import LoadingState from '@/components/LoadingState.vue'
+import { LoadingState } from '@go-drive/utils'
 
 export default { name: 'SearchPanel' }
 </script>
