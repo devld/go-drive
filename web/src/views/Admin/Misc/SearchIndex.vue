@@ -77,7 +77,7 @@ import { useInterval } from '@go-drive/utils'
 import { alert } from '@/utils/ui-utils'
 import { formatTime } from '@/utils'
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import { useAppStore } from '@/store'
 import { FormItem, Task as Task_ } from '@/types'
 

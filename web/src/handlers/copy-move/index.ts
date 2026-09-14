@@ -1,4 +1,4 @@
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { copyOrMove } from '@/utils/entry'
 import { EntryHandler } from '../types'
 

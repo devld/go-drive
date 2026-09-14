@@ -16,10 +16,10 @@
     "lint": "vue-tsc --noEmit && eslint"
   },
   "dependencies": {
+    "@go-drive/i18n": "0.0.0",
     "@go-drive/utils": "0.0.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.38",
-    "vue-i18n": "^11.4.5",
     "vue-router": "^5.1.0"
   },
   "devDependencies": {

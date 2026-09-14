@@ -2,7 +2,7 @@ import showBaseDialog, {
   BaseDialogOptions,
   createDialog,
 } from '@/utils/ui-utils/base-dialog'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import ExecutionLogDialogInner from './ExecutionLogDialogInner.vue'
 import type { RequestTask } from '@/utils/http'
 import type { StreamHttpResponse } from '@/api/http'

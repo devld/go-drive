@@ -1,0 +1,44 @@
+{
+  "loading": "Loading",
+  "markdown": {
+    "name": "Markdown",
+    "desc": "Preview and edit Markdown",
+    "split": "Split",
+    "code": "Code",
+    "preview": "Preview"
+  },
+  "spreadsheet": {
+    "name": "Table",
+    "desc": "Preview CSV or TSV",
+    "empty": "No rows",
+    "error": "Unable to parse table"
+  },
+  "web": {
+    "name": "Sandbox preview",
+    "desc": "Preview HTML or SVG in a sandbox"
+  },
+  "ebook": {
+    "name": "Read",
+    "desc": "Preview EPUB",
+    "previous": "Previous",
+    "next": "Next",
+    "error": "Unable to open EPUB"
+  },
+  "cbz": {
+    "name": "Read",
+    "desc": "Preview comic archive",
+    "empty": "No comic pages found",
+    "error": "Unable to open CBZ"
+  },
+  "model3d": {
+    "name": "3D view",
+    "desc": "Preview GLB or GLTF",
+    "error": "Unable to open 3D model"
+  },
+  "map": {
+    "name": "Map",
+    "desc": "Preview geographic data on a map",
+    "invalidXml": "Invalid XML",
+    "error": "Invalid map data"
+  }
+}

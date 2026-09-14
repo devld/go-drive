@@ -1,6 +1,6 @@
 import BaseDialog from './BaseDialog.vue'
 import { IS_DEBUG } from '@/utils'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { createApp, defineComponent, h, reactive, ref, shallowRef } from 'vue'
 import dialogUse from '../dialog-use'
 import { SimpleButtonType } from '@/components/SimpleButton'

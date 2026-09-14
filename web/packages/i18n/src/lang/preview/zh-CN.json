@@ -1,0 +1,44 @@
+{
+  "loading": "加载中",
+  "markdown": {
+    "name": "Markdown",
+    "desc": "预览和编辑 Markdown",
+    "split": "分栏",
+    "code": "代码",
+    "preview": "预览"
+  },
+  "spreadsheet": {
+    "name": "表格",
+    "desc": "预览 CSV 或 TSV",
+    "empty": "没有数据",
+    "error": "无法解析表格"
+  },
+  "web": {
+    "name": "沙箱预览",
+    "desc": "在沙箱中预览 HTML 或 SVG"
+  },
+  "ebook": {
+    "name": "阅读",
+    "desc": "预览 EPUB",
+    "previous": "上一页",
+    "next": "下一页",
+    "error": "无法打开 EPUB"
+  },
+  "cbz": {
+    "name": "阅读",
+    "desc": "预览漫画压缩包",
+    "empty": "未找到漫画页面",
+    "error": "无法打开 CBZ"
+  },
+  "model3d": {
+    "name": "3D 查看",
+    "desc": "预览 GLB 或 GLTF",
+    "error": "无法打开 3D 模型"
+  },
+  "map": {
+    "name": "地图",
+    "desc": "在地图上预览地理数据",
+    "invalidXml": "XML 无效",
+    "error": "地图数据无效"
+  }
+}

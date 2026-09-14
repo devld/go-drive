@@ -88,7 +88,7 @@ import { FormItem, PathMeta } from '@/types'
 import { mapOf } from '@/utils'
 import { alert, confirm } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 
 const { t } = useI18n()
 

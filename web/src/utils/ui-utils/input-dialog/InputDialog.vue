@@ -34,7 +34,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { s } from '@/i18n'
+import { s } from '@go-drive/i18n'
 import { val } from '@/utils'
 import { computed, ref, unref, watch } from 'vue'
 import { InputDialogOptions, InputDialogValidateFunc } from '.'

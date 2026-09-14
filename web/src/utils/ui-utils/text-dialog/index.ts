@@ -1,4 +1,4 @@
-import { isT, T } from '@/i18n'
+import { isT, T } from '@go-drive/i18n'
 import showBaseDialog, { BaseDialogOptions, createDialog } from '../base-dialog'
 import TextDialogInner from './TextDialog.vue'
 

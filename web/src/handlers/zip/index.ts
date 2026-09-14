@@ -1,6 +1,6 @@
 import { zipUrl } from '@/api'
 import { AUTH_PARAM, getToken } from '@/api/http'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { EntryHandler } from '../types'
 
 export default {
