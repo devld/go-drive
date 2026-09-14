@@ -1,5 +1,5 @@
 import { copyEntry, deleteTask, fileUrl, moveEntry } from '@/api'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { Entry, Task } from '@/types'
 import { formatBytes, pathClean, pathJoin, taskDone, TASK_CANCELLED } from '.'
 import { alert, loading } from './ui-utils'

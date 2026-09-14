@@ -1,5 +1,5 @@
 import { wrapAsyncComponent } from '@/components/async'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
 

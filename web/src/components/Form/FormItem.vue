@@ -200,10 +200,9 @@
   </div>
 </template>
 <script setup lang="ts">
-import { isT, s } from '@/i18n'
+import { isT, s, useI18n } from '@go-drive/i18n'
 import { FormItem } from '@/types'
 import { ref, computed, useSlots } from 'vue'
-import { useI18n } from 'vue-i18n'
 import FormItemForm from './FormItemForm.vue'
 
 import CodeEditor from '../CodeEditor/index.vue'

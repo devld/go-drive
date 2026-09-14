@@ -6,7 +6,7 @@ import {
   defineComponent,
   h,
 } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import { LoadingState } from '@go-drive/utils'
 
 const AsyncLoadingState = defineComponent(() => {

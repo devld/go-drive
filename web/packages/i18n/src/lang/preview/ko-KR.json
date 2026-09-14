@@ -1,0 +1,44 @@
+{
+  "loading": "로딩 중",
+  "markdown": {
+    "name": "Markdown",
+    "desc": "Markdown 미리보기 및 편집",
+    "split": "분할",
+    "code": "코드",
+    "preview": "미리보기"
+  },
+  "spreadsheet": {
+    "name": "표",
+    "desc": "CSV 또는 TSV 미리보기",
+    "empty": "데이터가 없습니다",
+    "error": "표를 해석할 수 없습니다"
+  },
+  "web": {
+    "name": "샌드박스 미리보기",
+    "desc": "샌드박스에서 HTML 또는 SVG 미리보기"
+  },
+  "ebook": {
+    "name": "읽기",
+    "desc": "EPUB 미리보기",
+    "previous": "이전",
+    "next": "다음",
+    "error": "EPUB을 열 수 없습니다"
+  },
+  "cbz": {
+    "name": "읽기",
+    "desc": "만화 압축 파일 미리보기",
+    "empty": "만화 페이지를 찾을 수 없습니다",
+    "error": "CBZ를 열 수 없습니다"
+  },
+  "model3d": {
+    "name": "3D 보기",
+    "desc": "GLB 또는 GLTF 미리보기",
+    "error": "3D 모델을 열 수 없습니다"
+  },
+  "map": {
+    "name": "지도",
+    "desc": "지도에서 지리 데이터 미리보기",
+    "invalidXml": "잘못된 XML입니다",
+    "error": "잘못된 지도 데이터입니다"
+  }
+}

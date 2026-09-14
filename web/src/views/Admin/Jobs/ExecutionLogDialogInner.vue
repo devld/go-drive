@@ -17,9 +17,8 @@ import {
   onMounted,
   watch,
 } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { s, useI18n } from '@go-drive/i18n'
 import { deleteTask, getTask } from '@/api'
-import { s } from '@/i18n'
 import type { ExecutionLogDialogOptions } from './execution-log-dialog'
 import type { StreamHttpResponse } from '@/api/http'
 import type { RequestTask } from '@/utils/http'

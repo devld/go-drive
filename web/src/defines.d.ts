@@ -18,7 +18,7 @@ import FloatButton from '@/components/FloatButton'
 import ProgressBar from '@/components/ProgressBar.vue'
 import Pagination from '@/components/Pagination.vue'
 
-import { s } from '@/i18n'
+import { s, type I18nText as PackageI18nText, type I18nTextObject as PackageI18nTextObject } from '@go-drive/i18n'
 
 declare global {
   declare type O<T = any> = Record<string, T>
@@ -34,8 +34,8 @@ declare global {
 
   declare type PromiseValue<T> = Promise<T> | T
 
-  declare type I18nTextObject = { key: string; args?: O<any> }
-  declare type I18nText = string | I18nTextObject
+  declare type I18nTextObject = PackageI18nTextObject
+  declare type I18nText = PackageI18nText
 
   declare type PropType<T> = VuePropType<T>
 

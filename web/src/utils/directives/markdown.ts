@@ -1,5 +1,5 @@
 import type { Directive, DirectiveHook } from 'vue'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 
 const onAnchorClicked = function (this: HTMLAnchorElement, e: MouseEvent) {
   e.preventDefault()

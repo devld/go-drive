@@ -10,5 +10,8 @@
   },
   "peerDependencies": {
     "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "@go-drive/i18n": "0.0.0"
   }
 }

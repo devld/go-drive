@@ -1,5 +1,5 @@
 import { SimpleButtonType } from '@/components/SimpleButton'
-import { isT } from '@/i18n'
+import { isT } from '@go-drive/i18n'
 import { createApp } from 'vue'
 import dialogUse from '../dialog-use'
 import LoadingDialog from './LoadingDialog.vue'
