@@ -14,12 +14,8 @@ import http, {
   clearToken,
   pathPasswordHeaders,
   setToken,
+  binaryHttp,
 } from './http'
-import { createHttp } from '@/utils/http/http'
-import {
-  transformErrorResponse,
-  transformTextResponse,
-} from '@/utils/http/transformers'
 
 const ACCESS_KEY = '_k'
 const PROXY_KEY = 'proxy'
@@ -93,23 +89,28 @@ export function fileThumbnail(path: string, meta: EntryMeta) {
   return buildURL(`${API_PATH}/thumbnail`, query)!
 }
 
-const textHttp = createHttp({
-  transformResponse: [transformTextResponse([]), transformErrorResponse],
-})
+export function getBlobContent(
+  path: string,
+  meta: EntryMeta,
+  params?: FileURLParams
+) {
+  return binaryHttp
+    .get<Blob>(
+      fileUrl(path, meta, {
+        ...params,
+        useProxy: 'cors',
+      }),
+      { headers: pathPasswordHeaders(path) }
+    )
+    .then((blob) => blob)
+}
 
 export function getContent(
   path: string,
   meta: EntryMeta,
   params?: FileURLParams
 ) {
-  return textHttp
-    .get<any>(
-      fileUrl(path, meta, {
-        ...params,
-        useProxy: 'cors',
-      })
-    )
-    .then((res) => res.data)
+  return getBlobContent(path, meta, params).then((blob) => blob.text())
 }
 
 export function makeDir(path: string) {

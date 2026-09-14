@@ -1,6 +1,6 @@
 import Utils from '@/utils'
 import Components from '@/components'
-import i18n from '@/i18n'
+import i18n from '@go-drive/i18n'
 import router from '@/router'
 import store from '@/store'
 import { Plugin } from 'vue'

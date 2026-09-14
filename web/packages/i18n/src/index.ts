@@ -1,9 +1,26 @@
-import { Plugin } from 'vue'
+import type { Plugin } from 'vue'
 import { createI18n } from 'vue-i18n'
+export { useI18n } from 'vue-i18n'
 import enUS from './lang/en-US.json'
+import enUSPreview from './lang/preview/en-US.json'
+
+export interface I18nTextObject {
+  key: string
+  args?: Record<string, unknown>
+}
+
+export type I18nText = string | I18nTextObject
 
 const DEFAULT_LANG = 'en-US'
 const loadedLanguages: string[] = [DEFAULT_LANG]
+
+const withPreviewMessages = (
+  messages: Record<string, unknown>,
+  previewMessages: Record<string, unknown>
+) => ({
+  ...messages,
+  preview: previewMessages,
+})
 
 const i18n = createI18n({
   legacy: false,
@@ -11,14 +28,22 @@ const i18n = createI18n({
   globalInjection: true,
   locale: DEFAULT_LANG,
   fallbackLocale: DEFAULT_LANG,
-  messages: { [DEFAULT_LANG]: enUS } as Record<string, any>,
+  messages: {
+    [DEFAULT_LANG]: withPreviewMessages(enUS, enUSPreview),
+  } as Record<string, any>,
 })
 
 function loadLanguage(lang: string) {
   if (i18n.global.locale.value === lang) return lang
   if (loadedLanguages.includes(lang)) return _setLang(lang)
-  return import(`./lang/${lang}.json`).then((msgs) => {
-    i18n.global.setLocaleMessage(lang, msgs.default)
+  return Promise.all([
+    import(`./lang/${lang}.json`),
+    import(`./lang/preview/${lang}.json`),
+  ]).then(([msgs, previewMessages]) => {
+    i18n.global.setLocaleMessage(
+      lang,
+      withPreviewMessages(msgs.default, previewMessages.default)
+    )
     loadedLanguages.push(lang)
     return _setLang(lang)
   })
@@ -26,7 +51,9 @@ function loadLanguage(lang: string) {
 
 function _setLang(lang: string) {
   i18n.global.locale.value = lang
-  document.querySelector('html')!.setAttribute('lang', lang)
+  if (typeof document !== 'undefined') {
+    document.querySelector('html')?.setAttribute('lang', lang)
+  }
   return lang
 }
 
@@ -44,11 +71,16 @@ export async function setLang(lang: string) {
 
 function _tFn(this: I18nTextObject) {
   return (
-    i18n.global as unknown as { t: (key: string, data: O<any>) => string }
+    i18n.global as unknown as {
+      t: (key: string, data: Record<string, unknown>) => string
+    }
   ).t(this.key, this.args ?? {})
 }
 
-export function T(key: string, args?: O<any>): I18nTextObject {
+export function T(
+  key: string,
+  args?: Record<string, unknown>
+): I18nTextObject {
   const o = { key, args, t: '' }
   Object.defineProperty(o, 'i18n', { enumerable: false, get: () => true })
   o.toString = _tFn

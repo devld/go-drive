@@ -1,6 +1,6 @@
 import { zipUrl } from '@/api'
 import { AUTH_PARAM, getToken } from '@/api/http'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { EntryHandler } from '../types'
 
 export default {
@@ -10,7 +10,7 @@ export default {
     description: T('handler.zip.desc'),
     icon: 'archive',
   },
-  supports: () => true,
+  supports: [],
   multiple: true,
   handler: async ({ entry: entries, parent }) => {
     const form = document.createElement('form')

@@ -42,7 +42,7 @@ import type {
   EntryDropInvalidReason,
 } from './useDrag'
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 
 const props = defineProps<{
   state: EntryDragState

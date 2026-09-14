@@ -10,7 +10,7 @@
 import { cleanPermissionsAndMounts as cleanPermissionsAndMountsApi } from '@/api/admin'
 import { alert } from '@/utils/ui-utils'
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 
 const { t } = useI18n()
 

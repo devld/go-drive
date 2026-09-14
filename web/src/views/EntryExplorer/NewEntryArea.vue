@@ -123,7 +123,7 @@ import {
 } from '@go-drive/utils'
 import { alert, confirm, input, loading } from '@/utils/ui-utils'
 import { computed, onBeforeMount, onBeforeUnmount, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import TaskManager from './TaskManager/index.vue'
 
 const uploadManager = new UploadManager({ concurrent: 3 })

@@ -41,7 +41,7 @@ export default { name: 'EntryItem' }
 import { Entry } from '@/types'
 import { filenameExt, formatBytes, formatTime } from '@/utils'
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import type { ListViewMode } from '.'
 import type { IconName } from '@/components/icons'
 

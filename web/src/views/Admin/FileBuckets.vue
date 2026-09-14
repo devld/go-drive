@@ -88,7 +88,7 @@ import { API_PATH } from '@/api/http'
 import { FormItem, FileBucket } from '@/types'
 import { alert, confirm } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import { FILE_BUCKET_SECRET_KEY } from '@/config'
 
 const { t } = useI18n()
