@@ -57,6 +57,14 @@ func defaultTestConfigWithDirs(dataDir, tempDir string) common.Config {
 		Thumbnail: common.ThumbnailConfig{
 			TTL: common.DefaultThumbnailTTL,
 		},
+		Archive: common.ArchiveConfig{
+			MaxSize:       "256m",
+			MaxMemberSize: "256m",
+			MaxEntries:    common.DefaultArchiveMaxEntries,
+			CacheItems:    common.DefaultArchiveCacheItems,
+			CacheSize:     "1g",
+			IndexTTL:      common.DefaultArchiveIndexTTL,
+		},
 		Auth: common.AuthConfig{
 			Validity:    common.DefaultAuthValidity,
 			AutoRefresh: common.DefaultAuthAutoRefresh,

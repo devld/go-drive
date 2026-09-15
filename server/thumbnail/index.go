@@ -21,7 +21,6 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync/atomic"
@@ -44,8 +43,8 @@ type Maker struct {
 	// handlers is a registry for TypeHandler, map[extension]map[tag]TypeHandler
 	handlers map[string]map[string]TypeHandler
 
-	cacheDir string
-	apiPath  string
+	artifacts *driveutil.ArtifactCache
+	apiPath   string
 
 	pool    pond.Pool
 	options *storage.OptionsDAO
@@ -65,36 +64,23 @@ func NewMaker(config common.Config, optionsDAO *storage.OptionsDAO,
 	if e != nil {
 		return nil, e
 	}
+	artifacts, e := driveutil.NewArtifactCache(dir)
+	if e != nil {
+		return nil, e
+	}
 
 	m := &Maker{
-		handlers: handlers,
-		options:  optionsDAO,
-		cacheDir: dir,
-		apiPath:  config.APIPath,
-		validity: config.Thumbnail.TTL,
+		handlers:  handlers,
+		options:   optionsDAO,
+		artifacts: artifacts,
+		apiPath:   config.APIPath,
+		validity:  config.Thumbnail.TTL,
 	}
 
 	// Remove leftover lock files and empty failure markers on startup. Empty
 	// files mark previously failed generations; dropping them on restart gives
 	// those entries a fresh chance to be regenerated.
-	cleaned := 0
-	walkErr := filepath.Walk(m.cacheDir, func(path string, info os.FileInfo, e error) error {
-		if e != nil {
-			logging.For("thumbn").Warnf("thumbnail cache cleanup walk failed path=%s: %v", logging.Sanitize(path), e)
-			return nil
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if strings.HasSuffix(info.Name(), lockSuffix) || info.Size() == 0 {
-			if e := os.Remove(path); e != nil {
-				logging.For("thumbn").Warnf("thumbnail cache cleanup failed path=%s: %v", logging.Sanitize(path), e)
-			} else {
-				cleaned++
-			}
-		}
-		return nil
-	})
+	cleaned, walkErr := artifacts.CleanStartup()
 	if walkErr != nil {
 		logging.For("thumbn").Errorf("thumbnail cache cleanup failed: %v", walkErr)
 	}
@@ -266,17 +252,13 @@ func (m *Maker) resolveHandler(entry ThumbnailEntry) ([]TypeHandler, error) {
 }
 
 func (m *Maker) tryToGetFromCache(entry ThumbnailEntry, path string) (Thumbnail, error) {
-	exists, e := utils.FileExists(path)
+	f, exists, e := m.artifacts.OpenIfExists(path)
 	if e != nil {
 		return nil, e
 	}
 	if !exists {
 		logging.For("thumbn").Debugf("thumbnail cache file absent path=%s", logging.Sanitize(entry.Path()))
 		return nil, nil
-	}
-	f, e := os.Open(path)
-	if e != nil {
-		return nil, e
 	}
 	stat, e := f.Stat()
 	if e != nil {
@@ -363,14 +345,31 @@ func (m *Maker) executeTask(task *taskWrapper) error {
 	}
 
 	lockFile := task.dest + lockSuffix
-	exists, e = utils.FileExists(lockFile)
+	lock, acquired, e := m.artifacts.TryLock(lockFile)
 	if e != nil {
 		return e
 	}
-	if exists {
+	if !acquired {
 		logging.For("thumbn").Debugf("thumbnail generation already in progress path=%s", logging.Sanitize(task.entry.Path()))
 		return errMaking
 	}
+	if e := lock.Close(); e != nil {
+		_ = os.Remove(lockFile)
+		return e
+	}
+	// The destination may have been committed between the first check and the
+	// lock acquisition. The atomic lock still prevents two writers from
+	// modifying the same artifact, so keep the winner's file.
+	exists, e = utils.FileExists(task.dest)
+	if e != nil {
+		_ = os.Remove(lockFile)
+		return e
+	}
+	if exists {
+		_ = os.Remove(lockFile)
+		return nil
+	}
+	defer func() { _ = os.Remove(lockFile) }()
 	var lastErr error
 	for _, h := range task.h {
 		logging.For("thumbn").Debugf("thumbnail handler started path=%s mime=%s", logging.Sanitize(task.entry.Path()), h.MimeType())
@@ -399,8 +398,13 @@ func (m *Maker) executeTask(task *taskWrapper) error {
 
 		if e == nil {
 			if e = os.Rename(lockFile, task.dest); e != nil {
+				exists, statErr := utils.FileExists(task.dest)
 				_ = os.Remove(lockFile)
-				_ = os.Remove(task.dest)
+				if statErr == nil && exists {
+					// Another producer won the race between our destination
+					// check and the rename. Keep its complete artifact.
+					return nil
+				}
 				return e
 			}
 			logging.For("thumbn").Debugf("thumbnail generated path=%s mime=%s duration=%s",
@@ -561,29 +565,17 @@ func (m *Maker) createItem(entry ThumbnailEntry, path, mimeType string) (io.Writ
 }
 
 func (m *Maker) remove(path string) error {
-	return os.Remove(path)
+	return m.artifacts.Remove(path)
 }
 
 func (m *Maker) getItem(entry ThumbnailEntry) string {
 	key := md5.Sum([]byte(entry.GetRealPath()))
-	return filepath.Join(m.cacheDir, fmt.Sprintf("%x", key))
+	return m.artifacts.DigestPath(fmt.Sprintf("%x", key))
 }
 
 func (m *Maker) clean() {
-	n := 0
 	notBefore := time.Now().Add(-m.validity)
-	e := filepath.Walk(m.cacheDir, func(path string, info os.FileInfo, e error) error {
-		if e != nil || info.IsDir() {
-			return nil
-		}
-		if info.ModTime().Before(notBefore) {
-			if e := os.Remove(path); e != nil {
-				logging.For("thumbn").Warnf("failed to delete file %s: %v", path, e)
-			}
-			n++
-		}
-		return nil
-	})
+	n, e := m.artifacts.CleanOlderThan(notBefore)
 	if n > 0 {
 		logging.For("thumbn").Debugf("%d expired thumbnails cleaned", n)
 	}

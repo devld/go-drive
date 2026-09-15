@@ -433,6 +433,13 @@
       "name": "打包下载",
       "desc": "创建 zip 压缩包"
     },
+    "archive": {
+      "name": "压缩包预览",
+      "desc": "浏览压缩包内容",
+      "parent": "上一级",
+      "empty": "此目录为空",
+      "open": "打开"
+    },
     "delete": {
       "name": "删除",
       "desc": "删除文件",

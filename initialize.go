@@ -12,6 +12,7 @@ import (
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server"
+	archivepreview "go-drive/server/archive"
 	"go-drive/server/job"
 	"go-drive/server/search"
 	"go-drive/server/thumbnail"
@@ -107,6 +108,11 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err := phase(err); err != nil {
 		return nil, err
 	}
+	phase = initPhase("archive preview")
+	archiveService, err := archivepreview.NewService(config.Archive, config.TempDir, ch)
+	if err := phase(err); err != nil {
+		return nil, err
+	}
 	signer := utils.NewSigner()
 	phase = initPhase("chunk uploader")
 	chunkUploader, err := server.NewChunkUploader(config)
@@ -130,7 +136,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 
 	phase = initPhase("server")
 	engine, err := server.InitServer(config, ch, bus, rootDrive, access,
-		service, dbTokenStore, maker, signer, chunkUploader, runner,
+		service, dbTokenStore, maker, archiveService, signer, chunkUploader, runner,
 		optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO,
 		pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO,
 		jobExecutor, fileMessageSource, webResourceFS())
