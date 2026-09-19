@@ -23,16 +23,14 @@ func (t EntryType) IsDir() bool {
 // EntryMeta is the metadata of entry
 type EntryMeta struct {
 	// Readable indicates is this entry can be read
-	Readable bool
+	Readable bool `json:"readable"`
 	// Writable indicates is this entry can be written
-	Writable bool
-	// ThumbnailURL is a client-loadable thumbnail image URL.
-	ThumbnailURL string
-	// SelfThumbnail indicates the entry can produce a thumbnail through
-	// IEntryThumbnail (served by the server thumbnail API).
-	SelfThumbnail bool
+	Writable bool `json:"writable"`
+	// HasThumbnail indicates the entry can produce a thumbnail through
+	// Thumbnail(ctx) (served by the server thumbnail artifact API).
+	HasThumbnail bool `json:"hasThumbnail"`
 	// Props is some drive-specified properties of this entry
-	Props M
+	Props M `json:"props"`
 }
 
 type ContentURL struct {

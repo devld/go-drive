@@ -1309,7 +1309,7 @@ defineDrive(
         isDir: false,
         size: 7,
         modTime: -1,
-        meta: { readable: true, selfThumbnail: true }
+        meta: { readable: true, hasThumbnail: true }
       };
     },
     list: function () { return []; },
@@ -1496,7 +1496,7 @@ func TestScriptDriveLimitedReadersSurvivePoolReturn(t *testing.T) {
 				d := newTestScriptDrivePool(t, `
      function reader(){`+source+`const r=f.limitReader(4).limitReader(8);r.read(new Bytes(1));return r;}
      defineDrive({createInstance(){return {}}},{
-      get(path){return {path,isDir:false,meta:{readable:true,selfThumbnail:true}}},
+      get(path){return {path,isDir:false,meta:{readable:true,hasThumbnail:true}}},
       list(){return []},getReader:reader,getThumbnail:reader
      });
     `, &s.VMPoolConfig{MaxTotal: 1, MaxIdle: maxIdle})

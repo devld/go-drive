@@ -3,7 +3,7 @@ title: 路径模式
 description: 编写包含通配符、递归匹配、排除和排序规则的 go-drive 路径模式，用于权限、索引和处理器配置。
 lang: zh-CN
 translation_key: path-patterns
-source_hash: 189226db755bc0d3502a3659595109ffb9b80bdd531c97f101e509b9c402ce60
+source_hash: 774f3213fb39a3455e810687ae9e408cacdd5df1400d414da022e1ed02ad6375
 ---
 
 # 路径模式
@@ -27,6 +27,6 @@ a/**/*.js    匹配 a/x.js 和 a/sub/x.js
 photos/202?  匹配 photos/2020 到 photos/2029
 ```
 
-不同功能会在模式外增加自己的语法：搜索过滤每行还需以 `+` 或 `-` 开头；缩略图映射使用 `tag:<pattern>`。
+不同功能会在模式外增加自己的语法：搜索过滤每行还需以 `+` 或 `-` 开头。
 
 删除和移动任务使用通配符时先在测试目录验证。`**` 可能匹配非常大的目录树。

@@ -4,7 +4,7 @@ titleTemplate: false
 description: 使用一台自托管 go-drive 服务器统一管理本地文件、S3、WebDAV、FTP、SFTP、OneDrive 和 Google Drive。
 lang: zh-CN
 translation_key: home
-source_hash: eca33cdda3533f2d5539f0f0c315870b01d9802919dd3c7ee42e3dd5d7f6afca
+source_hash: 8cc9c3f45a7fef17aa8e83b988cbe3560fb0fc89c7f6ef5afe7b4881b5bf9c5c
 ---
 
 # go-drive
@@ -47,7 +47,7 @@ docker run -d --name go-drive \
 | WebDAV | 其他 WebDAV 服务 | URL、账号、缓存 |
 | S3 | AWS S3 及兼容服务 | endpoint、region、path-style、代理传输 |
 | OneDrive | 个人盘、组织盘、SharePoint | 区域、tenant、代理传输、缓存 |
-| Google Drive | 个人盘和共享盘 | 缓存、缩略图代理 |
+| Google Drive | 个人盘和共享盘 | 缓存 |
 | Dropbox、七牛云等 | JavaScript 扩展 | 脚本 Drive 仓库 |
 
 具体配置和能力限制见 [Drive 总览](./drives/)。

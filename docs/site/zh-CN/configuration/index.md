@@ -3,7 +3,7 @@ title: 配置文件参考
 description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: 8cdda32873e49430f3cff942eebe1ecd70846a742f1654626d58b0aeaeb0062c
+source_hash: a2301b407d9981e0d344a87ce260eec93f511aad7f776b2866170811adbe1321
 ---
 
 # 配置文件参考
@@ -50,11 +50,22 @@ thumbnail:
   # concurrent: 4            # 默认 max(CPU/2, 1)
   handlers:
     - type: image
-      tags:
       file-types: jpg,jpeg,png,gif,webp
     - type: text
-      tags:
       file-types: txt,md,xml,html,css,scss,js,json,jsx,properties,yml,yaml,ini,c,h,cpp,go,java,kt,gradle,ps1
+
+# 压缩包预览支持 zip、7z 和 rar。
+archive:
+  max-size: 2g
+  max-member-size: 512m
+  max-entries: 100000
+  # 检查压缩包时使用的远程稀疏源文件缓存限制。
+  cache-items: 128
+  cache-size: 4g
+  index-ttl: 24h
+  # 解压文件产物使用独立的总字节数和 TTL 限制。
+  content-cache-size: 4g
+  content-cache-ttl: 24h
 
 auth:
   validity: 2h
@@ -141,6 +152,12 @@ auth:
 ## 缩略图处理器
 
 处理器类型为 `image`、`text` 或 `shell`。Shell 处理器支持 `shell`、`mime-type`、`write-content`、`max-size` 和 `timeout` 等配置，详见[预览与缩略图](../features/preview-thumbnail.html)。官方 Docker 镜像中的配置会启用 libvips/ffmpeg；从镜像提取配置可以获得对应模板。
+
+## 压缩包预览
+
+内置压缩包处理器支持 ZIP、7z 和 RAR。`max-size` 限制服务器检查的压缩文件大小，`max-member-size` 限制单个解压文件大小，`max-entries` 限制索引的内部文件数量。`cache-items` 和 `cache-size` 限制检查压缩包时使用的远程稀疏源文件缓存，`index-ttl` 控制完整内部文件索引的有效期。解压文件预览会生成完整产物，并使用独立的 `content-cache-size` 总字节数上限和 `content-cache-ttl` 有效期。
+
+请求达到短等待时间后，压缩包检查仍可在后台继续执行。Web UI 会轮询任务并在产物完成后打开；关闭预览窗口只会停止轮询，不会取消后台处理。
 
 ## WebDAV、搜索和缓存
 

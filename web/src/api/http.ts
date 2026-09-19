@@ -1,19 +1,20 @@
 import { getLang } from '@go-drive/i18n'
 import {
-  Http,
   HttpError,
   HttpRequestBaseConfig,
   HttpRequestConfig,
   HttpResponse,
 } from '@/utils/http'
-import { createHttp } from '@/utils/http/http'
+import { createHttp, getOriginalHttp } from '@/utils/http/http'
 import {
+  transformBlobResponse,
   transformErrorResponse,
   transformJSONRequest,
   transformJSONResponse,
 } from '@/utils/http/transformers'
 
 export const AUTH_PARAM = 'token'
+export const ACCESS_KEY = '_k'
 
 const AUTH_HEADER = 'Authorization'
 const PATH_PASSWORD_HEADER = 'X-Path-Password'
@@ -21,6 +22,11 @@ const TOKEN_KEY = 'token'
 const RESPONSE_HEADER_KEY = 'x-response'
 
 const MAX_RETRY = 1
+const RETRY_CONTEXT_KEY = Symbol('api.http.retry')
+const TOKEN_CONTEXT_KEY = Symbol('api.http.token')
+const USE_TOKEN_CONTEXT_KEY = Symbol('api.http.useToken')
+
+export const RETURN_RESPONSE_CONTEXT_KEY = Symbol('api.http.returnResponse')
 
 let apiPath = window.___config___.api
 if (!/^https?:\/\//.test(apiPath)) {
@@ -31,6 +37,7 @@ export const API_PATH = apiPath
 const BASE_CONFIG: HttpRequestBaseConfig = {
   baseURL: API_PATH,
   timeout: 60000,
+  context: { [USE_TOKEN_CONTEXT_KEY]: true },
 }
 
 export function setToken(token: string) {
@@ -96,19 +103,26 @@ export function pathPasswordHeaders(path: string): Record<string, string> {
 
 async function processConfig(config: HttpRequestConfig) {
   if (!config.context) config.context = {}
-  if (config.context._t === undefined) config.context._t = -1
-  config.context._t++
-  if (config.context._t > MAX_RETRY)
+  const useToken = config.context[USE_TOKEN_CONTEXT_KEY] ?? true
+  if (config.context[RETRY_CONTEXT_KEY] === undefined)
+    config.context[RETRY_CONTEXT_KEY] = -1
+  config.context[RETRY_CONTEXT_KEY]++
+  if (config.context[RETRY_CONTEXT_KEY] > MAX_RETRY)
     throw new HttpError(-1, 'max retry reached')
 
   if (!config.headers) config.headers = {}
 
-  const token = getToken()
-  if (token) {
-    config.headers[AUTH_HEADER] = token
-    config.context._tokenUsing = token
+  if (useToken) {
+    const token = getToken()
+    if (token) {
+      config.headers[AUTH_HEADER] = token
+      config.context[TOKEN_CONTEXT_KEY] = token
+    } else {
+      delete config.headers[AUTH_HEADER]
+    }
   } else {
     delete config.headers[AUTH_HEADER]
+    delete config.context[TOKEN_CONTEXT_KEY]
   }
 
   config.headers['Accept-Language'] = getLang()
@@ -124,13 +138,13 @@ async function handlerError(e: any) {
   const config = response.request
   if (status === 401) {
     // the token is invalid/expired: drop it and retry once as anonymous
-    if (getToken() && getToken() === config.context?._tokenUsing) {
+    if (getToken() && getToken() === config.context?.[TOKEN_CONTEXT_KEY]) {
       clearToken()
     } else {
       // already anonymous (or token already changed); nothing to recover
       throw e
     }
-    const originalHttp = config.context?.__initiator as Http | undefined
+    const originalHttp = getOriginalHttp(config)
     if (!originalHttp) throw e
     return originalHttp(config)
   }
@@ -165,6 +179,22 @@ export const streamHttp = createHttp<StreamHttpResponse>({
   ],
 })
 
+export const binaryHttp = createHttp<Blob>({
+  ...BASE_CONFIG,
+  context: { [USE_TOKEN_CONTEXT_KEY]: false },
+  transformRequest: [processConfig],
+  transformResponse: [
+    transformBlobResponse([]),
+    transformErrorResponse,
+    (error, resp) => {
+      if (error) return handlerError(error)
+      return resp.request.context?.[RETURN_RESPONSE_CONTEXT_KEY]
+        ? resp
+        : resp.data
+    },
+  ],
+})
+
 export default createHttp({
   ...BASE_CONFIG,
   transformRequest: [processConfig, transformJSONRequest],
@@ -173,7 +203,9 @@ export default createHttp({
     transformErrorResponse,
     (error, resp) => {
       if (error) return handlerError(error)
-      return resp.data
+      return resp.request.context?.[RETURN_RESPONSE_CONTEXT_KEY]
+        ? resp
+        : resp.data
     },
   ],
 })

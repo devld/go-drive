@@ -47,6 +47,8 @@ The configuration file supports:
 - `text`: reads the beginning of a text file and generates an SVG.
 - `shell`: runs an external program that writes the thumbnail to stdout.
 
+Some Drives set `hasThumbnail` on an entry (OneDrive, Google Drive, and script Drives that implement `getThumbnail`). The UI requests a thumbnail even when the extension is not in the handler list, and the processor uses `Entry.Thumbnail` instead of the local image, text, or shell handlers.
+
 The official Docker image includes:
 
 - libvips: low-memory, high-performance image thumbnails, including WebP, TIFF, SVG, HEIC, and AVIF.
@@ -60,7 +62,6 @@ Extract `config.yml` from the Docker image to get the complete enabled handler t
 thumbnail:
   handlers:
     - type: shell
-      tags: media
       file-types: mp4,avi,mkv,mov,webm,mp3,flac,ogg,opus
       config:
         shell: ffmpeg -hide_banner -loglevel error -i - -an -frames:v 1 -vf scale=220:-1 -c:v libwebp -f webp -
@@ -82,14 +83,4 @@ Unix uses `/bin/sh -c`; Windows uses `cmd.exe /D /S /C`. Scripts may span multip
 
 Shell handlers run with the go-drive process's privileges; use only trusted commands. Setting `write-content: true` for remote files sends the entire content to stdin and may consume substantial network and CPU resources.
 
-## Map paths to handlers
-
-The site-setting format is:
-
-```text
-tag1,tag2:<path pattern>
-```
-
-go-drive first finds handlers by extension, then uses the path mapping's tag to select one. If no tag matches, it uses the default handler for that extension. Restart after changing handlers in the configuration file; changing only the interface mapping usually does not require a restart.
-
-The thumbnail cache is stored under the data directory and controlled by `thumbnail.ttl`. Failures are cached briefly to avoid repeated resource use; restarting clears failure markers and allows another attempt.
+The thumbnail cache is stored under the data directory and controlled by `thumbnail.ttl`. Deterministic failures are cached briefly to avoid repeated resource use and remain available after restart until their TTL expires.

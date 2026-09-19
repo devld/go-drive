@@ -343,38 +343,13 @@ func (e jsObjEntry) jsonShape() any {
 	if e.e == nil {
 		return nil
 	}
-	return struct {
-		Path    string          `json:"path"`
-		Name    string          `json:"name"`
-		Type    types.EntryType `json:"type"`
-		Size    int64           `json:"size"`
-		ModTime int64           `json:"modTime"`
-		Meta    struct {
-			Readable      bool    `json:"readable"`
-			Writable      bool    `json:"writable"`
-			ThumbnailURL  string  `json:"thumbnailUrl"`
-			SelfThumbnail bool    `json:"selfThumbnail"`
-			Props         types.M `json:"props"`
-		} `json:"meta"`
-	}{
-		Path:    e.e.Path(),
-		Name:    e.e.Name(),
-		Type:    e.e.Type(),
-		Size:    e.e.Size(),
-		ModTime: e.e.ModTime(),
-		Meta: struct {
-			Readable      bool    `json:"readable"`
-			Writable      bool    `json:"writable"`
-			ThumbnailURL  string  `json:"thumbnailUrl"`
-			SelfThumbnail bool    `json:"selfThumbnail"`
-			Props         types.M `json:"props"`
-		}{
-			Readable:      e.e.Meta().Readable,
-			Writable:      e.e.Meta().Writable,
-			ThumbnailURL:  e.e.Meta().ThumbnailURL,
-			SelfThumbnail: e.e.Meta().SelfThumbnail,
-			Props:         e.e.Meta().Props,
-		},
+	return types.M{
+		"path":    e.e.Path(),
+		"name":    e.e.Name(),
+		"type":    e.e.Type(),
+		"size":    e.e.Size(),
+		"modTime": e.e.ModTime(),
+		"meta":    e.e.Meta(),
 	}
 }
 

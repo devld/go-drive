@@ -49,11 +49,22 @@ thumbnail:
   # concurrent: 4            # Defaults to max(CPU/2, 1)
   handlers:
     - type: image
-      tags:
       file-types: jpg,jpeg,png,gif,webp
     - type: text
-      tags:
       file-types: txt,md,xml,html,css,scss,js,json,jsx,properties,yml,yaml,ini,c,h,cpp,go,java,kt,gradle,ps1
+
+# Archive preview supports zip, 7z, and rar files.
+archive:
+  max-size: 2g
+  max-member-size: 512m
+  max-entries: 100000
+  # Sparse remote source cache limits used while inspecting an archive.
+  cache-items: 128
+  cache-size: 4g
+  index-ttl: 24h
+  # Complete decompressed member artifacts use a separate byte/TTL policy.
+  content-cache-size: 4g
+  content-cache-ttl: 24h
 
 auth:
   validity: 2h
@@ -140,6 +151,20 @@ auth:
 ## Thumbnail handlers
 
 Handler types are `image`, `text`, and `shell`. Shell handlers accept `shell`, `mime-type`, `write-content`, `max-size`, `timeout`, and related settings; see [Preview and thumbnails](../features/preview-thumbnail.html). The official Docker configuration enables libvips and ffmpeg. Extract the configuration from the image to get those templates.
+
+## Archive preview
+
+The built-in archive handler supports ZIP, 7z, and RAR. `max-size` limits the
+compressed source inspected by the server; `max-member-size` limits one
+decompressed member; and `max-entries` bounds the indexed member count.
+`cache-items` and `cache-size` limit the sparse remote source cache used while
+inspecting archives. The complete member index uses `index-ttl`. Decompressed
+member preview bodies are complete artifacts and use the independent
+`content-cache-size` byte budget and `content-cache-ttl` validity period.
+
+Archive inspection can continue in the background when a request reaches its
+short response wait. The Web UI polls the task and opens the completed
+artifact; closing the view only stops polling.
 
 ## WebDAV, search, and cache
 

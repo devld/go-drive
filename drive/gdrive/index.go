@@ -28,7 +28,6 @@ func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
 			{Field: "client_id", Label: t("form.client_id.label"), Type: "text", Description: t("form.client_id.description"), Required: true},
 			{Field: "client_secret", Label: t("form.client_secret.label"), Type: "password", Description: t("form.client_secret.description"), Required: true},
 			{Field: "cache_ttl", Label: t("form.cache_ttl.label"), Type: "text", Description: t("form.cache_ttl.description"), DefaultValue: "4h"},
-			{Field: "proxy_thumbnail", Label: t("form.proxy_thumbnail.label"), Type: "checkbox", Description: t("form.proxy_thumbnail.description"), DefaultValue: "1"},
 		},
 		Factory: driveutil.DriveFactory{Create: NewGDrive, InitConfig: InitConfig, Init: Init},
 	})
@@ -55,11 +54,10 @@ func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils)
 	}
 
 	g := &GDrive{
-		s:              service,
-		cacheTTL:       cacheTtl,
-		oauthHolder:    oauthHolder,
-		driveId:        params["drive_id"],
-		proxyThumbnail: config.GetBool("proxy_thumbnail"),
+		s:           service,
+		cacheTTL:    cacheTtl,
+		oauthHolder: oauthHolder,
+		driveId:     params["drive_id"],
 	}
 	if cacheTtl <= 0 {
 		g.cache = driveutil.DummyCache()
@@ -80,8 +78,6 @@ type GDrive struct {
 	cache    driveutil.DriveCache
 
 	oauthHolder *driveutil.OAuthHolder
-
-	proxyThumbnail bool
 }
 
 func (g *GDrive) Meta(context.Context) (types.DriveMeta, error) {
@@ -442,17 +438,9 @@ func (g *gdriveEntry) mimeType() string {
 }
 
 func (g *gdriveEntry) Meta() types.EntryMeta {
-	thumbnailURL := ""
-	selfThumbnail := false
-	if !g.d.proxyThumbnail {
-		thumbnailURL = g.thumbnail
-	} else if g.thumbnail != "" {
-		selfThumbnail = true
-	}
-
 	return types.EntryMeta{
 		Readable: true, Writable: true,
-		ThumbnailURL: thumbnailURL, SelfThumbnail: selfThumbnail,
+		HasThumbnail: g.thumbnail != "",
 		Props: types.M{
 			"ext": mimeTypeExtensionsMap[g.mimeType()],
 		},
@@ -518,7 +506,7 @@ func (g *gdriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 }
 
 func (g *gdriveEntry) Thumbnail(_ context.Context) (types.IContentReader, error) {
-	if !g.Meta().SelfThumbnail {
+	if g.thumbnail == "" {
 		return nil, err.NewUnsupportedError()
 	}
 	return driveutil.NewURLContentReader(g.thumbnail, nil, true), nil

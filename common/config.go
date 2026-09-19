@@ -41,20 +41,28 @@ const (
 
 	TempDir = "temp"
 
-	DefaultListen              = ":8089"
-	DefaultAPIPath             = ""
-	DefaultWebPath             = ""
-	DefaultDataDir             = "./data"
-	DefaultOAuthRedirectURI    = "https://go-drive.top/oauth_callback"
-	DefaultMaxConcurrentTask   = 100
-	DefaultFreeFs              = false
-	DefaultThumbnailTTL        = 30 * 24 * time.Hour
-	DefaultAuthValidity        = 2 * time.Hour
-	DefaultAuthAutoRefresh     = true
-	DefaultSignatureTTL        = 12 * time.Hour
-	DefaultWebDavPrefix        = "/dav"
-	DefaultWebDavMaxCacheItems = 1000
-	DefaultSearcher            = "sqlite"
+	DefaultListen                  = ":8089"
+	DefaultAPIPath                 = ""
+	DefaultWebPath                 = ""
+	DefaultDataDir                 = "./data"
+	DefaultOAuthRedirectURI        = "https://go-drive.top/oauth_callback"
+	DefaultMaxConcurrentTask       = 100
+	DefaultFreeFs                  = false
+	DefaultThumbnailTTL            = 30 * 24 * time.Hour
+	DefaultArchiveMaxSize          = int64(2 * 1024 * 1024 * 1024)
+	DefaultArchiveMaxMembers       = int64(512 * 1024 * 1024)
+	DefaultArchiveMaxEntries       = 100000
+	DefaultArchiveCacheItems       = 128
+	DefaultArchiveCacheSize        = int64(4 * 1024 * 1024 * 1024)
+	DefaultArchiveIndexTTL         = 24 * time.Hour
+	DefaultArchiveContentCacheSize = int64(4 * 1024 * 1024 * 1024)
+	DefaultArchiveContentCacheTTL  = 24 * time.Hour
+	DefaultAuthValidity            = 2 * time.Hour
+	DefaultAuthAutoRefresh         = true
+	DefaultSignatureTTL            = 12 * time.Hour
+	DefaultWebDavPrefix            = "/dav"
+	DefaultWebDavMaxCacheItems     = 1000
+	DefaultSearcher                = "sqlite"
 
 	DefaultCacheType                      = "mem"
 	DefaultCacheCleanPeriod time.Duration = 10 * time.Minute
@@ -102,6 +110,7 @@ type Config struct {
 	FreeFs bool `yaml:"free-fs"`
 
 	Thumbnail ThumbnailConfig `yaml:"thumbnail"`
+	Archive   ArchiveConfig   `yaml:"archive"`
 	Auth      AuthConfig      `yaml:"auth"`
 
 	SignatureTTL time.Duration `yaml:"signature-ttl"`
@@ -137,9 +146,21 @@ type ThumbnailConfig struct {
 	Handlers   []ThumbnailHandlerItem `yaml:"handlers"`
 }
 
+// ArchiveConfig limits the amount of archive data that the preview service may
+// inspect or stream. Size values use the same suffixes as other size settings,
+// for example 256m or 1g.
+type ArchiveConfig struct {
+	MaxSize          types.SV      `yaml:"max-size"`
+	MaxMemberSize    types.SV      `yaml:"max-member-size"`
+	MaxEntries       int           `yaml:"max-entries"`
+	CacheItems       int           `yaml:"cache-items"`
+	CacheSize        types.SV      `yaml:"cache-size"`
+	IndexTTL         time.Duration `yaml:"index-ttl"`
+	ContentCacheSize types.SV      `yaml:"content-cache-size"`
+	ContentCacheTTL  time.Duration `yaml:"content-cache-ttl"`
+}
+
 type ThumbnailHandlerItem struct {
-	// Name is the unique name of the thumbnail handler
-	Tags string `yaml:"tags"`
 	// Type is handler type, available type are image, text, shell
 	Type string `yaml:"type"`
 	// FileTypes is supported file extensions separate by comm, folder type is /
@@ -197,6 +218,16 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		FreeFs:            DefaultFreeFs,
 		Thumbnail: ThumbnailConfig{
 			TTL: DefaultThumbnailTTL,
+		},
+		Archive: ArchiveConfig{
+			MaxSize:          types.SV("2g"),
+			MaxMemberSize:    types.SV("512m"),
+			MaxEntries:       DefaultArchiveMaxEntries,
+			CacheItems:       DefaultArchiveCacheItems,
+			CacheSize:        types.SV("4g"),
+			IndexTTL:         DefaultArchiveIndexTTL,
+			ContentCacheSize: types.SV("4g"),
+			ContentCacheTTL:  DefaultArchiveContentCacheTTL,
 		},
 		Auth: AuthConfig{
 			Validity:    DefaultAuthValidity,
@@ -261,6 +292,30 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 
 	if config.Thumbnail.Concurrent <= 0 {
 		config.Thumbnail.Concurrent = int(math.Max(float64(runtime.NumCPU()/2), 1))
+	}
+	if config.Archive.MaxSize == "" {
+		config.Archive.MaxSize = types.SV("2g")
+	}
+	if config.Archive.MaxMemberSize == "" {
+		config.Archive.MaxMemberSize = types.SV("512m")
+	}
+	if config.Archive.MaxEntries <= 0 {
+		config.Archive.MaxEntries = DefaultArchiveMaxEntries
+	}
+	if config.Archive.CacheItems <= 0 {
+		config.Archive.CacheItems = DefaultArchiveCacheItems
+	}
+	if config.Archive.CacheSize == "" {
+		config.Archive.CacheSize = types.SV("4g")
+	}
+	if config.Archive.IndexTTL <= 0 {
+		config.Archive.IndexTTL = DefaultArchiveIndexTTL
+	}
+	if config.Archive.ContentCacheSize == "" {
+		config.Archive.ContentCacheSize = types.SV("4g")
+	}
+	if config.Archive.ContentCacheTTL <= 0 {
+		config.Archive.ContentCacheTTL = DefaultArchiveContentCacheTTL
 	}
 
 	e := parseDbConfig(&config.Db)

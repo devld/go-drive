@@ -26,6 +26,6 @@ a/**/*.js    matches a/x.js and a/sub/x.js
 photos/202?  matches photos/2020 through photos/2029
 ```
 
-Individual features add their own syntax around the pattern: each search-filter line also begins with `+` or `-`, while thumbnail mappings use `tag:<pattern>`.
+Individual features add their own syntax around the pattern: each search-filter line also begins with `+` or `-`.
 
 Test wildcard delete and move jobs in a test directory first. `**` may match a very large directory tree.

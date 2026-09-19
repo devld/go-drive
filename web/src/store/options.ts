@@ -13,7 +13,7 @@ export interface OptionsItem<T> {
   process: (v?: string) => T
 }
 
-const stringList = (v?: string) => {
+export const stringList = (v?: string) => {
   v = v?.trim()
   if (!v) return []
   return Object.freeze((v || '').split(',').map((e) => e.trim()))

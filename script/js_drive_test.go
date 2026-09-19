@@ -75,7 +75,7 @@ func sampleInspectEntry() jsObjEntry {
 		typ:     types.TypeFile,
 		size:    12,
 		modTime: 1700000000000,
-		meta:    types.EntryMeta{Readable: true, Writable: true, ThumbnailURL: "https://thumb"},
+		meta:    types.EntryMeta{Readable: true, Writable: true, HasThumbnail: true},
 	}}
 }
 
@@ -95,8 +95,8 @@ func TestEntryMarshalJSON(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	want := `{"path":"dir/file.txt","name":"file.txt","type":"file","size":12,"modTime":1700000000000,"meta":{"readable":true,"writable":true,"thumbnailUrl":"https://thumb","selfThumbnail":false,"props":null}}`
-	if string(got) != want {
+	want := `{"path":"dir/file.txt","name":"file.txt","type":"file","size":12,"modTime":1700000000000,"meta":{"readable":true,"writable":true,"hasThumbnail":true,"props":null}}`
+	if !jsonEqual(string(got), want) {
 		t.Fatalf("MarshalJSON = %s, want %s", got, want)
 	}
 
@@ -165,7 +165,7 @@ func TestFormatConsoleArgInspectsGoHandles(t *testing.T) {
 	if got := evalConsoleArg(t, vm, `new Hash("md5")`); got != "Hash { Size: 16, ... }" {
 		t.Fatalf("Hash log = %s", got)
 	}
-	if got := evalConsoleArg(t, vm, `entry.meta`); !jsonEqual(got, `{"readable":true,"writable":true,"thumbnailUrl":"https://thumb","selfThumbnail":false,"props":{}}`) {
+	if got := evalConsoleArg(t, vm, `entry.meta`); !jsonEqual(got, `{"readable":true,"writable":true,"hasThumbnail":true,"props":{}}`) {
 		t.Fatalf("EntryMeta log = %s", got)
 	}
 	if got := evalConsoleArg(t, vm, `entry.getUrl()`); !jsonEqual(got, `{"url":"https://example.com/file.txt","header":{},"proxy":true,"downloadFileName":""}`) {
