@@ -6,11 +6,7 @@ on:
       - master
     paths:
       - docs/site/**
-  pull_request:
-    branches:
-      - master
-    paths:
-      - docs/site/**
+  # Pull request documentation checks run in ci.yml when docs/site changes.
   workflow_dispatch:
 
 permissions:
