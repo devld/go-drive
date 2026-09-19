@@ -576,7 +576,7 @@ func getURL(ctx context.Context, u string, header types.SM) (int, io.ReadCloser,
 	status := resp.Status()
 	if status < 200 || status >= 300 {
 		_ = resp.Dispose()
-		return status, nil, err.NewRemoteApiError(status,
+		return status, nil, err.NewRemoteAPIError(status,
 			i18n.T("util.request_failed", strconv.Itoa(status)))
 	}
 	return status, resp.Response().Body, nil

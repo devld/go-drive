@@ -143,7 +143,7 @@ func (g *GDrive) deserializeEntry(ci driveutil.EntryCacheItem) (types.IEntry, er
 	return &gdriveEntry{
 		id: id, mime: ci.Data["m"], path: ci.Path, isDir: ci.Type.IsDir(),
 		size: ci.Size, modTime: ci.ModTime, d: g,
-		targetId: ci.Data["ti"], targetMime: ci.Data["tm"],
+		targetID: ci.Data["ti"], targetMime: ci.Data["tm"],
 		thumbnail: ci.Data["th"],
 	}, nil
 }

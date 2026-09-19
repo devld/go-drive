@@ -2,21 +2,21 @@ package utils
 
 import "sync"
 
-type IdPoolID interface {
+type IDPoolID interface {
 	uint | uint32 | uint64
 }
 
-type IdPool[T IdPoolID] struct {
+type IDPool[T IDPoolID] struct {
 	max  T
 	pool [][2]T
 	mu   sync.Mutex
 }
 
-func NewIdPool[T IdPoolID]() *IdPool[T] {
-	return &IdPool[T]{max: 0, pool: make([][2]T, 0), mu: sync.Mutex{}}
+func NewIDPool[T IDPoolID]() *IDPool[T] {
+	return &IDPool[T]{max: 0, pool: make([][2]T, 0), mu: sync.Mutex{}}
 }
 
-func (p *IdPool[T]) Next() T {
+func (p *IDPool[T]) Next() T {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if len(p.pool) > 0 {
@@ -32,7 +32,7 @@ func (p *IdPool[T]) Next() T {
 	return p.max
 }
 
-func (p *IdPool[T]) Release(id T) {
+func (p *IDPool[T]) Release(id T) {
 	if id <= 0 {
 		return
 	}

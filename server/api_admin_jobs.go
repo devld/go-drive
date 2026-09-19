@@ -123,8 +123,8 @@ func (jr *jobsRoute) deleteJob(c *gin.Context) {
 }
 
 func (jr *jobsRoute) getExecutions(c *gin.Context) {
-	jobId := utils.ToInt(c.Query("jobId"), -1)
-	if jobId < 0 {
+	jobID := utils.ToInt(c.Query("jobId"), -1)
+	if jobID < 0 {
 		_ = c.Error(err.NewBadRequestError(""))
 		return
 	}
@@ -133,7 +133,7 @@ func (jr *jobsRoute) getExecutions(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	items, total, e := jr.jobDAO.GetJobExecutions(uint(jobId), page, pageSize)
+	items, total, e := jr.jobDAO.GetJobExecutions(uint(jobID), page, pageSize)
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -153,12 +153,12 @@ func (jr *jobsRoute) getExecutions(c *gin.Context) {
 }
 
 func (jr *jobsRoute) executeJob(c *gin.Context) {
-	jobId := utils.ToInt(c.Query("jobId"), -1)
-	if jobId < 0 {
+	jobID := utils.ToInt(c.Query("jobId"), -1)
+	if jobID < 0 {
 		_ = c.Error(err.NewBadRequestError(""))
 		return
 	}
-	jobObj, e := jr.jobDAO.GetJob(uint(jobId))
+	jobObj, e := jr.jobDAO.GetJob(uint(jobID))
 	if e != nil {
 		_ = c.Error(e)
 		return
@@ -215,7 +215,7 @@ func (jr *jobsRoute) deleteJobExecution(c *gin.Context) {
 	}
 }
 
-func (jr *jobsRoute) deleteJobExecutionsByJobId(c *gin.Context) {
+func (jr *jobsRoute) deleteJobExecutionsByJobID(c *gin.Context) {
 	id := utils.ToUInt(c.Query("jobId"), 0)
 	if id == 0 {
 		_ = c.Error(err.NewBadRequestError(""))

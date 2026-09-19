@@ -28,7 +28,7 @@ func TestJobDAO_GetJobExecutionsPagination(t *testing.T) {
 
 	for i := range 5 {
 		if e := dao.AddJobExecution(&types.JobExecution{
-			JobId:     42,
+			JobID:     42,
 			StartedAt: uint64(100 + i),
 			Status:    types.JobExecutionSuccess,
 		}); e != nil {
@@ -36,7 +36,7 @@ func TestJobDAO_GetJobExecutionsPagination(t *testing.T) {
 		}
 	}
 	if e := dao.AddJobExecution(&types.JobExecution{
-		JobId: 7, StartedAt: 999, Status: types.JobExecutionSuccess,
+		JobID: 7, StartedAt: 999, Status: types.JobExecutionSuccess,
 	}); e != nil {
 		t.Fatal(e)
 	}

@@ -102,7 +102,7 @@ func (je *JobExecutor) parseTriggers(job types.Job) ([]ParsedJobTrigger, error) 
 	return triggers, nil
 }
 
-// TriggerExecutionWithEvent runs the job using task.Runner with event information and returns the task
+// TriggerExecution runs the job using task.Runner with event information and returns the task
 func (je *JobExecutor) TriggerExecution(jobID uint, event TriggerEvent) (task.Task, error) {
 	job, e := je.jobDAO.GetJob(jobID)
 	if e != nil {
@@ -117,7 +117,7 @@ func (je *JobExecutor) TriggerExecution(jobID uint, event TriggerEvent) (task.Ta
 		logging.For("job").Warnf("job trigger queue failed job_id=%d: %v", jobID, e)
 		return task.Task{}, e
 	}
-	logging.For("job").Debugf("job triggered job_id=%d task_id=%s event=%s", jobID, created.Id, event.Type)
+	logging.For("job").Debugf("job triggered job_id=%d task_id=%s event=%s", jobID, created.ID, event.Type)
 	return created, nil
 }
 
@@ -178,7 +178,7 @@ func (je *JobExecutor) executeJob(ctx types.TaskCtx, job types.Job,
 
 func (je *JobExecutor) newJobExecution(job types.Job) (*types.JobExecution, error) {
 	jobExecution := &types.JobExecution{
-		JobId:     job.ID,
+		JobID:     job.ID,
 		StartedAt: uint64(time.Now().UnixMilli()),
 		Status:    types.JobExecutionRunning,
 	}
@@ -197,7 +197,7 @@ func (je *JobExecutor) updateJobExecutionResult(item *jobExecutionItem, e error)
 	} else {
 		item.Status = types.JobExecutionSuccess
 	}
-	item.JobExecution.Logs = item.logger.String()
+	item.Logs = item.logger.String()
 	if e := je.jobDAO.UpdateJobExecution(item.JobExecution); e != nil {
 		logging.For("job").Errorf("failed to update job execution: %v", e)
 	}
@@ -207,10 +207,10 @@ func (je *JobExecutor) updateJobExecutionResult(item *jobExecutionItem, e error)
 	}
 	if e != nil {
 		logging.For("job").Errorf("job execution failed job_id=%d execution_id=%d duration=%s: %v",
-			item.JobId, item.ID, duration, e)
+			item.JobID, item.ID, duration, e)
 	} else {
 		logging.For("job").Debugf("job execution succeeded job_id=%d execution_id=%d duration=%s",
-			item.JobId, item.ID, duration)
+			item.JobID, item.ID, duration)
 	}
 	item.cancel()
 	je.removeJobExecution(item.ID)
@@ -265,7 +265,7 @@ func (je *JobExecutor) CancelJobExecution(id uint) error {
 	je.mu.RUnlock()
 	if item != nil {
 		item.cancel()
-		logging.For("job").Debugf("job execution canceled execution_id=%d job_id=%d", id, item.JobId)
+		logging.For("job").Debugf("job execution canceled execution_id=%d job_id=%d", id, item.JobID)
 	}
 	return nil
 }
@@ -274,10 +274,7 @@ func (je *JobExecutor) IsJobExecutionRunning(id uint) bool {
 	je.mu.RLock()
 	item := je.executions[id]
 	je.mu.RUnlock()
-	if item == nil {
-		return false
-	}
-	return true
+	return item != nil
 }
 
 // GetExecutionProgress returns the live task progress for a running execution.

@@ -26,7 +26,7 @@ type Progress struct {
 }
 
 type Task struct {
-	Id        string    `json:"id"`
+	ID        string    `json:"id"`
 	Status    Status    `json:"status"`
 	Progress  Progress  `json:"progress"`
 	Result    any       `json:"result"`

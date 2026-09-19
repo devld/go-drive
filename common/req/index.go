@@ -65,14 +65,14 @@ func NewDefaultClient() *Client {
 	return client
 }
 
-func (h *Client) BuildURL(requestUrl string) (string, error) {
-	if absoluteURLPattern.MatchString(requestUrl) {
-		return requestUrl, nil
+func (h *Client) BuildURL(requestURL string) (string, error) {
+	if absoluteURLPattern.MatchString(requestURL) {
+		return requestURL, nil
 	}
 	if h.baseURL == nil {
-		return requestUrl, nil
+		return requestURL, nil
 	}
-	ru, e := url.Parse(requestUrl)
+	ru, e := url.Parse(requestURL)
 	if e != nil {
 		return "", e
 	}
@@ -86,9 +86,9 @@ func (h *Client) BuildURL(requestUrl string) (string, error) {
 	return u.String(), nil
 }
 
-func (h *Client) newRequest(method string, requestUrl string, headers types.SM,
+func (h *Client) newRequest(method string, requestURL string, headers types.SM,
 	body RequestBody, ctx context.Context) (*http.Request, error) {
-	requestUrl, e := h.BuildURL(requestUrl)
+	requestURL, e := h.BuildURL(requestURL)
 	if e != nil {
 		return nil, e
 	}
@@ -98,9 +98,9 @@ func (h *Client) newRequest(method string, requestUrl string, headers types.SM,
 	}
 	var req *http.Request
 	if ctx != nil {
-		req, e = http.NewRequestWithContext(ctx, method, requestUrl, bodyReader)
+		req, e = http.NewRequestWithContext(ctx, method, requestURL, bodyReader)
 	} else {
-		req, e = http.NewRequest(method, requestUrl, bodyReader)
+		req, e = http.NewRequest(method, requestURL, bodyReader)
 	}
 	if e != nil {
 		return nil, e
@@ -146,22 +146,22 @@ func (h *Client) request(req *http.Request) (Response, error) {
 	return resp, nil
 }
 
-func (h *Client) Request(ctx context.Context, method, requestUrl string,
+func (h *Client) Request(ctx context.Context, method, requestURL string,
 	headers types.SM, body RequestBody) (Response, error) {
-	req, e := h.newRequest(method, requestUrl, headers, body, ctx)
+	req, e := h.newRequest(method, requestURL, headers, body, ctx)
 	if e != nil {
 		return nil, e
 	}
 	return h.request(req)
 }
 
-func (h *Client) Get(ctx context.Context, requestUrl string, headers types.SM) (Response, error) {
-	return h.Request(ctx, "GET", requestUrl, headers, nil)
+func (h *Client) Get(ctx context.Context, requestURL string, headers types.SM) (Response, error) {
+	return h.Request(ctx, "GET", requestURL, headers, nil)
 }
 
-func (h *Client) Post(ctx context.Context, requestUrl string,
+func (h *Client) Post(ctx context.Context, requestURL string,
 	headers types.SM, body RequestBody) (Response, error) {
-	return h.Request(ctx, "POST", requestUrl, headers, body)
+	return h.Request(ctx, "POST", requestURL, headers, body)
 }
 
 type httpResp struct {
@@ -192,7 +192,7 @@ func (r *httpResp) getBody() ([]byte, error) {
 	return r.body, nil
 }
 
-func (r *httpResp) Json(v any) error {
+func (r *httpResp) JSON(v any) error {
 	defer func() { _ = r.r.Body.Close() }()
 	dat, e := r.getBody()
 	if e != nil {
@@ -226,7 +226,7 @@ func NewURLEncodedBody(v types.SM) RequestBody {
 	return &byteBody{b: []byte(q.Encode()), t: "application/x-www-form-urlencoded"}
 }
 
-func NewJsonBody(v any) RequestBody {
+func NewJSONBody(v any) RequestBody {
 	b, _ := json.Marshal(v)
 	if b == nil {
 		b = make([]byte, 0)

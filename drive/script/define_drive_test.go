@@ -151,7 +151,7 @@ defineDrive(
 );
 `, nil, nil)
 	_, e := d.Get(context.Background(), "x")
-	var remote err.RemoteApiError
+	var remote err.RemoteAPIError
 	if !errors.As(e, &remote) || remote.Status() != http.StatusInternalServerError {
 		t.Fatalf("generic throw = %#v (%v)", e, e)
 	}

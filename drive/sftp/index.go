@@ -330,20 +330,20 @@ func (f *Drive) deserializeEntry(ec driveutil.EntryCacheItem) (types.IEntry, err
 	return &sftpEntry{path: ec.Path, d: f, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir()}, nil
 }
 
-var connectionLost = err.NewRemoteApiError(500, "Connection lost")
+var connectionLost = err.NewRemoteAPIError(500, "Connection lost")
 
 func (f *Drive) handleError(e error) error {
 	switch e {
 	case sftp.ErrSSHFxEOF, io.EOF:
-		return err.NewRemoteApiError(500, "EOF")
+		return err.NewRemoteAPIError(500, "EOF")
 	case sftp.ErrSSHFxNoSuchFile, os.ErrNotExist:
 		return err.NewNotFoundError()
 	case sftp.ErrSSHFxPermissionDenied:
 		return err.NewPermissionDeniedError(e.Error())
 	case sftp.ErrSSHFxBadMessage:
-		return err.NewRemoteApiError(500, "Bad Message")
+		return err.NewRemoteAPIError(500, "Bad Message")
 	case sftp.ErrSSHFxNoConnection:
-		return err.NewRemoteApiError(500, "No Connection")
+		return err.NewRemoteAPIError(500, "No Connection")
 	case sftp.ErrSSHFxConnectionLost:
 		f.clientMux.Lock()
 		defer f.clientMux.Unlock()

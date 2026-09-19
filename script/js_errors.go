@@ -70,10 +70,10 @@ var jsErrorClasses = []jsErrorClass{
 			if statusValue := obj.Get("status"); statusValue != nil && !goja.IsUndefined(statusValue) && !goja.IsNull(statusValue) {
 				status = int(statusValue.ToInteger())
 			}
-			return err.NewRemoteApiError(status, jsErrorMessage(obj))
+			return err.NewRemoteAPIError(status, jsErrorMessage(obj))
 		},
 		toJSArgs: func(e error) ([]any, bool) {
-			remote, ok := stderrors.AsType[err.RemoteApiError](e)
+			remote, ok := stderrors.AsType[err.RemoteAPIError](e)
 			if !ok {
 				return nil, false
 			}
@@ -107,7 +107,7 @@ var jsClassUnsupportedError = JSClass{
 	Construct: ctorMessageError("UnsupportedError"),
 }
 
-var jsClassRemoteApiError = JSClass{
+var jsClassRemoteAPIError = JSClass{
 	Name:   "RemoteApiError",
 	Parent: jsParentError,
 	Construct: func(vm *VM, args Values) any {
@@ -182,13 +182,6 @@ func jsDriveErrorArgs(e error) (string, []any, bool) {
 		}
 	}
 	return "", nil, false
-}
-
-func errorFromValue(value *Value) error {
-	if value == nil {
-		return nil
-	}
-	return errorFromGojaValue(value.vm, value.v)
 }
 
 func errorFromGojaValue(vm *VM, v goja.Value) error {

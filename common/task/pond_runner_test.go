@@ -61,7 +61,7 @@ func TestExecuteAndWaitContinuesAfterTimeout(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("task did not continue in the background")
 	}
-	completed := waitForTask(t, runner, task.Id, Done)
+	completed := waitForTask(t, runner, task.ID, Done)
 	if completed.Result != "done" {
 		t.Fatalf("unexpected result: %#v", completed.Result)
 	}
@@ -80,7 +80,7 @@ func TestRunnerSnapshotsDuringProgressUpdates(t *testing.T) {
 		t.Fatal(e)
 	}
 	for {
-		snapshot, e := runner.GetTask(task.Id)
+		snapshot, e := runner.GetTask(task.ID)
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -88,7 +88,7 @@ func TestRunnerSnapshotsDuringProgressUpdates(t *testing.T) {
 			break
 		}
 	}
-	waitForTask(t, runner, task.Id, Done)
+	waitForTask(t, runner, task.ID, Done)
 }
 
 func TestStopTaskCancelsRunningTask(t *testing.T) {
@@ -100,13 +100,13 @@ func TestStopTaskCancelsRunningTask(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	waitForTask(t, runner, task.Id, Running)
-	stopped, e := runner.StopTask(task.Id)
+	waitForTask(t, runner, task.ID, Running)
+	stopped, e := runner.StopTask(task.ID)
 	if e != nil {
 		t.Fatal(e)
 	}
 	if stopped.Status != Canceled {
 		t.Fatalf("unexpected stopped status: %q", stopped.Status)
 	}
-	waitForTask(t, runner, task.Id, Canceled)
+	waitForTask(t, runner, task.ID, Canceled)
 }

@@ -23,7 +23,7 @@ func newIsolatedGormDB(t *testing.T) *gorm.DB {
 	if e != nil {
 		t.Fatalf("open sqlite: %v", e)
 	}
-	t.Cleanup(func() { closeDb(db) })
+	t.Cleanup(func() { closeDB(db) })
 	if e := db.AutoMigrate(&types.Drive{}, &types.DriveData{}, &types.Job{}); e != nil {
 		t.Fatalf("AutoMigrate: %v", e)
 	}
@@ -268,7 +268,7 @@ func TestMigrateLegacyJobSchemaCopiesAndDropsOldColumns(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	t.Cleanup(func() { closeDb(db) })
+	t.Cleanup(func() { closeDB(db) })
 	sqlDB, e := db.DB()
 	if e != nil {
 		t.Fatal(e)

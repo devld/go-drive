@@ -8,7 +8,7 @@ import (
 type Response interface {
 	Response() *http.Response
 	Status() int
-	Json(v any) error
+	JSON(v any) error
 	XML(v any) error
 	Dispose() error
 }

@@ -86,12 +86,12 @@ func init() {
 		&jsClassProgressReporter,
 		&jsClassHash,
 		&jsClassHmac,
-		&jsClassHttpFormData,
+		&jsClassHTTPFormData,
 		&jsClassBadRequestError,
 		&jsClassNotFoundError,
 		&jsClassNotAllowedError,
 		&jsClassUnsupportedError,
-		&jsClassRemoteApiError,
+		&jsClassRemoteAPIError,
 	)
 }
 
@@ -447,7 +447,7 @@ func (s *ClassSet) containsNamesOf(other *ClassSet) bool {
 // Call before pool initialization completes. NewVM uses this for BuiltinClasses as well.
 func (vm *VM) AddClassSet(set *ClassSet) error {
 	if vm == nil || vm.disposed || vm.j == nil {
-		return errors.New("Runtime has been disposed")
+		return errors.New("Runtime has been disposed") //nolint:staticcheck // JS-facing error keeps the host type name
 	}
 	if set == nil {
 		return nil

@@ -51,7 +51,7 @@ func NewDrive(ctx context.Context, config types.SM,
 		return nil, e
 	}
 
-	cacheTtl := config.GetDuration("cache_ttl", -1)
+	cacheTTL := config.GetDuration("cache_ttl", -1)
 
 	uu, e := url.Parse(u)
 	if e != nil {
@@ -61,10 +61,10 @@ func NewDrive(ctx context.Context, config types.SM,
 
 	w := &Drive{
 		username: username, password: password, requestHeaders: requestHeaders,
-		cacheTTL: cacheTtl, pathPrefix: strings.TrimRight(pathPrefix, "/"),
+		cacheTTL: cacheTTL, pathPrefix: strings.TrimRight(pathPrefix, "/"),
 	}
 
-	if cacheTtl <= 0 {
+	if cacheTTL <= 0 {
 		w.cache = driveutil.DummyCache()
 	} else {
 		w.cache = utils.CreateCache(w.deserializeEntry)
@@ -188,7 +188,7 @@ func (w *Drive) copyOrMove(method string, from types.IEntry, to string,
 		header["Overwrite"] = "F"
 	}
 	resp, e := w.c.Request(ctx, method, wEntry.path, header, nil)
-	if e != nil && !(!override && e == errorPreconditionFailed) {
+	if e != nil && (override || e != errorPreconditionFailed) {
 		return nil, e
 	}
 	if e == nil {
@@ -282,7 +282,7 @@ func (w *Drive) afterRequest(resp req.Response) error {
 		if resp.Status() == http.StatusUnauthorized {
 			return err.NewUnauthorizedError(davT("wrong_user_or_password"))
 		}
-		return err.NewRemoteApiError(500, davT("remote_error", strconv.Itoa(resp.Status())))
+		return err.NewRemoteAPIError(500, davT("remote_error", strconv.Itoa(resp.Status())))
 	}
 	return nil
 }
