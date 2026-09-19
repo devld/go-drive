@@ -23,7 +23,10 @@ var webdavHTTPMethods = []string{
 func InitWebdavAccess(router gin.IRouter, config common.Config,
 	access *drive.Access, userAuth *auth.UserAuth) error {
 
-	cfp, e := driveutil.NewCacheFillPool(config.WebDav.MaxCacheItems, config.TempDir)
+	cfp, e := driveutil.NewCacheFilePool(driveutil.CacheFilePoolOptions{
+		MaxEntries: config.WebDav.MaxCacheItems,
+		Dir:        config.TempDir,
+	})
 	if e != nil {
 		return e
 	}

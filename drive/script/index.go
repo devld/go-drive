@@ -560,7 +560,7 @@ func (se *scriptDriveEntry) EntryData() types.SM {
 }
 
 func (se *scriptDriveEntry) Thumbnail(ctx context.Context) (types.IContentReader, error) {
-	if se.d == nil || !se.d.has.getThumbnail || se.s == nil || !se.s.Meta.SelfThumbnail {
+	if se.d == nil || !se.d.has.getThumbnail || se.s == nil || !se.s.Meta.HasThumbnail {
 		return nil, err.NewUnsupportedError()
 	}
 	var result types.IContentReader

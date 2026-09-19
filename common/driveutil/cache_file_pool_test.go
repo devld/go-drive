@@ -2,9 +2,12 @@ package driveutil
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -13,7 +16,7 @@ import (
 // the "whole file" request (start == -1) used for files smaller than the block
 // size, as well as ranged requests.
 func byteReaderGetter(data []byte) ReaderGetter {
-	return func(start, size int64) (io.ReadCloser, error) {
+	return func(_ context.Context, start, size int64) (io.ReadCloser, error) {
 		s := start
 		if s < 0 {
 			s = 0
@@ -92,7 +95,7 @@ func TestRangeLock_MergeGapAndContained(t *testing.T) {
 }
 
 // TestRangeLock_AcquireWaitsForFeed verifies acquire blocks until the range is
-// fed, then returns. This exercises the sync.Cond based wakeup.
+// fed, then returns without a lost wakeup.
 func TestRangeLock_AcquireWaitsForFeed(t *testing.T) {
 	rl := newRangeLock(100)
 	done := make(chan error, 1)
@@ -138,13 +141,13 @@ func TestRangeLock_ReleaseCancelsAcquire(t *testing.T) {
 
 func TestCacheFilePool_ReadFull(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFillPool(8, dir)
+	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
 	if e != nil {
 		t.Fatal(e)
 	}
 	data := bytes.Repeat([]byte("hello world "), 1000)
 
-	r, e := pool.GetReader("k1", int64(len(data)), byteReaderGetter(data))
+	r, e := pool.GetReader(context.Background(), "k1", int64(len(data)), byteReaderGetter(data))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -160,13 +163,13 @@ func TestCacheFilePool_ReadFull(t *testing.T) {
 
 func TestCacheFilePool_SeekRead(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFillPool(8, dir)
+	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
 	if e != nil {
 		t.Fatal(e)
 	}
 	data := []byte("0123456789abcdefghij")
 
-	r, e := pool.GetReader("k1", int64(len(data)), byteReaderGetter(data))
+	r, e := pool.GetReader(context.Background(), "k1", int64(len(data)), byteReaderGetter(data))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -184,9 +187,192 @@ func TestCacheFilePool_SeekRead(t *testing.T) {
 	}
 }
 
+func TestCacheFilePool_ReadAtDoesNotChangePosition(t *testing.T) {
+	dir := t.TempDir()
+	p, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 2, Dir: dir})
+	if e != nil {
+		t.Fatal(e)
+	}
+	data := []byte("0123456789abcdefghij")
+	r, e := p.GetReader(context.Background(), "read-at", int64(len(data)), byteReaderGetter(data))
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer func() { _ = r.Close() }()
+
+	readerAt, ok := r.(io.ReaderAt)
+	if !ok {
+		t.Fatal("cache reader does not implement io.ReaderAt")
+	}
+	part := make([]byte, 4)
+	if _, e := readerAt.ReadAt(part, 6); e != nil {
+		t.Fatal(e)
+	}
+	if string(part) != "6789" {
+		t.Fatalf("ReadAt() = %q", part)
+	}
+	all, e := io.ReadAll(r)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if string(all) != string(data) {
+		t.Fatalf("Read after ReadAt() = %q", all)
+	}
+}
+
+func TestCacheFilePool_ReturnsSourceErrorToWaitingReaders(t *testing.T) {
+	dir := t.TempDir()
+	p, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 2, Dir: dir})
+	if e != nil {
+		t.Fatal(e)
+	}
+	want := errors.New("source failed")
+	getter := func(context.Context, int64, int64) (io.ReadCloser, error) {
+		return nil, want
+	}
+	r1, e := p.GetReader(context.Background(), "error", 4, getter)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r2, e := p.GetReader(context.Background(), "error", 4, getter)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer func() { _ = r1.Close(); _ = r2.Close() }()
+
+	results := make(chan error, 2)
+	for _, r := range []io.Reader{r1, r2} {
+		go func(r io.Reader) {
+			_, readErr := io.ReadFull(r, make([]byte, 4))
+			results <- readErr
+		}(r)
+	}
+	for range 2 {
+		if got := <-results; !errors.Is(got, want) {
+			t.Fatalf("read error = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestCacheFilePool_CancelDoesNotInterruptOtherReaders(t *testing.T) {
+	dir := t.TempDir()
+	pool, err := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := bytes.Repeat([]byte("cached-file-a"), 256)
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var startOnce sync.Once
+	getter := func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+		startOnce.Do(func() { close(started) })
+		select {
+		case <-release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		return byteReaderGetter(data)(ctx, start, size)
+	}
+
+	ctx1, cancel1 := context.WithCancel(context.Background())
+	r1, err := pool.GetReader(ctx1, "a", int64(len(data)), getter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r2, err := pool.GetReader(context.Background(), "a", int64(len(data)), getter)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	firstErr := make(chan error, 1)
+	go func() {
+		_, readErr := io.ReadAll(r1)
+		_ = r1.Close()
+		firstErr <- readErr
+	}()
+	<-started
+	secondErr := make(chan error, 1)
+	go func() {
+		got, readErr := io.ReadAll(r2)
+		_ = r2.Close()
+		if readErr != nil {
+			secondErr <- readErr
+			return
+		}
+		if !bytes.Equal(got, data) {
+			secondErr <- errors.New("unexpected payload")
+			return
+		}
+		secondErr <- nil
+	}()
+	cancel1()
+	close(release)
+	if err := <-firstErr; !errors.Is(err, context.Canceled) {
+		t.Fatalf("first reader error = %v, want context.Canceled", err)
+	}
+	if err := <-secondErr; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCacheFilePool_LastReaderCancelStopsFill(t *testing.T) {
+	dir := t.TempDir()
+	pool, err := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	started := make(chan struct{})
+	stopped := make(chan error, 1)
+	getter := func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+		return &blockedFillReader{ctx: ctx, started: started, stopped: stopped}, nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	r, err := pool.GetReader(ctx, "a", 32, getter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		_, _ = io.ReadAll(r)
+		_ = r.Close()
+	}()
+	<-started
+	cancel()
+	select {
+	case err := <-stopped:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("fill stop = %v, want context.Canceled", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("fill continued after the last reader closed")
+	}
+}
+
+type blockedFillReader struct {
+	ctx     context.Context
+	started chan struct{}
+	stopped chan error
+	once    sync.Once
+}
+
+func (r *blockedFillReader) Read([]byte) (int, error) {
+	r.once.Do(func() { close(r.started) })
+	<-r.ctx.Done()
+	err := r.ctx.Err()
+	select {
+	case r.stopped <- err:
+	default:
+	}
+	return 0, err
+}
+
+func (r *blockedFillReader) Close() error { return nil }
+
 func TestCacheFilePool_ConcurrentReaders(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFillPool(8, dir)
+	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -196,7 +382,7 @@ func TestCacheFilePool_ConcurrentReaders(t *testing.T) {
 	errs := make(chan error, n)
 	for i := 0; i < n; i++ {
 		go func() {
-			r, e := pool.GetReader("shared", int64(len(data)), byteReaderGetter(data))
+			r, e := pool.GetReader(context.Background(), "shared", int64(len(data)), byteReaderGetter(data))
 			if e != nil {
 				errs <- e
 				return
@@ -221,17 +407,49 @@ func TestCacheFilePool_ConcurrentReaders(t *testing.T) {
 	}
 }
 
+func TestCacheFilePool_MaxBytesEvictsOldest(t *testing.T) {
+	dir := t.TempDir()
+	data := []byte("cached content")
+	p, err := NewCacheFilePool(CacheFilePoolOptions{
+		MaxEntries: 4,
+		MaxBytes:   int64(len(data)),
+		Dir:        dir,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r1, err := p.GetReader(context.Background(), "first", int64(len(data)), byteReaderGetter(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.ReadAll(r1); err != nil {
+		t.Fatal(err)
+	}
+	_ = r1.Close()
+
+	r2, err := p.GetReader(context.Background(), "second", int64(len(data)), byteReaderGetter(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = r2.Close() }()
+	if _, err := io.ReadAll(r2); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, time.Second, func() bool { return countCacheFiles(t, dir) == 1 })
+}
+
 // TestCacheFilePool_EvictionRemovesFile verifies the backing file is removed
 // once an idle entry is evicted from the pool.
 func TestCacheFilePool_EvictionRemovesFile(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFillPool(1, dir)
+	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 1, Dir: dir})
 	if e != nil {
 		t.Fatal(e)
 	}
 	data := []byte("some cached content")
 
-	r1, e := pool.GetReader("k1", int64(len(data)), byteReaderGetter(data))
+	r1, e := pool.GetReader(context.Background(), "k1", int64(len(data)), byteReaderGetter(data))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -241,7 +459,7 @@ func TestCacheFilePool_EvictionRemovesFile(t *testing.T) {
 	_ = r1.Close()
 
 	// adding a second entry evicts k1 (capacity 1)
-	r2, e := pool.GetReader("k2", int64(len(data)), byteReaderGetter(data))
+	r2, e := pool.GetReader(context.Background(), "k2", int64(len(data)), byteReaderGetter(data))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -255,20 +473,20 @@ func TestCacheFilePool_EvictionRemovesFile(t *testing.T) {
 // truncating/leaking), and that the file is removed once the reader closes.
 func TestCacheFilePool_EvictionKeepsFileWhileActive(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFillPool(1, dir)
+	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 1, Dir: dir})
 	if e != nil {
 		t.Fatal(e)
 	}
 	data := []byte("some cached content")
 
 	// active reader on k1 (not read, not closed)
-	r1, e := pool.GetReader("k1", int64(len(data)), byteReaderGetter(data))
+	r1, e := pool.GetReader(context.Background(), "k1", int64(len(data)), byteReaderGetter(data))
 	if e != nil {
 		t.Fatal(e)
 	}
 
 	// evict k1 by adding k2
-	r2, e := pool.GetReader("k2", int64(len(data)), byteReaderGetter(data))
+	r2, e := pool.GetReader(context.Background(), "k2", int64(len(data)), byteReaderGetter(data))
 	if e != nil {
 		t.Fatal(e)
 	}

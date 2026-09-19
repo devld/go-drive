@@ -171,12 +171,8 @@ func (c *ChrootWrapper) wrapEntry(e types.IEntry) types.IEntry {
 }
 
 func unwrapEntry(e types.IEntry) types.IEntry {
-	ee := driveutil.GetIEntry(e, func(entry types.IEntry) bool {
-		_, ok := entry.(*chrootEntry)
-		return ok
-	})
-	if ee != nil {
-		return ee.(*chrootEntry).IEntry
+	if ce, ok := driveutil.IEntryAs[*chrootEntry](e); ok {
+		return ce.IEntry
 	}
 	return e
 }

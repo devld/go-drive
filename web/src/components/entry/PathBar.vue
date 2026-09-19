@@ -47,6 +47,9 @@ const props = defineProps({
   dropState: {
     type: Object as PropType<EntryDragState>,
   },
+  rootName: {
+    type: String,
+  },
 })
 
 const { t } = useI18n()
@@ -61,7 +64,7 @@ const emit = defineEmits<{
 
 const segments = computed(() => {
   const ss = props.path.replace(/\/+/g, '/').split('/').filter(Boolean)
-  const pathSegments = [{ name: t('app.root_path'), path: '' }]
+  const pathSegments = [{ name: props.rootName || t('app.root_path'), path: '' }]
   ss.forEach((s, i) => {
     pathSegments.push({ name: s, path: ss.slice(0, i + 1).join('/') })
   })

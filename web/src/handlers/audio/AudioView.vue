@@ -237,12 +237,17 @@
   </div>
 </template>
 <script setup lang="ts">
-import { fileThumbnail, fileUrl } from '@/api'
+import { fileThumbnailUrl } from '@/api/artifact'
+import { fileUrl } from '@/api'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { useAppStore } from '@/store'
 import { Entry } from '@/types'
 import { createDrag } from '@go-drive/utils'
-import { filenameBase, filenameExt } from '@/utils'
+import {
+  entryMatches,
+  filenameBase,
+  filenameExt,
+} from '@/utils'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { EntryHandlerContext } from '../types'
 
@@ -305,18 +310,16 @@ const loadedRatio = computed(() =>
 )
 
 const supportThumbnail = (entry: Entry) => {
-  if (entry.meta.thumbnailUrl || entry.meta.selfThumbnail) return true
-  const ext = filenameExt(entry.name)
-  return !!store.config?.thumbnail.extensions?.[ext]
+  if (entry.meta.hasThumbnail) return true
+  const extensions = store.config?.artifact?.thumbnail?.extensions
+  return !!extensions && entryMatches(entry, extensions)
 }
 
 const currentCover = computed(() => {
   const track = currentTrack.value
   if (!track) return undefined
-  const url = track.entry.meta.thumbnailUrl
-  if (url) return url
   if (supportThumbnail(track.entry)) {
-    return fileThumbnail(track.entry.path, track.entry.meta)
+    return fileThumbnailUrl(track.entry.path, track.entry.meta)
   }
   return undefined
 })

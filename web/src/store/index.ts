@@ -1,8 +1,8 @@
 import { getConfig, getUser } from '@/api'
-import { Config, User } from '@/types'
+import { Config, RawConfig, User } from '@/types'
 import { isAdmin } from '@/utils'
 import { createPinia, defineStore } from 'pinia'
-import { ConfigOptions, ConfigOptionsMap } from './options'
+import { ConfigOptions, ConfigOptionsMap, stringList } from './options'
 
 interface TypedConfig extends Config {
   options: ConfigOptionsMap
@@ -17,6 +17,16 @@ interface AppState {
   showLogin: boolean
 
   progressBar: number | boolean
+}
+
+function normalizeConfig(config: RawConfig): Config {
+  const artifact = Object.fromEntries(
+    Object.entries(config.artifact).map(([key, handler]) => [
+      key,
+      { ...handler, extensions: stringList(handler.extensions) },
+    ])
+  ) as Config['artifact']
+  return { ...config, artifact }
 }
 
 export const useAppStore = defineStore('app', {
@@ -51,7 +61,9 @@ export const useAppStore = defineStore('app', {
       return user
     },
     async getConfig() {
-      const config = Object.freeze(await getConfig(Object.keys(ConfigOptions)))
+      const config = normalizeConfig(
+        await getConfig(Object.keys(ConfigOptions))
+      )
       Object.keys(config.options).forEach((key) => {
         const co = ConfigOptions[key]
         if (!co) return
@@ -61,6 +73,7 @@ export const useAppStore = defineStore('app', {
         config.options[key] = co.process(config.options[key])
       })
       Object.freeze(config.options)
+      Object.freeze(config)
       this.config = config as TypedConfig
       return config as TypedConfig
     },

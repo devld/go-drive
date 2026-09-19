@@ -50,6 +50,14 @@ api:
     file_too_large: File size is too large to create thumbnail
     image_too_large: Image is too large to create thumbnail
     create_failed: Unable to create thumbnail
+  archive:
+    too_large: Archive exceeds the configured size limit
+    too_many_entries: Archive contains too many entries
+    member_too_large: This file in the archive exceeds the configured size limit
+    invalid: Invalid or corrupted archive
+    unsupported: Unsupported archive format
+    process_failed: Failed to process archive
+    member_not_found: File not found in the archive
   zip:
     size_exceed: Exceeds the maximum allowed size {{ 1 }}
 storage:
@@ -92,9 +100,6 @@ drive:
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
-      proxy_thumbnail:
-        label: Thumbnail Proxy
-        description: If the thumbnails are not displayed properly, try turning on this option
     oauth_text: Connect to Google Drive
     drive_label: Drive
     my_drive_name: My Drive

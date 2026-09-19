@@ -1,6 +1,6 @@
 ---
 title: Google Drive
-description: Connect Google Drive to go-drive with OAuth credentials, redirect URIs, API scopes, shared drives, and thumbnail proxy settings.
+description: Connect Google Drive to go-drive with OAuth credentials, redirect URIs, API scopes, and shared drives.
 lang: en
 translation_key: drive-google-drive
 ---
@@ -30,10 +30,9 @@ The URI in Google Cloud Console must exactly match the configuration.
 
 ## Add the Drive
 
-Enter the Client ID, Client Secret, cache TTL, and **Proxy thumbnails** setting. After OAuth completes, select a personal or shared drive, save, and reload the Drive.
+Enter the Client ID, Client Secret, and cache TTL. After OAuth completes, select a personal or shared drive, save, and reload the Drive.
 
-- Cache TTL defaults to `4h`; clear the cache after files are changed directly outside go-drive.
-- Proxy thumbnails is enabled by default and is useful when browsers cannot access Google thumbnail URLs directly.
+Cache TTL defaults to `4h`; clear the cache after files are changed directly outside go-drive. Google file thumbnails are fetched by go-drive and stored in the thumbnail cache.
 
 The Google Drive API does not have a traditional path model and allows duplicate names in one directory. When go-drive encounters duplicate entries, it appends the first six characters of the file ID to the name.
 

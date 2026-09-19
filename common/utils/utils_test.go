@@ -191,3 +191,21 @@ func TestBuildURL(t *testing.T) {
 		t.Errorf("expect '%s', but it's '%s'", "/a/%E4%BD%A0%E5%A5%BD/d/%E4%B8%96%E7%95%8C", v)
 	}
 }
+
+func TestPositiveOr(t *testing.T) {
+	if got := PositiveOr(3, 9); got != 3 {
+		t.Fatalf("PositiveOr(3, 9) = %d, want 3", got)
+	}
+	if got := PositiveOr(0, 9); got != 9 {
+		t.Fatalf("PositiveOr(0, 9) = %d, want 9", got)
+	}
+	if got := PositiveOr(-2, 9); got != 9 {
+		t.Fatalf("PositiveOr(-2, 9) = %d, want 9", got)
+	}
+	if got := PositiveOr(2*time.Second, time.Hour); got != 2*time.Second {
+		t.Fatalf("PositiveOr duration kept = %s", got)
+	}
+	if got := PositiveOr(time.Duration(0), time.Hour); got != time.Hour {
+		t.Fatalf("PositiveOr duration fallback = %s", got)
+	}
+}

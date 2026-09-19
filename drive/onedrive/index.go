@@ -388,7 +388,7 @@ func (o *oneDriveEntry) Size() int64 {
 func (o *oneDriveEntry) Meta() types.EntryMeta {
 	return types.EntryMeta{
 		Readable: true, Writable: true,
-		ThumbnailURL: o.thumbnail,
+		HasThumbnail: o.thumbnail != "",
 	}
 }
 
@@ -404,12 +404,23 @@ func (o *oneDriveEntry) Name() string {
 	return utils.PathBase(o.path)
 }
 
+func (o *oneDriveEntry) Thumbnail(_ context.Context) (types.IContentReader, error) {
+	if o.thumbnail == "" {
+		return nil, err.NewUnsupportedError()
+	}
+	return driveutil.NewURLContentReader(o.thumbnail, nil, true), nil
+}
+
 func (o *oneDriveEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
 	u, resp, e := o.get(ctx)
 	if e != nil {
 		return nil, e
 	}
 	if resp != nil {
+		if start >= 0 || size > 0 {
+			_ = resp.Dispose()
+			return nil, err.NewUnsupportedError()
+		}
 		return resp.Response().Body, nil
 	}
 	return driveutil.GetURL(ctx, u, nil, start, size)

@@ -70,7 +70,6 @@ After an external system changes files, clear the corresponding Drive cache or s
 ## Thumbnails are not generated
 
 - Check that the extension is listed in a handler's `file-types`.
-- Check that the path-mapping tag exists on the corresponding handler.
 - For a shell handler, check the command, `mime-type`, timeout, and whether the program is installed.
 - For remote files using `write-content`, confirm read permission and network connectivity.
 - Failures are cached; after fixing the cause, restart to clear the failure marker and retry.

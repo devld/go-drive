@@ -9,6 +9,7 @@ import (
 	"go-drive/drive/fs"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,7 +76,7 @@ func sampleInspectEntry() jsObjEntry {
 		typ:     types.TypeFile,
 		size:    12,
 		modTime: 1700000000000,
-		meta:    types.EntryMeta{Readable: true, Writable: true, ThumbnailURL: "https://thumb"},
+		meta:    types.EntryMeta{Readable: true, Writable: true, HasThumbnail: true},
 	}}
 }
 
@@ -95,8 +96,8 @@ func TestEntryMarshalJSON(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	want := `{"path":"dir/file.txt","name":"file.txt","type":"file","size":12,"modTime":1700000000000,"meta":{"readable":true,"writable":true,"thumbnailUrl":"https://thumb","selfThumbnail":false,"props":null}}`
-	if string(got) != want {
+	want := `{"path":"dir/file.txt","name":"file.txt","type":"file","size":12,"modTime":1700000000000,"meta":{"readable":true,"writable":true,"hasThumbnail":true,"props":null}}`
+	if !jsonEqual(string(got), want) {
 		t.Fatalf("MarshalJSON = %s, want %s", got, want)
 	}
 
@@ -107,6 +108,39 @@ func TestEntryMarshalJSON(t *testing.T) {
 	if string(nilJSON) != "null" {
 		t.Fatalf("nil Entry JSON = %s, want null", nilJSON)
 	}
+}
+
+func TestEntryGetReaderFallsBackToURL(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "from-url")
+	}))
+	t.Cleanup(srv.Close)
+
+	vm := newPoolTestVM(t)
+	entry := jsObjEntry{
+		ClassHost: NewClassHost(vm),
+		e: urlFallbackEntry{
+			inspectTestEntry: inspectTestEntry{path: "f", name: "f", typ: types.TypeFile},
+			url:              srv.URL,
+		},
+	}
+	mustDefineGlobal(t, vm, "entry", entry)
+	got, e := vm.Run(context.Background(), `entry.getReader(-1, -1).readAsString()`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if got.String() != "from-url" {
+		t.Fatalf("getReader fallback = %q, want from-url", got.String())
+	}
+}
+
+type urlFallbackEntry struct {
+	inspectTestEntry
+	url string
+}
+
+func (e urlFallbackEntry) GetURL(context.Context) (*types.ContentURL, error) {
+	return &types.ContentURL{URL: e.url}, nil
 }
 
 func TestFormatConsoleArgInspectsGoHandles(t *testing.T) {
@@ -165,7 +199,7 @@ func TestFormatConsoleArgInspectsGoHandles(t *testing.T) {
 	if got := evalConsoleArg(t, vm, `new Hash("md5")`); got != "Hash { Size: 16, ... }" {
 		t.Fatalf("Hash log = %s", got)
 	}
-	if got := evalConsoleArg(t, vm, `entry.meta`); !jsonEqual(got, `{"readable":true,"writable":true,"thumbnailUrl":"https://thumb","selfThumbnail":false,"props":{}}`) {
+	if got := evalConsoleArg(t, vm, `entry.meta`); !jsonEqual(got, `{"readable":true,"writable":true,"hasThumbnail":true,"props":{}}`) {
 		t.Fatalf("EntryMeta log = %s", got)
 	}
 	if got := evalConsoleArg(t, vm, `entry.getUrl()`); !jsonEqual(got, `{"url":"https://example.com/file.txt","header":{},"proxy":true,"downloadFileName":""}`) {

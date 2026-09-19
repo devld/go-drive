@@ -194,8 +194,8 @@ func TestDriveRoutesUseRPCOperations(t *testing.T) {
 		t.Fatalf("InitDriveRoutes() error = %v", e)
 	}
 
-	if got := len(router.Routes()); got != 19 {
-		t.Fatalf("registered drive route count = %d, want 19", got)
+	if got := len(router.Routes()); got != 20 {
+		t.Fatalf("registered drive route count = %d, want 20", got)
 	}
 	assertRegisteredRoutes(t, router,
 		"GET /stat",
@@ -208,7 +208,8 @@ func TestDriveRoutesUseRPCOperations(t *testing.T) {
 		"POST /write",
 		"GET /download",
 		"HEAD /download",
-		"GET /thumbnail",
+		"GET /artifact/:handler",
+		"POST /artifact/:handler",
 		"GET /search",
 		"POST /archive",
 		"POST /chunk-uploads",
@@ -219,6 +220,9 @@ func TestDriveRoutesUseRPCOperations(t *testing.T) {
 		"HEAD /drive-uploader/:name",
 	)
 	assertRoutesNotRegistered(t, router,
+		"GET /thumbnail",
+		"GET /archive/list",
+		"GET /archive/content",
 		"GET /entry/*path",
 		"DELETE /entry/*path",
 		"GET /entries/*path",

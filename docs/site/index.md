@@ -46,7 +46,7 @@ Open `http://localhost:8089`. See [Installation and startup](./getting-started/)
 | WebDAV | Any WebDAV-compatible server | URL, credentials, cache |
 | S3 | Amazon S3 and compatible storage | Endpoint, region, path style, proxied transfer |
 | OneDrive | Personal, organization, and SharePoint drives | Region, tenant, proxied transfer, cache |
-| Google Drive | Personal and shared drives | Cache, proxied thumbnails |
+| Google Drive | Personal and shared drives | Cache |
 | Dropbox, Qiniu, and others | JavaScript extensions | Script drive repository |
 
 See the [drive overview](./drives/) for configuration details and capability limitations.

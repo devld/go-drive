@@ -124,11 +124,6 @@
         "video_file_exts_desc": "List of supported video file extensions, separated by comma",
         "monaco_editor_exts": "Use the Monaco editor",
         "monaco_editor_exts_desc": "Comma-separated file extensions(or match the full filename starting with '/', e.g. '/.gitignore'), which will be opened using the Monaco editor",
-        "thumbnail_config": "Thumbnail config",
-        "thumbnail_mapping": "Thumbnail Generator Mapping",
-        "thumbnail_mapping_tips": "Configure the tag used to match thumbnails generator in a path, one rule per line. The format is: tag1,tag2:path-pattern\nThe mounted path and chrooted path will be resolved to an absolute path for matching\n\n** matches zero or more directories;\n* matches any sequence of non-path-separators;\n? matches any single non-path-separator character.",
-        "thumbnail_mapping_placeholder": "Example: a,b:Pictures/**/*.jpg",
-        "thumbnail_mapping_invalid": "Invalid mapping pattern",
         "download_options": "Download Options",
         "proxy_max": "Max Proxy Size",
         "proxy_max_desc": "Maximum allowed file size for downloading via proxy. Units: b, k, m, g, t",
@@ -432,6 +427,13 @@
     "zip": {
       "name": "Zip Download",
       "desc": "Create zip archive"
+    },
+    "archive": {
+      "name": "Archive Preview",
+      "desc": "Browse archive contents",
+      "parent": "Up",
+      "empty": "This folder is empty",
+      "download": "Download"
     },
     "delete": {
       "name": "Delete",

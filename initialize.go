@@ -12,9 +12,9 @@ import (
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/server"
+	artifactinit "go-drive/server/artifact/builtin"
 	"go-drive/server/job"
 	"go-drive/server/search"
-	"go-drive/server/thumbnail"
 	"go-drive/storage"
 	"time"
 
@@ -102,8 +102,8 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 		return nil, err
 	}
 
-	phase = initPhase("thumbnail")
-	maker, err := thumbnail.NewMaker(config, optionsDAO, ch)
+	phase = initPhase("artifact previews")
+	artifactService, err := artifactinit.Initialize(config, runner, ch)
 	if err := phase(err); err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 
 	phase = initPhase("server")
 	engine, err := server.InitServer(config, ch, bus, rootDrive, access,
-		service, dbTokenStore, maker, signer, chunkUploader, runner,
+		service, dbTokenStore, artifactService, signer, chunkUploader, runner,
 		optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO,
 		pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO,
 		jobExecutor, fileMessageSource, webResourceFS())

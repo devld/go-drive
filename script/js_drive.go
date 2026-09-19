@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"go-drive/common/driveutil"
+	apierr "go-drive/common/errors"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 )
@@ -287,7 +288,11 @@ func (e jsObjEntry) GetURL() any {
 }
 
 func (e jsObjEntry) GetReader(start, size int64) *Value {
-	r, err := e.e.GetReader(e.VM().ExecutionContext(), start, size)
+	ctx := e.VM().ExecutionContext()
+	r, err := e.e.GetReader(ctx, start, size)
+	if err != nil && apierr.IsUnsupportedError(err) {
+		r, err = driveutil.GetIContentReader(ctx, e.e, start, size)
+	}
 	if err != nil {
 		e.VM().ThrowError(err)
 	}
@@ -302,14 +307,11 @@ func (e jsObjEntry) Unwrap() jsObjEntry {
 }
 
 func (e jsObjEntry) Data() any {
-	cacheableEntry := driveutil.GetIEntry(e.e, func(entry types.IEntry) bool {
-		_, ok := entry.(driveutil.CacheableEntry)
-		return ok
-	})
-	if cacheableEntry == nil {
+	cacheableEntry, ok := driveutil.IEntryAs[driveutil.CacheableEntry](e.e)
+	if !ok {
 		return nil
 	}
-	dat := cacheableEntry.(driveutil.CacheableEntry).EntryData()
+	dat := cacheableEntry.EntryData()
 	if dat == nil {
 		return nil
 	}
@@ -343,38 +345,13 @@ func (e jsObjEntry) jsonShape() any {
 	if e.e == nil {
 		return nil
 	}
-	return struct {
-		Path    string          `json:"path"`
-		Name    string          `json:"name"`
-		Type    types.EntryType `json:"type"`
-		Size    int64           `json:"size"`
-		ModTime int64           `json:"modTime"`
-		Meta    struct {
-			Readable      bool    `json:"readable"`
-			Writable      bool    `json:"writable"`
-			ThumbnailURL  string  `json:"thumbnailUrl"`
-			SelfThumbnail bool    `json:"selfThumbnail"`
-			Props         types.M `json:"props"`
-		} `json:"meta"`
-	}{
-		Path:    e.e.Path(),
-		Name:    e.e.Name(),
-		Type:    e.e.Type(),
-		Size:    e.e.Size(),
-		ModTime: e.e.ModTime(),
-		Meta: struct {
-			Readable      bool    `json:"readable"`
-			Writable      bool    `json:"writable"`
-			ThumbnailURL  string  `json:"thumbnailUrl"`
-			SelfThumbnail bool    `json:"selfThumbnail"`
-			Props         types.M `json:"props"`
-		}{
-			Readable:      e.e.Meta().Readable,
-			Writable:      e.e.Meta().Writable,
-			ThumbnailURL:  e.e.Meta().ThumbnailURL,
-			SelfThumbnail: e.e.Meta().SelfThumbnail,
-			Props:         e.e.Meta().Props,
-		},
+	return types.M{
+		"path":    e.e.Path(),
+		"name":    e.e.Name(),
+		"type":    e.e.Type(),
+		"size":    e.e.Size(),
+		"modTime": e.e.ModTime(),
+		"meta":    e.e.Meta(),
 	}
 }
 

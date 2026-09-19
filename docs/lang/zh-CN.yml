@@ -50,6 +50,14 @@ api:
     file_too_large: 文件过大无法创建缩略图
     image_too_large: 图片过大无法创建缩略图
     create_failed: 无法创建缩略图
+  archive:
+    too_large: 压缩包超过大小限制
+    too_many_entries: 压缩包内文件数量过多
+    member_too_large: 压缩包内该文件超过大小限制
+    invalid: 压缩包无效或已损坏
+    unsupported: 不支持的压缩包格式
+    process_failed: 无法处理该压缩包
+    member_not_found: 压缩包中找不到该文件
   zip:
     size_exceed: 超过最大允许的大小 {{ 1 }}
 storage:
@@ -92,9 +100,6 @@ drive:
       cache_ttl:
         label: 缓存生命周期
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
-      proxy_thumbnail:
-        label: 代理缩略图
-        description: 如果缩略图无法正常显示，尝试开启此选项
     oauth_text: 连接到 Google Drive
     drive_label: Drive
     my_drive_name: My Drive

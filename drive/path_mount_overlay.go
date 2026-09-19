@@ -150,10 +150,8 @@ func (d *PathMountOverlayDrive) resolveMountTreePath(path string, depth int) (st
 }
 
 func isPathMountVirtualEntry(entry types.IEntry) bool {
-	return driveutil.GetIEntry(entry, func(candidate types.IEntry) bool {
-		_, ok := candidate.(*pathMountVirtualEntry)
-		return ok
-	}) != nil
+	_, ok := driveutil.IEntryAs[*pathMountVirtualEntry](entry)
+	return ok
 }
 
 func remapMounts(mounts []types.PathMount, from, to string, keepID bool) []types.PathMount {

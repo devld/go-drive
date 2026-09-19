@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"go-drive/common/logging"
+	"go-drive/common/utils"
 	"sync"
 	"time"
 )
@@ -71,7 +72,7 @@ func NewVMPool(ctx context.Context, initialize VMInitializer, config *VMPoolConf
 	}
 	if config.IdleTime > 0 {
 		p.cleaner.Add(1)
-		go p.runCleaner(cleanPeriod(config.IdleTime))
+		go p.runCleaner(min(utils.PositiveOr(config.IdleTime/2, time.Millisecond), time.Minute))
 	}
 	initialized = true
 	return p, nil
@@ -132,17 +133,6 @@ func validateVMPoolConfig(config *VMPoolConfig) {
 	if config.MaxTotal < config.MinIdle {
 		panic("MaxTotal must be greater than or equal to MinIdle")
 	}
-}
-
-func cleanPeriod(idleTime time.Duration) time.Duration {
-	period := idleTime / 2
-	if period <= 0 {
-		period = time.Millisecond
-	}
-	if period > time.Minute {
-		period = time.Minute
-	}
-	return period
 }
 
 func (p *VMPool) Get(ctx context.Context) (*VM, error) {

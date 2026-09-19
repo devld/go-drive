@@ -265,7 +265,7 @@ With no `header` and `proxy: false`, the client receives a redirect. If a `heade
 
 #### `getThumbnail(entry) -> ReadCloser | ContentURL` (optional)
 
-Return a remote thumbnail response body or URL configuration. When returning the body, do not dispose it first. Mark eligible entries with `meta.selfThumbnail: true` in `get`/`list` (type, extension, size only; no network). Omit `getThumbnail` when the service has no thumbnail capability.
+Return a remote thumbnail response body or URL configuration. When returning the body, do not dispose it first. Mark eligible entries with `meta.hasThumbnail: true` in `get`/`list` (type, extension, size only; no network). Omit `getThumbnail` when the service has no thumbnail capability.
 
 ### Background intervals
 

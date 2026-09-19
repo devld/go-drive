@@ -1,21 +1,36 @@
 package driveutil
 
 import (
+	"context"
 	"errors"
 	err "go-drive/common/errors"
 	"go-drive/common/logging"
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
-	"github.com/hashicorp/golang-lru/v2"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
-type ReaderGetter = func(int64, int64) (io.ReadCloser, error)
+type ReaderGetter func(context.Context, int64, int64) (io.ReadCloser, error)
 
-func NewCacheFillPool(maxCache int, dir string) (*CacheFilePool, error) {
+// CacheFilePoolOptions controls both the number and the approximate total
+// compressed size of cached sources. MaxBytes is zero for an unlimited byte
+// budget.
+type CacheFilePoolOptions struct {
+	MaxEntries   int
+	MaxBytes     int64
+	Dir          string
+	CleanStartup bool
+}
+
+func NewCacheFilePool(options CacheFilePoolOptions) (*CacheFilePool, error) {
+	maxCache := options.MaxEntries
+	dir := options.Dir
 	if dir == "" {
 		dir = os.TempDir()
 	}
@@ -26,8 +41,11 @@ func NewCacheFillPool(maxCache int, dir string) (*CacheFilePool, error) {
 	if !info.IsDir() {
 		return nil, errors.New(dir + " is not a directory")
 	}
-	pool := &CacheFilePool{dir: dir}
-	pool.entries, e = lru.NewWithEvict[string, *cacheFile](maxCache, pool.onCacheEvicted)
+	if options.CleanStartup {
+		cleanupCacheFiles(dir)
+	}
+	pool := &CacheFilePool{dir: dir, maxBytes: options.MaxBytes}
+	pool.entries, e = lru.NewWithEvict(maxCache, pool.onCacheEvicted)
 	if e != nil {
 		return nil, e
 	}
@@ -35,23 +53,53 @@ func NewCacheFillPool(maxCache int, dir string) (*CacheFilePool, error) {
 	return pool, nil
 }
 
-type CacheFilePool struct {
-	dir     string
-	entries *lru.Cache[string, *cacheFile]
-	mu      sync.Mutex
+func cleanupCacheFiles(dir string) {
+	entries, e := os.ReadDir(dir)
+	if e != nil {
+		return
+	}
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), "cache-") || !entry.Type().IsRegular() {
+			continue
+		}
+		_ = os.Remove(filepath.Join(dir, entry.Name()))
+	}
 }
 
-func (cfp *CacheFilePool) GetReader(key string, size int64, getReader ReaderGetter) (io.ReadSeekCloser, error) {
-	cf, ok := cfp.entries.Get(key)
-	if ok {
-		return cf.Reader()
+type CacheFilePool struct {
+	dir      string
+	entries  *lru.Cache[string, *cacheFile]
+	maxBytes int64
+	bytesMu  sync.Mutex
+	bytes    int64
+	mu       sync.Mutex
+}
+
+// Has reports whether a source currently has a live in-memory cache entry.
+func (cfp *CacheFilePool) Has(key string) bool {
+	_, ok := cfp.entries.Peek(key)
+	return ok
+}
+
+// GetReader returns a seekable reader backed by the cache pool. ctx belongs to
+// this reader: it cancels waiting and reading for this caller only. Source
+// fills use a separate context so one cancelled reader does not abort others.
+// That fill is cancelled when the last reader leaves while a download is still
+// running.
+func (cfp *CacheFilePool) GetReader(ctx context.Context, key string, size int64, getReader ReaderGetter) (io.ReadSeekCloser, error) {
+	if cf, ok := cfp.entries.Get(key); ok {
+		if reader, e := cf.Reader(ctx); e == nil {
+			return reader, nil
+		}
 	}
 	cfp.mu.Lock()
 	defer cfp.mu.Unlock()
 
-	// re-check after acquiring the write lock to avoid creating duplicated cacheFile
-	if cf, ok = cfp.entries.Get(key); ok {
-		return cf.Reader()
+	if cf, ok := cfp.entries.Get(key); ok {
+		if reader, e := cf.Reader(ctx); e == nil {
+			return reader, nil
+		}
+		cfp.entries.Remove(key)
 	}
 
 	// Use a unique file per cacheFile instance instead of a deterministic name
@@ -66,10 +114,13 @@ func (cfp *CacheFilePool) GetReader(key string, size int64, getReader ReaderGett
 	name := file.Name()
 	_ = file.Close()
 
+	fillCtx, fillCancel := context.WithCancel(context.Background())
 	newCf := &cacheFile{
-		name:      name,
-		size:      size,
-		getReader: getReader,
+		name:       name,
+		size:       size,
+		getReader:  getReader,
+		fillCtx:    fillCtx,
+		fillCancel: fillCancel,
 
 		rl:      newRangeLock(size),
 		readers: map[*cacheFileReader]struct{}{},
@@ -85,24 +136,82 @@ func (cfp *CacheFilePool) GetReader(key string, size int64, getReader ReaderGett
 		defer cfp.mu.Unlock()
 		cfp.entries.Remove(key)
 	}
-	cf = newCf
-	cfp.entries.Add(key, cf)
+	reader, e := newCf.Reader(ctx)
+	if e != nil {
+		fillCancel()
+		_ = os.Remove(name)
+		return nil, e
+	}
+	cfp.entries.Add(key, newCf)
+	if newCf.size > 0 {
+		cfp.addBytes(newCf.size)
+	}
+	cfp.trimBytes()
 
-	return cf.Reader()
+	return reader, nil
 }
 
 func (cfp *CacheFilePool) onCacheEvicted(_ string, cf *cacheFile) {
+	if cf.size > 0 {
+		cfp.addBytes(-cf.size)
+	}
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
 
 	cf.evicted = true
+	if len(cf.readers) == 0 && cf.fillCancel != nil {
+		cf.fillCancel()
+	}
 	cf.removeFileIfIdleLocked()
 }
 
+func (cfp *CacheFilePool) addBytes(delta int64) {
+	if delta == 0 {
+		return
+	}
+	cfp.bytesMu.Lock()
+	cfp.bytes += delta
+	if cfp.bytes < 0 {
+		cfp.bytes = 0
+	}
+	cfp.bytesMu.Unlock()
+}
+
+func (cfp *CacheFilePool) trimBytes() {
+	if cfp.maxBytes <= 0 {
+		return
+	}
+	for {
+		cfp.bytesMu.Lock()
+		over := cfp.bytes > cfp.maxBytes
+		cfp.bytesMu.Unlock()
+		if !over {
+			return
+		}
+		if _, _, ok := cfp.entries.RemoveOldest(); !ok {
+			return
+		}
+	}
+}
+
+// Dispose removes this pool's entries and marks active cache files for cleanup.
+// Active readers keep their private backing file until they close.
+func (cfp *CacheFilePool) Dispose() error {
+	for _, key := range cfp.entries.Keys() {
+		if cf, ok := cfp.entries.Peek(key); ok {
+			cfp.entries.Remove(key)
+			_ = cf.closeWithError(os.ErrClosed)
+		}
+	}
+	return nil
+}
+
 type cacheFile struct {
-	name      string
-	size      int64
-	getReader ReaderGetter
+	name       string
+	size       int64
+	getReader  ReaderGetter
+	fillCtx    context.Context
+	fillCancel context.CancelFunc
 
 	rl      *rangeLock // for reading
 	readers map[*cacheFileReader]struct{}
@@ -118,13 +227,20 @@ type cacheFile struct {
 	// evict removes this cacheFile's entry from the owning pool. Set by the
 	// pool when the cacheFile is created.
 	evict func()
+	// err is the terminal source/cache error. Keeping it on the cache file
+	// lets readers waiting for a fill observe the original error instead of the
+	// less useful os.ErrClosed from the range lock.
+	err error
 
 	mu sync.Mutex
 }
 
-func (cf *cacheFile) Reader() (*cacheFileReader, error) {
+func (cf *cacheFile) Reader(ctx context.Context) (*cacheFileReader, error) {
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
+	if cf.err != nil {
+		return nil, cf.err
+	}
 	f, e := os.Open(cf.name)
 	if e != nil {
 		return nil, e
@@ -135,6 +251,8 @@ func (cf *cacheFile) Reader() (*cacheFileReader, error) {
 		size:        cf.size,
 		rl:          cf.rl,
 		readRequest: cf.readRequest,
+		terminalErr: cf.terminalError,
+		ctx:         ctx,
 	}
 	cfr.release = func() { cf.releaseReader(cfr) }
 
@@ -143,7 +261,31 @@ func (cf *cacheFile) Reader() (*cacheFileReader, error) {
 }
 
 func (cf *cacheFile) Close() error {
+	return cf.closeWithError(os.ErrClosed)
+}
+
+func (cf *cacheFile) closeWithError(cause error) error {
 	cf.mu.Lock()
+	started := cf.startCloseLocked(cause)
+	evict := cf.evict
+	cf.mu.Unlock()
+	if started && evict != nil {
+		evict()
+	}
+	return nil
+}
+
+func (cf *cacheFile) startCloseLocked(cause error) bool {
+	if cf.err != nil {
+		if cf.fillCancel != nil {
+			cf.fillCancel()
+		}
+		return false
+	}
+	cf.err = cause
+	if cf.fillCancel != nil {
+		cf.fillCancel()
+	}
 	for w := range cf.writers {
 		_ = w.Close()
 	}
@@ -158,15 +300,13 @@ func (cf *cacheFile) Close() error {
 	// reused for new reads.
 	cf.evicted = true
 	cf.removeFileIfIdleLocked()
-	cf.mu.Unlock()
+	return true
+}
 
-	// Drop the entry from the pool (outside cf.mu to keep the pool->cacheFile
-	// lock ordering and avoid re-entering cf.mu via onCacheEvicted).
-	if cf.evict != nil {
-		cf.evict()
-	}
-
-	return nil
+func (cf *cacheFile) terminalError() error {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+	return cf.err
 }
 
 // removeFileIfIdleLocked removes the backing file if the cacheFile has been
@@ -182,12 +322,18 @@ func (cf *cacheFile) removeFileIfIdleLocked() {
 	_ = os.Remove(cf.name)
 }
 
-func (cf *cacheFile) readRequest(start, readLen int64) error {
+func (cf *cacheFile) readRequest(ctx context.Context, start, readLen int64) error {
 	if readLen < 0 {
 		panic("invalid readLen")
 	}
 	if readLen == 0 {
 		return nil
+	}
+	if e := cf.terminalError(); e != nil {
+		return e
+	}
+	if e := ctx.Err(); e != nil {
+		return e
 	}
 	if cf.rl.satisfy(start, readLen) {
 		return nil
@@ -222,21 +368,21 @@ func (cf *cacheFile) readRequest(start, readLen int64) error {
 
 	var reader io.ReadCloser
 
-	rc, e := cf.getReader(offset, size)
+	rc, e := cf.getReader(cf.fillCtx, offset, size)
 	if e == nil {
 		reader = rc
 	} else {
 		if !err.IsUnsupportedError(e) {
-			_ = cf.Close()
+			_ = cf.closeWithError(e)
 			return e
 		}
 		if !cf.wl.tryExclusiveFeed(0, cf.size) {
 			// the whole file is being downloaded
 			return nil
 		}
-		rc, e = cf.getReader(-1, -1)
+		rc, e = cf.getReader(cf.fillCtx, -1, -1)
 		if e != nil {
-			_ = cf.Close()
+			_ = cf.closeWithError(e)
 			return e
 		}
 		reader = rc
@@ -251,12 +397,12 @@ func (cf *cacheFile) readRequest(start, readLen int64) error {
 	return nil
 }
 
-func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
+func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, length int64) {
 	go func() {
 		defer func() { _ = reader.Close() }()
 		writer, e := os.OpenFile(cf.name, os.O_WRONLY, 0600)
 		if e != nil {
-			_ = cf.Close()
+			_ = cf.closeWithError(e)
 			return
 		}
 		defer func() { _ = writer.Close() }()
@@ -264,7 +410,7 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
 			_, e = writer.Seek(offset, io.SeekStart)
 			if e != nil {
 				logging.For("f-cache").Errorf("cache_file_pool seek error: %v", e)
-				_ = cf.Close()
+				_ = cf.closeWithError(e)
 				return
 			}
 		}
@@ -280,24 +426,39 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
 
 		buf := make([]byte, 32*1024)
 		pos := offset
+		remaining := length
 		for {
-			nr, er := reader.Read(buf)
+			readBuf := buf
+			if remaining < int64(len(readBuf)) {
+				readBuf = readBuf[:int(remaining)]
+			}
+			nr, er := reader.Read(readBuf)
 			if nr > 0 {
-				nw, ew := writer.Write(buf[0:nr])
+				nw, ew := writer.Write(readBuf[:nr])
 				if ew != nil {
 					logging.For("f-cache").Errorf("cache_file_pool write error: %v", ew)
-					_ = cf.Close()
+					_ = cf.closeWithError(ew)
+					return
+				}
+				if nw != nr {
+					logging.For("f-cache").Errorf("cache_file_pool short write: wrote %d of %d bytes", nw, nr)
+					_ = cf.closeWithError(io.ErrShortWrite)
 					return
 				}
 				cf.rl.feed(pos, int64(nw))
 				pos += int64(nw)
+				remaining -= int64(nw)
+			}
+			if remaining == 0 {
+				break
 			}
 			if er != nil {
 				if er != io.EOF {
 					logging.For("f-cache").Errorf("cache_file_pool read error: %v", er)
-					_ = cf.Close()
+					_ = cf.closeWithError(er)
 					return
 				}
+				_ = cf.closeWithError(io.ErrUnexpectedEOF)
 				break
 			}
 		}
@@ -306,22 +467,36 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, _ int64) {
 
 func (cf *cacheFile) releaseReader(cfr *cacheFileReader) {
 	cf.mu.Lock()
-	defer cf.mu.Unlock()
 	delete(cf.readers, cfr)
-	cf.removeFileIfIdleLocked()
+	var evict func()
+	if len(cf.readers) == 0 && len(cf.writers) > 0 {
+		if cf.startCloseLocked(context.Canceled) {
+			evict = cf.evict
+		}
+	} else {
+		cf.removeFileIfIdleLocked()
+	}
+	cf.mu.Unlock()
+	if evict != nil {
+		evict()
+	}
 }
 
 type cacheFileReader struct {
 	f    *os.File
 	pos  int64
 	size int64
+	ctx  context.Context
 
 	rl *rangeLock
 
-	readRequest func(int64, int64) error
+	readRequest func(context.Context, int64, int64) error
+	terminalErr func() error
 	release     func()
 
-	mu sync.Mutex
+	mu   sync.Mutex
+	once sync.Once
+	err  error
 }
 
 func (cfr *cacheFileReader) Read(p []byte) (n int, err error) {
@@ -334,10 +509,13 @@ func (cfr *cacheFileReader) Read(p []byte) (n int, err error) {
 	}
 	readLen := end - cfr.pos
 
-	if e := cfr.readRequest(cfr.pos, readLen); e != nil {
+	if e := cfr.readRequest(cfr.ctx, cfr.pos, readLen); e != nil {
 		return 0, e
 	}
-	if e := cfr.rl.acquire(cfr.pos, readLen); e != nil {
+	if e := cfr.rl.acquireContext(cfr.ctx, cfr.pos, readLen); e != nil {
+		if terminal := cfr.terminalErr(); terminal != nil {
+			return 0, terminal
+		}
 		return 0, e
 	}
 	if _, e := cfr.f.Seek(cfr.pos, io.SeekStart); e != nil {
@@ -349,6 +527,35 @@ func (cfr *cacheFileReader) Read(p []byte) (n int, err error) {
 	}
 	cfr.pos += int64(n)
 	return
+}
+
+func (cfr *cacheFileReader) ReadAt(p []byte, off int64) (n int, err error) {
+	cfr.mu.Lock()
+	defer cfr.mu.Unlock()
+	if off < 0 || off > cfr.size {
+		return 0, os.ErrInvalid
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	readLen := int64(len(p))
+	if remaining := cfr.size - off; readLen > remaining {
+		readLen = remaining
+	}
+	if e := cfr.readRequest(cfr.ctx, off, readLen); e != nil {
+		return 0, e
+	}
+	if e := cfr.rl.acquireContext(cfr.ctx, off, readLen); e != nil {
+		if terminal := cfr.terminalErr(); terminal != nil {
+			return 0, terminal
+		}
+		return 0, e
+	}
+	n, err = cfr.f.ReadAt(p[:int(readLen)], off)
+	if n < len(p) && err == nil {
+		err = io.EOF
+	}
+	return n, err
 }
 
 func (cfr *cacheFileReader) Seek(offset int64, whence int) (int64, error) {
@@ -373,23 +580,25 @@ func (cfr *cacheFileReader) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (cfr *cacheFileReader) Close() error {
-	e := cfr.f.Close()
-	cfr.release()
-	return e
+	cfr.once.Do(func() {
+		cfr.err = cfr.f.Close()
+		cfr.release()
+	})
+	return cfr.err
 }
 
 func newRangeLock(max int64) *rangeLock {
 	rl := &rangeLock{
 		ranges: make([][]int64, 0),
 		max:    max,
+		notify: make(chan struct{}),
 	}
-	rl.cond = sync.NewCond(&rl.mu)
 	return rl
 }
 
 type rangeLock struct {
 	mu     sync.Mutex
-	cond   *sync.Cond
+	notify chan struct{}
 	ranges [][]int64
 	max    int64
 	// canceled indicates this lock has been released/closed; waiting acquirers
@@ -400,16 +609,30 @@ type rangeLock struct {
 // acquire blocks until the [start, start+length) range is available, or the
 // lock is canceled (returns os.ErrClosed).
 func (rl *rangeLock) acquire(start, length int64) error {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
+	return rl.acquireContext(context.Background(), start, length)
+}
+
+func (rl *rangeLock) acquireContext(ctx context.Context, start, length int64) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	for {
+		rl.mu.Lock()
 		if rl._satisfy(start, length) {
+			rl.mu.Unlock()
 			return nil
 		}
 		if rl.canceled {
+			rl.mu.Unlock()
 			return os.ErrClosed
 		}
-		rl.cond.Wait()
+		notify := rl.notify
+		rl.mu.Unlock()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-notify:
+		}
 	}
 }
 
@@ -445,7 +668,7 @@ func (rl *rangeLock) release() {
 		return
 	}
 	rl.canceled = true
-	rl.cond.Broadcast()
+	rl.broadcastLocked()
 }
 
 func (rl *rangeLock) _satisfy(start, length int64) bool {
@@ -469,7 +692,12 @@ func (rl *rangeLock) _satisfy(start, length int64) bool {
 func (rl *rangeLock) _feed(start, l int64) {
 	rl.ranges = append(rl.ranges, []int64{start, start + l})
 	rl._merge()
-	rl.cond.Broadcast()
+	rl.broadcastLocked()
+}
+
+func (rl *rangeLock) broadcastLocked() {
+	close(rl.notify)
+	rl.notify = make(chan struct{})
 }
 
 // _merge sorts and merges overlapping/adjacent ranges. rl.mu must be held.
