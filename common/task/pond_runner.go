@@ -21,9 +21,12 @@ import (
 )
 
 type PondRunner struct {
-	pool       pond.Pool
-	store      cmap.ConcurrentMap[string, *pondTaskCtx]
-	tickerStop func()
+	pool           pond.Pool
+	maxConcurrency int
+	groupMu        sync.RWMutex
+	groupPools     map[string]pond.Pool
+	store          cmap.ConcurrentMap[string, *pondTaskCtx]
+	tickerStop     func()
 }
 
 var cleanThreshold = 10 * time.Minute
@@ -32,12 +35,40 @@ var taskLog = logging.For("task")
 
 func NewPondRunner(config common.Config, ch *registry.ComponentsHolder) *PondRunner {
 	tr := &PondRunner{
-		pool:  pond.NewPool(config.MaxConcurrentTask),
-		store: cmap.New[*pondTaskCtx](),
+		pool:           pond.NewPool(config.MaxConcurrentTask),
+		maxConcurrency: config.MaxConcurrentTask,
+		groupPools:     make(map[string]pond.Pool),
+		store:          cmap.New[*pondTaskCtx](),
 	}
 	tr.tickerStop = utils.TimeTick(tr.clean, 30*time.Second)
 	ch.Add(registry.KeyTaskRunner, tr)
 	return tr
+}
+
+var _ Runner = (*PondRunner)(nil)
+
+func (t *PondRunner) RegisterGroup(group string, concurrency int) error {
+	if concurrency <= 0 {
+		return nil
+	}
+	if !IsValidGroup(group) {
+		return fmt.Errorf("invalid task group %q", group)
+	}
+	t.groupMu.Lock()
+	defer t.groupMu.Unlock()
+	if _, exists := t.groupPools[group]; exists {
+		return fmt.Errorf("task group %q is already registered", group)
+	}
+	if concurrency < t.maxConcurrency {
+		t.groupPools[group] = t.pool.NewSubpool(concurrency)
+		return nil
+	}
+	if concurrency > t.maxConcurrency {
+		taskLog.Warnf("task group %s concurrency %d exceeds global task concurrency %d; using global limit",
+			logging.Sanitize(group), concurrency, t.maxConcurrency)
+	}
+	t.groupPools[group] = t.pool
+	return nil
 }
 
 func (t *PondRunner) createTask(runnable Runnable, options ...Option) *pondTaskCtx {
@@ -68,46 +99,70 @@ func (t *PondRunner) createTask(runnable Runnable, options ...Option) *pondTaskC
 
 func (t *PondRunner) Execute(runnable Runnable, option ...Option) (Task, error) {
 	w := t.createTask(runnable, option...)
-	if e := t.pool.Go(func() { execute(w) }); e != nil {
+	pool := t.poolFor(w.task.Group)
+	if e := pool.Go(func() { execute(w) }); e != nil {
 		t.store.Remove(w.task.Id)
-		t.logSubmitError(w, e)
+		t.logSubmitError(pool, w, e)
 		return w.snapshot(), e
 	}
 	return w.snapshot(), nil
 }
 
-func (t *PondRunner) ExecuteAndWait(runnable Runnable, timeout time.Duration, option ...Option) (Task, error) {
+// ExecuteAndWait waits for a detached task while the caller remains
+// interested in its result. The waiter context and timeout never cancel the
+// task; StopTask is the explicit cancellation mechanism.
+func (t *PondRunner) ExecuteAndWait(ctx context.Context, runnable Runnable, timeout time.Duration, option ...Option) (Task, error) {
+	waitDone := ctx.Done()
 	w := t.createTask(runnable, option...)
+	pool := t.poolFor(w.task.Group)
 
 	timer := time.NewTimer(timeout)
+	if timeout <= 0 {
+		timer.Stop()
+	}
 	done := make(chan struct{})
 	defer timer.Stop()
 
-	if e := t.pool.Go(func() {
+	if e := pool.Go(func() {
 		execute(w)
 		close(done)
 	}); e != nil {
 		t.store.Remove(w.task.Id)
-		t.logSubmitError(w, e)
+		t.logSubmitError(pool, w, e)
 		return w.snapshot(), e
 	}
+	var timerC <-chan time.Time
+	if timeout > 0 {
+		timerC = timer.C
+	}
 	select {
-	case <-timer.C:
+	case <-timerC:
 		taskLog.Debugf("task wait timed out id=%s group=%s name=%s timeout=%s; continuing in background",
 			w.task.Id, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name), timeout)
 		// Timeout only limits how long the caller waits. The task deliberately
 		// remains queued/running and continues in the background.
 	case <-done:
+	case <-waitDone:
+		return w.snapshot(), ctx.Err()
 	}
 
 	return w.snapshot(), nil
 }
 
-func (t *PondRunner) logSubmitError(w *pondTaskCtx, e error) {
+func (t *PondRunner) poolFor(group string) pond.Pool {
+	t.groupMu.RLock()
+	defer t.groupMu.RUnlock()
+	if pool, ok := t.groupPools[group]; ok {
+		return pool
+	}
+	return t.pool
+}
+
+func (t *PondRunner) logSubmitError(pool pond.Pool, w *pondTaskCtx, e error) {
 	if errors.Is(e, pond.ErrQueueFull) {
 		taskLog.Warnf("task queue full id=%s group=%s name=%s waiting=%d queue_size=%d: %v",
 			w.task.Id, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name),
-			t.pool.WaitingTasks(), t.pool.QueueSize(), e)
+			pool.WaitingTasks(), pool.QueueSize(), e)
 		return
 	}
 	taskLog.Errorf("task submission failed id=%s group=%s name=%s: %v",
@@ -312,7 +367,7 @@ func finishTask(w *pondTaskCtx, result any, taskErr error) {
 			w.task.Status = Canceled
 		} else {
 			w.task.Status = Error
-			w.task.Error = types.M{"message": taskErr.Error()}
+			w.task.Error = jsonError{taskErr}
 		}
 	} else {
 		w.task.Status = Done

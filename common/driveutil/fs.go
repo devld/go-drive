@@ -210,9 +210,9 @@ func (w *driveFSFile) getFile() error {
 		} else {
 			cacheKey += "p:" + w.e.Path()
 		}
-		reader, e := w.fs.cfp.GetReader(cacheKey, w.e.Size(),
-			func(start, size int64) (io.ReadCloser, error) {
-				return GetIContentReader(w.ctx, w.e, start, size)
+		reader, e := w.fs.cfp.GetReader(w.ctx, cacheKey, w.e.Size(),
+			func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+				return GetIContentReader(ctx, w.e, start, size)
 			},
 		)
 		if e != nil {

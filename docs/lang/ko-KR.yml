@@ -92,9 +92,6 @@ drive:
       cache_ttl:
         label: 캐시 TTL
         description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
-      proxy_thumbnail:
-        label: 썸네일 프록시
-        description: 썸네일이 제대로 표시되지 않는 경우 이 옵션을 켜 보세요
     oauth_text: Google Drive에 연결
     drive_label: 드라이브
     my_drive_name: 내 드라이브

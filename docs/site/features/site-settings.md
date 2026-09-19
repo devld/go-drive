@@ -57,7 +57,3 @@ This restricts signed-out visitors to a virtual subdirectory. It does not grant 
 - **Maximum ZIP size** limits packaged downloads.
 
 These limits protect server bandwidth, memory, and temporary space. With proxy downloading disabled for a cloud Drive, direct browser downloads may follow a different path. Cross-Drive and ZIP operations still consume server resources.
-
-## Thumbnail mapping
-
-Use `tag1,tag2:<path pattern>` to select configuration-file handlers for different directories. Handlers themselves are defined in `config.yml` and require a restart after changes. See [File Preview and Thumbnails](./preview-thumbnail.html) for mapping rules.

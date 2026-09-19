@@ -13,10 +13,10 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/drive"
+	"go-drive/server/artifact"
 	"go-drive/server/auth"
 	"go-drive/server/job"
 	"go-drive/server/search"
-	"go-drive/server/thumbnail"
 	"go-drive/storage"
 	"io/fs"
 	"net/http"
@@ -34,7 +34,7 @@ func InitServer(config common.Config,
 	driveAccess *drive.Access,
 	searcher *search.Service,
 	tokenStore types.TokenStore,
-	thumbnail *thumbnail.Maker,
+	artifactService *artifact.Service,
 	signer *utils.Signer,
 	chunkUploader *ChunkUploader,
 	runner task.Runner,
@@ -97,7 +97,7 @@ func InitServer(config common.Config,
 		return nil, e
 	}
 
-	if e := InitDriveRoutes(router, driveAccess, searcher, config, thumbnail,
+	if e := InitDriveRoutes(router, driveAccess, searcher, config, artifactService,
 		signer, chunkUploader, runner, tokenStore, userDAO, optionsDAO, pathMetaDAO); e != nil {
 		return nil, e
 	}

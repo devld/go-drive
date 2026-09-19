@@ -227,14 +227,26 @@ func CopyIContentToTempFile(ctx types.TaskCtx, content types.IContentReader, tem
 	return CopyReaderToTempFile(ctx, reader, tempDir)
 }
 
+func SetContentDisposition(respHeader http.Header, filename string) {
+	if filename == "" {
+		return
+	}
+	encoded := url2.QueryEscape(filename)
+	disposition := "attachment"
+	if _, inline := inlineContentDispositionExtMimeTypesMap[utils.PathExt(filename)]; inline {
+		disposition = "inline"
+	}
+	respHeader.Set("Content-Disposition", fmt.Sprintf("%s; filename*=utf-8''%s", disposition, encoded))
+}
+
 func setContentDispositionHeaderIfNeeded(respHeader http.Header, filename string) {
 	fileMimeType := inlineContentDispositionExtMimeTypesMap[utils.PathExt(filename)]
 	if fileMimeType == "" {
-		respHeader.Set("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", url2.QueryEscape(filename)))
-	} else {
-		respHeader.Set("Content-Type", fileMimeType)
-		respHeader.Del("Content-Disposition")
+		SetContentDisposition(respHeader, filename)
+		return
 	}
+	respHeader.Set("Content-Type", fileMimeType)
+	respHeader.Del("Content-Disposition")
 }
 
 func DownloadIContent(ctx context.Context, content types.IContent,

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	err "go-drive/common/errors"
+	apierr "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
 	"go-drive/common/types"
@@ -88,7 +88,7 @@ func platformShellCommand(goos, script string) (string, []string) {
 
 func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
 	if s.maxSize > 0 && entry.Size() > s.maxSize {
-		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.file_too_large"))
+		return apierr.NewNotFoundMessageError(i18n.T("api.thumbnail.file_too_large"))
 	}
 	cmd := exec.Command(s.command, s.args...)
 
@@ -134,7 +134,7 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry T
 
 	if e != nil {
 		logging.For("thumbn").Errorf("shell handler failed for %s: %v; stderr: %s", entry.Path(), e, strings.TrimSpace(stdErr.String()))
-		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.create_failed"))
+		return errors.New(i18n.T("api.thumbnail.create_failed"))
 	}
 
 	return nil

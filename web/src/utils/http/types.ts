@@ -7,6 +7,10 @@ export type HttpRequestMethod =
   | 'put'
   | 'patch'
 
+export interface HttpRequestContext {
+  [key: symbol]: any
+}
+
 export interface HttpUploadProgress {
   loaded: number
   total: number
@@ -28,7 +32,7 @@ export interface HttpRequestBaseConfig {
   transformRequest?: HttpRequestTransformer | HttpRequestTransformer[]
   transformResponse?: HttpResponseTransformer | HttpResponseTransformer[]
 
-  context?: Record<string, any>
+  context?: HttpRequestContext
 }
 
 export interface HttpRequestConfig extends HttpRequestBaseConfig {

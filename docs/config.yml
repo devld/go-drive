@@ -71,12 +71,10 @@ thumbnail:
 
   # Thumbnail generator. Available types are image, text, shell
   # file-types are supported file extensions
-  # tags are comma-separated optional tags for matching thumbnail generator
   handlers:
     # image: embed generator for image files(jpg, png, gif)
     # Notice: this have bad performance
     - type: image
-      tags:
       file-types: jpg,jpeg,png,gif,webp
       #config:
       #  # max supported file size
@@ -94,7 +92,6 @@ thumbnail:
     # The official Docker image installs libvips and enables the block below automatically.
     # docker-handlers:begin
     #- type: shell
-    #  tags:
     #  file-types: jpg,jpeg,png,gif,webp,tif,tiff,svg,heic,heif,avif
     #  config:
     #    shell: |
@@ -111,7 +108,6 @@ thumbnail:
     # text: embed generator for text files
     # Generating a svg file by reading some content
     - type: text
-      tags:
       file-types: txt,md,xml,html,css,scss,js,json,jsx,properties,yml,yaml,ini,c,h,cpp,go,java,kt,gradle,ps1
       #config:
       #  font-size: 12
@@ -147,7 +143,6 @@ thumbnail:
     # The official Docker image installs ffmpeg and enables the block below automatically.
     # docker-handlers:begin
     #- type: shell
-    #  tags:
     #  file-types: mp4,avi,mkv,mov,webm,flv,m4v,mpg,mpeg,3gp,mp3,flac,ogg,opus
     #  config:
     #    # Shell command or multiline script. Executed by /bin/sh on Unix and cmd.exe on Windows.
@@ -161,6 +156,25 @@ thumbnail:
     #    # the timeout to generating, if <= 0, no limitation
     #    timeout: 10m
     # docker-handlers:end
+
+# Archive preview supports zip, 7z, and rar files.
+archive:
+  # Maximum compressed archive size that may be inspected.
+  max-size: 2g
+  # Maximum uncompressed member size that may be streamed.
+  max-member-size: 512m
+  # Maximum number of entries indexed from one archive.
+  max-entries: 100000
+  # Maximum number of remote archive source files kept in the sparse cache.
+  cache-items: 128
+  # Maximum total compressed bytes kept in the sparse cache.
+  cache-size: 4g
+  # Validity period of the persisted archive member index.
+  index-ttl: 24h
+  # Maximum total decompressed archive content bytes kept in the artifact cache.
+  content-cache-size: 4g
+  # Validity period of cached decompressed archive content artifacts.
+  content-cache-ttl: 24h
 
 auth:
   # User session validity

@@ -117,28 +117,6 @@ const configForms: OptionsForm[] = [
       },
     ],
   },
-  {
-    title: t('p.admin.site.thumbnail_config'),
-    form: [
-      {
-        field: 'thumbnail.handlersMapping',
-        label: t('p.admin.site.thumbnail_mapping'),
-        description: t('p.admin.site.thumbnail_mapping_tips'),
-        placeholder: t('p.admin.site.thumbnail_mapping_placeholder'),
-        type: 'textarea',
-        width: '100%',
-        validate: (v: string) =>
-          !v ||
-          !v
-            .split('\n')
-            .filter(Boolean)
-            .some(
-              (f) => !/^([A-Za-z0-9-_]+(,[A-Za-z0-9-_]+)*):(.+)$/.test(f)
-            ) ||
-          t('p.admin.site.thumbnail_mapping_invalid'),
-      },
-    ],
-  },
 ]
 </script>
 <style lang="scss">

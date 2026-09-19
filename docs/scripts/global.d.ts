@@ -127,13 +127,11 @@ declare type EntryType = "file" | "dir";
 declare interface EntryMeta {
   readonly readable: boolean;
   readonly writable: boolean;
-  /** Client-loadable thumbnail URL. */
-  readonly thumbnailUrl?: string;
   /**
    * Set when `getThumbnail` can produce a thumbnail for this entry.
    * Local predicate only (type, extension, size); no network I/O.
    */
-  readonly selfThumbnail?: boolean;
+  readonly hasThumbnail?: boolean;
   readonly props?: M;
 }
 
@@ -373,6 +371,7 @@ declare class NotAllowedError extends Error {
   constructor(msg?: string);
 }
 
+/** HTTP 403. */
 declare class UnsupportedError extends Error {
   constructor(msg?: string);
 }
