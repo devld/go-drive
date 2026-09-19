@@ -168,7 +168,7 @@ const (
 
 type JobExecution struct {
 	ID          uint   `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
-	JobId       uint   `gorm:"column:job_id;not null;type:uint" json:"jobId"`
+	JobID       uint   `gorm:"column:job_id;not null;type:uint" json:"jobId"`
 	StartedAt   uint64 `gorm:"column:started_at;type:uint" json:"startedAt"`
 	CompletedAt uint64 `gorm:"column:completed_at;type:uint" json:"completedAt"`
 	Status      string `gorm:"column:status;not null;type:string" json:"status"`

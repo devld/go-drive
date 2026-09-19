@@ -79,7 +79,7 @@ func defaultTestConfigWithDirs(dataDir, tempDir string) common.Config {
 		RevHash: common.RevHash,
 		BuildAt: common.BuildAt,
 
-		Db: common.DbConfig{
+		DB: common.DBConfig{
 			Type: "sqlite",
 			Name: "file::memory:?cache=shared",
 		},

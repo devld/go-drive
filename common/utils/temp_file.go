@@ -16,12 +16,12 @@ type TempFile struct {
 // TransferTo transfers the file to name by moving.
 // If the file is opened, is will be closed before moving
 func (t *TempFile) TransferTo(name string) (bool, error) {
-	_ = t.File.Close()
-	e := os.Rename(t.File.Name(), name)
+	_ = t.Close()
+	e := os.Rename(t.Name(), name)
 	if e == nil {
 		return true, nil
 	}
-	open, e := os.Open(t.File.Name())
+	open, e := os.Open(t.Name())
 	if e != nil {
 		return false, e
 	}

@@ -133,7 +133,6 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, 
 		if !os.IsNotExist(e) {
 			return nil, e
 		}
-		e = nil
 	}
 
 	if fileInfo != nil {

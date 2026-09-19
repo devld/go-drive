@@ -168,7 +168,7 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 	}
 	defer func() { _ = resp.Dispose() }()
 	if resp.Status() != http.StatusOK {
-		return DriveScriptRepository{}, err.NewRemoteApiError(resp.Status(), "failed to fetch data")
+		return DriveScriptRepository{}, err.NewRemoteAPIError(resp.Status(), "failed to fetch data")
 	}
 	respData, e := readLimitedContent(resp.Response().Body, maxRepositoryResponseSize, "script repository response is too large")
 	if e != nil {
@@ -692,7 +692,7 @@ func openScriptResponse(ctx context.Context, url string) (httpreq.Response, erro
 	}
 	if resp.Status() < http.StatusOK || resp.Status() >= http.StatusMultipleChoices {
 		_ = resp.Dispose()
-		return nil, err.NewRemoteApiError(resp.Status(), "failed to download script")
+		return nil, err.NewRemoteAPIError(resp.Status(), "failed to download script")
 	}
 	return resp, nil
 }
@@ -712,7 +712,7 @@ func readLimitedContent(reader io.Reader, maxSize int64, message string) ([]byte
 		return nil, e
 	}
 	if int64(len(content)) > maxSize {
-		return nil, err.NewRemoteApiError(http.StatusRequestEntityTooLarge, message)
+		return nil, err.NewRemoteAPIError(http.StatusRequestEntityTooLarge, message)
 	}
 	return content, nil
 }

@@ -75,8 +75,8 @@ func (d templateData) AppScript() (string, error) {
 	return `<script id="app-script">` + content + `</script>`, nil
 }
 
-// Json is called by html template
-func (templateData) Json(o any) (string, error) {
+// JSON is called by html template
+func (templateData) JSON(o any) (string, error) {
 	s, e := json.Marshal(o)
 	if e != nil {
 		return "", e

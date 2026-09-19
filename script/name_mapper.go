@@ -27,6 +27,7 @@ func (goFieldNameMapper) MethodName(t reflect.Type, method reflect.Method) strin
 
 func lowerCamelGoName(name string) string {
 	name = strings.ReplaceAll(name, "URL", "Url")
+	name = strings.ReplaceAll(name, "HTTP", "Http")
 	name = strings.ReplaceAll(name, "JSON", "Json")
 	name = strings.ReplaceAll(name, "OAuth", "Oauth")
 	first, size := utf8.DecodeRuneInString(name)

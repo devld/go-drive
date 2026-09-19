@@ -88,7 +88,7 @@ func NewVM() (*VM, error) {
 
 func (vm *VM) freeze(value goja.Value) error {
 	if vm.jsVars.objectFreeze == nil {
-		return errors.New("Object.freeze is unavailable")
+		return errors.New("Object.freeze is unavailable") //nolint:staticcheck // JS-facing error keeps the host type name
 	}
 	_, e := vm.jsVars.objectFreeze(goja.Undefined(), value)
 	return e
@@ -270,7 +270,7 @@ func (vm *VM) rejectPromiseResult(result *Value, e error) (*Value, error) {
 	}
 	if result.isPromise() {
 		vm.reusable = false
-		return nil, errors.New("Promise return values are not supported")
+		return nil, errors.New("Promise return values are not supported") //nolint:staticcheck // JS-facing error keeps the host type name
 	}
 	return result, nil
 }

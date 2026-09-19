@@ -210,16 +210,16 @@ func (h *Handler) handleGetHeadPost(w http.ResponseWriter, r *http.Request) (sta
 
 	fu, ok := f.(FileURL)
 	if ok {
-		fUrl, e := fu.GetURL(ctx)
+		fURL, e := fu.GetURL(ctx)
 		if e == os.ErrInvalid {
 			return http.StatusMethodNotAllowed, nil
 		}
 		if e != nil {
 			return http.StatusInternalServerError, e
 		}
-		if fUrl != "" {
+		if fURL != "" {
 			w.WriteHeader(http.StatusFound)
-			w.Header().Add("Location", fUrl)
+			w.Header().Add("Location", fURL)
 			return 0, nil
 		}
 	}
@@ -425,8 +425,8 @@ func (h *Handler) handleLock(w http.ResponseWriter, r *http.Request) (retStatus 
 	}
 
 	ctx := r.Context()
-	//lint:ignore SA4006 just ignore
-	token, ld, now, created := "", LockDetails{}, time.Now(), false
+	token, now, created := "", time.Now(), false
+	var ld LockDetails
 	if li == (lockInfo{}) {
 		// An empty lockInfo means to refresh the lock.
 		ih, ok := parseIfHeader(r.Header.Get("If"))

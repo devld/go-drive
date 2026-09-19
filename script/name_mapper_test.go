@@ -13,7 +13,7 @@ type mapperFixture struct {
 func (mapperFixture) GetURL()       {}
 func (mapperFixture) JSON()         {}
 func (mapperFixture) UnixMilli()    {}
-func (mapperFixture) HttpResponse() {}
+func (mapperFixture) HTTPResponse() {}
 func (mapperFixture) OAuthLoad()    {}
 
 func TestJSObjectFieldNamesUsesJSONTag(t *testing.T) {
@@ -51,7 +51,7 @@ func TestGoFieldNameMapper(t *testing.T) {
 		"GetURL":       "getUrl",
 		"JSON":         "json",
 		"UnixMilli":    "unixMilli",
-		"HttpResponse": "httpResponse",
+		"HTTPResponse": "httpResponse",
 		"OAuthLoad":    "oauthLoad",
 	}
 	for name, want := range wants {

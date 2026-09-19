@@ -169,10 +169,10 @@ func (dr *driveRoute) list(c *gin.Context) {
 		return
 	}
 	principal := GetPrincipal(c)
-	res := make([]entryJson, 0, len(entries)+1)
-	res = append(res, *dr.newEntryJson(entry, principal))
+	res := make([]entryJSON, 0, len(entries)+1)
+	res = append(res, *dr.newEntryJSON(entry, principal))
 	for _, v := range entries {
-		res = append(res, *dr.newEntryJson(v, principal))
+		res = append(res, *dr.newEntryJSON(v, principal))
 	}
 	SetResult(c, res)
 }
@@ -190,7 +190,7 @@ func (dr *driveRoute) get(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, dr.newEntryJson(entry, GetPrincipal(c)))
+	SetResult(c, dr.newEntryJSON(entry, GetPrincipal(c)))
 }
 
 func (dr *driveRoute) makeDir(c *gin.Context) {
@@ -206,7 +206,7 @@ func (dr *driveRoute) makeDir(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, dr.newEntryJson(entry, GetPrincipal(c)))
+	SetResult(c, dr.newEntryJSON(entry, GetPrincipal(c)))
 }
 
 func (dr *driveRoute) copyEntry(c *gin.Context) {
@@ -238,7 +238,7 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 		if e != nil {
 			return nil, e
 		}
-		return dr.newEntryJson(r, principal), nil
+		return dr.newEntryJSON(r, principal), nil
 	}, 2*time.Second, task.WithNameGroup(from+" -> "+to, "drive/copy"))
 
 	if e != nil {
@@ -277,7 +277,7 @@ func (dr *driveRoute) move(c *gin.Context) {
 		if e != nil {
 			return nil, e
 		}
-		return dr.newEntryJson(r, principal), nil
+		return dr.newEntryJSON(r, principal), nil
 	}, 2*time.Second, task.WithNameGroup(from+" -> "+to, "drive/move"))
 
 	if e != nil {
@@ -502,7 +502,7 @@ func (dr *driveRoute) writeContent(c *gin.Context) {
 		if e != nil {
 			return nil, e
 		}
-		return dr.newEntryJson(r, principal), nil
+		return dr.newEntryJSON(r, principal), nil
 	}, 2*time.Second, task.WithNameGroup(path, "drive/write"))
 	if e != nil {
 		_ = c.Error(e)
@@ -581,7 +581,7 @@ func (dr *driveRoute) completeChunkUpload(c *gin.Context) {
 		}
 		_ = tempFile.Close()
 		_ = dr.chunkUploader.DeleteUpload(id)
-		return dr.newEntryJson(entry, principal), nil
+		return dr.newEntryJSON(entry, principal), nil
 	}, 2*time.Second, task.WithNameGroup(path, "drive/chunk-merge"))
 	if e != nil {
 		_ = c.Error(e)
@@ -643,7 +643,7 @@ func (dr *driveRoute) search(c *gin.Context) {
 	SetResult(c, r)
 }
 
-func (dr *driveRoute) newEntryJson(e types.IEntry, principal types.Principal) *entryJson {
+func (dr *driveRoute) newEntryJSON(e types.IEntry, principal types.Principal) *entryJSON {
 	entryMeta := e.Meta()
 	meta := utils.MapCopy(entryMeta.Props, nil)
 	meta["writable"] = entryMeta.Writable
@@ -658,7 +658,7 @@ func (dr *driveRoute) newEntryJson(e types.IEntry, principal types.Principal) *e
 	if !principal.HasUserGroup(types.AdminUserGroup) {
 		delete(meta, "mountAt")
 	}
-	return &entryJson{
+	return &entryJSON{
 		Path:    e.Path(),
 		Name:    utils.PathBase(e.Path()),
 		Type:    e.Type(),
@@ -672,7 +672,7 @@ func (dr *driveRoute) wrapEntryWithAccessKey(entry types.IEntry, accessKey strin
 	return driveutil.WrapEntryWithMeta(entry, types.M{"accessKey": accessKey})
 }
 
-type entryJson struct {
+type entryJSON struct {
 	Path    string          `json:"path"`
 	Name    string          `json:"name"`
 	Type    types.EntryType `json:"type"`

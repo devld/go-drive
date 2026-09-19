@@ -75,7 +75,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	pathStyle := config["path_style"]
 	region := config["region"]
 	endpoint := config["endpoint"]
-	cacheTtl := config.GetDuration("cache_ttl", -1)
+	cacheTTL := config.GetDuration("cache_ttl", -1)
 	requestHeaders, e := req.ParseRequestHeaders(config[req.RequestHeadersField])
 	if e != nil {
 		return nil, e
@@ -100,10 +100,10 @@ func NewDrive(ctx context.Context, config types.SM,
 		bucket:        aws.String(bucket),
 		uploadProxy:   config.GetBool("proxy_upload"),
 		downloadProxy: config.GetBool("proxy_download"),
-		cacheTTL:      cacheTtl,
+		cacheTTL:      cacheTTL,
 		tempDir:       driveUtils.Config.TempDir,
 	}
-	if cacheTtl <= 0 {
+	if cacheTTL <= 0 {
 		d.cache = driveutil.DummyCache()
 	} else {
 		d.cache = driveUtils.CreateCache(d.deserializeEntry)
@@ -381,7 +381,7 @@ func (s *Drive) Delete(ctx types.TaskCtx, path string) error {
 func (s *Drive) Upload(ctx context.Context, path string, size int64,
 	override bool, config types.SM) (*types.DriveUploadConfig, error) {
 	action := config["action"]
-	uploadId := config["uploadId"]
+	uploadID := config["uploadId"]
 	partsEtag := config["parts"]
 	seq := config.GetInt("seq", -1)
 
@@ -398,13 +398,13 @@ func (s *Drive) Upload(ctx context.Context, path string, size int64,
 			Bucket:     s.bucket,
 			Key:        aws.String(path),
 			PartNumber: aws.Int32(int32(seq + 1)),
-			UploadId:   aws.String(uploadId),
+			UploadId:   aws.String(uploadID),
 		})
 	case "CompleteMultipartUpload":
 		_, e := s.c.CompleteMultipartUpload(ctx, &s3.CompleteMultipartUploadInput{
 			Bucket:          s.bucket,
 			Key:             aws.String(path),
-			UploadId:        aws.String(uploadId),
+			UploadId:        aws.String(uploadID),
 			MultipartUpload: &awsType.CompletedMultipartUpload{Parts: buildCompleteUploadBody(partsEtag)},
 		})
 		_ = s.cache.Evict(path, false)
@@ -414,7 +414,7 @@ func (s *Drive) Upload(ctx context.Context, path string, size int64,
 		_, e := s.c.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
 			Bucket:   s.bucket,
 			Key:      aws.String(path),
-			UploadId: aws.String(uploadId),
+			UploadId: aws.String(uploadID),
 		})
 		return nil, e
 	case "CompletePutObject":

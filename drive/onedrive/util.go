@@ -26,19 +26,19 @@ var t = i18n.TPrefix("drive.onedrive.")
 type apiConfig struct {
 	AuthorizeURL string
 	TokenURL     string
-	ApiBase      string
+	APIBase      string
 }
 
 var sites = map[string]apiConfig{
 	"global": {
 		AuthorizeURL: "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize",
 		TokenURL:     "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token",
-		ApiBase:      "https://graph.microsoft.com/v1.0",
+		APIBase:      "https://graph.microsoft.com/v1.0",
 	},
 	"china": {
 		AuthorizeURL: "https://login.chinacloudapi.cn/{tenant}/oauth2/v2.0/authorize",
 		TokenURL:     "https://login.chinacloudapi.cn/{tenant}/oauth2/v2.0/token",
-		ApiBase:      "https://microsoftgraph.chinacloudapi.cn/v1.0",
+		APIBase:      "https://microsoftgraph.chinacloudapi.cn/v1.0",
 	},
 }
 
@@ -71,7 +71,7 @@ func oauthReq(c common.Config, config types.SM) *driveutil.OAuthRequest {
 	}
 }
 
-var httpApi, _ = req.NewClient("", nil, ifApiCallError, nil)
+var httpAPI, _ = req.NewClient("", nil, ifAPICallError, nil)
 
 var thumbnailExtensions = make(map[string]bool)
 
@@ -117,7 +117,7 @@ func InitConfig(ctx context.Context, config types.SM,
 	if oauthHolder == nil {
 		return initConfig, nil
 	}
-	reqClient, e := req.NewClient("", nil, ifApiCallError, oauthHolder.Client())
+	reqClient, e := req.NewClient("", nil, ifAPICallError, oauthHolder.Client())
 	if e != nil {
 		return nil, e
 	}
@@ -181,7 +181,7 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.D
 			}
 		}
 
-		reqClient, e := req.NewClient("", nil, ifApiCallError, oauthHolder.Client())
+		reqClient, e := req.NewClient("", nil, ifAPICallError, oauthHolder.Client())
 		if e != nil {
 			return e
 		}
@@ -190,7 +190,7 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.D
 			return e
 		}
 
-		paramsData = types.SM{"share_point_id": info.Id, "drive_id": ""}
+		paramsData = types.SM{"share_point_id": info.ID, "drive_id": ""}
 	} else {
 		paramsData = types.SM{"drive_id": data["drive_id"], "share_point_id": ""}
 	}
@@ -221,7 +221,7 @@ func generateDrivesForm(ctx context.Context, reqClient *req.Client,
 				utils.FormatBytes(uint64(d.Quota.Used), 1),
 				utils.FormatBytes(uint64(d.Quota.Total), 1),
 				used),
-			Value: d.Id,
+			Value: d.ID,
 		}
 	}
 	initConfig.Form = []types.FormItem{
@@ -234,22 +234,22 @@ func generateDrivesForm(ctx context.Context, reqClient *req.Client,
 func getUser(ctx context.Context, req *req.Client, site string) (userProfile, error) {
 	s := getSiteConfig(site)
 	user := userProfile{}
-	resp, e := req.Get(ctx, s.ApiBase+"/me", nil)
+	resp, e := req.Get(ctx, s.APIBase+"/me", nil)
 	if e != nil {
 		return user, e
 	}
-	e = resp.Json(&user)
+	e = resp.JSON(&user)
 	return user, e
 }
 
 func getDrives(ctx context.Context, req *req.Client, site string) ([]driveInfo, error) {
 	s := getSiteConfig(site)
 	o := userDrives{}
-	resp, e := req.Get(ctx, s.ApiBase+"/me/drives", nil)
+	resp, e := req.Get(ctx, s.APIBase+"/me/drives", nil)
 	if e != nil {
 		return nil, e
 	}
-	e = resp.Json(&o)
+	e = resp.JSON(&o)
 	return o.Drives, e
 }
 
@@ -260,7 +260,7 @@ func getSharePointInfo(ctx context.Context, req *req.Client, site string, shareP
 	}
 	s := getSiteConfig(site)
 	o := sharePointInfo{}
-	resp, e := req.Get(ctx, s.ApiBase+utils.BuildURL(
+	resp, e := req.Get(ctx, s.APIBase+utils.BuildURL(
 		"/sites/{}:/{}",
 		parsedURL.Hostname(),
 		strings.Trim(parsedURL.Path, "/"),
@@ -268,15 +268,15 @@ func getSharePointInfo(ctx context.Context, req *req.Client, site string, shareP
 	if e != nil {
 		return o, e
 	}
-	e = resp.Json(&o)
+	e = resp.JSON(&o)
 	return o, e
 }
 
 // uploadSmallFile uploads a new file that less than 4Mb
 func (o *OneDrive) uploadSmallFile(ctx types.TaskCtx,
-	parentId, filename string, size int64, reader io.Reader) (*oneDriveEntry, error) {
+	parentID, filename string, size int64, reader io.Reader) (*oneDriveEntry, error) {
 	ctx.Total(size, true)
-	resp, e := o.c.Request(ctx, "PUT", idURL(parentId)+":"+utils.BuildURL("/{}:/content", filename),
+	resp, e := o.c.Request(ctx, "PUT", idURL(parentID)+":"+utils.BuildURL("/{}:/content", filename),
 		types.SM{"Content-Type": "application/octet-stream"}, req.NewReaderBody(driveutil.ProgressReader(reader, ctx), size))
 	if e != nil {
 		return nil, e
@@ -297,9 +297,9 @@ func (o *OneDrive) uploadSmallFileOverride(ctx types.TaskCtx,
 }
 
 func (o *OneDrive) uploadLargeFile(ctx types.TaskCtx,
-	parentId, filename string, size int64, override bool, reader io.Reader) (*oneDriveEntry, error) {
+	parentID, filename string, size int64, override bool, reader io.Reader) (*oneDriveEntry, error) {
 	ctx.Total(size, true)
-	sessionUrl, e := o.createUploadSession(ctx, parentId, filename, override)
+	sessionURL, e := o.createUploadSession(ctx, parentID, filename, override)
 	if e != nil {
 		return nil, e
 	}
@@ -307,7 +307,7 @@ func (o *OneDrive) uploadLargeFile(ctx types.TaskCtx,
 	var finalResp req.Response = nil
 	for s := int64(0); s < size; s += chunkSize {
 		if e := ctx.Err(); e != nil {
-			_ = deleteUploadSession(ctx, sessionUrl)
+			_ = deleteUploadSession(ctx, sessionURL)
 			return nil, e
 		}
 		end := s + chunkSize
@@ -315,12 +315,12 @@ func (o *OneDrive) uploadLargeFile(ctx types.TaskCtx,
 			end = size
 		}
 		contentRange := fmt.Sprintf("bytes %d-%d/%d", s, end-1, size)
-		resp, e := httpApi.Request(ctx, "PUT", sessionUrl, types.SM{
+		resp, e := httpAPI.Request(ctx, "PUT", sessionURL, types.SM{
 			"Content-Range": contentRange,
 			"Content-Type":  "application/octet-stream",
 		}, req.NewReaderBody(driveutil.ProgressReader(io.LimitReader(reader, chunkSize), ctx), end-s))
 		if e != nil {
-			_ = deleteUploadSession(ctx, sessionUrl)
+			_ = deleteUploadSession(ctx, sessionURL)
 			return nil, e
 		}
 		if end == size {
@@ -333,42 +333,42 @@ func (o *OneDrive) uploadLargeFile(ctx types.TaskCtx,
 		panic("expect finalResp is not nil")
 	}
 	if finalResp.Status() != 201 && finalResp.Status() != 200 {
-		_ = deleteUploadSession(ctx, sessionUrl)
+		_ = deleteUploadSession(ctx, sessionURL)
 		return nil, errors.New(i18n.T("drive.onedrive.unexpected_status", strconv.Itoa(finalResp.Status())))
 	}
 	return o.toEntry(finalResp)
 }
 
-func (o *OneDrive) createUploadSession(ctx context.Context, parentId, filename string, override bool) (string, error) {
+func (o *OneDrive) createUploadSession(ctx context.Context, parentID, filename string, override bool) (string, error) {
 	conflictBehavior := "fail"
 	if override {
 		conflictBehavior = "replace"
 	}
-	resp, e := o.c.Post(ctx, idURL(parentId)+":"+utils.BuildURL("/{}:/createUploadSession", filename),
-		nil, req.NewJsonBody(types.M{"item": types.M{"@microsoft.graph.conflictBehavior": conflictBehavior}}))
+	resp, e := o.c.Post(ctx, idURL(parentID)+":"+utils.BuildURL("/{}:/createUploadSession", filename),
+		nil, req.NewJSONBody(types.M{"item": types.M{"@microsoft.graph.conflictBehavior": conflictBehavior}}))
 	if e != nil {
 		return "", e
 	}
 	createdUploadSession := createUploadSessionResp{}
-	if e = resp.Json(&createdUploadSession); e != nil {
+	if e = resp.JSON(&createdUploadSession); e != nil {
 		return "", e
 	}
 	return createdUploadSession.UploadURL, nil
 }
 
-func deleteUploadSession(ctx context.Context, sessionUrl string) error {
-	_, e := httpApi.Request(ctx, "DELETE", sessionUrl, nil, nil)
+func deleteUploadSession(ctx context.Context, sessionURL string) error {
+	_, e := httpAPI.Request(ctx, "DELETE", sessionURL, nil, nil)
 	return e
 }
 
-func waitLongRunningAction(ctx context.Context, waitUrl string) error {
+func waitLongRunningAction(ctx context.Context, waitURL string) error {
 	for {
-		resp, e := httpApi.Get(ctx, waitUrl, nil)
+		resp, e := httpAPI.Get(ctx, waitURL, nil)
 		if e != nil {
 			return e
 		}
 		s := actionProgress{}
-		if e := resp.Json(&s); e != nil {
+		if e := resp.JSON(&s); e != nil {
 			return e
 		}
 		if s.Status != "inProgress" && s.Status != "notStarted" {
@@ -383,7 +383,7 @@ func waitLongRunningAction(ctx context.Context, waitUrl string) error {
 
 func (o *OneDrive) toEntry(resp req.Response) (*oneDriveEntry, error) {
 	item := driveItem{}
-	if e := resp.Json(&item); e != nil {
+	if e := resp.JSON(&item); e != nil {
 		return nil, e
 	}
 	entry := o.newEntry(item)
@@ -398,16 +398,16 @@ func (o *OneDrive) deserializeEntry(ec driveutil.EntryCacheItem) (types.IEntry, 
 	return &oneDriveEntry{
 		d: o, id: ed["id"],
 		path: ec.Path, size: ec.Size, modTime: ec.ModTime, isDir: ec.Type.IsDir(),
-		downloadUrl:          ed["du"],
-		downloadUrlExpiresAt: ed.GetInt64("de", -1),
+		downloadURL:          ed["du"],
+		downloadURLExpiresAt: ed.GetInt64("de", -1),
 		thumbnail:            ed["th"],
 	}, nil
 }
 
-func ifApiCallError(resp req.Response) error {
+func ifAPICallError(resp req.Response) error {
 	if resp.Status() < 200 || resp.Status() >= 400 {
 		ee := apiError{}
-		if e := resp.Json(&ee); e != nil {
+		if e := resp.JSON(&ee); e != nil {
 			return e
 		}
 		if ee.Err.Code == "itemNotFound" {

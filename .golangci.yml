@@ -7,7 +7,17 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+  settings:
+    govet:
+      disable:
+        # Go 1.26 flags reflect.Ptr comparisons as "should be inlined".
+        - inline
+    staticcheck:
+      checks:
+        - all
+        - "-ST1000"
   exclusions:
     paths:
       # Forked encoding/xml from the Go standard library.
       - server/webdav/internal/xml
+      - web/node_modules

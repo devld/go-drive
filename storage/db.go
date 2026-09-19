@@ -13,7 +13,7 @@ import (
 var dbLog = logging.For("db")
 
 func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
-	dbLog.Debugf("opening database type=%s", config.Db.Type)
+	dbLog.Debugf("opening database type=%s", config.DB.Type)
 	dialect := config.GetDB()
 	gormConfig := logger.Config{
 		SlowThreshold:             200 * time.Millisecond,
@@ -33,10 +33,10 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 	}
 
 	if e := migrateAll(db); e != nil {
-		closeDb(db)
+		closeDB(db)
 		return nil, e
 	}
-	dbLog.Debugf("database ready type=%s", config.Db.Type)
+	dbLog.Debugf("database ready type=%s", config.DB.Type)
 
 	d := &DB{db: db}
 	ch.Add(registry.KeyDB, d)
@@ -48,15 +48,15 @@ type DB struct {
 }
 
 func (d *DB) Dispose() error {
-	closeDb(d.db)
+	closeDB(d.db)
 	return nil
 }
 
-func closeDb(db *gorm.DB) {
+func closeDB(db *gorm.DB) {
 	if db != nil {
-		sqlDb, e := db.DB()
+		sqlDB, e := db.DB()
 		if e == nil {
-			_ = sqlDb.Close()
+			_ = sqlDB.Close()
 		}
 	}
 }

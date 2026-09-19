@@ -43,9 +43,9 @@ func (t *textTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEn
 	rows := (t.imageSize - 2*t.padding) / t.fontSize
 
 	w := bufio.NewWriter(dest)
-	_, e = w.WriteString(fmt.Sprintf("<svg viewBox=\"0 0 %d %d\" xmlns=\"http://www.w3.org/2000/svg\" "+
+	_, e = fmt.Fprintf(w, "<svg viewBox=\"0 0 %d %d\" xmlns=\"http://www.w3.org/2000/svg\" "+
 		"style=\"background-color:#fff;padding: %dpx;\">"+
-		"<style>text{font-size: 10px;white-space:pre;}</style>", t.imageSize, t.imageSize, t.padding))
+		"<style>text{font-size: 10px;white-space:pre;}</style>", t.imageSize, t.imageSize, t.padding)
 	if e != nil {
 		return e
 	}
@@ -61,8 +61,8 @@ func (t *textTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEn
 			return e
 		}
 
-		_, e = w.WriteString(fmt.Sprintf("<text x=\"%d\" y=\"%d\">",
-			0, (i+1)*t.fontSize))
+		_, e = fmt.Fprintf(w, "<text x=\"%d\" y=\"%d\">",
+			0, (i+1)*t.fontSize)
 
 		if e != nil {
 			return e

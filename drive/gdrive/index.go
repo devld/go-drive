@@ -48,7 +48,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils)
 		return nil, e
 	}
 
-	cacheTtl := config.GetDuration("cache_ttl", -1)
+	cacheTTL := config.GetDuration("cache_ttl", -1)
 	params, e := utils.Data.Load("drive_id")
 	if e != nil {
 		return nil, e
@@ -56,12 +56,12 @@ func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils)
 
 	g := &GDrive{
 		s:              service,
-		cacheTTL:       cacheTtl,
+		cacheTTL:       cacheTTL,
 		oauthHolder:    oauthHolder,
-		driveId:        params["drive_id"],
+		driveID:        params["drive_id"],
 		proxyThumbnail: config.GetBool("proxy_thumbnail"),
 	}
-	if cacheTtl <= 0 {
+	if cacheTTL <= 0 {
 		g.cache = driveutil.DummyCache()
 	} else {
 		g.cache = utils.CreateCache(g.deserializeEntry)
@@ -74,7 +74,7 @@ var _ types.IDrive = (*GDrive)(nil)
 type GDrive struct {
 	s *drive.Service
 
-	driveId string
+	driveID string
 
 	cacheTTL time.Duration
 	cache    driveutil.DriveCache
@@ -120,7 +120,7 @@ func (g *GDrive) Save(ctx types.TaskCtx, path string, size int64,
 	if entry != nil {
 		resp, e = g.s.Files.Update(entry.id, &drive.File{}).Media(reader).Context(ctx).ProgressUpdater(onProgress).Do()
 	} else {
-		resp, e = g.s.Files.Create(&drive.File{Name: filename, Parents: []string{parent.fileId()}}).
+		resp, e = g.s.Files.Create(&drive.File{Name: filename, Parents: []string{parent.fileID()}}).
 			Media(reader).Context(ctx).ProgressUpdater(onProgress).Do()
 	}
 	if e != nil {
@@ -145,7 +145,7 @@ func (g *GDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error)
 		return nil, e
 	}
 	resp, e := g.s.Files.Create(&drive.File{
-		Name: dirName, Parents: []string{parent.fileId()},
+		Name: dirName, Parents: []string{parent.fileID()},
 		MimeType: typeFolder,
 	}).Context(ctx).Do()
 	if e != nil {
@@ -172,7 +172,7 @@ func (g *GDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override 
 		return nil, e
 	}
 	resp, e := g.s.Files.Copy(from.(*gdriveEntry).id,
-		&drive.File{Name: filename, Parents: []string{parent.fileId()}}).Do()
+		&drive.File{Name: filename, Parents: []string{parent.fileID()}}).Do()
 	if e != nil {
 		return nil, e
 	}
@@ -204,7 +204,7 @@ func (g *GDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override 
 		return nil, e
 	}
 	resp, e := g.s.Files.Update(from.(*gdriveEntry).id, &drive.File{Name: filename}).Context(ctx).
-		AddParents(parent.fileId()).RemoveParents(fromParent.fileId()).Do()
+		AddParents(parent.fileID()).RemoveParents(fromParent.fileID()).Do()
 	if e != nil {
 		return nil, e
 	}
@@ -232,8 +232,8 @@ func (g *GDrive) getParentTarget(path string, ctx context.Context) (*gdriveEntry
 func (g *GDrive) getByPath(path string, ctx context.Context) (*gdriveEntry, error) {
 	if utils.IsRootPath(path) {
 		id := "root"
-		if g.driveId != "" {
-			id = g.driveId
+		if g.driveID != "" {
+			id = g.driveID
 		}
 		return &gdriveEntry{id: id, isDir: true, modTime: -1, d: g}, nil
 	}
@@ -269,20 +269,20 @@ func (g *GDrive) List(ctx context.Context, path string) ([]types.IEntry, error) 
 		if e != nil {
 			return nil, e
 		}
-		id = ge.fileId()
+		id = ge.fileID()
 	}
 
 	gFiles := make([]*drive.File, 0)
 	nextPageToken := ""
 
-	if g.driveId != "" && id == "root" {
-		id = g.driveId
+	if g.driveID != "" && id == "root" {
+		id = g.driveID
 	}
 
 	for {
 		req := g.s.Files.List().Context(ctx)
-		if g.driveId != "" {
-			req.DriveId(g.driveId).
+		if g.driveID != "" {
+			req.DriveId(g.driveID).
 				IncludeItemsFromAllDrives(true).
 				Corpora("drive").
 				SupportsAllDrives(true)
@@ -371,10 +371,10 @@ func (g *GDrive) newEntry(parentPath string, file *drive.File) *gdriveEntry {
 	if strings.HasPrefix(file.MimeType, typeGoogleAppPrefix) {
 		size = -1
 	}
-	targetId := ""
+	targetID := ""
 	targetMime := ""
 	if file.ShortcutDetails != nil {
-		targetId = file.ShortcutDetails.TargetId
+		targetID = file.ShortcutDetails.TargetId
 		targetMime = file.ShortcutDetails.TargetMimeType
 	}
 	thumbnail := file.ThumbnailLink
@@ -386,7 +386,7 @@ func (g *GDrive) newEntry(parentPath string, file *drive.File) *gdriveEntry {
 		path:  path2.Join(parentPath, file.Name),
 		isDir: file.MimeType == typeFolder || targetMime == typeFolder,
 		size:  size, modTime: utils.Millisecond(modTime),
-		targetId: targetId, targetMime: targetMime, thumbnail: thumbnail,
+		targetID: targetID, targetMime: targetMime, thumbnail: thumbnail,
 	}
 }
 
@@ -395,8 +395,8 @@ var _ types.IEntry = (*gdriveEntry)(nil)
 type gdriveEntry struct {
 	id   string
 	mime string
-	// targetId is the target fileId, if it's a shortcut
-	targetId string
+	// targetID is the target fileId, if it's a shortcut
+	targetID string
 	// targetMime is the target mimeType, if it's a shortcut
 	targetMime string
 	thumbnail  string
@@ -427,9 +427,9 @@ func (g *gdriveEntry) Size() int64 {
 	return g.size
 }
 
-func (g *gdriveEntry) fileId() string {
-	if g.targetId != "" {
-		return g.targetId
+func (g *gdriveEntry) fileID() string {
+	if g.targetID != "" {
+		return g.targetID
 	}
 	return g.id
 }
@@ -480,20 +480,20 @@ func (g *gdriveEntry) GetReader(ctx context.Context, start, size int64) (io.Read
 }
 
 func (g *gdriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
-	downloadUrl := ""
+	downloadURL := ""
 
-	fileId := g.fileId()
+	fileID := g.fileID()
 	exportMime := exportMimeTypeMap[g.mimeType()]
 	if exportMime != "" {
-		downloadUrl = utils.BuildURL(g.d.s.BasePath+"files/{}/export", fileId) +
+		downloadURL = utils.BuildURL(g.d.s.BasePath+"files/{}/export", fileID) +
 			"?alt=media&mimeType=" + url2.QueryEscape(exportMime)
 	} else {
 		if strings.HasPrefix(g.mimeType(), typeGoogleAppPrefix) {
 			return nil, err.NewNotAllowedMessageError(i18n.T("drive.file_not_downloadable"))
 		}
 	}
-	if downloadUrl == "" {
-		downloadUrl = utils.BuildURL(g.d.s.BasePath+"files/{}", fileId) + "?alt=media"
+	if downloadURL == "" {
+		downloadURL = utils.BuildURL(g.d.s.BasePath+"files/{}", fileID) + "?alt=media"
 	}
 
 	t, e := g.d.oauthHolder.Token(ctx)
@@ -511,7 +511,7 @@ func (g *gdriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 	}
 
 	return &types.ContentURL{
-		Proxy: true, URL: downloadUrl,
+		Proxy: true, URL: downloadURL,
 		Header:           types.SM{"Authorization": t.TokenType + " " + t.AccessToken},
 		DownloadFileName: downloadFilename,
 	}, nil
@@ -527,7 +527,7 @@ func (g *gdriveEntry) Thumbnail(_ context.Context) (types.IContentReader, error)
 func (g *gdriveEntry) EntryData() types.SM {
 	return types.SM{
 		"i": g.id, "m": g.mime,
-		"ti": g.targetId, "tm": g.targetMime,
+		"ti": g.targetID, "tm": g.targetMime,
 		"th": g.thumbnail,
 	}
 }

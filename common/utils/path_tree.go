@@ -38,7 +38,7 @@ func (n *PathTreeNode[T]) Get(path string) (*PathTreeNode[T], *PathTreeNode[T]) 
 }
 
 func (n *PathTreeNode[T]) GetCb(path string, cb func(*PathTreeNode[T])) (*PathTreeNode[T], *PathTreeNode[T]) {
-	var node *PathTreeNode[T] = n
+	var node = n
 	var parent *PathTreeNode[T] = nil
 	if IsRootPath(path) {
 		if cb != nil {

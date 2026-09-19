@@ -26,7 +26,7 @@ type dbMigration struct {
 var dbMigrations = []dbMigration{
 	{version: -1, name: "legacy_job_schema", run: migrateLegacyJobSchema},
 	{version: -1, name: "auto_migrate", run: autoMigrateModels},
-	{version: -1, name: "init_db_data", run: tryInitDbData},
+	{version: -1, name: "init_db_data", run: tryInitDBData},
 	{version: 1, name: "job_schedule_to_triggers", run: migrateJobScheduleToTriggers},
 	{version: 2, name: "script_drive_configs", run: migrateScriptDriveConfigs},
 	{version: 3, name: "oauth_drive_data", run: migrateOAuthDriveData},
@@ -106,7 +106,7 @@ var initSQL = []string{
 	"INSERT INTO `path_permissions`(`path`, `subject`, `permission`, `policy`) VALUES ('', 'ANY', 1, 1)",
 }
 
-func tryInitDbData(db *gorm.DB) error {
+func tryInitDBData(db *gorm.DB) error {
 	var n int64 = 0
 	if e := db.Model(&types.User{}).Count(&n).Error; e != nil {
 		return e
@@ -151,7 +151,7 @@ func migrateLegacyJobSchema(db *gorm.DB) error {
 	if e != nil {
 		return e
 	}
-	dialect := db.Dialector.Name()
+	dialect := db.Name()
 	exists, e := hasTable(sqlDB, dialect, "jobs")
 	if e != nil || !exists {
 		return e
@@ -183,7 +183,7 @@ func prepareLegacyJobTable(db *gorm.DB) error {
 	if e != nil {
 		return e
 	}
-	dialect := db.Dialector.Name()
+	dialect := db.Name()
 	exists, e := hasTable(sqlDB, dialect, "jobs")
 	if e != nil || !exists {
 		return e

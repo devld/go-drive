@@ -5,7 +5,7 @@ import (
 )
 
 func TestIdPool(t *testing.T) {
-	p := NewIdPool[uint]()
+	p := NewIDPool[uint]()
 
 	for i := 0; i < 100; i++ {
 		p.Next()
@@ -46,7 +46,7 @@ func TestIdPool(t *testing.T) {
 }
 
 func TestIdPoolIgnoresUnallocatedID(t *testing.T) {
-	p := NewIdPool[uint]()
+	p := NewIDPool[uint]()
 	p.Release(100)
 	if got := p.Next(); got != 1 {
 		t.Fatalf("Next() = %d, want 1", got)
