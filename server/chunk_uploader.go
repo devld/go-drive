@@ -41,7 +41,7 @@ func (c *ChunkUploader) CreateUpload(size, chunkSize int64) (ChunkUpload, error)
 	if size <= 0 {
 		return ChunkUpload{}, err.NewBadRequestError(i18n.T("api.chunk_uploader.invalid_file_size"))
 	}
-	id := c.generateUploadId(size, chunkSize)
+	id := c.generateUploadID(size, chunkSize)
 	dir := c.getDir(id)
 	exists, e := utils.FileExists(dir)
 	if e != nil {
@@ -65,7 +65,7 @@ func (c *ChunkUploader) ChunkUpload(id string, seq int, reader io.Reader) error 
 
 	defer func() {
 		if c.isMarkedDelete(upload) {
-			_ = c.DeleteUpload(upload.Id)
+			_ = c.DeleteUpload(upload.ID)
 		}
 	}()
 
@@ -129,7 +129,7 @@ func (c *ChunkUploader) CompleteUpload(id string, ctx types.TaskCtx) (*os.File, 
 			_ = os.Remove(file.Name())
 		}
 		if c.isMarkedDelete(upload) {
-			_ = c.DeleteUpload(upload.Id)
+			_ = c.DeleteUpload(upload.ID)
 		}
 	}()
 	ctx.Total(upload.Size, true)
@@ -173,13 +173,13 @@ func (c *ChunkUploader) DeleteUpload(id string) error {
 	return nil
 }
 
-func (c ChunkUploader) generateUploadId(size, chunkSize int64) string {
+func (c ChunkUploader) generateUploadID(size, chunkSize int64) string {
 	return fmt.Sprintf("%s_%d_%d", uuid.New().String(), size, chunkSize)
 }
 
 func (c *ChunkUploader) getUpload(id string) (*ChunkUpload, error) {
 	temp := strings.Split(id, "_")
-	if len(temp) != 3 || !isValidUploadIdPart(temp[0]) {
+	if len(temp) != 3 || !isValidUploadIDPart(temp[0]) {
 		return nil, err.NewBadRequestError(i18n.T("api.chunk_uploader.invalid_upload_id"))
 	}
 	dir := c.getDir(id)
@@ -219,33 +219,33 @@ func (c *ChunkUploader) markDeleted(upload *ChunkUpload) error {
 }
 
 func (c *ChunkUploader) getFile(upload *ChunkUpload) string {
-	return path2.Join(c.getDir(upload.Id), "file")
+	return path2.Join(c.getDir(upload.ID), "file")
 }
 
 func (c *ChunkUploader) getChunk(upload *ChunkUpload, seq int) string {
-	return path2.Join(c.getDir(upload.Id), strconv.Itoa(seq))
+	return path2.Join(c.getDir(upload.ID), strconv.Itoa(seq))
 }
 
 func (c *ChunkUploader) getDeleteMark(upload *ChunkUpload) string {
-	return path2.Join(c.getDir(upload.Id), "deleted")
+	return path2.Join(c.getDir(upload.ID), "deleted")
 }
 
 func (c *ChunkUploader) getDir(id string) string {
 	return path2.Join(c.dir, filepath.Clean(id))
 }
 
-// isValidUploadIdPart reports whether s is a valid uuid-like id segment.
+// isValidUploadIDPart reports whether s is a valid uuid-like id segment.
 // It only allows characters produced by uuid.New().String() to prevent
 // path traversal via a crafted upload id (which is used as a directory name).
-func isValidUploadIdPart(s string) bool {
+func isValidUploadIDPart(s string) bool {
 	if s == "" {
 		return false
 	}
 	for _, ch := range s {
-		if !((ch >= '0' && ch <= '9') ||
-			(ch >= 'a' && ch <= 'f') ||
-			(ch >= 'A' && ch <= 'F') ||
-			ch == '-') {
+		if (ch < '0' || ch > '9') &&
+			(ch < 'a' || ch > 'f') &&
+			(ch < 'A' || ch > 'F') &&
+			ch != '-' {
 			return false
 		}
 	}
@@ -253,7 +253,7 @@ func isValidUploadIdPart(s string) bool {
 }
 
 type ChunkUpload struct {
-	Id        string `json:"id"`
+	ID        string `json:"id"`
 	Size      int64  `json:"size"`
 	ChunkSize int64  `json:"chunkSize"`
 	Chunks    int    `json:"chunks"`
@@ -261,7 +261,7 @@ type ChunkUpload struct {
 
 func newChunkUpload(id string, size, chunkSize int64) *ChunkUpload {
 	return &ChunkUpload{
-		Id:        id,
+		ID:        id,
 		Size:      size,
 		ChunkSize: chunkSize,
 		Chunks:    int(math.Ceil(float64(size) / float64(chunkSize))),

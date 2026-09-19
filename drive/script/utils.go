@@ -82,7 +82,7 @@ func GetDriveScriptConfigForm(ctx context.Context, config common.Config, name st
 	if e != nil {
 		return nil, e
 	}
-	vm, e := createVm(ctx, config, file)
+	vm, e := createVM(ctx, config, file)
 	if e != nil {
 		return nil, e
 	}
@@ -247,7 +247,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.Drive
 		return nil, e
 	}
 
-	vm, e := createVm(ctx, driveUtils.Config, selectedScript)
+	vm, e := createVM(ctx, driveUtils.Config, selectedScript)
 	if e != nil {
 		return nil, e
 	}
@@ -287,7 +287,7 @@ func init_(ctx context.Context, data, config types.SM, driveUtils driveutil.Driv
 	if e != nil {
 		return e
 	}
-	vm, e := createVm(ctx, driveUtils.Config, selectedScript)
+	vm, e := createVM(ctx, driveUtils.Config, selectedScript)
 	if e != nil {
 		return e
 	}
@@ -608,7 +608,7 @@ func initializeDriveScriptVM(ctx context.Context, vm *s.VM, compiled *compiledDr
 	return e
 }
 
-func createVm(ctx context.Context, config common.Config, script string) (*s.VM, error) {
+func createVM(ctx context.Context, config common.Config, script string) (*s.VM, error) {
 	compiled, e := compileDriveScript(config, script)
 	if e != nil {
 		return nil, e

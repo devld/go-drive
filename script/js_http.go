@@ -82,7 +82,7 @@ var jsHTTP = NativeFunction(func(vm *VM, args Values) any {
 			reqBody = newHTTPRequestBody(vr, n, "")
 		} else if b := GetBytes(vm, body, ""); b != nil {
 			reqBody = newHTTPRequestBody(bytes.NewReader(b), int64(len(b)), "")
-		} else if fd, ok := HostAs[*jsObjHttpFormData](body); ok {
+		} else if fd, ok := HostAs[*jsObjHTTPFormData](body); ok {
 			fd.consumeIfReaders()
 			r, w := io.Pipe()
 			multipartReader = r
@@ -121,7 +121,7 @@ var jsHTTP = NativeFunction(func(vm *VM, args Values) any {
 		response.Body = &httpCancelBody{ReadCloser: response.Body, cancel: cancel}
 		cancel = nil
 	}
-	return newHttpResponse(vm, response)
+	return newHTTPResponse(vm, response)
 })
 
 // Keep the request deadline alive until the body is closed, including when a
@@ -136,19 +136,19 @@ func (b *httpCancelBody) Close() error {
 	return b.ReadCloser.Close()
 }
 
-var jsClassHttpFormData = JSClass{
+var jsClassHTTPFormData = JSClass{
 	Name:   "HttpFormData",
-	Handle: jsObjHttpFormData{},
+	Handle: jsObjHTTPFormData{},
 	Construct: func(vm *VM, _ Values) any {
-		return &jsObjHttpFormData{ClassHost: NewClassHost(vm), data: make([]formDataField, 0)}
+		return &jsObjHTTPFormData{ClassHost: NewClassHost(vm), data: make([]formDataField, 0)}
 	},
 	Methods: map[string]ClassMethod{
 		"appendField": func(vm *VM, this *Value, args Values) any {
-			This[*jsObjHttpFormData](vm, this, "HttpFormData.appendField").AppendField(args.Get(0).String(), args.Get(1).Raw())
+			This[*jsObjHTTPFormData](vm, this, "HttpFormData.appendField").AppendField(args.Get(0).String(), args.Get(1).Raw())
 			return nil
 		},
 		"appendFile": func(vm *VM, this *Value, args Values) any {
-			This[*jsObjHttpFormData](vm, this, "HttpFormData.appendFile").AppendFile(args.Get(0).String(), args.Get(1).String(), args.Get(2).Raw())
+			This[*jsObjHTTPFormData](vm, this, "HttpFormData.appendFile").AppendFile(args.Get(0).String(), args.Get(1).String(), args.Get(2).Raw())
 			return nil
 		},
 	},
@@ -196,7 +196,7 @@ func readerBodyLength(headers types.SM, r io.Reader) (int64, error) {
 	return readerKnownLength(r), nil
 }
 
-type jsObjHttpFormData struct {
+type jsObjHTTPFormData struct {
 	ClassHost
 	data []formDataField
 	used bool
@@ -209,7 +209,7 @@ type formDataField struct {
 	data     any
 }
 
-func (fd *jsObjHttpFormData) AppendField(key string, v any) {
+func (fd *jsObjHTTPFormData) AppendField(key string, v any) {
 	var data []byte
 	if str, ok := v.(string); ok {
 		data = []byte((str))
@@ -221,7 +221,7 @@ func (fd *jsObjHttpFormData) AppendField(key string, v any) {
 	fd.data = append(fd.data, formDataField{field: key, data: data})
 }
 
-func (fd *jsObjHttpFormData) AppendFile(key, filename string, reader any) {
+func (fd *jsObjHTTPFormData) AppendFile(key, filename string, reader any) {
 	if vr := GetReader(fd.vm, reader, ""); vr != nil {
 		fd.data = append(fd.data, formDataField{field: key, filename: filename, file: true, data: vr})
 		return
@@ -237,7 +237,7 @@ func (fd *jsObjHttpFormData) AppendFile(key, filename string, reader any) {
 	fd.data = append(fd.data, formDataField{field: key, filename: filename, file: true, data: data})
 }
 
-func (fd *jsObjHttpFormData) hasReader() bool {
+func (fd *jsObjHTTPFormData) hasReader() bool {
 	for _, item := range fd.data {
 		if _, ok := item.data.(io.Reader); ok {
 			return true
@@ -246,7 +246,7 @@ func (fd *jsObjHttpFormData) hasReader() bool {
 	return false
 }
 
-func (fd *jsObjHttpFormData) consumeIfReaders() {
+func (fd *jsObjHTTPFormData) consumeIfReaders() {
 	if !fd.hasReader() {
 		return
 	}
@@ -256,12 +256,12 @@ func (fd *jsObjHttpFormData) consumeIfReaders() {
 	fd.used = true
 }
 
-func (fd jsObjHttpFormData) ConsoleString() string {
+func (fd jsObjHTTPFormData) ConsoleString() string {
 	n := len(fd.data)
 	return formatGoInspect("HttpFormData", []string{fmt.Sprintf("Len: %d", n)}, n > 0)
 }
 
-func (fd *jsObjHttpFormData) writeTo(mw *multipart.Writer) error {
+func (fd *jsObjHTTPFormData) writeTo(mw *multipart.Writer) error {
 	defer func() { _ = mw.Close() }()
 
 	var e error
@@ -306,7 +306,7 @@ type httpHeadersJS struct {
 	h  http.Header
 }
 
-func newHttpHeaders(vm *VM, h http.Header) *httpHeadersJS {
+func newHTTPHeaders(vm *VM, h http.Header) *httpHeadersJS {
 	return &httpHeadersJS{vm: vm, h: h}
 }
 
@@ -338,11 +338,11 @@ type httpResponseJS struct {
 	body    io.ReadCloser
 }
 
-func newHttpResponse(vm *VM, resp *http.Response) *httpResponseJS {
+func newHTTPResponse(vm *VM, resp *http.Response) *httpResponseJS {
 	return &httpResponseJS{
 		vm:      vm,
 		Status:  resp.StatusCode,
-		Headers: newHttpHeaders(vm, resp.Header),
+		Headers: newHTTPHeaders(vm, resp.Header),
 		Body:    vm.NewInstance("ReadCloser", resp.Body),
 		body:    resp.Body,
 	}

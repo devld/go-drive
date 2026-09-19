@@ -101,16 +101,16 @@ func (n UnsupportedError) Code() int {
 	return http.StatusMethodNotAllowed
 }
 
-type RemoteApiError struct {
+type RemoteAPIError struct {
 	code int
 	msg  string
 }
 
-func (r RemoteApiError) Error() string {
+func (r RemoteAPIError) Error() string {
 	return r.msg
 }
 
-func (r RemoteApiError) Code() int {
+func (r RemoteAPIError) Code() int {
 	if r.code == http.StatusUnauthorized {
 		return http.StatusInternalServerError
 	}
@@ -118,7 +118,7 @@ func (r RemoteApiError) Code() int {
 }
 
 // Status is the remote HTTP status originally recorded for this error.
-func (r RemoteApiError) Status() int {
+func (r RemoteAPIError) Status() int {
 	return r.code
 }
 
@@ -194,6 +194,6 @@ func NewUnsupportedMessageError(msg string) UnsupportedError {
 	return UnsupportedError{msg}
 }
 
-func NewRemoteApiError(code int, msg string) RemoteApiError {
-	return RemoteApiError{code, msg}
+func NewRemoteAPIError(code int, msg string) RemoteAPIError {
+	return RemoteAPIError{code, msg}
 }

@@ -309,7 +309,7 @@ func TestParseIfHeader(t *testing.T) {
 	}}
 
 	for _, tc := range testCases {
-		got, ok := parseIfHeader(strings.Replace(tc.input, "\n", "", -1))
+		got, ok := parseIfHeader(strings.ReplaceAll(tc.input, "\n", ""))
 		if gotEmpty := reflect.DeepEqual(got, ifHeader{}); gotEmpty == ok {
 			t.Errorf("%s: should be different: empty header == %t, ok == %t", tc.desc, gotEmpty, ok)
 			continue

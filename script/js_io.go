@@ -47,7 +47,7 @@ var jsClassBytes = JSClass{
 		"random": NativeFunction(func(vm *VM, args Values) any {
 			n := args.Get(0).Integer()
 			if n < 0 || n > maxRandomBytes {
-				vm.ThrowError(errors.New("Bytes.random: size must be between 0 and 1MiB"))
+				vm.ThrowError(errors.New("Bytes.random: size must be between 0 and 1MiB")) //nolint:staticcheck // JS-facing error keeps the host type name
 			}
 			b := make([]byte, n)
 			if n > 0 {
@@ -510,8 +510,9 @@ type tempFileCloser struct {
 }
 
 func (tfc *tempFileCloser) Close() error {
-	_ = tfc.File.Close()
-	return os.Remove(tfc.File.Name())
+	f := tfc.File
+	_ = f.Close()
+	return os.Remove(f.Name())
 }
 
 func newBytes(vm *VM, s any) jsObjBytes {

@@ -42,7 +42,7 @@ func NewPondRunner(config common.Config, ch *registry.ComponentsHolder) *PondRun
 
 func (t *PondRunner) createTask(runnable Runnable, options ...Option) *pondTaskCtx {
 	task := &Task{
-		Id:        uuid.New().String(),
+		ID:        uuid.New().String(),
 		Status:    Pending,
 		Progress:  Progress{Loaded: 0, Total: 0},
 		CreatedAt: time.Now(),
@@ -60,8 +60,8 @@ func (t *PondRunner) createTask(runnable Runnable, options ...Option) *pondTaskC
 		task:     task,
 	}
 
-	t.store.Set(task.Id, w)
-	taskLog.Debugf("task created id=%s group=%s name=%s", task.Id,
+	t.store.Set(task.ID, w)
+	taskLog.Debugf("task created id=%s group=%s name=%s", task.ID,
 		logging.Sanitize(task.Group), logging.Sanitize(task.Name))
 	return w
 }
@@ -69,7 +69,7 @@ func (t *PondRunner) createTask(runnable Runnable, options ...Option) *pondTaskC
 func (t *PondRunner) Execute(runnable Runnable, option ...Option) (Task, error) {
 	w := t.createTask(runnable, option...)
 	if e := t.pool.Go(func() { execute(w) }); e != nil {
-		t.store.Remove(w.task.Id)
+		t.store.Remove(w.task.ID)
 		t.logSubmitError(w, e)
 		return w.snapshot(), e
 	}
@@ -87,14 +87,14 @@ func (t *PondRunner) ExecuteAndWait(runnable Runnable, timeout time.Duration, op
 		execute(w)
 		close(done)
 	}); e != nil {
-		t.store.Remove(w.task.Id)
+		t.store.Remove(w.task.ID)
 		t.logSubmitError(w, e)
 		return w.snapshot(), e
 	}
 	select {
 	case <-timer.C:
 		taskLog.Debugf("task wait timed out id=%s group=%s name=%s timeout=%s; continuing in background",
-			w.task.Id, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name), timeout)
+			w.task.ID, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name), timeout)
 		// Timeout only limits how long the caller waits. The task deliberately
 		// remains queued/running and continues in the background.
 	case <-done:
@@ -106,12 +106,12 @@ func (t *PondRunner) ExecuteAndWait(runnable Runnable, timeout time.Duration, op
 func (t *PondRunner) logSubmitError(w *pondTaskCtx, e error) {
 	if errors.Is(e, pond.ErrQueueFull) {
 		taskLog.Warnf("task queue full id=%s group=%s name=%s waiting=%d queue_size=%d: %v",
-			w.task.Id, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name),
+			w.task.ID, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name),
 			t.pool.WaitingTasks(), t.pool.QueueSize(), e)
 		return
 	}
 	taskLog.Errorf("task submission failed id=%s group=%s name=%s: %v",
-		w.task.Id, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name), e)
+		w.task.ID, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name), e)
 }
 
 func (t *PondRunner) GetTasks(group string) ([]Task, error) {
@@ -153,7 +153,7 @@ func (t *PondRunner) RemoveTask(id string) error {
 		return ErrorNotFound
 	}
 	w.cancel()
-	t.store.Remove(w.task.Id)
+	t.store.Remove(w.task.ID)
 	taskLog.Debugf("task removed id=%s group=%s name=%s", id,
 		logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name))
 	return nil
@@ -171,7 +171,7 @@ func (t *PondRunner) clean() {
 	t.store.IterCb(func(key string, t *pondTaskCtx) {
 		task := t.snapshot()
 		if task.Finished() && (time.Now().Unix()-task.UpdatedAt.Unix() > int64(cleanThreshold.Seconds())) {
-			ids = append(ids, task.Id)
+			ids = append(ids, task.ID)
 		}
 	})
 	for _, id := range ids {
@@ -225,7 +225,7 @@ type pondTaskCtx struct {
 }
 
 func (w *pondTaskCtx) TaskID() string {
-	return w.task.Id
+	return w.task.ID
 }
 
 func (w *pondTaskCtx) Progress(loaded int64, abs bool) {
@@ -281,7 +281,7 @@ func execute(w *pondTaskCtx) {
 	w.task.Status = Running
 	w.task.UpdatedAt = time.Now()
 	w.mux.Unlock()
-	taskLog.Debugf("task started id=%s group=%s name=%s", w.task.Id,
+	taskLog.Debugf("task started id=%s group=%s name=%s", w.task.ID,
 		logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name))
 
 	defer func() {
@@ -300,7 +300,7 @@ func finishTask(w *pondTaskCtx, result any, taskErr error) {
 		w.task.UpdatedAt = time.Now()
 		status := w.task.Status
 		duration := w.task.UpdatedAt.Sub(w.task.CreatedAt)
-		id, group, name := w.task.Id, w.task.Group, w.task.Name
+		id, group, name := w.task.ID, w.task.Group, w.task.Name
 		w.mux.Unlock()
 		taskLog.Debugf("task finished id=%s group=%s name=%s status=%s duration=%s",
 			id, logging.Sanitize(group), logging.Sanitize(name), status, duration)
@@ -321,7 +321,7 @@ func finishTask(w *pondTaskCtx, result any, taskErr error) {
 	w.task.UpdatedAt = time.Now()
 	status = w.task.Status
 	duration := w.task.UpdatedAt.Sub(w.task.CreatedAt)
-	id, group, name := w.task.Id, w.task.Group, w.task.Name
+	id, group, name := w.task.ID, w.task.Group, w.task.Name
 	w.mux.Unlock()
 	if taskErr != nil && status != Canceled {
 		taskLog.Errorf("task failed id=%s group=%s name=%s duration=%s: %s",

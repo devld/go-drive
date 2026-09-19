@@ -37,9 +37,9 @@ func init() {
 		},
 		Do: func(ctx types.TaskCtx, params types.SM, ch *registry.ComponentsHolder, onLog func(s string)) error {
 			code := params["code"]
-			eventJson := params[jobEventName]
+			eventJSON := params[jobEventName]
 			event := make(types.M, 2)
-			e := json.Unmarshal([]byte(eventJson), &event)
+			e := json.Unmarshal([]byte(eventJSON), &event)
 			if e != nil {
 				return fmt.Errorf("failed to parse event: %s", e.Error())
 			}

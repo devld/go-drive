@@ -38,7 +38,7 @@ func newFakeHTTPFile(name, content string, modTime time.Time) *fakeHTTPFile {
 func (f *fakeHTTPFile) Close() error                       { return nil }
 func (f *fakeHTTPFile) Readdir(int) ([]fs.FileInfo, error) { return nil, nil }
 func (f *fakeHTTPFile) Stat() (fs.FileInfo, error) {
-	return &fakeFileInfo{name: f.name, size: f.Reader.Size(), modTime: f.modTime}, nil
+	return &fakeFileInfo{name: f.name, size: f.Size(), modTime: f.modTime}, nil
 }
 
 func TestTemplateProcessor_Process(t *testing.T) {

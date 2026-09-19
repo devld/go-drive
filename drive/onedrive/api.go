@@ -12,11 +12,11 @@ import (
 const uploadChunkSize = 4 * 1024 * 1024
 
 // https://docs.microsoft.com/en-us/graph/api/resources/driveitem?view=graph-rest-1.0#instance-attributes
-const downloadUrlTTL = 40 * time.Minute
+const downloadURLTTL = 40 * time.Minute
 
 // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/site_getbypath?view=odsp-graph-online
 type sharePointInfo struct {
-	Id                   string    `json:"id"`
+	ID                   string    `json:"id"`
 	DisplayName          string    `json:"displayName"`
 	Name                 string    `json:"name"`
 	CreatedDateTime      time.Time `json:"createdDateTime"`
@@ -30,7 +30,7 @@ type userProfile struct {
 }
 
 type driveInfo struct {
-	Id          string `json:"id"`
+	ID          string `json:"id"`
 	DriveType   string `json:"driveType"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -98,7 +98,7 @@ type thumbnailInfo struct {
 
 // https://docs.microsoft.com/en-us/graph/api/resources/driveitem?view=graph-rest-1.0
 type driveItem struct {
-	Id      string      `json:"id"`
+	ID      string      `json:"id"`
 	Name    string      `json:"name"`
 	Size    int64       `json:"size"`
 	Deleted *deleteInfo `json:"deleted"`
@@ -119,7 +119,7 @@ type driveItem struct {
 	Thumbnails []thumbnailInfo `json:"thumbnails"`
 
 	Parent struct {
-		Id   string `json:"id"`
+		ID   string `json:"id"`
 		Path string `json:"path"`
 	} `json:"parentReference"`
 }
@@ -149,7 +149,7 @@ type createUploadSessionResp struct {
 
 type actionProgress struct {
 	Percent    float32 `json:"percentageComplete"`
-	ResourceId string  `json:"resourceId"`
+	ResourceID string  `json:"resourceId"`
 	Status     string  `json:"status"`
 }
 
