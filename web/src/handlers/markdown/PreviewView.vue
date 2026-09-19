@@ -1,9 +1,9 @@
 <template>
   <div
     ref="el"
-    class="text-edit-view"
+    class="markdown-view"
     data-ui="preview"
-    data-handler="text"
+    data-handler="markdown"
     @keydown="onKeyDown"
   >
     <HandlerTitleBar :title="filename" @close="emit('close')">
@@ -13,21 +13,15 @@
         </SimpleButton>
       </template>
     </HandlerTitleBar>
-    <template v-if="!error">
-      <CodeEditor
-        v-if="useMonacoEditor"
-        v-model="content"
-        :type="monacoEditorType"
-        :disabled="readonly"
-        @save="!readonly && saveFile()"
-      />
-      <CodeMirrorEditor
-        v-else-if="!useMonacoEditor"
-        v-model="content"
-        :filename="filename"
-        :disabled="readonly"
-      />
-    </template>
+    <MarkdownSplitView v-if="!error" :content="content">
+      <template #editor>
+        <CodeMirrorEditor
+          v-model="content"
+          :filename="filename"
+          :disabled="readonly"
+        />
+      </template>
+    </MarkdownSplitView>
     <ErrorView v-else :status="error.status" :message="error.message" />
     <LoadingState
       v-if="!inited"
@@ -39,25 +33,23 @@
 <script setup lang="ts">
 import { getContent } from '@/api'
 import uploadManager from '@/api/upload-manager'
-import CodeEditor from '@/components/CodeEditor/index.vue'
-import { getLang } from '@/components/CodeEditor/mapping'
 import CodeMirrorEditor from '@go-drive/code-mirror'
+import MarkdownSplitView from '@go-drive/previewers/markdown'
+import { isPrimaryModifierPressed, LoadingState } from '@go-drive/utils'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
-import { Entry } from '@/types'
-import { entryMatches, filename as filenameFn, filenameExt } from '@/utils'
+import ErrorView from '@/components/ErrorView.vue'
+import SimpleButton from '@/components/SimpleButton'
+import type { Entry } from '@/types'
+import { filename as filenameFn } from '@/utils'
 import { HttpError } from '@/utils/http'
-import { isPrimaryModifierPressed } from '@go-drive/utils'
-import { alert } from '@/utils/ui-utils'
-import { LoadingState } from '@go-drive/utils'
 import { computed, nextTick, ref, watch } from 'vue'
-import { EntryHandlerContext } from '../types'
+import type { EntryHandlerContext } from '../types'
 
 const props = defineProps({
   entry: {
     type: Object as PropType<Entry>,
     required: true,
   },
-  entries: { type: Array as PropType<Entry[]> },
   ctx: {
     type: Object as PropType<EntryHandlerContext>,
     required: true,
@@ -66,37 +58,27 @@ const props = defineProps({
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'save-state', v: boolean): void
+  (e: 'save-state', value: boolean): void
 }>()
 
 const error = ref<HttpError | null>(null)
 const inited = ref(false)
-
 const content = ref('')
-
 const saving = ref(false)
-
-const path = computed(() => props.entry.path)
-
-const filename = computed(() => filenameFn(path.value))
-
-const readonly = computed(() => !props.entry.meta.writable)
-
 const el = ref<HTMLElement | null>(null)
 
-const useMonacoEditor = computed(() => {
-  const ext = props.ctx.config.options['web.monacoEditorExts']
-  return ext && ext.length > 0 && entryMatches(props.entry, ext)
-})
-const monacoEditorType = computed(() => {
-  const ext = filenameExt(filename.value)
-  return getLang(ext)
-})
+const path = computed(() => props.entry.path)
+const filename = computed(() => filenameFn(path.value))
+const readonly = computed(() => !props.entry.meta.writable)
 
 const loadFile = async () => {
   inited.value = false
+  error.value = null
   try {
-    return await loadFileContent()
+    content.value = await getContent(path.value, props.entry.meta, {
+      noCache: true,
+    })
+    nextTick(() => changeSaveState(true))
   } catch (e: any) {
     error.value = e
   } finally {
@@ -104,21 +86,8 @@ const loadFile = async () => {
   }
 }
 
-const loadFileContent = async () => {
-  content.value = await getContent(path.value, props.entry.meta, {
-    noCache: true,
-  })
-  nextTick(() => {
-    changeSaveState(true)
-  })
-  return content.value
-}
-
 const saveFile = async () => {
-  if (readonly.value) return
-  if (saving.value) {
-    return
-  }
+  if (readonly.value || saving.value) return
   saving.value = true
   try {
     await uploadManager.upload(
@@ -141,37 +110,35 @@ const changeSaveState = (saved: boolean) => {
   emit('save-state', saved)
 }
 
-const onKeyDown = (e: KeyboardEvent) => {
+const onKeyDown = (event: KeyboardEvent) => {
   if (
-    e.key === 's' &&
-    isPrimaryModifierPressed(e) &&
-    !e.altKey &&
-    !e.shiftKey &&
+    event.key === 's' &&
+    isPrimaryModifierPressed(event) &&
+    !event.altKey &&
+    !event.shiftKey &&
     !readonly.value
   ) {
-    e.preventDefault()
-    saveFile()
+    event.preventDefault()
+    void saveFile()
   }
 }
 
 watch(
   () => content.value,
-  () => {
-    changeSaveState(false)
-  }
+  () => changeSaveState(false)
 )
 
 loadFile()
 </script>
 <style lang="scss">
-.text-edit-view {
+.markdown-view {
   position: relative;
   width: 100vw;
   height: 100%;
   padding-top: 48px;
-  background-color: var(--color-bg-elevated);
   overflow: hidden;
   box-sizing: border-box;
+  background-color: var(--color-bg-elevated);
   box-shadow: var(--shadow-elevated);
 
   .handler-title-bar {
@@ -181,21 +148,16 @@ loadFile()
     right: 0;
   }
 
-  .text-editor {
+  .markdown-split-view {
     height: 100%;
-
-    .CodeMirror {
-      height: 100%;
-    }
   }
 
-  .code-editor {
+  .code-mirror-editor {
     height: 100%;
   }
 
   > .loading-state {
     top: 48px;
   }
-
 }
 </style>

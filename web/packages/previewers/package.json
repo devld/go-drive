@@ -8,18 +8,35 @@
     "./markdown": "./src/markdown/index.ts",
     "./markdown/styles.scss": "./src/markdown/styles.scss",
     "./markdown/dark.scss": "./src/markdown/dark.scss",
+    "./spreadsheet": "./src/spreadsheet/index.ts",
+    "./ebook": "./src/ebook/index.ts",
+    "./cbz": "./src/cbz/index.ts",
+    "./model3d": "./src/model3d/index.ts",
+    "./map": "./src/map/index.ts",
     "./image": "./src/image/index.ts"
   },
   "peerDependencies": {
     "vue": "^3.5.0"
   },
   "dependencies": {
+    "@go-drive/i18n": "0.0.0",
     "@go-drive/utils": "0.0.0",
+    "@tmcw/togeojson": "^7.1.2",
     "dompurify": "^3.4.15",
+    "epubjs": "^0.3.93",
     "github-markdown-css": "^5.9.0",
     "highlight.js": "^11.11.1",
+    "jszip": "^3.10.1",
+    "leaflet": "^1.9.4",
     "marked": "^18.0.5",
     "marked-highlight": "^2.2.4",
-    "photoswipe": "^5.4.4"
+    "photoswipe": "^5.4.4",
+    "three": "^0.180.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/leaflet": "^1.9.20",
+    "@types/three": "^0.180.0"
   }
 }

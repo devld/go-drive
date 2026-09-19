@@ -14,6 +14,6 @@ export default {
     component: DownloadView,
   },
   multiple: true,
-  supports: ({ entry }) => entry.every((e) => e.type === 'file'),
+  supports: ['file'],
   order: 2000,
 } as EntryHandler
