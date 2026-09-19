@@ -20,7 +20,7 @@ var (
 	KeyTaskRunner    = componentKey{k: "taskRunner"}
 	KeyJobExecutor   = componentKey{k: "jobExecutor"}
 	KeyFailBanGroup  = componentKey{k: "failBanGroup"}
-	KeyThumbnail     = componentKey{k: "thumbnail"}
+	KeyArtifact      = componentKey{k: "artifact"}
 	KeySearchService = componentKey{k: "searchService"}
 	KeyTokenStore    = componentKey{k: "tokenStore"}
 

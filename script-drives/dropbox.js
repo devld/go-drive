@@ -1,5 +1,5 @@
 // @name Dropbox
-// @version 1.0.10
+// @version 1.0.11
 // @description Dropbox drive
 
 /**
@@ -293,7 +293,7 @@ function toEntry(data) {
     modTime: isDir ? -1 : dayjs(data.server_modified).toDate().getTime(),
   };
   if (dropboxCanThumbnail(entry)) {
-    entry.meta = { readable: true, writable: true, selfThumbnail: true };
+    entry.meta = { readable: true, writable: true, hasThumbnail: true };
   }
   return entry;
 }

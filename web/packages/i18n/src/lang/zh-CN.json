@@ -124,11 +124,6 @@
         "video_file_exts_desc": "支持查看的视频文件后缀名列表，用英文逗号隔开",
         "monaco_editor_exts": "使用 Monaco 编辑器",
         "monaco_editor_exts_desc": "用英文逗号隔开的文件后缀名（或以 '/' 开头匹配全文件名，如 '/.gitignore'），这些文件将会使用 Monaco 编辑器打开",
-        "thumbnail_config": "缩略图配置",
-        "thumbnail_mapping": "缩略图生成器映射",
-        "thumbnail_mapping_tips": "配置某个路径中生成缩略图所使用的生成器 tag，每行一个规则。\n格式为: tag1,tag2:路径匹配规则\n其中，挂载路径和 chroot 路径将会被解析为绝对路径来进行匹配\n\n** 匹配零个或多个目录；\n* 匹配任意个数的非目录分隔符字符;\n? 匹配单个非目录分隔符字符。",
-        "thumbnail_mapping_placeholder": "例如: a,b:Pictures/**/*.jpg",
-        "thumbnail_mapping_invalid": "无效的映射规则",
         "download_options": "下载配置",
         "proxy_max": "最大代理大小",
         "proxy_max_desc": "最大允许通过代理下载的文件大小，可使用 b, k, m, g, t 单位",
@@ -432,6 +427,13 @@
     "zip": {
       "name": "打包下载",
       "desc": "创建 zip 压缩包"
+    },
+    "archive": {
+      "name": "压缩包预览",
+      "desc": "浏览压缩包内容",
+      "parent": "上一级",
+      "empty": "此目录为空",
+      "download": "下载"
     },
     "delete": {
       "name": "删除",

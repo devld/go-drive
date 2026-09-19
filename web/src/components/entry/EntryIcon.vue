@@ -21,8 +21,8 @@
 </template>
 <script setup lang="ts">
 import { getEntryIcon } from './file-icon'
-import { fileThumbnail } from '@/api'
-import { filenameExt } from '@/utils'
+import { fileThumbnailUrl } from '@/api/artifact'
+import { entryMatches } from '@/utils'
 import { ref, computed, watch } from 'vue'
 import { Entry } from '@/types'
 import { useAppStore } from '@/store'
@@ -49,18 +49,19 @@ const thumbnailLoaded = ref(false)
 
 const store = useAppStore()
 
-const thumbnailConfig = computed(() => store.config!.thumbnail)
+const thumbnailConfig = computed(() => store.config?.artifact?.thumbnail)
 const entryIcon = computed(() => getEntryIcon(props.entry))
 const supportThumbnail = computed(() => {
   const entry = props.entry
-  const ext = entry.type === 'dir' ? '/' : filenameExt(entry.name)
-  return !!thumbnailConfig.value.extensions?.[ext]
+  const extensions = thumbnailConfig.value?.extensions
+  if (!extensions) return false
+  return entry.type === 'dir'
+    ? extensions.includes('/')
+    : entryMatches(entry, extensions)
 })
 const thumbnail = computed(() => {
-  const url = props.entry.meta.thumbnailUrl
-  if (url) return url
-  if (supportThumbnail.value || props.entry.meta.selfThumbnail) {
-    return fileThumbnail(props.entry.path, props.entry.meta)
+  if (supportThumbnail.value || props.entry.meta.hasThumbnail) {
+    return fileThumbnailUrl(props.entry.path, props.entry.meta)
   }
   return undefined
 })

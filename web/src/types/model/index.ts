@@ -76,8 +76,7 @@ export interface EntryPathMeta {
 export interface EntryMeta extends O<any> {
   accessKey?: string
   writable?: boolean
-  thumbnailUrl?: string
-  selfThumbnail?: boolean
+  hasThumbnail?: boolean
   mountAt?: string
   /** real extension of this entry */
   ext?: string

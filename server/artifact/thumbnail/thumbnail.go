@@ -22,8 +22,7 @@ func RegisterTypeHandler(name string, thf TypeHandlerFactory) {
 type TypeHandlerFactory = func(config types.SM) (TypeHandler, error)
 
 type TypeHandler interface {
-	// CreateThumbnail creates thumbnail for entry, and writes to dest.
-	// Returns err.UnsupportedError if this TypeHandler is unable to create thumbnail for this entry
+	// CreateThumbnail writes a thumbnail for entry.
 	CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error
 	// MimeType returns the mime-type of this TypeHandler can generate
 	MimeType() string
@@ -32,42 +31,31 @@ type TypeHandler interface {
 	Timeout() time.Duration
 }
 
-type Thumbnail interface {
-	io.ReadSeeker
-	io.Closer
-	ModTime() time.Time
-	Size() int64
-	MimeType() string
-}
-
 // IEntryThumbnail is the extension of IEntry.
-// Entries implement this interface to supports generating thumbnail by themself.
-// The wrapper IEntry must NOT implementing this interface.
+// Entries implement this interface to produce a thumbnail when Meta.HasThumbnail
+// is true. Wrapper IEntry types must NOT implement this interface.
 type IEntryThumbnail interface {
-	// Thumbnail returns err.UnsupportedError if this entry is not supported
+	// Thumbnail returns common/errors.NewUnsupportedError if this entry is not supported.
 	Thumbnail(context.Context) (types.IContentReader, error)
 }
 
 func GetWrappedThumbnailEntry(entry types.IEntry) IEntryThumbnail {
-	e := driveutil.GetIEntry(entry, func(e types.IEntry) bool {
-		_, ok := e.(IEntryThumbnail)
-		return ok
-	})
-	if e == nil {
+	t, ok := driveutil.IEntryAs[IEntryThumbnail](entry)
+	if !ok {
 		return nil
 	}
-	if !e.Meta().SelfThumbnail {
+	e, ok := t.(types.IEntry)
+	if !ok || !e.Meta().HasThumbnail {
 		return nil
 	}
-	return e.(IEntryThumbnail)
+	return t
 }
 
-var entrySelfThumbnailTypeHandler = &entrySelfThumbnailHandler{}
+var entryThumbnailTypeHandler = &entryThumbnailHandler{}
 
-type entrySelfThumbnailHandler struct {
-}
+type entryThumbnailHandler struct{}
 
-func (est *entrySelfThumbnailHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
+func (est *entryThumbnailHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
 	te := GetWrappedThumbnailEntry(entry)
 	if te == nil {
 		return errors.New("cannot generate thumbnail")
@@ -79,11 +67,11 @@ func (est *entrySelfThumbnailHandler) CreateThumbnail(ctx context.Context, entry
 	return driveutil.CopyIContent(task.NewContextWrapper(ctx), tr, dest)
 }
 
-func (est *entrySelfThumbnailHandler) MimeType() string {
+func (est *entryThumbnailHandler) MimeType() string {
 	return ""
 }
 
-func (est *entrySelfThumbnailHandler) Timeout() time.Duration {
+func (est *entryThumbnailHandler) Timeout() time.Duration {
 	return 30 * time.Second
 }
 

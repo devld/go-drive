@@ -3,7 +3,7 @@ package thumbnail
 import (
 	"context"
 	"go-drive/common/driveutil"
-	err "go-drive/common/errors"
+	apierr "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -42,7 +42,7 @@ func newImageTypeHandler(c types.SM) (TypeHandler, error) {
 
 func (i *imageTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
 	if entry.Size() > i.maxSize {
-		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.file_too_large"))
+		return apierr.NewNotFoundMessageError(i18n.T("api.thumbnail.file_too_large"))
 	}
 	tempFile, e := driveutil.CopyIContentToTempFile(task.NewContextWrapper(ctx), entry, "")
 	if e != nil {
@@ -57,7 +57,7 @@ func (i *imageTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailE
 		return e
 	}
 	if imgConf.Width*imgConf.Height > i.maxPixels {
-		return err.NewNotFoundMessageError(i18n.T("api.thumbnail.image_too_large"))
+		return apierr.NewNotFoundMessageError(i18n.T("api.thumbnail.image_too_large"))
 	}
 	_, e = tempFile.Seek(0, 0)
 	if e != nil {

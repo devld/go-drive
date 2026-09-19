@@ -3,7 +3,7 @@ title: 故障排查
 description: 排查 go-drive 启动、OAuth、存储、上传、WebDAV、反向代理、搜索、权限、缓存和缩略图问题。
 lang: zh-CN
 translation_key: troubleshooting
-source_hash: 6b8300f5d0c229c78d54908572a7e8ae4fe3a2e5c2585995527e77b806f3391c
+source_hash: f50fabf4d2b7c0859b7dda2327957e5c08968ecec80d67ab6182e4f37035ab10
 ---
 
 # 故障排查
@@ -71,7 +71,6 @@ source_hash: 6b8300f5d0c229c78d54908572a7e8ae4fe3a2e5c2585995527e77b806f3391c
 ## 缩略图不生成
 
 - 检查扩展名是否在 handler 的 `file-types` 中。
-- 检查路径映射 tag 是否存在于对应 handler。
 - Shell handler 检查命令、`mime-type`、超时和程序是否安装。
 - 远端文件使用 `write-content` 时确认可读权限和网络。
 - 失败会被缓存；修复后重启可清除失败标记并重试。

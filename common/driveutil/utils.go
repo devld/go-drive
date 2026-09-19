@@ -15,6 +15,7 @@ import (
 	"go-drive/common/utils"
 	"io"
 	"io/fs"
+	"mime"
 	"net/http"
 	"net/http/httputil"
 	url2 "net/url"
@@ -27,12 +28,46 @@ import (
 
 //go:embed inline_file_exts.json
 var inlineFileEztsBytes []byte
-var inlineContentDispositionExtMimeTypesMap = make(map[string]string)
+
+var (
+	inlineContentDispositionExtMimeTypesMap map[string]string
+	// inlineFileExts follows inline_file_exts.json order and is used as
+	// preferred aliases for ExtensionByMimeType. mime.ExtensionsByType sorts
+	// lexicographically, so image/jpeg would otherwise become .jfif.
+	inlineFileExts []string
+)
 
 func init() {
-	if err := json.Unmarshal(inlineFileEztsBytes, &inlineContentDispositionExtMimeTypesMap); err != nil {
+	var pairs [][2]string
+	if err := json.Unmarshal(inlineFileEztsBytes, &pairs); err != nil {
 		panic(err)
 	}
+	inlineFileExts = make([]string, 0, len(pairs))
+	inlineContentDispositionExtMimeTypesMap = make(map[string]string, len(pairs))
+	for _, pair := range pairs {
+		inlineFileExts = append(inlineFileExts, "."+pair[0])
+		inlineContentDispositionExtMimeTypesMap[pair[0]] = pair[1]
+	}
+}
+
+// ExtensionByMimeType returns a common filename extension for mimeType,
+// including the leading dot. It returns "" when mimeType is empty or unknown.
+func ExtensionByMimeType(mimeType string) string {
+	if mimeType == "" {
+		return ""
+	}
+	exts, err := mime.ExtensionsByType(mimeType)
+	if err != nil || len(exts) == 0 {
+		return ""
+	}
+	for _, preferred := range inlineFileExts {
+		for _, ext := range exts {
+			if ext == preferred {
+				return ext
+			}
+		}
+	}
+	return exts[0]
 }
 
 var _ types.IEntryWrapper = (*metaEntryWrapper)(nil)
@@ -56,39 +91,42 @@ func WrapEntryWithMeta(entry types.IEntry, props types.M) types.IEntry {
 	return &metaEntryWrapper{IEntry: entry, props: props}
 }
 
-func GetIEntry(entry types.IEntry, test func(iEntry types.IEntry) bool) types.IEntry {
-	if entry == nil {
-		return nil
-	}
-	for {
-		if test != nil && test(entry) {
-			return entry
+func IEntryAs[T any](entry types.IEntry) (T, bool) {
+	var found T
+	_, ok := walkIEntry(entry, func(e types.IEntry) bool {
+		v, ok := e.(T)
+		if ok {
+			found = v
 		}
-		if wrapper, ok := entry.(types.IEntryWrapper); ok {
-			entry = wrapper.GetIEntry()
-		} else {
-			break
-		}
-	}
-	if test != nil {
-		return nil
-	}
-	return entry
+		return ok
+	})
+	return found, ok
 }
 
 func UnwrapIEntry(entry types.IEntry) types.IEntry {
-	for {
-		ew, ok := entry.(types.IEntryWrapper)
-		if !ok {
-			return entry
-		} else {
-			entry = ew.GetIEntry()
-		}
-	}
+	inner, _ := walkIEntry(entry, func(types.IEntry) bool { return false })
+	return inner
 }
 
 func GetSelfEntry(d types.IDrive, entry types.IEntry) types.IEntry {
-	return GetIEntry(entry, func(ee types.IEntry) bool { return ee.Drive() == d })
+	if found, ok := walkIEntry(entry, func(e types.IEntry) bool { return e.Drive() == d }); ok {
+		return found
+	}
+	return nil
+}
+
+func walkIEntry(entry types.IEntry, visit func(types.IEntry) bool) (types.IEntry, bool) {
+	for entry != nil {
+		if visit(entry) {
+			return entry, true
+		}
+		wrapper, ok := entry.(types.IEntryWrapper)
+		if !ok {
+			return entry, false
+		}
+		entry = wrapper.GetIEntry()
+	}
+	return nil, false
 }
 
 // FindNonExistsEntryName returns path when it is available. If it already
@@ -227,14 +265,26 @@ func CopyIContentToTempFile(ctx types.TaskCtx, content types.IContentReader, tem
 	return CopyReaderToTempFile(ctx, reader, tempDir)
 }
 
+func SetContentDisposition(respHeader http.Header, filename string) {
+	if filename == "" {
+		return
+	}
+	encoded := url2.QueryEscape(filename)
+	disposition := "attachment"
+	if _, inline := inlineContentDispositionExtMimeTypesMap[utils.PathExt(filename)]; inline {
+		disposition = "inline"
+	}
+	respHeader.Set("Content-Disposition", fmt.Sprintf("%s; filename*=utf-8''%s", disposition, encoded))
+}
+
 func setContentDispositionHeaderIfNeeded(respHeader http.Header, filename string) {
 	fileMimeType := inlineContentDispositionExtMimeTypesMap[utils.PathExt(filename)]
 	if fileMimeType == "" {
-		respHeader.Set("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", url2.QueryEscape(filename)))
-	} else {
-		respHeader.Set("Content-Type", fileMimeType)
-		respHeader.Del("Content-Disposition")
+		SetContentDisposition(respHeader, filename)
+		return
 	}
+	respHeader.Set("Content-Type", fileMimeType)
+	respHeader.Del("Content-Disposition")
 }
 
 func DownloadIContent(ctx context.Context, content types.IContent,

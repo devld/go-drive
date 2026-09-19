@@ -200,19 +200,15 @@ func (w *driveFSFile) getFile() error {
 		if w.fs.cfp == nil {
 			return errors.New("not readable")
 		}
-		dispatcherEntry := GetIEntry(w.e, func(e types.IEntry) bool {
-			_, ok := e.(types.IDispatcherEntry)
-			return ok
-		})
 		cacheKey := fmt.Sprintf("m:%d,s:%d,", w.e.ModTime(), w.e.Size())
-		if dispatcherEntry != nil {
-			cacheKey += "rp:" + dispatcherEntry.(types.IDispatcherEntry).GetRealPath()
+		if dispatcherEntry, ok := IEntryAs[types.IDispatcherEntry](w.e); ok {
+			cacheKey += "rp:" + dispatcherEntry.GetRealPath()
 		} else {
 			cacheKey += "p:" + w.e.Path()
 		}
-		reader, e := w.fs.cfp.GetReader(cacheKey, w.e.Size(),
-			func(start, size int64) (io.ReadCloser, error) {
-				return GetIContentReader(w.ctx, w.e, start, size)
+		reader, e := w.fs.cfp.GetReader(w.ctx, cacheKey, w.e.Size(),
+			func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+				return GetIContentReader(ctx, w.e, start, size)
 			},
 		)
 		if e != nil {

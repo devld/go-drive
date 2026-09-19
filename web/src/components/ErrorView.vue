@@ -2,7 +2,7 @@
   <div class="error-view">
     <span class="error-code" :title="message">{{ status || 'ERROR' }}</span>
     <span>{{ message }}</span>
-    <div class="back-button">
+    <div v-if="showBack" class="back-button">
       <SimpleButton @click="$router.go(-1)">{{
         $t('app.go_back')
       }}</SimpleButton>
@@ -16,6 +16,10 @@ defineProps({
   },
   message: {
     type: String,
+  },
+  showBack: {
+    type: Boolean,
+    default: true,
   },
 })
 </script>

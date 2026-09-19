@@ -16,6 +16,12 @@ import {
   normalizeXHRHttpHeader,
 } from './utils'
 
+const HTTP_CONTEXT_INITIATOR = Symbol('http.initiator')
+
+export function getOriginalHttp(config: HttpRequestConfig): Http | undefined {
+  return config.context?.[HTTP_CONTEXT_INITIATOR] as Http | undefined
+}
+
 const processHeaders = (...headers: (O | undefined)[]) => {
   const merged: O = {}
   for (const header of headers) {
@@ -91,7 +97,10 @@ const mergeConfig = (
 const wrapConfig = <T>(
   config: HttpRequestConfig | undefined,
   http: Http<T>
-) => ({ ...config, context: { ...config?.context, __initiator: http } })
+) => ({
+  ...config,
+  context: { ...config?.context, [HTTP_CONTEXT_INITIATOR]: http },
+})
 
 const transformRequest = async (
   config: HttpRequestConfig,
@@ -184,7 +193,7 @@ export const createHttp = <T = HttpResponse>(
 ): Http<T> => {
   const http: HttpBase<T> = function (config) {
     const mergedConfig = wrapConfig(
-      config.context?.__initiator === fullHttp
+      config.context?.[HTTP_CONTEXT_INITIATOR] === fullHttp
         ? config
         : mergeConfig(baseConfig, config),
       fullHttp

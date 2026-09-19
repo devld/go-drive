@@ -3,7 +3,7 @@ title: 站点设置
 description: 自定义 go-drive 品牌、匿名访问、文件处理、界面外观、注入样式及其他浏览器端站点行为。
 lang: zh-CN
 translation_key: site-settings
-source_hash: 846c6c8f14f71eb721b9d871a6336d20ca950cbfb1b52c3aaf4413aa44342f94
+source_hash: 22bdd3bf6665cf9f0e12532ddbc02acc8c6a6eaaecaa4a1aca52db4b0a5c4382
 ---
 
 # 站点设置
@@ -52,7 +52,3 @@ document.addEventListener('DOMContentLoaded', () => {
 - “ZIP 最大大小”限制打包下载规模。
 
 限制值用于保护服务器带宽、内存和临时空间。云盘关闭代理下载时，浏览器直下可能不受同样路径影响；跨 Drive 和 ZIP 操作仍会消耗服务器资源。
-
-## 缩略图映射
-
-用 `tag1,tag2:<路径模式>` 为不同目录选择配置文件中的 handler。处理器本身在 `config.yml` 中定义，修改后需要重启；映射规则说明见[文件预览与缩略图](./preview-thumbnail.html)。

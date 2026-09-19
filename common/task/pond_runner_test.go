@@ -1,7 +1,11 @@
 package task
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"go-drive/common"
+	err "go-drive/common/errors"
 	"go-drive/common/registry"
 	"go-drive/common/types"
 	"testing"
@@ -43,7 +47,7 @@ func TestExecuteAndWaitContinuesAfterTimeout(t *testing.T) {
 	finished := make(chan struct{})
 
 	started := time.Now()
-	task, e := runner.ExecuteAndWait(func(ctx types.TaskCtx) (any, error) {
+	task, e := runner.ExecuteAndWait(context.Background(), func(ctx types.TaskCtx) (any, error) {
 		<-release
 		close(finished)
 		return "done", nil
@@ -65,6 +69,18 @@ func TestExecuteAndWaitContinuesAfterTimeout(t *testing.T) {
 	if completed.Result != "done" {
 		t.Fatalf("unexpected result: %#v", completed.Result)
 	}
+}
+
+func TestExecuteAndWaitPanicsForNilContext(t *testing.T) {
+	runner := newTestRunner(t, 1)
+	defer func() {
+		if recover() == nil {
+			t.Fatal("ExecuteAndWait(nil) did not panic")
+		}
+	}()
+	_, _ = runner.ExecuteAndWait(nil, func(ctx types.TaskCtx) (any, error) { //nolint:staticcheck // ExecuteAndWait must panic on a nil context.
+		return nil, nil
+	}, time.Second)
 }
 
 func TestRunnerSnapshotsDuringProgressUpdates(t *testing.T) {
@@ -109,4 +125,39 @@ func TestStopTaskCancelsRunningTask(t *testing.T) {
 		t.Fatalf("unexpected stopped status: %q", stopped.Status)
 	}
 	waitForTask(t, runner, task.ID, Canceled)
+}
+
+func TestFailedTaskJSONUsesPublicErrorPayload(t *testing.T) {
+	runner := newTestRunner(t, 1)
+	want := err.NewNotFoundMessageError("missing artifact")
+	created, e := runner.ExecuteAndWait(context.Background(), func(types.TaskCtx) (any, error) {
+		return nil, want
+	}, time.Second)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if created.Status != Error {
+		t.Fatalf("status = %q, want %s", created.Status, Error)
+	}
+	if !errors.Is(created.Error, want) {
+		t.Fatalf("Error = %v, want %v", created.Error, want)
+	}
+	payload, e := json.Marshal(created)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var body map[string]any
+	if e := json.Unmarshal(payload, &body); e != nil {
+		t.Fatal(e)
+	}
+	public, ok := body["error"].(map[string]any)
+	if !ok {
+		t.Fatalf("error payload = %#v", body["error"])
+	}
+	if public["message"] != want.Error() {
+		t.Fatalf("public message = %#v", public["message"])
+	}
+	if code, _ := public["code"].(float64); int(code) != want.Code() {
+		t.Fatalf("public code = %#v", public["code"])
+	}
 }

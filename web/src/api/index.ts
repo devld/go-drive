@@ -1,5 +1,5 @@
 import {
-  Config,
+  RawConfig,
   Entry,
   EntryMeta,
   EntryMetaUseProxy,
@@ -9,19 +9,15 @@ import {
 } from '@/types'
 import { buildURL } from '@/utils'
 import http, {
+  ACCESS_KEY,
   API_PATH,
   clearCachedPathPasswords,
   clearToken,
   pathPasswordHeaders,
   setToken,
+  binaryHttp,
 } from './http'
-import { createHttp } from '@/utils/http/http'
-import {
-  transformErrorResponse,
-  transformTextResponse,
-} from '@/utils/http/transformers'
 
-const ACCESS_KEY = '_k'
 const PROXY_KEY = 'proxy'
 
 export interface FileURLParams {
@@ -85,31 +81,28 @@ export function fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
   return `${API_PATH}${_fileUrl(path, meta, params)}`
 }
 
-export function fileThumbnail(path: string, meta: EntryMeta) {
-  const query = { path } as O<any>
-  if (meta?.accessKey) {
-    query[ACCESS_KEY] = meta.accessKey
-  }
-  return buildURL(`${API_PATH}/thumbnail`, query)!
+export function getBlobContent(
+  path: string,
+  meta: EntryMeta,
+  params?: FileURLParams
+) {
+  return binaryHttp
+    .get<Blob>(
+      fileUrl(path, meta, {
+        ...params,
+        useProxy: 'cors',
+      }),
+      { headers: pathPasswordHeaders(path) }
+    )
+    .then((blob) => blob)
 }
-
-const textHttp = createHttp({
-  transformResponse: [transformTextResponse([]), transformErrorResponse],
-})
 
 export function getContent(
   path: string,
   meta: EntryMeta,
   params?: FileURLParams
 ) {
-  return textHttp
-    .get<any>(
-      fileUrl(path, meta, {
-        ...params,
-        useProxy: 'cors',
-      })
-    )
-    .then((res) => res.data)
+  return getBlobContent(path, meta, params).then((blob) => blob.text())
 }
 
 export function makeDir(path: string) {
@@ -171,7 +164,7 @@ export function getUser() {
 }
 
 export function getConfig(optKeys: string[]) {
-  return http.get<Config>('/config', {
+  return http.get<RawConfig>('/config', {
     params: {
       opts: optKeys.join(','),
     },

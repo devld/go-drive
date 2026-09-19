@@ -3,7 +3,7 @@ title: Google Drive
 description: 使用 OAuth 凭据、重定向 URI 和 API Scope 将 Google Drive 或共享云端硬盘连接到 go-drive。
 lang: zh-CN
 translation_key: drive-google-drive
-source_hash: 86c052b42dae64b8c273e2a43bc12b8d123d77b7d5b80d0f3c32048936f232f5
+source_hash: 9658f7f71333a13dbc8ec1199ec95cc952ccd9e454f7c4d48478b5d27a44b9e4
 ---
 
 # Google Drive
@@ -31,10 +31,9 @@ Google 控制台中的 URI 必须与配置完全一致。
 
 ## 添加 Drive
 
-填写 Client ID、Client Secret、缓存 TTL 和“代理缩略图”，完成 OAuth 后选择个人盘或共享盘，保存并重新加载 Drive。
+填写 Client ID、Client Secret 和缓存 TTL，完成 OAuth 后选择个人盘或共享盘，保存并重新加载 Drive。
 
-- 缓存 TTL 默认 `4h`；外部直接修改文件后可清除缓存。
-- 代理缩略图默认开启，适合不能让浏览器直接访问 Google 缩略图的环境。
+缓存 TTL 默认 `4h`；外部直接修改文件后可清除缓存。Google 文件缩略图由 go-drive 拉取并写入缩略图缓存。
 
 Google Drive API 没有传统路径模型，并允许同一目录存在同名文件。go-drive 遇到同名条目时会给名称追加文件 ID 的前 6 位。
 

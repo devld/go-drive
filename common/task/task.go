@@ -1,7 +1,10 @@
 package task
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
+	err "go-drive/common/errors"
 	"go-drive/common/types"
 	"time"
 )
@@ -30,7 +33,7 @@ type Task struct {
 	Status    Status    `json:"status"`
 	Progress  Progress  `json:"progress"`
 	Result    any       `json:"result"`
-	Error     any       `json:"error"`
+	Error     error     `json:"error"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 
@@ -38,6 +41,18 @@ type Task struct {
 	Name  string `json:"name"`
 	Group string `json:"group"`
 }
+
+type jsonError struct{ error }
+
+func (e jsonError) MarshalJSON() ([]byte, error) {
+	payload := types.M{"message": e.Error()}
+	if public, ok := errors.AsType[err.Error](e.error); ok {
+		payload["code"] = public.Code()
+	}
+	return json.Marshal(payload)
+}
+
+func (e jsonError) Unwrap() error { return e.error }
 
 func (t Task) Finished() bool {
 	return t.Status == Done || t.Status == Error || t.Status == Canceled
@@ -51,7 +66,14 @@ type TaskIDProvider interface {
 
 type Runner interface {
 	Execute(runnable Runnable, options ...Option) (Task, error)
-	ExecuteAndWait(runnable Runnable, timeout time.Duration, options ...Option) (Task, error)
+	// ExecuteAndWait limits only how long the caller waits. The task is created
+	// with its own detached context and continues in the background after the
+	// waiter context or timeout is done.
+	ExecuteAndWait(ctx context.Context, runnable Runnable, timeout time.Duration, options ...Option) (Task, error)
+	// RegisterGroup bounds concurrency for one exact task group. Non-positive
+	// concurrency is a no-op. Duplicate names return an error. Unregistered
+	// groups use the runner's global limit.
+	RegisterGroup(group string, concurrency int) error
 	GetTask(id string) (Task, error)
 	GetTasks(group string) ([]Task, error)
 	StopTask(id string) (Task, error)

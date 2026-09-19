@@ -88,7 +88,7 @@ func (p PermissionDeniedError) Error() string {
 	return p.msg
 }
 
-// UnsupportedError 405
+// UnsupportedError 403
 type UnsupportedError struct {
 	msg string
 }
@@ -98,7 +98,7 @@ func (n UnsupportedError) Error() string {
 }
 
 func (n UnsupportedError) Code() int {
-	return http.StatusMethodNotAllowed
+	return http.StatusForbidden
 }
 
 type RemoteAPIError struct {
@@ -124,6 +124,11 @@ func (r RemoteAPIError) Status() int {
 
 func IsUnauthorizedError(e error) bool {
 	_, ok := errors.AsType[UnauthorizedError](e)
+	return ok
+}
+
+func IsBadRequestError(e error) bool {
+	_, ok := errors.AsType[BadRequestError](e)
 	return ok
 }
 

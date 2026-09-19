@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"cmp"
 	cryptoRand "crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -16,6 +17,15 @@ import (
 	"strings"
 	"time"
 )
+
+// PositiveOr returns v when it is greater than zero, otherwise fallback.
+func PositiveOr[T cmp.Ordered](v, fallback T) T {
+	var zero T
+	if v > zero {
+		return v
+	}
+	return fallback
+}
 
 func FileExists(path string) (bool, error) {
 	_, e := os.Stat(path)
