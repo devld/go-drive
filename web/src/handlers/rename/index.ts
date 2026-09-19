@@ -1,5 +1,5 @@
 import { moveEntry } from '@/api'
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { dir, pathClean, pathJoin, taskDone, TASK_CANCELLED } from '@/utils'
 import { EntryHandler } from '../types'
 

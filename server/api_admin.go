@@ -165,7 +165,7 @@ func InitAdminRoutes(
 	// delete job execution
 	r.DELETE("/job-executions/:id", jr.deleteJobExecution)
 	// delete job executions by jobId
-	r.DELETE("/job-executions", jr.deleteJobExecutionsByJobId)
+	r.DELETE("/job-executions", jr.deleteJobExecutionsByJobID)
 	// execute job script code
 	r.POST("/job-script-evaluations", jr.scriptEval)
 

@@ -635,7 +635,7 @@ func TestDetachLimitedReaderClosesOwner(t *testing.T) {
 		t.Run(strconv.FormatBool(detach), func(t *testing.T) {
 			vm := newPoolTestVM(t)
 			probe := &closeProbe{Reader: strings.NewReader("abcdef")}
-			mustDefineGlobal(t, vm, "response", newHttpResponse(vm, &http.Response{Body: probe, Header: http.Header{}}))
+			mustDefineGlobal(t, vm, "response", newHTTPResponse(vm, &http.Response{Body: probe, Header: http.Header{}}))
 			var reader io.ReadCloser
 			e := vm.Do(context.Background(), func() error {
 				v, e := vm.Run(context.Background(), `response.body.limitReader(4).limitReader(2)`, "")

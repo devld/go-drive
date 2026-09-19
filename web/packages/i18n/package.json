@@ -1,0 +1,16 @@
+{
+  "name": "@go-drive/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared internationalization for the go-drive web application and previewers",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "vue-i18n": "^11.4.5"
+  }
+}

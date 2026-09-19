@@ -36,7 +36,7 @@ const (
 )
 
 const (
-	DbFilename = "data.db"
+	DBFilename = "data.db"
 	LocalFsDir = "local"
 
 	TempDir = "temp"
@@ -76,7 +76,7 @@ type Config struct {
 	// returns the direct remote address.
 	TrustedProxies []string `yaml:"trusted-proxies"`
 
-	Db      DbConfig      `yaml:"db"`
+	DB      DBConfig      `yaml:"db"`
 	Logging LoggingConfig `yaml:"logging"`
 
 	APIPath string `yaml:"api-path"`
@@ -117,7 +117,7 @@ type Config struct {
 	BuildAt string
 }
 
-type DbConfig struct {
+type DBConfig struct {
 	Type     string   `yaml:"type"`
 	Host     string   `yaml:"host"`
 	Port     int      `yaml:"port"`
@@ -263,7 +263,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		config.Thumbnail.Concurrent = int(math.Max(float64(runtime.NumCPU()/2), 1))
 	}
 
-	e := parseDbConfig(&config.Db)
+	e := parseDBConfig(&config.DB)
 	if e != nil {
 		return config, e
 	}
@@ -300,14 +300,14 @@ func applyLoggingConfig(config *LoggingConfig) error {
 	return nil
 }
 
-func parseDbConfig(c *DbConfig) error {
+func parseDBConfig(c *DBConfig) error {
 	if c.Type == "" {
 		c.Type = "sqlite"
 	}
 	switch c.Type {
 	case "sqlite":
 		if c.Name == "" {
-			c.Name = DbFilename
+			c.Name = DBFilename
 		}
 	case "mysql":
 		if c.Port <= 0 {
@@ -326,7 +326,7 @@ func parseDbConfig(c *DbConfig) error {
 }
 
 func (c Config) GetDB() gorm.Dialector {
-	db := c.Db
+	db := c.DB
 	var d gorm.Dialector = nil
 	switch db.Type {
 	case "sqlite":

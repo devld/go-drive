@@ -27,7 +27,7 @@ var (
 	_ ConsoleStringer = jsObjTempFile{}
 	_ ConsoleStringer = (*httpHeadersJS)(nil)
 	_ ConsoleStringer = (*httpResponseJS)(nil)
-	_ ConsoleStringer = jsObjHttpFormData{}
+	_ ConsoleStringer = jsObjHTTPFormData{}
 	_ ConsoleStringer = jsObjHash{}
 	_ ConsoleStringer = jsObjHmac{}
 	_ json.Marshaler  = jsObjEntry{}
@@ -118,8 +118,8 @@ func TestFormatConsoleArgInspectsGoHandles(t *testing.T) {
 	mustDefineGlobal(t, vm, "entry", entry)
 	mustDefineGlobal(t, vm, "entries", []jsObjEntry{entry})
 	mustDefineGlobal(t, vm, "buf", []byte("hello"))
-	mustDefineGlobal(t, vm, "headers", newHttpHeaders(vm, http.Header{"Content-Type": []string{"text/plain"}}))
-	mustDefineGlobal(t, vm, "resp", newHttpResponse(vm, &http.Response{
+	mustDefineGlobal(t, vm, "headers", newHTTPHeaders(vm, http.Header{"Content-Type": []string{"text/plain"}}))
+	mustDefineGlobal(t, vm, "resp", newHTTPResponse(vm, &http.Response{
 		StatusCode: 200,
 		Header:     http.Header{"Content-Length": []string{"5"}},
 		Body:       http.NoBody,

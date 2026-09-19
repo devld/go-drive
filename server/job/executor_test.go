@@ -28,7 +28,7 @@ type taskLookupRunner struct {
 }
 
 func (r taskLookupRunner) GetTask(id string) (task.Task, error) {
-	if id != r.task.Id {
+	if id != r.task.ID {
 		return task.Task{}, task.ErrorNotFound
 	}
 	return r.task, nil
@@ -36,7 +36,7 @@ func (r taskLookupRunner) GetTask(id string) (task.Task, error) {
 
 func TestGetExecutionProgress(t *testing.T) {
 	runner := taskLookupRunner{task: task.Task{
-		Id:       "task-2",
+		ID:       "task-2",
 		Progress: task.Progress{Loaded: 3, Total: 5},
 	}}
 	executor := &JobExecutor{

@@ -120,11 +120,11 @@ func mapScriptDriveError(e error) error {
 	if errors.Is(e, context.Canceled) || errors.Is(e, context.DeadlineExceeded) {
 		return e
 	}
-	return err.NewRemoteApiError(http.StatusInternalServerError, e.Error())
+	return err.NewRemoteAPIError(http.StatusInternalServerError, e.Error())
 }
 
 func invalidScriptResult(message string) error {
-	return err.NewRemoteApiError(http.StatusInternalServerError, message)
+	return err.NewRemoteAPIError(http.StatusInternalServerError, message)
 }
 
 func (sd *ScriptDrive) rootEntry() *scriptDriveEntry {

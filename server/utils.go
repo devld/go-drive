@@ -244,20 +244,20 @@ func ExecuteTaskStreaming(c *gin.Context, runner task.Runner, runnable task.Runn
 		return e
 	}
 	ms := GetMessageSource(c)
-	taskJson, e := json.Marshal(TranslateV(c, ms, createdTask))
+	taskJSON, e := json.Marshal(TranslateV(c, ms, createdTask))
 	if e != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, e)
 		return nil
 	}
 	c.Header("X-Accel-Buffering", "no") // for nginx to not buffer the response
-	c.Header(common.ResponseHeaderKey, string(taskJson))
+	c.Header(common.ResponseHeaderKey, string(taskJSON))
 	streamReady <- struct{}{}
 
 	select {
 	case <-c.Request.Context().Done():
-		authLog.Debugf("streaming task canceled by request id=%s", createdTask.Id)
-		if _, stopErr := runner.StopTask(createdTask.Id); stopErr != nil && !errors.Is(stopErr, task.ErrorNotFound) {
-			logging.For("task").Warnf("failed to stop canceled streaming task id=%s: %v", createdTask.Id, stopErr)
+		authLog.Debugf("streaming task canceled by request id=%s", createdTask.ID)
+		if _, stopErr := runner.StopTask(createdTask.ID); stopErr != nil && !errors.Is(stopErr, task.ErrorNotFound) {
+			logging.For("task").Warnf("failed to stop canceled streaming task id=%s: %v", createdTask.ID, stopErr)
 		}
 	case <-completeChan:
 	}

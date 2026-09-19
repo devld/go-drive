@@ -1,6 +1,6 @@
 import AppWrapper from '@/views/AppWrapper/index.vue'
 
-import { T } from '@/i18n'
+import { T } from '@go-drive/i18n'
 import { setTitle } from '@/utils'
 import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
 import { EXPLORER_PATH_BASE } from '@/config'

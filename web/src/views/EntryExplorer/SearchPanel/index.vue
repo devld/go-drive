@@ -63,7 +63,7 @@ import { Entry, SearchHitItem } from '@/types'
 import { debounce } from '@/utils'
 import { useHotKey } from '@go-drive/utils'
 import { computed, onUnmounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 import SearchItem from './SearchItem.vue'
 import { LoadingState } from '@go-drive/utils'
 

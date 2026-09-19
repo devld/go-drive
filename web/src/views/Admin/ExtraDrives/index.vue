@@ -142,7 +142,7 @@ import {
 import { alert, confirm } from '@/utils/ui-utils'
 import { reactive, ref } from 'vue'
 import { taskDone } from '@/utils'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@go-drive/i18n'
 
 interface DriveScriptRow extends DriveScript {
   loading?: boolean

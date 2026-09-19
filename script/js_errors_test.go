@@ -145,7 +145,7 @@ func TestJavaScriptErrorClassesMapToGoErrors(t *testing.T) {
 	}
 
 	_, e = vm.Run(context.Background(), `throw new RemoteApiError(502, "bad gateway")`, "")
-	var remote err.RemoteApiError
+	var remote err.RemoteAPIError
 	if !errors.As(e, &remote) || remote.Status() != 502 || remote.Error() != "bad gateway" {
 		t.Fatalf("RemoteApiError = %#v (%v)", e, e)
 	}

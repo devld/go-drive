@@ -24,7 +24,7 @@ func Test_isValidUploadIdPart(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
-			if got := isValidUploadIdPart(tt.in); got != tt.want {
+			if got := isValidUploadIDPart(tt.in); got != tt.want {
 				t.Errorf("isValidUploadIdPart(%q) = %v, want %v", tt.in, got, tt.want)
 			}
 		})

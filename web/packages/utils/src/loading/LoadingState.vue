@@ -26,14 +26,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { TextLike } from '../types'
+import type { I18nText } from '@go-drive/i18n'
 import LoadingIndicator from './LoadingIndicator.vue'
 
 type LoadingVariant = 'inline' | 'panel' | 'overlay' | 'page' | 'dialog'
 
 const props = withDefaults(
   defineProps<{
-    text?: TextLike
+    text?: I18nText
     ariaLabel?: string
     variant?: LoadingVariant
     surface?: boolean

@@ -74,38 +74,38 @@ func NewOneDrive(_ context.Context, config types.SM,
 		return nil, e
 	}
 
-	cacheTtl := config.GetDuration("cache_ttl", -1)
+	cacheTTL := config.GetDuration("cache_ttl", -1)
 	params, _ := driveUtils.Data.Load("drive_id", "share_point_id")
 	od := &OneDrive{
-		cacheTTL:      cacheTtl,
+		cacheTTL:      cacheTTL,
 		uploadProxy:   config.GetBool("proxy_upload"),
 		downloadProxy: config.GetBool("proxy_download"),
 	}
-	if cacheTtl <= 0 {
+	if cacheTTL <= 0 {
 		od.cache = driveutil.DummyCache()
 	} else {
 		od.cache = driveUtils.CreateCache(od.deserializeEntry)
 	}
 
-	driveId := params["drive_id"]
-	sharePointId := params["share_point_id"]
+	driveID := params["drive_id"]
+	sharePointID := params["share_point_id"]
 	sharePointURL := config["share_point"]
 
 	site := getSiteConfig(config["site"])
 	var reqPrefix string
 	switch {
 	case sharePointURL != "":
-		if sharePointId == "" {
+		if sharePointID == "" {
 			return nil, err.NewNotAllowedMessageError(t("drive_not_selected"))
 		}
-		reqPrefix = utils.BuildURL(site.ApiBase+"/sites/{}/drive", sharePointId)
-	case driveId != "":
-		reqPrefix = utils.BuildURL(site.ApiBase+"/drives/{}", driveId)
+		reqPrefix = utils.BuildURL(site.APIBase+"/sites/{}/drive", sharePointID)
+	case driveID != "":
+		reqPrefix = utils.BuildURL(site.APIBase+"/drives/{}", driveID)
 	default:
-		reqPrefix = site.ApiBase + "/me/drive"
+		reqPrefix = site.APIBase + "/me/drive"
 	}
 
-	od.c, e = req.NewClient(reqPrefix, nil, ifApiCallError, oauthHolder.Client())
+	od.c, e = req.NewClient(reqPrefix, nil, ifAPICallError, oauthHolder.Client())
 	od.reqPrefix = reqPrefix
 
 	return od, e
@@ -180,7 +180,7 @@ func (o *OneDrive) MakeDir(ctx context.Context, path string) (types.IEntry, erro
 	}
 	parent := utils.PathParent(path)
 	name := utils.PathBase(path)
-	resp, e := o.c.Post(ctx, pathURL(parent)+"/children", nil, req.NewJsonBody(types.M{
+	resp, e := o.c.Post(ctx, pathURL(parent)+"/children", nil, req.NewJSONBody(types.M{
 		"name":                              name,
 		"folder":                            types.M{},
 		"@microsoft.graph.conflictBehavior": "fail",
@@ -205,7 +205,7 @@ func (o *OneDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, overrid
 	ctx.Total(from.Size(), false)
 	toParentPath := utils.PathParent(to)
 	toName := utils.PathBase(to)
-	resp, e := o.c.Post(ctx, idURL(from.(*oneDriveEntry).id)+"/copy", nil, req.NewJsonBody(types.M{
+	resp, e := o.c.Post(ctx, idURL(from.(*oneDriveEntry).id)+"/copy", nil, req.NewJSONBody(types.M{
 		"parentReference": types.M{"path": itemPath(toParentPath)},
 		"name":            toName,
 	}))
@@ -215,8 +215,8 @@ func (o *OneDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, overrid
 	_ = resp.Dispose()
 	if resp.Status() == 202 {
 		// we should wait for it to finish
-		waitUrl := resp.Response().Header.Get("Location")
-		if e := waitLongRunningAction(ctx, waitUrl); e != nil {
+		waitURL := resp.Response().Header.Get("Location")
+		if e := waitLongRunningAction(ctx, waitURL); e != nil {
 			return nil, e
 		}
 	}
@@ -240,7 +240,7 @@ func (o *OneDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, overrid
 	toParentPath := utils.PathParent(to)
 	toName := utils.PathBase(to)
 	resp, e := o.c.Request(ctx, "PATCH", idURL(from.(*oneDriveEntry).id), nil,
-		req.NewJsonBody(types.M{
+		req.NewJSONBody(types.M{
 			"parentReference": types.M{"path": itemPath(toParentPath)},
 			"name":            toName,
 		}),
@@ -267,7 +267,7 @@ func (o *OneDrive) List(ctx context.Context, path string) ([]types.IEntry, error
 		if e != nil {
 			return nil, e
 		}
-		if e := resp.Json(&res); e != nil {
+		if e := resp.JSON(&res); e != nil {
 			return nil, e
 		}
 		for _, v := range res.Items {
@@ -322,35 +322,35 @@ func (o *OneDrive) Upload(ctx context.Context, path string, size int64,
 			return nil, e
 		}
 		filename := utils.PathBase(path)
-		sessionUrl, e := o.createUploadSession(ctx, parent.(*oneDriveEntry).id, filename, override)
+		sessionURL, e := o.createUploadSession(ctx, parent.(*oneDriveEntry).id, filename, override)
 		if e != nil {
 			return nil, e
 		}
 		return &types.DriveUploadConfig{
 			Provider: types.OneDriveProvider,
-			Config:   types.SM{"url": sessionUrl},
+			Config:   types.SM{"url": sessionURL},
 		}, nil
 	}
 }
 
 func (o *OneDrive) newEntry(item driveItem) *oneDriveEntry {
 	modTime, _ := time.Parse(time.RFC3339, item.ModTime)
-	thumbnailUrl := ""
+	thumbnailURL := ""
 	if supportThumbnail(item) &&
 		item.Thumbnails != nil && len(item.Thumbnails) > 0 &&
 		item.Thumbnails[0].Large != nil {
-		thumbnailUrl = item.Thumbnails[0].Large.URL
+		thumbnailURL = item.Thumbnails[0].Large.URL
 	}
 	return &oneDriveEntry{
-		id:                   item.Id,
+		id:                   item.ID,
 		path:                 item.Path(),
 		isDir:                item.Folder != nil,
 		size:                 item.Size,
 		modTime:              utils.Millisecond(modTime),
 		d:                    o,
-		thumbnail:            thumbnailUrl,
-		downloadUrl:          item.DownloadURL,
-		downloadUrlExpiresAt: time.Now().Add(downloadUrlTTL).Unix(),
+		thumbnail:            thumbnailURL,
+		downloadURL:          item.DownloadURL,
+		downloadURLExpiresAt: time.Now().Add(downloadURLTTL).Unix(),
 	}
 }
 
@@ -366,8 +366,8 @@ type oneDriveEntry struct {
 
 	thumbnail string
 
-	downloadUrl          string
-	downloadUrlExpiresAt int64
+	downloadURL          string
+	downloadURLExpiresAt int64
 }
 
 func (o *oneDriveEntry) Path() string {
@@ -419,7 +419,7 @@ func (o *oneDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 	if o.isDir {
 		return nil, err.NewNotAllowedError()
 	}
-	if o.downloadUrlExpiresAt <= time.Now().Unix() {
+	if o.downloadURLExpiresAt <= time.Now().Unix() {
 		u, resp, e := o.get(ctx)
 		if e != nil {
 			return nil, e
@@ -429,11 +429,11 @@ func (o *oneDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 			// fallback to GetReader
 			return nil, err.NewUnsupportedError()
 		}
-		o.downloadUrl = u
-		o.downloadUrlExpiresAt = time.Now().Add(downloadUrlTTL).Unix()
+		o.downloadURL = u
+		o.downloadURLExpiresAt = time.Now().Add(downloadURLTTL).Unix()
 		_ = o.d.cache.PutEntry(o, o.d.cacheTTL)
 	}
-	return &types.ContentURL{URL: o.downloadUrl, Proxy: o.d.downloadProxy}, nil
+	return &types.ContentURL{URL: o.downloadURL, Proxy: o.d.downloadProxy}, nil
 }
 
 func (o *oneDriveEntry) get(ctx context.Context) (string, req.Response, error) {
@@ -460,8 +460,8 @@ func (o *oneDriveEntry) get(ctx context.Context) (string, req.Response, error) {
 func (o *oneDriveEntry) EntryData() types.SM {
 	return types.SM{
 		"id": o.id,
-		"du": o.downloadUrl,
-		"de": strconv.FormatInt(o.downloadUrlExpiresAt, 10),
+		"du": o.downloadURL,
+		"de": strconv.FormatInt(o.downloadURLExpiresAt, 10),
 		"th": o.thumbnail,
 	}
 }

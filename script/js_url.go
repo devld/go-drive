@@ -179,7 +179,6 @@ func buildURL(vm *VM, parts *Value) (string, error) {
 		}
 		if !hasProtocol || protocol == "" {
 			scheme = originURL.Scheme
-			hasProtocol = true
 		} else if !strings.EqualFold(scheme, originURL.Scheme) {
 			return "", fmt.Errorf("origin and protocol do not match")
 		}

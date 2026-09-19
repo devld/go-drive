@@ -174,7 +174,7 @@ func (sdr *scriptDrivesRoute) syncAvailableDrives(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	sdr.syncTaskID = created.Id
+	sdr.syncTaskID = created.ID
 	SetResult(c, created)
 }
 

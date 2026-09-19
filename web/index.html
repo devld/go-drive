@@ -9,9 +9,9 @@
     <% if (mode === 'production') { %>
     <script>
       var ___config___ = {
-        api: JSON.parse('{{ .Json (.Config.APIPath) }}'),
-        appName: JSON.parse('{{ .Json (.Options.Get "app.name") }}'),
-        version: JSON.parse('{{ .Json (.Config.Version) }}'),
+        api: JSON.parse('{{ .JSON (.Config.APIPath) }}'),
+        appName: JSON.parse('{{ .JSON (.Options.Get "app.name") }}'),
+        version: JSON.parse('{{ .JSON (.Config.Version) }}'),
       }
     </script>
     <% } else { %>

@@ -136,7 +136,7 @@ func TestOAuthTokenNilContextPanics(t *testing.T) {
 			t.Fatal("expected nil context to panic")
 		}
 	}()
-	_, _ = oauthHolder.Token(nil)
+	_, _ = oauthHolder.Token(nil) //nolint:staticcheck // Token must panic on a nil context.
 }
 
 func TestOAuthClientClosesBodyWhenTokenRequestFails(t *testing.T) {
