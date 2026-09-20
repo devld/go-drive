@@ -17,7 +17,7 @@ type VMPoolConfig struct {
 	MaxIdle  int
 	MinIdle  int
 	IdleTime time.Duration
-	// Classes is merged onto every pool member after NewVM.
+	// Classes extra host classes merged onto every pool member after NewVM.
 	Classes *ClassSet
 }
 

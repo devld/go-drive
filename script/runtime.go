@@ -60,8 +60,6 @@ func NewVM() (*VM, error) {
 	runtime.SetFieldNameMapper(goFieldNameMapper{})
 	vm := &VM{
 		j:           runtime,
-		classes:     BuiltinClasses,
-		ctors:       make(map[string]*goja.Object, len(BuiltinClasses.classes)),
 		disposables: make(map[any]struct{}),
 		reusable:    true,
 	}
@@ -69,7 +67,7 @@ func NewVM() (*VM, error) {
 	vm.jsVars.errorCtor = runtime.Get("Error").ToObject(runtime)
 	vm.jsVars.objectFreeze, _ = goja.AssertFunction(runtime.Get("Object").ToObject(runtime).Get("freeze"))
 	vm.jsVars.arrayIsArray, _ = goja.AssertFunction(runtime.Get("Array").ToObject(runtime).Get("isArray"))
-	if e := vm.AddClassSet(BuiltinClasses); e != nil {
+	if e := vm.AddClassSet(builtinClasses); e != nil {
 		_ = vm.Dispose()
 		return nil, e
 	}

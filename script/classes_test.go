@@ -121,21 +121,21 @@ func TestHostClassMethodsLiveOnPrototype(t *testing.T) {
 
 func TestHostClassCatalogIsRegistered(t *testing.T) {
 	vm := newPoolTestVM(t)
-	if vm.classes != BuiltinClasses {
-		t.Fatal("NewVM should share BuiltinClasses")
+	if vm.classes != builtinClasses {
+		t.Fatal("NewVM should share builtinClasses")
 	}
-	if len(vm.ctors) != len(BuiltinClasses.classes) {
-		t.Fatalf("registered %d ctors, catalog %d", len(vm.ctors), len(BuiltinClasses.classes))
+	if len(vm.ctors) != len(builtinClasses.classes) {
+		t.Fatalf("registered %d ctors, catalog %d", len(vm.ctors), len(builtinClasses.classes))
 	}
-	if len(BuiltinClasses.names) != len(BuiltinClasses.classes) {
-		t.Fatalf("names %d, catalog %d", len(BuiltinClasses.names), len(BuiltinClasses.classes))
+	if len(builtinClasses.names) != len(builtinClasses.classes) {
+		t.Fatalf("names %d, catalog %d", len(builtinClasses.names), len(builtinClasses.classes))
 	}
-	for i := 1; i < len(BuiltinClasses.names); i++ {
-		if BuiltinClasses.names[i-1] >= BuiltinClasses.names[i] {
-			t.Fatalf("names not sorted: %v", BuiltinClasses.names)
+	for i := 1; i < len(builtinClasses.names); i++ {
+		if builtinClasses.names[i-1] >= builtinClasses.names[i] {
+			t.Fatalf("names not sorted: %v", builtinClasses.names)
 		}
 	}
-	for _, class := range BuiltinClasses.classes {
+	for _, class := range builtinClasses.classes {
 		if vm.ctors[class.Name] == nil {
 			t.Fatalf("class %q ctor is nil", class.Name)
 		}
@@ -392,7 +392,7 @@ func TestClassSetCopiesDefinitionMaps(t *testing.T) {
 		make func(*JSClass) *ClassSet
 	}{
 		{"NewClassSet", func(c *JSClass) *ClassSet { return NewClassSet(c) }},
-		{"With", func(c *JSClass) *ClassSet { return BuiltinClasses.With(c) }},
+		{"With", func(c *JSClass) *ClassSet { return NewClassSet().With(c) }},
 	} {
 		t.Run(compose.name, func(t *testing.T) {
 			class := boxClass()
@@ -506,7 +506,7 @@ func TestClassSetInPool(t *testing.T) {
 		MaxTotal: 2,
 		MaxIdle:  2,
 		MinIdle:  1,
-		Classes:  BuiltinClasses.With(boxClass()),
+		Classes:  NewClassSet(boxClass()),
 	})
 	if e != nil {
 		t.Fatal(e)
@@ -532,35 +532,35 @@ func TestClassSetInPool(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer func() { _ = pool.Return(context.Background(), vm2) }()
-	if vm.classes != vm2.classes || vm.classes != pool.config.Classes {
-		t.Fatal("pool VMs should share VMPoolConfig.Classes")
+	if vm.classSet().classByName("Box") == nil || vm.classSet().classByName("Bytes") == nil {
+		t.Fatal("pooled extras should merge onto builtins")
+	}
+	if builtinClasses.classByName("Box") != nil {
+		t.Fatal("AddClassSet must not mutate builtinClasses")
 	}
 }
 
-func TestClassSetSharedAcrossVMs(t *testing.T) {
-	set := BuiltinClasses.With(boxClass())
+func TestClassSetMergedAcrossVMs(t *testing.T) {
+	extras := NewClassSet(boxClass())
 	vm1 := newPoolTestVM(t)
 	vm2 := newPoolTestVM(t)
-	if e := vm1.AddClassSet(set); e != nil {
+	if e := vm1.AddClassSet(extras); e != nil {
 		t.Fatal(e)
 	}
-	if e := vm2.AddClassSet(set); e != nil {
+	if e := vm2.AddClassSet(extras); e != nil {
 		t.Fatal(e)
 	}
-	if vm1.classes != set || vm2.classes != set {
-		t.Fatal("AddClassSet should keep a complete extra set shared")
+	if vm1.classes == extras || vm2.classes == extras || vm1.classes == builtinClasses {
+		t.Fatal("extras should merge onto each VM catalog")
 	}
-
-	partial := NewClassSet(boxClass())
-	vm3 := newPoolTestVM(t)
-	if e := vm3.AddClassSet(partial); e != nil {
-		t.Fatal(e)
+	if builtinClasses.classByName("Box") != nil {
+		t.Fatal("AddClassSet must not mutate builtinClasses")
 	}
-	if vm3.classes == partial || vm3.classes == BuiltinClasses {
-		t.Fatal("partial set should be merged onto builtins")
-	}
-	if vm3.classSet().classByName("Box") == nil || vm3.classSet().classByName("Bytes") == nil {
+	if vm1.classSet().classByName("Box") == nil || vm1.classSet().classByName("Bytes") == nil {
 		t.Fatal("merged set should have Box and Bytes")
+	}
+	if vm2.classSet().classByName("Box") == nil || vm2.classSet().classByName("Bytes") == nil {
+		t.Fatal("second VM merged set should have Box and Bytes")
 	}
 }
 
@@ -611,9 +611,9 @@ func TestRejectExtendBuiltin(t *testing.T) {
 		fn   func()
 	}{
 		{"NewClassSet Error", func() { NewClassSet(hostOnly("MyError", "Error")) }},
-		{"With Error", func() { BuiltinClasses.With(hostOnly("MyError", "Error")) }},
-		{"With NotFoundError", func() { BuiltinClasses.With(hostOnly("MyNotFound", "NotFoundError")) }},
-		{"With Reader", func() { BuiltinClasses.With(hostOnly("MyReader", "Reader")) }},
+		{"With Error", func() { builtinClasses.With(hostOnly("MyError", "Error")) }},
+		{"With NotFoundError", func() { builtinClasses.With(hostOnly("MyNotFound", "NotFoundError")) }},
+		{"With Reader", func() { builtinClasses.With(hostOnly("MyReader", "Reader")) }},
 		{"NewClassSet Reader", func() { NewClassSet(hostOnly("MyReader", "Reader")) }},
 	}
 	for _, tc := range cases {
