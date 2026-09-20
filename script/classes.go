@@ -15,7 +15,7 @@ import (
 type JSClass struct {
 	Name string
 	// Parent is another JSClass name in the same ClassSet.
-	// Callers cannot extend BuiltinClasses or JavaScript Error.
+	// Callers cannot extend builtin host classes or JavaScript Error.
 	Parent    string
 	Construct NativeFunction
 	// Handle is a zero value of the instance type. It must embed ClassHost.
@@ -37,9 +37,11 @@ type JSClass struct {
 // ClassMethod is a host-class prototype method.
 type ClassMethod func(vm *VM, this *Value, args Values) any
 
-// ClassSet is an immutable catalog of host classes and may be shared by VMs.
-// Compose extras with With; install with AddClassSet (before pool initialization completes)
-// or VMPoolConfig.Classes. Lookups (by name, handle type, Accepts) live here.
+// ClassSet is an immutable catalog of host classes.
+// Callers build extras with NewClassSet or With, then install with AddClassSet
+// (before pool initialization completes) or VMPoolConfig.Classes.
+// Lookups (by name, handle type, Accepts) live here. AddClassSet merges
+// new names onto the VM catalog; it does not mutate the builtin catalog.
 type ClassSet struct {
 	classes   []*JSClass
 	byName    map[string]*JSClass
@@ -70,13 +72,10 @@ var (
 	hostObjectType    = reflect.TypeFor[*hostObject]()
 )
 
-var (
-	// BuiltinClasses is installed by NewVM.
-	BuiltinClasses *ClassSet
-)
+var builtinClasses *ClassSet
 
 func init() {
-	BuiltinClasses = newClassSet(
+	builtinClasses = newClassSet(
 		&jsClassDrive,
 		&jsClassEntry,
 		&jsClassBytes,
@@ -96,7 +95,7 @@ func init() {
 }
 
 // NewClassSet clones and finalizes classes. Invalid definitions panic.
-// Parent cannot be Error or a class from BuiltinClasses.
+// Parent cannot be Error or a builtin host class.
 func NewClassSet(classes ...*JSClass) *ClassSet {
 	mustNotExtendBuiltin(classes)
 	return newClassSet(classes...)
@@ -119,6 +118,7 @@ func newClassSet(classes ...*JSClass) *ClassSet {
 }
 
 // With returns a new finalized set containing s plus classes. s may be nil.
+// Use it to compose extras; AddClassSet merges the result onto a VM.
 func (s *ClassSet) With(classes ...*JSClass) *ClassSet {
 	mustNotExtendBuiltin(classes)
 	n := len(classes)
@@ -157,7 +157,7 @@ func rejectExtendBuiltin(c *JSClass) error {
 	if c == nil || c.Parent == "" {
 		return nil
 	}
-	if c.Parent == jsParentError || (BuiltinClasses != nil && BuiltinClasses.byName[c.Parent] != nil) {
+	if c.Parent == jsParentError || (builtinClasses != nil && builtinClasses.byName[c.Parent] != nil) {
 		return fmt.Errorf("host class %s cannot extend builtin class %s", c.Name, c.Parent)
 	}
 	return nil
@@ -391,7 +391,7 @@ func (vm *VM) classSet() *ClassSet {
 	if vm != nil && vm.classes != nil {
 		return vm.classes
 	}
-	return BuiltinClasses
+	return builtinClasses
 }
 
 func (s *ClassSet) classByName(name string) *JSClass {
@@ -428,23 +428,9 @@ func (s *ClassSet) classAccepting(v any) *JSClass {
 	return nil
 }
 
-func (s *ClassSet) containsNamesOf(other *ClassSet) bool {
-	if other == nil {
-		return true
-	}
-	if s == nil {
-		return false
-	}
-	for _, c := range other.classes {
-		if s.byName[c.Name] == nil {
-			return false
-		}
-	}
-	return true
-}
-
 // AddClassSet installs classes whose names are not already on this Runtime.
-// Call before pool initialization completes. NewVM uses this for BuiltinClasses as well.
+// Call before pool initialization completes. NewVM uses this for the builtin catalog as well.
+// The first successful install becomes the VM catalog; later installs merge new names.
 func (vm *VM) AddClassSet(set *ClassSet) error {
 	if vm == nil || vm.disposed || vm.j == nil {
 		return errors.New("Runtime has been disposed") //nolint:staticcheck // JS-facing error keeps the host type name
@@ -462,12 +448,11 @@ func (vm *VM) AddClassSet(set *ClassSet) error {
 	if len(added) == 0 {
 		return nil
 	}
-	cur := vm.classSet()
-	if set.containsNamesOf(cur) {
+	if vm.classes == nil {
 		vm.classes = set
-	} else {
-		vm.classes = cur.With(added...)
+		return nil
 	}
+	vm.classes = vm.classes.With(added...)
 	return nil
 }
 
