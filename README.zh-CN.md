@@ -51,6 +51,7 @@
 - **LDAP 认证** —— 支持 LDAP/LDAPS、用户首次登录自动创建以及用户组自动同步。
 - **路径挂载** —— 将任意存储或子路径挂载到统一的虚拟目录树中。
 - **文件预览** —— 基于 [PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe) 的图片画廊、内置音视频播放器和 PDF 查看器，并支持配置外部预览器。
+- **压缩包预览** —— 在浏览器中浏览 ZIP、7z 和 RAR，可下载其中单个文件，或将所选内容打包为 zip。
 - **编辑器** —— 使用 [CodeMirror](https://github.com/codemirror/) 进行文本编辑，使用 [Monaco Editor](https://github.com/microsoft/monaco-editor) 进行完整的代码编辑。
 - **缩略图** —— 为图片、文本、视频和音频生成缩略图（处理器可插拔，可选 `libvips`/`ffmpeg`）。
 - **文件名搜索** —— 可选的跨挂载存储文件名索引与搜索。

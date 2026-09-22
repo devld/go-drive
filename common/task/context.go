@@ -107,3 +107,11 @@ func (c *taskCtxWrapper) Total(total int64, abs bool) {
 		c.taskCtx.Total(total, abs)
 	}
 }
+
+func (c *taskCtxWrapper) GetProgress() int64 {
+	return c.taskCtx.GetProgress()
+}
+
+func (c *taskCtxWrapper) GetTotal() int64 {
+	return c.taskCtx.GetTotal()
+}

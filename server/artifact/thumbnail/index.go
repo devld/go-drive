@@ -105,7 +105,7 @@ func (m *Maker) supportedExtensions() string {
 }
 
 func (m *Maker) Resolve(request artifact.Request) (artifact.ResolvedRequest, error) {
-	if request.Source == nil || request.Args != "" {
+	if request.Args != "" {
 		return artifact.ResolvedRequest{}, apierr.NewNotFoundMessageError("invalid thumbnail artifact request")
 	}
 	return artifact.ResolvedRequest{Fingerprint: "v1"}, nil

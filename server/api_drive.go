@@ -24,7 +24,6 @@ import (
 
 const (
 	maxProxySizeKey = "proxy.maxSize"
-	maxZipSizeKey   = "zip.maxSize"
 )
 
 var driveUploaderNameRegexp = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
@@ -64,14 +63,13 @@ func InitDriveRoutes(
 	// get file content
 	signatureAuthRoute.HEAD("/download", dr._getDrive, dr.getContent)
 	signatureAuthRoute.GET("/download", dr._getDrive, dr.getContent)
+	signatureAuthRoute.HEAD("/artifact/:handler", dr._getDrive, dr.getArtifact)
 	signatureAuthRoute.GET("/artifact/:handler", dr._getDrive, dr.getArtifact)
 
 	tokenAuth := TokenAuth(tokenStore)
 	r := router.Group("/", tokenAuth)
 
 	r.POST("/artifact/:handler", dr._getDrive, dr.postArtifact)
-
-	router.POST("/archive", TokenAuthWithPostParams(tokenStore), dr._getDrive, dr.zipDownload)
 
 	// list entries/drives
 	router.GET("/list", SignatureAuth(signer, userDAO, false), tokenAuth, dr._getDrive, dr.list)

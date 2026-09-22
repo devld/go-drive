@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 ## File preview
 
-You can separately configure extensions for text, images, audio, video, Monaco, and external previewers. See [File Preview and Thumbnails](./preview-thumbnail.html) for detailed formats and third-party privacy implications.
+You can separately configure extensions for text, images, audio, video, Monaco, and external previewers. ZIP, 7z, and RAR archives open in the browser; their size limits are set in `config.yml`. See [File Preview and Thumbnails](./preview-thumbnail.html) for detailed formats and third-party privacy implications.
 
 ## Anonymous user root path
 

@@ -4,7 +4,7 @@ titleTemplate: false
 description: 使用一台自托管 go-drive 服务器统一管理本地文件、S3、WebDAV、FTP、SFTP、OneDrive 和 Google Drive。
 lang: zh-CN
 translation_key: home
-source_hash: 8cc9c3f45a7fef17aa8e83b988cbe3560fb0fc89c7f6ef5afe7b4881b5bf9c5c
+source_hash: 58a581c4aad6facc0cdbb4795afe9f376813017606753e5e4f3b92324a4e5c77
 ---
 
 # go-drive
@@ -30,7 +30,7 @@ docker run -d --name go-drive \
 
 - 浏览、上传、下载、复制、移动、重命名和删除文件，支持拖拽、粘贴、分片上传和 ZIP 打包下载。
 - 用户、用户组、根路径隔离和按路径读写权限。
-- 图片、音频、视频、文本、代码、PDF 与可配置的外部预览器。
+- 图片、音频、视频、文本、代码、PDF、ZIP/7z/RAR 压缩包与可配置的外部预览器。
 - 内置图片/文本缩略图；官方 Docker 镜像还提供 libvips 和 ffmpeg。
 - 全文文件名搜索、WebDAV 服务、路径挂载和路径属性。
 - 带访问控制、上传 Token、类型/大小限制和防盗链的文件桶。

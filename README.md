@@ -51,6 +51,7 @@ The whole application ships as a single self-contained binary (the web UI and i1
 - **LDAP authentication** — connect to LDAP/LDAPS with just-in-time user creation and automatic group synchronization.
 - **Path mounting** — mount any drive or subpath into a unified virtual tree.
 - **File preview** — image gallery powered by [PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe), built-in audio/video players and PDF viewer, plus configurable external previewers.
+- **Archive preview** — browse ZIP, 7z, and RAR files in the browser; download individual entries or pack a selection as a zip.
 - **Editors** — text editing with [CodeMirror](https://github.com/codemirror/) and full code editing with [Monaco Editor](https://github.com/microsoft/monaco-editor).
 - **Thumbnails** — generate thumbnails for images, text, video, and audio (pluggable handlers, optional `libvips`/`ffmpeg`).
 - **Filename search** — optional indexed filename search across mounted drives.

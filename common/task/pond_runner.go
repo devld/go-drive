@@ -110,7 +110,8 @@ func (t *PondRunner) Execute(runnable Runnable, option ...Option) (Task, error) 
 
 // ExecuteAndWait waits for a detached task while the caller remains
 // interested in its result. The waiter context and timeout never cancel the
-// task; StopTask is the explicit cancellation mechanism.
+// task; StopTask is the explicit cancellation mechanism. A canceled or
+// timed-out wait returns the current snapshot with a nil error.
 func (t *PondRunner) ExecuteAndWait(ctx context.Context, runnable Runnable, timeout time.Duration, option ...Option) (Task, error) {
 	waitDone := ctx.Done()
 	w := t.createTask(runnable, option...)
@@ -139,13 +140,13 @@ func (t *PondRunner) ExecuteAndWait(ctx context.Context, runnable Runnable, time
 	case <-timerC:
 		taskLog.Debugf("task wait timed out id=%s group=%s name=%s timeout=%s; continuing in background",
 			w.task.ID, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name), timeout)
-		// Timeout only limits how long the caller waits. The task deliberately
-		// remains queued/running and continues in the background.
 	case <-done:
 	case <-waitDone:
-		return w.snapshot(), ctx.Err()
+		taskLog.Debugf("task wait canceled id=%s group=%s name=%s; continuing in background",
+			w.task.ID, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name))
 	}
-
+	// The waiter leaving does not fail the task. Timeout and a canceled
+	// or deadline context only end the wait; generation keeps running.
 	return w.snapshot(), nil
 }
 
@@ -309,6 +310,18 @@ func (w *pondTaskCtx) Total(total int64, abs bool) {
 		w.task.Progress.Total += total
 	}
 	w.task.UpdatedAt = time.Now()
+}
+
+func (w *pondTaskCtx) GetProgress() int64 {
+	w.mux.RLock()
+	defer w.mux.RUnlock()
+	return w.task.Progress.Loaded
+}
+
+func (w *pondTaskCtx) GetTotal() int64 {
+	w.mux.RLock()
+	defer w.mux.RUnlock()
+	return w.task.Progress.Total
 }
 
 func (w *pondTaskCtx) snapshot() Task {

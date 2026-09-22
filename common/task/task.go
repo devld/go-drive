@@ -68,7 +68,9 @@ type Runner interface {
 	Execute(runnable Runnable, options ...Option) (Task, error)
 	// ExecuteAndWait limits only how long the caller waits. The task is created
 	// with its own detached context and continues in the background after the
-	// waiter context or timeout is done.
+	// waiter context or timeout is done. Ending the wait returns the current
+	// snapshot and a nil error. The error is only for failing to submit the
+	// task.
 	ExecuteAndWait(ctx context.Context, runnable Runnable, timeout time.Duration, options ...Option) (Task, error)
 	// RegisterGroup bounds concurrency for one exact task group. Non-positive
 	// concurrency is a no-op. Duplicate names return an error. Unregistered

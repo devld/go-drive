@@ -17,7 +17,11 @@ func newTestStore(t *testing.T, policies map[string]Policy) *Store {
 		t.Fatal(err)
 	}
 	for _, bucket := range []string{"thumbnail", "archive-index", "archive-content"} {
-		if err := store.registerType(bucket, policies[bucket]); err != nil {
+		policy := policies[bucket]
+		if policy.TTL <= 0 {
+			policy.TTL = time.Hour
+		}
+		if err := store.registerType(bucket, policy); err != nil {
 			t.Fatalf("register artifact bucket %q: %v", bucket, err)
 		}
 	}
@@ -144,8 +148,11 @@ func TestStoreEvictsOldestPayloadAndProtectsActiveReader(t *testing.T) {
 }
 
 func TestStoreServesOversizedPayloadOnce(t *testing.T) {
-	store := newTestStore(t, map[string]Policy{"archive-content": {MaxBytes: 3}})
-	writeArtifact(t, store, "archive-content", "oversized", "oversized", Meta{Name: "oversized"}, "1234")
+	store := newTestStore(t, map[string]Policy{"archive-content": {TTL: time.Hour, MaxBytes: 3}})
+	info := writeArtifact(t, store, "archive-content", "oversized", "oversized", Meta{Name: "oversized"}, "1234")
+	if info.Name != "oversized" {
+		t.Fatalf("info = %#v", info)
+	}
 	opened, err := store.Open("archive-content", "oversized")
 	if err != nil {
 		t.Fatal(err)
@@ -157,5 +164,26 @@ func TestStoreServesOversizedPayloadOnce(t *testing.T) {
 	}
 	if _, err := store.Open("archive-content", "oversized"); err == nil {
 		t.Fatal("oversized payload remained after its first reader closed")
+	}
+}
+
+func TestCleanKeepsExpiredArtifactWhileItIsOpen(t *testing.T) {
+	store := newTestStore(t, nil)
+	writeArtifact(t, store, "archive-content", "live", "live", Meta{Name: "live"}, "abc")
+	opened, err := store.Open("archive-content", "live")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed, err := store.Clean("archive-content", time.Nanosecond, 0); err != nil || removed != 0 {
+		t.Fatalf("Clean() while reading = removed:%d err:%v, want the open artifact kept", removed, err)
+	}
+	probe, err := store.Open("archive-content", "live")
+	if err != nil {
+		t.Fatalf("open artifact was removed: %v", err)
+	}
+	_ = probe.Body.Close()
+	_ = opened.Body.Close()
+	if removed, err := store.Clean("archive-content", time.Nanosecond, 0); err != nil || removed == 0 {
+		t.Fatalf("Clean() after close = removed:%d err:%v, want expiry", removed, err)
 	}
 }

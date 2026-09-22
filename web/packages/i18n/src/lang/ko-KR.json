@@ -426,14 +426,21 @@
     },
     "zip": {
       "name": "ZIP 다운로드",
-      "desc": "ZIP 압축 파일 생성"
+      "desc": "ZIP 압축 파일 생성",
+      "packaging": "압축 중",
+      "packaging_progress": "압축 중 {p}",
+      "pack_expired": "압축 다운로드가 만료되었습니다. 다시 시도해 주세요"
     },
     "archive": {
-      "name": "압축 파일 미리보기",
+      "name": "압축 파일 열기",
       "desc": "압축 파일 내용 탐색",
       "parent": "상위 폴더",
       "empty": "이 폴더는 비어 있습니다",
-      "download": "다운로드"
+      "download": "다운로드",
+      "n_selected": "{n}개 선택됨",
+      "packaging": "압축 중",
+      "packaging_progress": "압축 중 {p}",
+      "pack_expired": "압축 다운로드가 만료되었습니다. 다시 시도해 주세요"
     },
     "delete": {
       "name": "삭제",

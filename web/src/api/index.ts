@@ -8,14 +8,16 @@ import {
   User,
 } from '@/types'
 import { buildURL } from '@/utils'
+import type { HttpResponse } from '@/utils/http'
 import http, {
   ACCESS_KEY,
   API_PATH,
+  RETURN_RESPONSE_CONTEXT_KEY,
+  binaryHttp,
   clearCachedPathPasswords,
   clearToken,
   pathPasswordHeaders,
   setToken,
-  binaryHttp,
 } from './http'
 
 const PROXY_KEY = 'proxy'
@@ -73,10 +75,6 @@ function _fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
   return buildURL('/download', query)!
 }
 
-export function zipUrl() {
-  return `${API_PATH}/archive`
-}
-
 export function fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
   return `${API_PATH}${_fileUrl(path, meta, params)}`
 }
@@ -103,6 +101,84 @@ export function getContent(
   params?: FileURLParams
 ) {
   return getBlobContent(path, meta, params).then((blob) => blob.text())
+}
+
+export interface ArtifactInfo {
+  name?: string
+  mimeType?: string
+  size: number
+  ref: string
+}
+
+export type ArtifactPrepareResult =
+  | { info: ArtifactInfo }
+  | { task: Task<ArtifactInfo> }
+
+function artifactQuery(
+  path: string,
+  meta: EntryMeta,
+  extra?: { args?: string; ref?: string }
+) {
+  const query = { path } as O<any>
+  if (extra?.args) query.args = extra.args
+  if (extra?.ref) query.ref = extra.ref
+  if (meta?.accessKey) query[ACCESS_KEY] = meta.accessKey
+  return query
+}
+
+export function artifactURL(
+  path: string,
+  meta: EntryMeta,
+  handler: string,
+  extra?: { args?: string; ref?: string }
+) {
+  return buildURL(
+    `${API_PATH}/artifact/${handler}`,
+    artifactQuery(path, meta, extra)
+  )!
+}
+
+function preparedArtifact(
+  response: HttpResponse<ArtifactInfo | Task<ArtifactInfo>>
+): ArtifactPrepareResult {
+  if (response.status === 202) {
+    return { task: response.data as Task<ArtifactInfo> }
+  }
+  return { info: response.data as ArtifactInfo }
+}
+
+export function prepareArtifact(
+  path: string,
+  meta: EntryMeta,
+  handler: string,
+  args = ''
+) {
+  return http
+    .post<HttpResponse<ArtifactInfo | Task<ArtifactInfo>>>(
+      `/artifact/${handler}`,
+      args,
+      {
+        headers: {
+          ...pathPasswordHeaders(path),
+          'content-type': 'text/plain',
+        },
+        params: artifactQuery(path, meta),
+        context: { [RETURN_RESPONSE_CONTEXT_KEY]: true },
+      }
+    )
+    .then(preparedArtifact)
+}
+
+export function getArtifact<T>(
+  path: string,
+  meta: EntryMeta,
+  handler: string,
+  extra?: { args?: string; ref?: string }
+) {
+  return http.get<T>(`/artifact/${handler}`, {
+    headers: pathPasswordHeaders(path),
+    params: artifactQuery(path, meta, extra),
+  })
 }
 
 export function makeDir(path: string) {

@@ -18,6 +18,8 @@ type TaskCtx interface {
 	context.Context
 	Progress(loaded int64, abs bool)
 	Total(total int64, abs bool)
+	GetProgress() int64
+	GetTotal() int64
 }
 
 type IDisposable interface {

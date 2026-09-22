@@ -39,9 +39,11 @@ const (
 
 	argsIndex         = "index"
 	argsContentPrefix = "content:"
+	argsPackPrefix    = "pack:"
 
 	cacheIndex   = "index"
 	cacheContent = "content"
+	cachePack    = "pack"
 
 	supportedExtensions = "zip,7z,rar"
 )
@@ -79,6 +81,7 @@ type Previewer struct {
 	maxEntries    int
 	indexTTL      time.Duration
 	contentTTL    time.Duration
+	packTTL       time.Duration
 	contentSize   int64
 	sources       *driveutil.CacheFilePool
 	cache         artifact.Cache
@@ -110,6 +113,7 @@ func NewPreviewer(ctx artifact.HandlerContext) (artifact.Handler, error) {
 	indexTTL := utils.PositiveOr(config.IndexTTL, common.DefaultArchiveIndexTTL)
 	contentTTL := utils.PositiveOr(config.ContentCacheTTL, common.DefaultArchiveContentCacheTTL)
 	contentSize := utils.PositiveOr(config.ContentCacheSize.DataSize(common.DefaultArchiveContentCacheSize), common.DefaultArchiveContentCacheSize)
+	packTTL := utils.PositiveOr(config.PackTTL, common.DefaultArchivePackTTL)
 
 	sourceDir := filepath.Join(tempDir, "archive-sources")
 	if e := os.MkdirAll(sourceDir, 0700); e != nil {
@@ -131,6 +135,7 @@ func NewPreviewer(ctx artifact.HandlerContext) (artifact.Handler, error) {
 		maxEntries:    maxEntries,
 		indexTTL:      indexTTL,
 		contentTTL:    contentTTL,
+		packTTL:       packTTL,
 		contentSize:   contentSize,
 		sources:       sources,
 		cache:         ctx.Cache,
@@ -143,6 +148,7 @@ func (s *Previewer) Spec() artifact.Spec {
 		Caches: []artifact.CacheSpec{
 			{Name: cacheIndex, Policy: artifact.Policy{TTL: s.indexTTL}},
 			{Name: cacheContent, Policy: artifact.Policy{TTL: s.contentTTL, MaxBytes: s.contentSize}},
+			{Name: cachePack, Policy: artifact.Policy{TTL: s.packTTL}},
 		},
 		Config: types.M{
 			"extensions": supportedExtensions,
@@ -160,57 +166,89 @@ func (s *Previewer) Dispose() error {
 	return err
 }
 
-func parseArchiveArgs(args string) (content bool, member string, err error) {
+type archiveArgsKind int
+
+const (
+	archiveArgsIndex archiveArgsKind = iota
+	archiveArgsContent
+	archiveArgsPack
+)
+
+func parseArchiveArgs(args string) (kind archiveArgsKind, value string, err error) {
 	switch {
 	case args == argsIndex:
-		return false, "", nil
+		return archiveArgsIndex, "", nil
 	case strings.HasPrefix(args, argsContentPrefix):
-		member, err = normalizeMember(strings.TrimPrefix(args, argsContentPrefix))
+		value, err = normalizeMember(strings.TrimPrefix(args, argsContentPrefix))
 		if err != nil {
-			return false, "", err
+			return 0, "", err
 		}
-		if member == "" {
-			return false, "", notFound("archive content artifact args is empty")
+		if value == "" {
+			return 0, "", notFound("archive content artifact args is empty")
 		}
-		return true, member, nil
+		return archiveArgsContent, value, nil
+	case strings.HasPrefix(args, argsPackPrefix):
+		members, key, err := parsePackMembers(args)
+		if err != nil {
+			return 0, "", err
+		}
+		if len(members) == 0 {
+			return 0, "", notFound("invalid archive artifact args")
+		}
+		return archiveArgsPack, key, nil
 	default:
-		return false, "", notFound("invalid archive artifact args")
+		return 0, "", notFound("invalid archive artifact args")
 	}
 }
 
 func (s *Previewer) Resolve(request artifact.Request) (artifact.ResolvedRequest, error) {
-	if request.Source == nil {
-		return artifact.ResolvedRequest{}, notFound("archive artifact source is nil")
-	}
-	content, member, err := parseArchiveArgs(request.Args)
+	kind, value, err := parseArchiveArgs(request.Args)
 	if err != nil {
 		return artifact.ResolvedRequest{}, err
 	}
-	if !content {
+	switch kind {
+	case archiveArgsContent:
+		return artifact.ResolvedRequest{
+			Key: value,
+			Fingerprint: fmt.Sprintf("archive-content-v%d|max-size=%d|max-entries=%d|max-member=%d",
+				archiveArtifactVersion, s.maxSize, s.maxEntries, s.maxMemberSize),
+			Cache: cacheContent,
+		}, nil
+	case archiveArgsPack:
+		return artifact.ResolvedRequest{
+			Key: value,
+			Fingerprint: fmt.Sprintf("archive-pack-v%d|max-size=%d|max-entries=%d",
+				archiveArtifactVersion, s.maxSize, s.maxEntries),
+			Cache: cachePack,
+		}, nil
+	default:
 		return artifact.ResolvedRequest{
 			Fingerprint: fmt.Sprintf("archive-index-v%d|max-size=%d|max-entries=%d",
 				archiveArtifactVersion, s.maxSize, s.maxEntries),
 			Cache: cacheIndex,
 		}, nil
 	}
-	return artifact.ResolvedRequest{
-		Key: member,
-		Fingerprint: fmt.Sprintf("archive-content-v%d|max-size=%d|max-entries=%d|max-member=%d",
-			archiveArtifactVersion, s.maxSize, s.maxEntries, s.maxMemberSize),
-		Cache: cacheContent,
-	}, nil
 }
 
 func (s *Previewer) Produce(ctx types.TaskCtx, request artifact.Request, out artifact.Writer) error {
-	setArchiveProgressTotal(ctx, request.Source.Size())
-	content, member, err := parseArchiveArgs(request.Args)
+	kind, value, err := parseArchiveArgs(request.Args)
 	if err != nil {
 		return err
 	}
-	if !content {
+	switch kind {
+	case archiveArgsContent:
+		setArchiveProgressTotal(ctx, request.Source.Size())
+		return archiveProduceError(s.produceContent(ctx, request.Source, value, out))
+	case archiveArgsPack:
+		members, _, packErr := parsePackMembers(request.Args)
+		if packErr != nil {
+			return packErr
+		}
+		return archiveProduceError(s.producePack(ctx, request.Source, members, out))
+	default:
+		setArchiveProgressTotal(ctx, request.Source.Size())
 		return archiveProduceError(s.produceIndex(ctx, request.Source, out))
 	}
-	return archiveProduceError(s.produceContent(ctx, request.Source, member, out))
 }
 
 func (s *Previewer) produceIndex(ctx types.TaskCtx, entry types.IEntry, out artifact.Writer) error {
@@ -302,35 +340,45 @@ func (r *contextReader) Read(p []byte) (int, error) {
 }
 
 // openMember opens one archive member so Produce can copy it into the shared
-// complete-artifact cache.
+// complete-artifact cache. A cache miss reuses the source and ArchiveFS that
+// were opened to rebuild the index.
 func (s *Previewer) openMember(ctx types.TaskCtx, entry types.IEntry, member string) (*OpenedMember, error) {
-	index, e := s.loadIndex(ctx, entry)
-	if e != nil {
-		return nil, e
-	}
-	item, ok := findEntry(index, member)
+	index, ok := s.cachedIndex(entry)
+	var opened *source
+	var archiveFS *archives.ArchiveFS
 	if !ok {
-		return nil, notFound(msgMemberNotFound)
+		src, format, e := s.openSourceAndFormat(ctx, entry)
+		if e != nil {
+			return nil, e
+		}
+		opened = src
+		archiveFS = s.newArchiveFS(ctx, opened, format)
+		index, e = s.indexFromFS(archiveFS)
+		if e != nil {
+			_ = opened.Close()
+			return nil, e
+		}
 	}
-	if item.Type == types.TypeDir {
-		return nil, notFound("archive member is a directory")
+	item, err := s.lookupMember(index, member)
+	if err != nil {
+		_ = opened.Close()
+		return nil, err
 	}
-	if item.Size > s.maxMemberSize {
-		return nil, notFound(msgArchiveMemberTooLarge)
+	if opened == nil {
+		src, format, e := s.openSourceAndFormat(ctx, entry)
+		if e != nil {
+			return nil, e
+		}
+		opened = src
+		archiveFS = s.newArchiveFS(ctx, opened, format)
 	}
-
-	source, format, e := s.openSourceAndFormat(ctx, entry)
-	if e != nil {
-		return nil, e
-	}
-	archiveFS := s.newArchiveFS(ctx, source, format)
 	file, e := archiveFS.Open(member)
 	if e != nil {
-		_ = source.Close()
+		_ = opened.Close()
 		return nil, invalidArchiveError(e)
 	}
 
-	readCloser := &memberReadCloser{reader: file, member: file, source: source}
+	readCloser := &memberReadCloser{reader: file, member: file, source: opened}
 	// Do not rely solely on the size advertised by the archive header: a
 	// malformed or hostile archive may expand beyond it.
 	readCloser.reader = &boundedReader{
@@ -338,32 +386,6 @@ func (s *Previewer) openMember(ctx types.TaskCtx, entry types.IEntry, member str
 		limit:  s.maxMemberSize,
 	}
 	return &OpenedMember{Entry: item, Reader: readCloser}, nil
-}
-
-type source struct {
-	reader readerAtSeeker
-	closer io.Closer
-	size   int64
-}
-
-func (s *source) Close() error {
-	if s == nil || s.closer == nil {
-		return nil
-	}
-	return s.closer.Close()
-}
-
-type readerAtSeeker interface {
-	io.Reader
-	io.ReaderAt
-	io.Seeker
-}
-
-func withArchiveProgress(ctx types.TaskCtx, reader io.ReadCloser) io.ReadCloser {
-	return struct {
-		io.Reader
-		io.Closer
-	}{driveutil.ProgressReader(reader, ctx), reader}
 }
 
 func setArchiveProgressTotal(ctx types.TaskCtx, size int64) {
@@ -430,11 +452,18 @@ func (r *boundedReader) Read(p []byte) (int, error) {
 	return n, e
 }
 
-func (s *Previewer) loadIndex(ctx types.TaskCtx, entry types.IEntry) ([]Entry, error) {
-	if entries, ok := s.cachedIndex(entry); ok {
-		return entries, nil
+func (s *Previewer) lookupMember(index []Entry, member string) (Entry, error) {
+	item, ok := findEntry(index, member)
+	if !ok {
+		return Entry{}, notFound(msgMemberNotFound)
 	}
-	return s.buildIndex(ctx, entry)
+	if item.Type == types.TypeDir {
+		return Entry{}, notFound("archive member is a directory")
+	}
+	if item.Size > s.maxMemberSize {
+		return Entry{}, notFound(msgArchiveMemberTooLarge)
+	}
+	return item, nil
 }
 
 func (s *Previewer) cachedIndex(entry types.IEntry) ([]Entry, bool) {
@@ -469,11 +498,13 @@ func (s *Previewer) buildIndex(ctx types.TaskCtx, entry types.IEntry) ([]Entry, 
 		return nil, e
 	}
 	defer func() { _ = source.Close() }()
-	archiveFS := s.newArchiveFS(ctx, source, format)
+	return s.indexFromFS(s.newArchiveFS(ctx, source, format))
+}
 
+func (s *Previewer) indexFromFS(archiveFS fs.FS) ([]Entry, error) {
 	result := make([]Entry, 0)
 	seen := make(map[string]struct{})
-	e = fs.WalkDir(archiveFS, ".", func(name string, item fs.DirEntry, walkErr error) error {
+	e := fs.WalkDir(archiveFS, ".", func(name string, item fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -543,141 +574,6 @@ func (e boundedExtractor) Extract(ctx context.Context, source io.Reader, handle 
 		}
 		return handle(ctx, item)
 	})
-}
-
-func (s *Previewer) openSourceAndFormat(ctx types.TaskCtx, entry types.IEntry) (*source, archives.Extractor, error) {
-	if entry.Type() != types.TypeFile {
-		return nil, nil, notFound("archive entry is not a file")
-	}
-	size := entry.Size()
-	if size < 0 {
-		return nil, nil, notFound(msgUnsupportedArchive)
-	}
-	if size > s.maxSize {
-		return nil, nil, notFound(msgArchiveTooLarge)
-	}
-	key := sourceCacheKey(entry)
-	if !s.sources.Has(key) {
-		if local, err := openLocalFile(ctx, entry); err != nil {
-			return nil, nil, err
-		} else if local != nil {
-			format, e := s.detectFormat(entry.Name(), local, size)
-			if e != nil {
-				_ = local.Close()
-				return nil, nil, e
-			}
-			return &source{reader: local, closer: local, size: size}, format, nil
-		}
-	}
-	reader, e := s.sources.GetReader(ctx, key, size,
-		func(reqCtx context.Context, start, length int64) (io.ReadCloser, error) {
-			reader, e := driveutil.GetIContentReader(reqCtx, entry, start, length)
-			if e != nil {
-				return nil, e
-			}
-			return withArchiveProgress(ctx, reader), nil
-		},
-	)
-	if e != nil {
-		return nil, nil, e
-	}
-	ras, ok := reader.(readerAtSeeker)
-	if !ok {
-		_ = reader.Close()
-		return nil, nil, errors.New("archive source cache is not seekable")
-	}
-	format, e := s.detectFormat(entry.Name(), ras, size)
-	if e != nil {
-		_ = reader.Close()
-		return nil, nil, e
-	}
-	return &source{reader: ras, closer: reader, size: size}, format, nil
-}
-
-// openLocalFile returns a native *os.File when GetReader already provides one
-// (local fs). URL-capable remotes skip this probe so the range cache can fetch
-// them. A non-file reader is closed and the caller should use CacheFilePool.
-func openLocalFile(ctx context.Context, entry types.IEntry) (*os.File, error) {
-	if _, err := entry.GetURL(ctx); err == nil {
-		return nil, nil
-	}
-	reader, err := entry.GetReader(ctx, -1, -1)
-	if err != nil {
-		return nil, err
-	}
-	file, ok := reader.(*os.File)
-	if !ok {
-		_ = reader.Close()
-		return nil, nil
-	}
-	return file, nil
-}
-
-func (s *Previewer) detectFormat(name string, reader readerAtSeeker, size int64) (archives.Extractor, error) {
-	var format archives.Extractor
-	switch strings.ToLower(pathpkg.Ext(name)) {
-	case ".zip":
-		format = archives.Zip{}
-	case ".7z":
-		format = archives.SevenZip{}
-	case ".rar":
-		format = archives.Rar{}
-	}
-
-	var detected archives.Extractor
-	switch {
-	case hasPrefix(reader, []byte("PK\x03\x04"), size) ||
-		hasPrefix(reader, []byte("PK\x05\x06"), size) ||
-		hasPrefix(reader, []byte("PK\x07\x08"), size):
-		detected = archives.Zip{}
-	case hasPrefix(reader, []byte("7z\xBC\xAF\x27\x1C"), size):
-		detected = archives.SevenZip{}
-	case hasPrefix(reader, []byte("Rar!\x1A\x07\x00"), size) ||
-		hasPrefix(reader, []byte("Rar!\x1A\x07\x01\x00"), size):
-		detected = archives.Rar{}
-	default:
-		return nil, notFound(msgUnsupportedArchive)
-	}
-	if format != nil && fmt.Sprintf("%T", format) != fmt.Sprintf("%T", detected) {
-		return nil, notFound(msgUnsupportedArchive)
-	}
-	return detected, nil
-}
-
-func hasPrefix(reader readerAtSeeker, prefix []byte, size int64) bool {
-	if size >= 0 && size < int64(len(prefix)) {
-		return false
-	}
-	buf := make([]byte, len(prefix))
-	n, e := reader.ReadAt(buf, 0)
-	return e == nil && n == len(prefix) && string(buf) == string(prefix)
-}
-
-func sourceCacheKey(entry types.IEntry) string {
-	realPath := entry.Path()
-	if dispatcher, ok := driveutil.IEntryAs[types.IDispatcherEntry](entry); ok {
-		realPath = dispatcher.GetRealPath()
-	}
-	return fmt.Sprintf("%s|%d|%d", realPath, entry.Size(), entry.ModTime())
-}
-
-func normalizeMember(name string) (string, error) {
-	if strings.ContainsRune(name, '\x00') || strings.ContainsRune(name, '\\') {
-		return "", notFound("invalid archive path")
-	}
-	name = pathpkg.Clean(strings.TrimPrefix(name, "/"))
-	if name == "." || !validArchivePath(name) {
-		return "", notFound("invalid archive path")
-	}
-	return name, nil
-}
-
-func validArchivePath(name string) bool {
-	return name != "." && name != "" &&
-		!pathpkg.IsAbs(name) && name != ".." &&
-		!strings.HasPrefix(name, "../") &&
-		!strings.ContainsRune(name, '\x00') &&
-		!strings.ContainsRune(name, '\\')
 }
 
 func findEntry(entries []Entry, name string) (Entry, bool) {

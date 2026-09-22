@@ -45,6 +45,18 @@
             :key="item.name === '..' ? '..' : item.path"
             class="archive-view__entry"
           >
+            <label
+              v-if="item.name !== '..'"
+              class="archive-view__check"
+            >
+              <input
+                type="checkbox"
+                :checked="isChecked(item)"
+                :indeterminate.prop="isIndeterminate(item)"
+                @click.stop
+                @change="toggleItem(item)"
+              />
+            </label>
             <button
               v-if="item.type === 'dir'"
               class="archive-view__entry-main"
@@ -56,7 +68,9 @@
                 :entry="toIconEntry(item)"
                 :show-thumbnail="false"
               />
-              <span class="archive-view__entry-name">{{ item.name }}</span>
+              <span class="archive-view__entry-name" :title="item.name">{{
+                item.name
+              }}</span>
             </button>
             <div v-else class="archive-view__entry-main">
               <EntryIcon
@@ -64,7 +78,9 @@
                 :entry="toIconEntry(item)"
                 :show-thumbnail="false"
               />
-              <span class="archive-view__entry-name">{{ item.name }}</span>
+              <span class="archive-view__entry-name" :title="item.name">{{
+                item.name
+              }}</span>
               <span class="archive-view__entry-size">
                 {{ formatBytes(item.size) }}
               </span>
@@ -85,6 +101,19 @@
             {{ $t('handler.archive.empty') }}
           </span>
         </div>
+        <div v-if="selectedCount > 0" class="archive-view__footer">
+          <span>{{ $t('handler.archive.n_selected', { n: selectedCount }) }}</span>
+          <span class="archive-view__actions">
+            <SimpleButton
+              small
+              icon="download"
+              :loading="packaging"
+              @click="downloadSelected"
+            >
+              {{ $t('handler.archive.download') }}
+            </SimpleButton>
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -92,25 +121,31 @@
 
 <script setup lang="ts">
 import {
-  ARCHIVE_ARGS_INDEX,
-  ARTIFACT_ARCHIVE,
-  archiveContentArgs,
-  ArchiveEntry,
   ArtifactInfo,
-  artifactUrl,
-  getArchiveIndex,
+  artifactURL,
+  deleteTask,
+  getArtifact,
   prepareArtifact,
-} from '@/api/artifact'
+} from '@/api'
 import type { EntryEventData } from '@/components/entry'
 import ErrorView from '@/components/ErrorView.vue'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
-import { Entry, TaskProgress } from '@/types'
+import { Entry, Task, TaskProgress } from '@/types'
 import { formatBytes, TASK_CANCELLED, taskDone } from '@/utils'
-import { alert } from '@/utils/ui-utils'
+import { alert, loading as showTaskLoading } from '@/utils/ui-utils'
+import { T } from '@go-drive/i18n'
 import { LoadingState } from '@go-drive/utils'
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { EntryHandlerContext } from '../types'
-import { buildArchiveTree } from './tree'
+import {
+  ArchiveEntry,
+  buildArchiveTree,
+  hasArchiveDescendantSelected,
+  isArchiveDirFullySelected,
+  isArchivePathCovered,
+  mergeArchiveSelection,
+  toggledArchiveSelection,
+} from './tree'
 
 const props = defineProps({
   entry: {
@@ -126,8 +161,20 @@ const props = defineProps({
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 
+const ARCHIVE_HANDLER = 'archive'
+const ARCHIVE_ARGS_INDEX = 'index'
+
+function archiveContentArgs(path: string) {
+  return `content:${path}`
+}
+
+function archivePackArgs(members: string[]) {
+  return `pack:${JSON.stringify(members)}`
+}
+
 const currentDir = ref('')
 const childrenByParent = shallowRef<Map<string, ArchiveEntry[]>>(new Map())
+const selected = ref<Set<string>>(new Set())
 const loading = ref(false)
 const error = ref<any>()
 const downloadingPath = ref('')
@@ -160,6 +207,38 @@ const displayItems = computed(() =>
   parentItem.value ? [parentItem.value, ...items.value] : items.value
 )
 
+const selectedMembers = computed(() =>
+  mergeArchiveSelection(selected.value, childrenByParent.value)
+)
+const selectedCount = computed(() => selectedMembers.value.length)
+const packaging = ref(false)
+
+const isChecked = (item: ArchiveEntry) =>
+  item.type === 'dir'
+    ? isArchiveDirFullySelected(
+        item.path,
+        selected.value,
+        childrenByParent.value
+      )
+    : isArchivePathCovered(item.path, selected.value)
+
+const isIndeterminate = (item: ArchiveEntry) =>
+  item.type === 'dir' &&
+  !isChecked(item) &&
+  hasArchiveDescendantSelected(
+    item.path,
+    selected.value,
+    childrenByParent.value
+  )
+
+const toggleItem = (item: ArchiveEntry) => {
+  selected.value = toggledArchiveSelection(
+    item,
+    selected.value,
+    childrenByParent.value
+  )
+}
+
 const toIconEntry = (item: ArchiveEntry): Entry => ({
   type: item.type,
   name: item.name,
@@ -170,7 +249,7 @@ const toIconEntry = (item: ArchiveEntry): Entry => ({
 })
 
 const waitReady = async (
-  args: string | undefined,
+  args: string,
   request: number,
   current: () => number,
   onProgress?: (progress: TaskProgress) => void
@@ -178,13 +257,13 @@ const waitReady = async (
   const prepared = await prepareArtifact(
     props.entry.path,
     props.entry.meta,
-    ARTIFACT_ARCHIVE,
+    ARCHIVE_HANDLER,
     args
   )
   if ('info' in prepared) {
-    return
+    return prepared.info
   }
-  await taskDone<ArtifactInfo>(prepared.task, (task) => {
+  return taskDone<ArtifactInfo>(prepared.task, (task) => {
     if (request !== current()) return false
     onProgress?.(task.progress ?? { loaded: 0, total: 0 })
   })
@@ -198,13 +277,20 @@ const load = async () => {
   downloadingPath.value = ''
   loadingProgress.value = { loaded: 0, total: 0 }
   try {
-    await waitReady(ARCHIVE_ARGS_INDEX, request, () => loadRequest, (progress) => {
+    const info = await waitReady(ARCHIVE_ARGS_INDEX, request, () => loadRequest, (progress) => {
       loadingProgress.value = progress
     })
     if (request !== loadRequest) return
-    const result = await getArchiveIndex(props.entry.path, props.entry.meta)
+    if (!info || !info.ref) return
+    const result = await getArtifact<ArchiveEntry[]>(
+      props.entry.path,
+      props.entry.meta,
+      ARCHIVE_HANDLER,
+      { ref: info.ref }
+    )
     if (request === loadRequest) {
       childrenByParent.value = buildArchiveTree(result ?? [])
+      selected.value = new Set()
     }
   } catch (e: any) {
     if (request === loadRequest && e !== TASK_CANCELLED) error.value = e
@@ -228,15 +314,12 @@ const download = async (item: ArchiveEntry) => {
   const request = ++downloadRequest
   downloadingPath.value = item.path
   try {
-    await waitReady(archiveContentArgs(item.path), request, () => downloadRequest)
-    if (request !== downloadRequest) return
+    const info = await waitReady(archiveContentArgs(item.path), request, () => downloadRequest)
+    if (request !== downloadRequest || !info || !info.ref) return
     const link = document.createElement('a')
-    link.href = artifactUrl(
-      props.entry.path,
-      props.entry.meta,
-      ARTIFACT_ARCHIVE,
-      archiveContentArgs(item.path)
-    )
+    link.href = artifactURL(props.entry.path, props.entry.meta, ARCHIVE_HANDLER, {
+      ref: info.ref,
+    })
     link.download = item.name
     link.target = '_blank'
     link.rel = 'noreferrer noopener nofollow'
@@ -250,12 +333,68 @@ const download = async (item: ArchiveEntry) => {
   }
 }
 
+const downloadSelected = async () => {
+  const members = selectedMembers.value
+  if (members.length === 0 || packaging.value) return
+  packaging.value = true
+  let canceled = false
+  let task: Task<ArtifactInfo> | undefined
+  const onCancel = () => {
+    canceled = true
+    return task && deleteTask(task.id)
+  }
+  try {
+    showTaskLoading({
+      text: T('handler.archive.packaging'),
+      onCancel,
+    })
+    const prepared = await prepareArtifact(
+      props.entry.path,
+      props.entry.meta,
+      ARCHIVE_HANDLER,
+      archivePackArgs(members)
+    )
+    const info = 'info' in prepared
+      ? prepared.info
+      : await taskDone(prepared.task, (running) => {
+          if (canceled) return false
+          task = running
+          showTaskLoading({
+            text: T('handler.archive.packaging_progress', {
+              p: running.progress
+                ? `${formatBytes(running.progress.loaded)}/${formatBytes(
+                    running.progress.total
+                  )}`
+                : '',
+            }),
+            onCancel,
+          })
+        })
+    if (!info || !info.ref) {
+      throw new Error(String(T('handler.archive.pack_expired')))
+    }
+    const link = document.createElement('a')
+    link.href = artifactURL(props.entry.path, props.entry.meta, ARCHIVE_HANDLER, {
+      ref: info.ref,
+    })
+    link.target = '_blank'
+    link.rel = 'noreferrer noopener nofollow'
+    link.click()
+  } catch (e: any) {
+    if (e !== TASK_CANCELLED) alert(e.message)
+  } finally {
+    packaging.value = false
+    showTaskLoading()
+  }
+}
+
 watch(
   () => props.entry.path,
   () => {
     if (!props.entry.path) return
     currentDir.value = ''
     childrenByParent.value = new Map()
+    selected.value = new Set()
     load()
   },
   { immediate: true }
@@ -376,6 +515,7 @@ button.archive-view__entry-main {
 }
 
 .archive-view__entry-name {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -383,9 +523,11 @@ button.archive-view__entry-main {
 }
 
 .archive-view__entry-size {
+  flex: none;
   margin-left: auto;
   color: var(--color-text-muted);
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .archive-view__download.simple-button.plain.small {
@@ -399,5 +541,30 @@ button.archive-view__entry-main {
   padding: 24px 10px;
   color: var(--color-text-muted);
   text-align: center;
+}
+
+.archive-view__check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding-left: 8px;
+}
+
+.archive-view__footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.archive-view__actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
 }
 </style>

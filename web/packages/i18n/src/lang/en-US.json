@@ -426,14 +426,21 @@
     },
     "zip": {
       "name": "Zip Download",
-      "desc": "Create zip archive"
+      "desc": "Create zip archive",
+      "packaging": "Packaging",
+      "packaging_progress": "Packaging {p}",
+      "pack_expired": "Packaged download expired, please try again"
     },
     "archive": {
-      "name": "Archive Preview",
+      "name": "Open Archive",
       "desc": "Browse archive contents",
       "parent": "Up",
       "empty": "This folder is empty",
-      "download": "Download"
+      "download": "Download",
+      "n_selected": "{n} selected",
+      "packaging": "Packaging",
+      "packaging_progress": "Packaging {p}",
+      "pack_expired": "Packaged download expired, please try again"
     },
     "delete": {
       "name": "Delete",

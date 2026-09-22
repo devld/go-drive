@@ -1,13 +1,17 @@
 package artifact
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"go-drive/common"
 	apierr "go-drive/common/errors"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"io"
+	"strings"
 	"testing"
+	"time"
 )
 
 type registryTestProcessor struct{}
@@ -49,11 +53,11 @@ type registryTestHandler struct {
 
 func (h registryTestHandler) Spec() Spec {
 	if len(h.registrations) == 0 {
-		return Spec{Caches: []CacheSpec{{}}}
+		return Spec{Caches: []CacheSpec{{Policy: Policy{TTL: time.Hour}}}}
 	}
 	spec := h.registrations[0]
 	if len(spec.Caches) == 0 {
-		spec.Caches = []CacheSpec{{}}
+		spec.Caches = []CacheSpec{{Policy: Policy{TTL: time.Hour}}}
 	}
 	return spec
 }
@@ -69,7 +73,7 @@ func registerTestHandler(t *testing.T, name string, handler Handler) {
 
 func newTestService(t *testing.T, runner task.Runner) *Service {
 	t.Helper()
-	svc, err := NewService(common.Config{TempDir: t.TempDir()}, runner)
+	svc, err := NewService(common.Config{TempDir: t.TempDir()}, runner, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,14 +81,14 @@ func newTestService(t *testing.T, runner task.Runner) *Service {
 	return svc
 }
 
-func generateRequest(svc *Service, request Request) (Info, error) {
+func generateRequest(svc *Service, request Request) (ArtifactInfo, error) {
 	handler, err := svc.resolveHandler(request.Handler)
 	if err != nil {
-		return Info{}, err
+		return ArtifactInfo{}, err
 	}
 	resolved, err := resolveRequest(handler, request)
 	if err != nil {
-		return Info{}, err
+		return ArtifactInfo{}, err
 	}
 	return svc.generateLocked(task.DummyContext(), request, handler, resolved)
 }
@@ -123,12 +127,12 @@ func TestServiceRegistersGenericArtifactType(t *testing.T) {
 	runner := &registryTestRunner{}
 	registerTestHandler(t, "custom", registryTestHandler{
 		registrations: []Spec{{
-			Caches:      []CacheSpec{{Policy: Policy{MaxBytes: 32}}},
+			Caches:      []CacheSpec{{Policy: Policy{TTL: time.Hour, MaxBytes: 32}}},
 			Concurrency: 2,
 			Config:      types.M{"extensions": "foo,bar"},
 		}},
 	})
-	svc, err := NewService(common.Config{TempDir: t.TempDir()}, runner)
+	svc, err := NewService(common.Config{TempDir: t.TempDir()}, runner, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,7 +330,7 @@ func (h *countingProduceHandler) Produce(_ types.TaskCtx, _ Request, out Writer)
 }
 
 func (h *countingProduceHandler) Spec() Spec {
-	return Spec{Caches: []CacheSpec{{}}}
+	return Spec{Caches: []CacheSpec{{Policy: Policy{TTL: time.Hour}}}}
 }
 
 func TestServiceCachesCacheableProduceFailure(t *testing.T) {
@@ -335,7 +339,7 @@ func TestServiceCachesCacheableProduceFailure(t *testing.T) {
 	if err := svc.install("preview", handler); err != nil {
 		t.Fatal(err)
 	}
-	request := Request{Handler: "preview"}
+	request := Request{Handler: "preview", Source: &identityTestEntry{path: "file", real: "drive/file", size: 1, modTime: 1}}
 	if _, err := generateRequest(svc, request); err == nil || err.Error() != "boom" {
 		t.Fatalf("first generate() = %v, want boom", err)
 	}
@@ -364,11 +368,12 @@ func TestHandlerCacheReadsOnlyOwnArtifacts(t *testing.T) {
 		return peer, nil
 	})
 	svc := newTestService(t, nil)
-	if _, err := generateRequest(svc, Request{Handler: "owner"}); err != nil {
+	entry := &identityTestEntry{path: "file", real: "drive/file", size: 1, modTime: 1}
+	if _, err := generateRequest(svc, Request{Handler: "owner", Source: entry}); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := owner.cache.Get(nil, "")
+	got, err := owner.cache.Get(entry, "")
 	if err != nil {
 		t.Fatalf("owner cache Get() = %v", err)
 	}
@@ -378,7 +383,7 @@ func TestHandlerCacheReadsOnlyOwnArtifacts(t *testing.T) {
 		t.Fatalf("owner cache body = %q %v", body, err)
 	}
 
-	if _, err := peer.cache.Get(nil, ""); !apierr.IsNotFoundError(err) {
+	if _, err := peer.cache.Get(entry, ""); !apierr.IsNotFoundError(err) {
 		t.Fatalf("peer cache Get() = %v, want not found", err)
 	}
 }
@@ -400,7 +405,9 @@ func (h *scopedCacheHandler) Produce(_ types.TaskCtx, _ Request, out Writer) err
 	return err
 }
 
-func (h *scopedCacheHandler) Spec() Spec { return Spec{Caches: []CacheSpec{{}}} }
+func (h *scopedCacheHandler) Spec() Spec {
+	return Spec{Caches: []CacheSpec{{Policy: Policy{TTL: time.Hour}}}}
+}
 
 func TestServiceResolveSelectsStore(t *testing.T) {
 	handler := &splitStoreHandler{}
@@ -408,13 +415,14 @@ func TestServiceResolveSelectsStore(t *testing.T) {
 	if err := svc.install("split", handler); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := generateRequest(svc, Request{Handler: "split", Args: "index"}); err != nil {
+	entry := &identityTestEntry{path: "file", real: "drive/file", size: 1, modTime: 1}
+	if _, err := generateRequest(svc, Request{Handler: "split", Source: entry, Args: "index"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.store.Lookup("split", "k", "fp", 0); err == nil {
+	if _, err := svc.store.Lookup("split", "k", "fp", time.Hour); err == nil {
 		t.Fatal("unnamed handler bucket unexpectedly exists")
 	}
-	index, err := svc.open(Request{Handler: "split", Args: "index"})
+	index, err := svc.open(Request{Handler: "split", Source: entry, Args: "index"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -423,14 +431,17 @@ func TestServiceResolveSelectsStore(t *testing.T) {
 	if err != nil || string(indexBody) != "index-body" {
 		t.Fatalf("index body = %q %v", indexBody, err)
 	}
-	if _, err := svc.open(Request{Handler: "split", Args: "content"}); !apierr.IsNotFoundError(err) {
+	if _, err := svc.open(Request{Handler: "split", Source: entry, Args: "content"}); !apierr.IsNotFoundError(err) {
 		t.Fatalf("content open() before generate = %v, want not found", err)
 	}
-	info, err := generateRequest(svc, Request{Handler: "split", Args: "content"})
+	info, err := generateRequest(svc, Request{Handler: "split", Source: entry, Args: "content"})
 	if err != nil {
 		t.Fatalf("content generate() = %#v %v", info, err)
 	}
-	if _, err := generateRequest(svc, Request{Handler: "split", Args: "missing"}); !apierr.IsNotFoundError(err) {
+	if info.Ref == "" {
+		t.Fatal("content Info.Ref is empty")
+	}
+	if _, err := generateRequest(svc, Request{Handler: "split", Source: entry, Args: "missing"}); !apierr.IsNotFoundError(err) {
 		t.Fatalf("unknown store generate() = %v, want not found", err)
 	}
 }
@@ -450,7 +461,10 @@ func (splitStoreHandler) Produce(_ types.TaskCtx, request Request, out Writer) e
 }
 
 func (splitStoreHandler) Spec() Spec {
-	return Spec{Caches: []CacheSpec{{Name: "index"}, {Name: "content"}}}
+	return Spec{Caches: []CacheSpec{
+		{Name: "index", Policy: Policy{TTL: time.Hour}},
+		{Name: "content", Policy: Policy{TTL: time.Hour}},
+	}}
 }
 
 type cacheableFailureHandler struct {
@@ -467,5 +481,112 @@ func (h *cacheableFailureHandler) Produce(types.TaskCtx, Request, Writer) error 
 }
 
 func (h *cacheableFailureHandler) Spec() Spec {
-	return Spec{Caches: []CacheSpec{{}}}
+	return Spec{Caches: []CacheSpec{{Policy: Policy{TTL: time.Hour}}}}
 }
+
+func TestArtifactInfoJSONInlinesStoreFields(t *testing.T) {
+	raw, err := json.Marshal(ArtifactInfo{
+		Info: Info{Name: "a.zip", MimeType: "application/zip", Size: 3},
+		Ref:  ":",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var public map[string]any
+	if err := json.Unmarshal(raw, &public); err != nil {
+		t.Fatal(err)
+	}
+	if _, nested := public["Info"]; nested {
+		t.Fatalf("info was nested: %s", raw)
+	}
+	if public["name"] != "a.zip" || public["size"] != float64(3) || public["ref"] != ":" {
+		t.Fatalf("json = %s", raw)
+	}
+}
+
+func TestPrepareResultCarriesRef(t *testing.T) {
+	handler := &countingProduceHandler{}
+	svc := newTestService(t, syncRunner{})
+	if err := svc.install("preview", handler); err != nil {
+		t.Fatal(err)
+	}
+	entry := &identityTestEntry{path: "demo.zip", real: "drive/demo.zip", size: 4, modTime: 1}
+	prepare := func(args string) ArtifactInfo {
+		t.Helper()
+		result, err := svc.Prepare(context.Background(), Request{
+			Handler: "preview",
+			Source:  entry,
+			Args:    args,
+		}, time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Task != nil {
+			t.Fatalf("args %q returned a task: %#v", args, result.Task)
+		}
+		if result.Info.Ref == "" {
+			t.Fatal("Info.Ref is empty")
+		}
+		return result.Info
+	}
+	first := prepare("index")
+	second := prepare("content:docs/info.md")
+	if first.Ref != ":" || second.Ref != first.Ref || strings.Contains(first.Ref, entry.real) {
+		t.Fatalf("ref = %q %q", first.Ref, second.Ref)
+	}
+	if handler.calls != 1 {
+		t.Fatalf("produce calls = %d, want 1", handler.calls)
+	}
+	opened, err := svc.OpenCached("preview", entry, first.Ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(opened.Body)
+	_ = opened.Body.Close()
+	if err != nil || string(body) != "ok" {
+		t.Fatalf("cached body = %q %v", body, err)
+	}
+	other := &identityTestEntry{path: entry.path, real: "other/demo.zip", size: entry.size, modTime: entry.modTime}
+	if _, err := svc.OpenCached("preview", other, first.Ref); !apierr.IsNotFoundError(err) {
+		t.Fatalf("ref opened for another real path: %v", err)
+	}
+	if _, err := svc.OpenCached("preview", entry, "missing"); !apierr.IsNotFoundError(err) {
+		t.Fatalf("missing ref = %v", err)
+	}
+	if _, err := svc.OpenCached("other", entry, first.Ref); !apierr.IsNotFoundError(err) {
+		t.Fatalf("ref for another handler = %v", err)
+	}
+	if _, err := svc.OpenCached("preview", entry, "index:"); !apierr.IsNotFoundError(err) {
+		t.Fatalf("ref for an unregistered cache = %v", err)
+	}
+	reopened, err := svc.OpenCached("preview", entry, first.Ref)
+	if err != nil {
+		t.Fatalf("ref stayed readable without a fingerprint check: %v", err)
+	}
+	_ = reopened.Body.Close()
+}
+
+type syncRunner struct{}
+
+func (syncRunner) Execute(runnable task.Runnable, options ...task.Option) (task.Task, error) {
+	return syncRunner{}.ExecuteAndWait(context.Background(), runnable, 0, options...)
+}
+
+func (syncRunner) ExecuteAndWait(ctx context.Context, runnable task.Runnable, _ time.Duration, _ ...task.Option) (task.Task, error) {
+	result, err := runnable(task.NewContextWrapper(ctx))
+	if err != nil {
+		return task.Task{Status: task.Error, Error: err}, nil
+	}
+	return task.Task{Status: task.Done, Result: result}, nil
+}
+
+func (syncRunner) RegisterGroup(string, int) error { return nil }
+func (syncRunner) GetTask(string) (task.Task, error) {
+	return task.Task{}, task.ErrorNotFound
+}
+func (syncRunner) GetTasks(string) ([]task.Task, error) { return nil, nil }
+func (syncRunner) StopTask(string) (task.Task, error) {
+	return task.Task{}, task.ErrorNotFound
+}
+func (syncRunner) RemoveTask(string) error { return nil }
+func (syncRunner) Dispose() error          { return nil }

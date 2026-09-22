@@ -1,6 +1,6 @@
 ---
 title: File Preview and Thumbnails
-description: Configure go-drive file viewers and thumbnail handlers for images, video, audio artwork, text, PDF, and office documents.
+description: Configure go-drive file viewers and thumbnail handlers for images, video, audio artwork, text, PDF, archives, and office documents.
 lang: en
 translation_key: preview-thumbnail
 ---
@@ -38,6 +38,12 @@ docx,doc,xlsx,xls,pptx,ppt https://view.officeapps.live.com/op/embed.aspx?src={U
 The external service must be able to access `{URL}`. When enabled, a signed file URL is sent to the third party. Use a local previewer for internal or sensitive files.
 
 **Maximum proxy-download size** and **Maximum ZIP size** limit the amount of file data the server will proxy or package. Use one-character units `b`, `k`, `m`, `g`, or `t`, for example `100m`. An empty value uses the application's default behavior.
+
+## Archive preview
+
+ZIP, 7z, and RAR files open in the browser. You can walk the folder tree, download individual files, or pack a selection as a zip.
+
+Size and cache limits live under `archive` in `config.yml`, including `max-size`, `max-member-size`, `max-entries`, and `pack-ttl` (how long a generated zip download stays available). See [Configuration](../configuration/).
 
 ## Thumbnail handlers
 

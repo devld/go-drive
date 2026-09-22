@@ -13,6 +13,33 @@ type testBlobMeta struct {
 	Name string `json:"name"`
 }
 
+func TestBlobPayloadSeekReadsARange(t *testing.T) {
+	cache, err := NewBlobCache[testBlobMeta](t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	putBlob(t, cache, "payload", testBlobMeta{Name: "payload"}, "abcdefghij")
+	_, size, body, err := cache.Open("payload")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = body.Close() }()
+	end, err := body.Seek(0, io.SeekEnd)
+	if err != nil || end != size {
+		t.Fatalf("SeekEnd = %d err=%v, want %d", end, err, size)
+	}
+	if _, err := body.Seek(3, io.SeekStart); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, 4)
+	if _, err := io.ReadFull(body, buf); err != nil {
+		t.Fatal(err)
+	}
+	if string(buf) != "defg" {
+		t.Fatalf("range = %q", buf)
+	}
+}
+
 func TestBlobCacheAtomicWriteAndOpen(t *testing.T) {
 	cache, err := NewBlobCache[testBlobMeta](t.TempDir())
 	if err != nil {
@@ -35,17 +62,31 @@ func TestBlobCacheAtomicWriteAndOpen(t *testing.T) {
 	if err != nil || meta.Name != "index" || size != int64(len("metadata")) {
 		t.Fatalf("ReadMeta() = %#v size=%d err=%v", meta, size, err)
 	}
-	items, err := cache.Items()
-	if err != nil || len(items) != 1 || items[0].Key != "archive-index" || items[0].Size != int64(len("metadata")) {
-		t.Fatalf("Items() = %+v err=%v", items, err)
+	items := 0
+	err = cache.Visit(func(key string, meta testBlobMeta, size int64) error {
+		items++
+		if key != "archive-index" || size != int64(len("metadata")) || meta.Name != "index" {
+			t.Fatalf("Visit() = key=%q meta=%+v size=%d", key, meta, size)
+		}
+		return nil
+	})
+	if err != nil || items != 1 {
+		t.Fatalf("Visit() items=%d err=%v", items, err)
 	}
 	reopened, err := NewBlobCache[testBlobMeta](cache.dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	items, err = reopened.Items()
-	if err != nil || len(items) != 1 || items[0].Key != "archive-index" {
-		t.Fatalf("reopened Items() = %+v err=%v", items, err)
+	items = 0
+	err = reopened.Visit(func(key string, meta testBlobMeta, size int64) error {
+		items++
+		if key != "archive-index" {
+			t.Fatalf("Visit() key = %q", key)
+		}
+		return nil
+	})
+	if err != nil || items != 1 {
+		t.Fatalf("reopened Visit() items=%d err=%v", items, err)
 	}
 }
 
@@ -91,9 +132,21 @@ func TestBlobCacheShardsByKeyPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	putBlob(t, cache, "abcdef", testBlobMeta{}, "x")
-	if _, err := os.Stat(filepath.Join(dir, "ab", "abcdef")); err != nil {
+	const key = "a/b:c def"
+	putBlob(t, cache, key, testBlobMeta{}, "x")
+	name := blobFileName(key)
+	if _, err := os.Stat(filepath.Join(dir, name[:2], name)); err != nil {
 		t.Fatal(err)
+	}
+	var seen int
+	if err := cache.Visit(func(key string, meta testBlobMeta, size int64) error {
+		seen++
+		if key != "a/b:c def" || size != 1 {
+			t.Fatalf("Visit() = key=%q meta=%+v size=%d", key, meta, size)
+		}
+		return nil
+	}); err != nil || seen != 1 {
+		t.Fatalf("Visit() seen=%d err=%v", seen, err)
 	}
 }
 
@@ -165,11 +218,12 @@ func TestBlobCacheReadMetaRejectsSizeMismatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, "br", "broken")
+	name := blobFileName("broken")
+	path := filepath.Join(dir, name[:2], name)
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		t.Fatal(err)
 	}
-	header, err := encodeBlobHeader(testBlobMeta{Name: "broken"}, 1)
+	header, err := encodeBlobHeader("broken", testBlobMeta{Name: "broken"}, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,6 +235,40 @@ func TestBlobCacheReadMetaRejectsSizeMismatch(t *testing.T) {
 	}
 	if _, _, _, e := cache.Open("broken"); e == nil || !apierr.IsNotFoundError(e) {
 		t.Fatalf("corrupt payload still present: err=%v", e)
+	}
+}
+
+func TestBlobCacheVisitDropsMismatchedKey(t *testing.T) {
+	dir := t.TempDir()
+	cache, err := NewBlobCache[testBlobMeta](dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := blobFileName("placed")
+	path := filepath.Join(dir, name[:2], name)
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	header, err := encodeBlobHeader("other", testBlobMeta{Name: "other"}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, header, 0600); err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	if err := cache.Visit(func(key string, meta testBlobMeta, size int64) error {
+		seen++
+		t.Fatalf("Visit() exposed key=%q meta=%+v size=%d", key, meta, size)
+		return nil
+	}); err != nil || seen != 0 {
+		t.Fatalf("Visit() seen=%d err=%v", seen, err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("mismatched blob still present: err=%v", err)
+	}
+	if _, _, e := cache.ReadMeta("placed"); e == nil || !apierr.IsNotFoundError(e) {
+		t.Fatalf("ReadMeta() err=%v, want NotFoundError", e)
 	}
 }
 
@@ -213,21 +301,22 @@ func TestBlobCacheHeaderIsJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	putBlob(t, cache, "abcdef", testBlobMeta{Name: "visible"}, "")
-	raw, err := os.ReadFile(filepath.Join(dir, "ab", "abcdef"))
+	name := blobFileName("abcdef")
+	raw, err := os.ReadFile(filepath.Join(dir, name[:2], name))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(raw), `"name":"visible"`) {
+	if !strings.Contains(string(raw), "abcdef") || !strings.Contains(string(raw), `"name":"visible"`) {
 		t.Fatalf("header = %q", raw)
 	}
 }
 
 func TestBlobCacheHeaderLengthIsStable(t *testing.T) {
-	zero, err := encodeBlobHeader(testBlobMeta{Name: "n"}, 0)
+	zero, err := encodeBlobHeader("n", testBlobMeta{Name: "n"}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	large, err := encodeBlobHeader(testBlobMeta{Name: "n"}, 1<<60)
+	large, err := encodeBlobHeader("n", testBlobMeta{Name: "n"}, 1<<60)
 	if err != nil {
 		t.Fatal(err)
 	}

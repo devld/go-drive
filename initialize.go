@@ -103,7 +103,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	}
 
 	phase = initPhase("artifact previews")
-	artifactService, err := artifactinit.Initialize(config, runner, ch)
+	artifactService, err := artifactinit.Initialize(config, optionsDAO, runner, ch)
 	if err := phase(err); err != nil {
 		return nil, err
 	}

@@ -2,7 +2,9 @@ package driveutil
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	err "go-drive/common/errors"
@@ -17,7 +19,8 @@ import (
 const (
 	blobHeaderMagic      = "GDBLOB1"
 	blobMaxHeaderJSON    = 1 << 20
-	blobMetaLenOffset    = len(blobHeaderMagic)
+	blobKeyLenOffset     = len(blobHeaderMagic)
+	blobMetaLenOffset    = blobKeyLenOffset + 8
 	blobPayloadLenOffset = blobMetaLenOffset + 8
 	blobPrefixSize       = blobPayloadLenOffset + 8
 )
@@ -25,15 +28,12 @@ const (
 var errCorruptBlob = errors.New("corrupt blob cache record")
 
 // BlobCache stores an opaque JSON metadata value plus an optional binary
-// payload. Callers address entries by key; the on-disk layout is private.
+// payload. Callers address entries by key. Keys may contain any character;
+// the on-disk name is the SHA-256 of the key, sharded by its first two hex
+// digits.
 type BlobCache[M any] struct {
 	dir   string
 	locks *utils.KeyLock
-}
-
-type BlobItem struct {
-	Key  string
-	Size int64
 }
 
 func NewBlobCache[M any](dir string) (*BlobCache[M], error) {
@@ -43,7 +43,10 @@ func NewBlobCache[M any](dir string) (*BlobCache[M], error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
 	}
-	return &BlobCache[M]{dir: dir, locks: utils.NewKeyLock(0)}, nil
+	return &BlobCache[M]{
+		dir:   dir,
+		locks: utils.NewKeyLock(0),
+	}, nil
 }
 
 func (c *BlobCache[M]) Lock(key string) func() {
@@ -60,7 +63,7 @@ func (c *BlobCache[M]) ReadMeta(key string) (M, int64, error) {
 	return rec, size, nil
 }
 
-func (c *BlobCache[M]) Open(key string) (M, int64, io.ReadCloser, error) {
+func (c *BlobCache[M]) Open(key string) (M, int64, io.ReadSeekCloser, error) {
 	var zero M
 	path, err := c.pathForKey(key)
 	if err != nil {
@@ -75,16 +78,18 @@ func (c *BlobCache[M]) Open(key string) (M, int64, io.ReadCloser, error) {
 		_ = file.Close()
 		return zero, 0, nil, err
 	}
-	meta, offset, payloadSize, err := readBlobHeader[M](file)
-	if err != nil {
+	storedKey, meta, offset, payloadSize, err := readBlobHeader[M](file)
+	if err != nil || storedKey != key || info.Size()-offset != payloadSize {
 		_ = file.Close()
+		if err == nil {
+			err = errCorruptBlob
+		}
 		return zero, 0, nil, c.missErr(key, err)
 	}
-	if info.Size()-offset != payloadSize {
-		_ = file.Close()
-		return zero, 0, nil, c.missErr(key, errCorruptBlob)
-	}
-	return meta, payloadSize, &blobPayloadCloser{Reader: io.LimitReader(file, payloadSize), file: file}, nil
+	return meta, payloadSize, &blobPayloadCloser{
+		SectionReader: io.NewSectionReader(file, offset, payloadSize),
+		file:          file,
+	}, nil
 }
 
 // Writer accepts metadata then bytes. WriteMeta must be called once before Write.
@@ -103,6 +108,7 @@ type BlobWriter[M any] interface {
 
 type blobWriter[M any] struct {
 	path      string
+	key       string
 	tmp       *os.File
 	headerLen int
 	size      int64
@@ -114,7 +120,7 @@ func (c *BlobCache[M]) Create(key string) (BlobWriter[M], error) {
 	if err != nil {
 		return nil, err
 	}
-	return &blobWriter[M]{path: path}, nil
+	return &blobWriter[M]{path: path, key: key}, nil
 }
 
 var _ BlobWriter[struct{}] = (*blobWriter[struct{}])(nil)
@@ -133,7 +139,7 @@ func (w *blobWriter[M]) WriteMeta(meta M) error {
 	if err != nil {
 		return err
 	}
-	header, err := encodeBlobHeader(meta, 0)
+	header, err := encodeBlobHeader(w.key, meta, 0)
 	if err != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmp.Name())
@@ -237,8 +243,11 @@ func (c *BlobCache[M]) Remove(key string) error {
 	return nil
 }
 
-func (c *BlobCache[M]) Items() ([]BlobItem, error) {
-	items := make([]BlobItem, 0)
+// Visit calls fn with the caller key, metadata, and payload size for each
+// readable blob. The walk does not accumulate entries. Unreadable files are
+// deleted after the walk and are not passed to fn.
+func (c *BlobCache[M]) Visit(fn func(key string, meta M, size int64) error) error {
+	var broken []string
 	err := filepath.Walk(c.dir, func(path string, info os.FileInfo, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -246,14 +255,24 @@ func (c *BlobCache[M]) Items() ([]BlobItem, error) {
 		if info.IsDir() || !isBlobFile(info.Name()) {
 			return nil
 		}
-		_, payloadSize, err := c.readRecordPath(path)
-		if err != nil {
+		key, meta, size, readErr := c.readRecordPath(path)
+		if readErr != nil {
+			broken = append(broken, path)
 			return nil
 		}
-		items = append(items, BlobItem{Key: info.Name(), Size: payloadSize})
-		return nil
+		return fn(key, meta, size)
 	})
-	return items, err
+	for _, path := range broken {
+		c.removeBroken(path)
+	}
+	return err
+}
+
+func (c *BlobCache[M]) removeBroken(path string) {
+	if err := removeBlobFile(path); err != nil {
+		return
+	}
+	_ = os.Remove(filepath.Dir(path))
 }
 
 func (c *BlobCache[M]) CleanStartup() (int, error) {
@@ -271,7 +290,7 @@ func (c *BlobCache[M]) CleanStartup() (int, error) {
 		if info.Size() == 0 {
 			return true
 		}
-		_, _, err := c.readRecordPath(path)
+		_, _, _, err := c.readRecordPath(path)
 		return err != nil
 	})
 }
@@ -282,28 +301,35 @@ func (c *BlobCache[M]) readRecord(key string) (M, int64, error) {
 	if err != nil {
 		return zero, 0, err
 	}
-	return c.readRecordPath(path)
+	stored, meta, size, err := c.readRecordPath(path)
+	if err != nil {
+		return zero, 0, err
+	}
+	if stored != key {
+		return zero, 0, errCorruptBlob
+	}
+	return meta, size, nil
 }
 
-func (c *BlobCache[M]) readRecordPath(path string) (M, int64, error) {
+func (c *BlobCache[M]) readRecordPath(path string) (string, M, int64, error) {
 	var zero M
 	file, err := os.Open(path)
 	if err != nil {
-		return zero, 0, err
+		return "", zero, 0, err
 	}
 	defer func() { _ = file.Close() }()
 	info, err := file.Stat()
 	if err != nil {
-		return zero, 0, err
+		return "", zero, 0, err
 	}
-	meta, offset, payloadSize, err := readBlobHeader[M](file)
+	key, meta, offset, payloadSize, err := readBlobHeader[M](file)
 	if err != nil {
-		return zero, 0, err
+		return "", zero, 0, err
 	}
-	if info.Size()-offset != payloadSize {
-		return zero, 0, errCorruptBlob
+	if info.Size()-offset != payloadSize || key == "" || blobFileName(key) != filepath.Base(path) {
+		return "", zero, 0, errCorruptBlob
 	}
-	return meta, payloadSize, nil
+	return key, meta, payloadSize, nil
 }
 
 func (c *BlobCache[M]) clean(shouldRemove func(string, os.FileInfo) bool) (int, error) {
@@ -337,19 +363,28 @@ func (c *BlobCache[M]) missErr(key string, e error) error {
 }
 
 func (c *BlobCache[M]) pathForKey(key string) (string, error) {
-	if err := validBlobKey(key); err != nil {
-		return "", err
+	if key == "" {
+		return "", errors.New("blob cache key is empty")
 	}
-	prefix := key
-	if len(key) >= 2 {
-		prefix = key[:2]
-	}
-	return filepath.Join(c.dir, prefix, key), nil
+	name := blobFileName(key)
+	return filepath.Join(c.dir, name[:2], name), nil
 }
 
-func encodeBlobHeader[M any](meta M, payloadSize int64) ([]byte, error) {
+func blobFileName(key string) string {
+	sum := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(sum[:])
+}
+
+func encodeBlobHeader[M any](key string, meta M, payloadSize int64) ([]byte, error) {
+	if key == "" {
+		return nil, errors.New("blob cache key is empty")
+	}
 	if payloadSize < 0 {
 		return nil, errors.New("blob payload size is negative")
+	}
+	keyBytes := []byte(key)
+	if len(keyBytes) > blobMaxHeaderJSON {
+		return nil, errors.New("blob key is too large")
 	}
 	jsonBytes, err := json.Marshal(meta)
 	if err != nil {
@@ -359,45 +394,45 @@ func encodeBlobHeader[M any](meta M, payloadSize int64) ([]byte, error) {
 	if len(jsonBytes) > blobMaxHeaderJSON {
 		return nil, errors.New("blob metadata is too large")
 	}
-	header := make([]byte, blobPrefixSize+len(jsonBytes))
+	header := make([]byte, blobPrefixSize+len(keyBytes)+len(jsonBytes))
 	copy(header, blobHeaderMagic)
+	binary.LittleEndian.PutUint64(header[blobKeyLenOffset:], uint64(len(keyBytes)))
 	binary.LittleEndian.PutUint64(header[blobMetaLenOffset:], uint64(len(jsonBytes)))
 	binary.LittleEndian.PutUint64(header[blobPayloadLenOffset:], uint64(payloadSize))
-	copy(header[blobPrefixSize:], jsonBytes)
+	copy(header[blobPrefixSize:], keyBytes)
+	copy(header[blobPrefixSize+len(keyBytes):], jsonBytes)
 	return header, nil
 }
 
-func readBlobHeader[M any](file *os.File) (M, int64, int64, error) {
+func readBlobHeader[M any](file *os.File) (string, M, int64, int64, error) {
 	var zero M
 	prefix := make([]byte, blobPrefixSize)
 	if _, err := io.ReadFull(file, prefix); err != nil {
-		return zero, 0, 0, errCorruptBlob
+		return "", zero, 0, 0, errCorruptBlob
 	}
 	if !bytes.Equal(prefix[:len(blobHeaderMagic)], []byte(blobHeaderMagic)) {
-		return zero, 0, 0, errCorruptBlob
+		return "", zero, 0, 0, errCorruptBlob
 	}
+	keyLen := binary.LittleEndian.Uint64(prefix[blobKeyLenOffset:])
 	metaLen := binary.LittleEndian.Uint64(prefix[blobMetaLenOffset:])
 	payloadLen := binary.LittleEndian.Uint64(prefix[blobPayloadLenOffset:])
-	if metaLen == 0 || metaLen > blobMaxHeaderJSON || payloadLen > math.MaxInt64 {
-		return zero, 0, 0, errCorruptBlob
+	if keyLen == 0 || keyLen > blobMaxHeaderJSON || metaLen == 0 || metaLen > blobMaxHeaderJSON || payloadLen > math.MaxInt64 {
+		return "", zero, 0, 0, errCorruptBlob
+	}
+	keyBuf := make([]byte, keyLen)
+	if _, err := io.ReadFull(file, keyBuf); err != nil {
+		return "", zero, 0, 0, errCorruptBlob
 	}
 	jsonBuf := make([]byte, metaLen)
 	if _, err := io.ReadFull(file, jsonBuf); err != nil {
-		return zero, 0, 0, errCorruptBlob
+		return "", zero, 0, 0, errCorruptBlob
 	}
 	var meta M
 	if err := json.Unmarshal(jsonBuf, &meta); err != nil {
-		return zero, 0, 0, errCorruptBlob
+		return "", zero, 0, 0, errCorruptBlob
 	}
-	offset := int64(blobPrefixSize) + int64(metaLen)
-	return meta, offset, int64(payloadLen), nil
-}
-
-func validBlobKey(key string) error {
-	if key == "" || key != filepath.Base(key) || key == "." || key == ".." {
-		return errors.New("blob cache key is invalid")
-	}
-	return nil
+	offset := int64(blobPrefixSize) + int64(keyLen) + int64(metaLen)
+	return string(keyBuf), meta, offset, int64(payloadLen), nil
 }
 
 func isBlobFile(name string) bool {
@@ -413,8 +448,12 @@ func removeBlobFile(path string) error {
 	return err
 }
 
+// blobPayloadCloser limits reads and seeks to the payload after the blob
+// header. Embedding *os.File would make Seek(0) land on the header, so the
+// payload window is an io.SectionReader. The file is kept only so Close can
+// release it. ServeContent uses the promoted Read and Seek for Range requests.
 type blobPayloadCloser struct {
-	io.Reader
+	*io.SectionReader
 	file *os.File
 }
 
