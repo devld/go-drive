@@ -71,8 +71,6 @@ func InitDriveRoutes(
 
 	r.POST("/artifact/:handler", dr._getDrive, dr.postArtifact)
 
-	router.POST("/archive", TokenAuthWithPostParams(tokenStore), dr._getDrive, dr.zipDownload)
-
 	// list entries/drives
 	router.GET("/list", SignatureAuth(signer, userDAO, false), tokenAuth, dr._getDrive, dr.list)
 

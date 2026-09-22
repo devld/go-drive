@@ -73,10 +73,6 @@ function _fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
   return buildURL('/download', query)!
 }
 
-export function zipUrl() {
-  return `${API_PATH}/archive`
-}
-
 export function fileUrl(path: string, meta: EntryMeta, params?: FileURLParams) {
   return `${API_PATH}${_fileUrl(path, meta, params)}`
 }

@@ -159,3 +159,46 @@ func TestStoreServesOversizedPayloadOnce(t *testing.T) {
 		t.Fatal("oversized payload remained after its first reader closed")
 	}
 }
+
+func TestCleanDropsIdleArtifactWhenTTLIsZero(t *testing.T) {
+	store := newTestStore(t, nil)
+	writeArtifact(t, store, "archive-content", "pack", "pack", Meta{Name: "pack.zip"}, "zip")
+	opened, err := store.Open("archive-content", "pack")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed, err := store.Clean("archive-content", 0, 0); err != nil || removed != 0 {
+		t.Fatalf("Clean() while reading = removed:%d err:%v, want the open artifact kept", removed, err)
+	}
+	_ = opened.Body.Close()
+	if _, err := store.Lookup("archive-content", "pack", "pack", 0); err != nil {
+		t.Fatalf("closed artifact was removed before the next cleanup: %v", err)
+	}
+	if removed, err := store.Clean("archive-content", 0, 0); err != nil || removed != 1 {
+		t.Fatalf("Clean() after close = removed:%d err:%v, want the idle artifact removed", removed, err)
+	}
+	if _, err := store.Open("archive-content", "pack"); err == nil {
+		t.Fatal("idle artifact remained after cleanup")
+	}
+}
+
+func TestCleanKeepsExpiredArtifactWhileItIsOpen(t *testing.T) {
+	store := newTestStore(t, nil)
+	writeArtifact(t, store, "archive-content", "live", "live", Meta{Name: "live"}, "abc")
+	opened, err := store.Open("archive-content", "live")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed, err := store.Clean("archive-content", time.Nanosecond, 0); err != nil || removed != 0 {
+		t.Fatalf("Clean() while reading = removed:%d err:%v, want the open artifact kept", removed, err)
+	}
+	probe, err := store.Open("archive-content", "live")
+	if err != nil {
+		t.Fatalf("open artifact was removed: %v", err)
+	}
+	_ = probe.Body.Close()
+	_ = opened.Body.Close()
+	if removed, err := store.Clean("archive-content", time.Nanosecond, 0); err != nil || removed == 0 {
+		t.Fatalf("Clean() after close = removed:%d err:%v, want expiry", removed, err)
+	}
+}

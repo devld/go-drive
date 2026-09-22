@@ -57,6 +57,7 @@ const (
 	DefaultArchiveIndexTTL         = 24 * time.Hour
 	DefaultArchiveContentCacheSize = int64(4 * 1024 * 1024 * 1024)
 	DefaultArchiveContentCacheTTL  = 24 * time.Hour
+	DefaultArchivePackTTL          = time.Minute
 	DefaultAuthValidity            = 2 * time.Hour
 	DefaultAuthAutoRefresh         = true
 	DefaultSignatureTTL            = 12 * time.Hour
@@ -158,6 +159,11 @@ type ArchiveConfig struct {
 	IndexTTL         time.Duration `yaml:"index-ttl"`
 	ContentCacheSize types.SV      `yaml:"content-cache-size"`
 	ContentCacheTTL  time.Duration `yaml:"content-cache-ttl"`
+	// PackTTL is how long a generated zip download can be fetched after it is
+	// published. Within this period the same zip is served again, including
+	// when a source file changed after it was built. An open download is not
+	// removed. Disk cleanup runs on a slower timer than this validity.
+	PackTTL time.Duration `yaml:"pack-ttl"`
 }
 
 type ThumbnailHandlerItem struct {
@@ -228,6 +234,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 			IndexTTL:         DefaultArchiveIndexTTL,
 			ContentCacheSize: types.SV("4g"),
 			ContentCacheTTL:  DefaultArchiveContentCacheTTL,
+			PackTTL:          DefaultArchivePackTTL,
 		},
 		Auth: AuthConfig{
 			Validity:    DefaultAuthValidity,
@@ -307,6 +314,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		config.Archive.ContentCacheSize = types.SV("4g")
 	}
 	config.Archive.ContentCacheTTL = utils.PositiveOr(config.Archive.ContentCacheTTL, DefaultArchiveContentCacheTTL)
+	config.Archive.PackTTL = utils.PositiveOr(config.Archive.PackTTL, DefaultArchivePackTTL)
 
 	e := parseDBConfig(&config.DB)
 	if e != nil {

@@ -2,6 +2,8 @@ package artifact
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"go-drive/common"
@@ -13,12 +15,17 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 var artifactLog = logging.For("artifact")
 
-const cleanInterval = 12 * time.Hour
+// cleanInterval is how often expired artifacts are removed from disk. Pack
+// downloads stay fetchable for archive.pack-ttl (default one minute) even
+// when this scan has not run yet. Cleanup skips artifacts that still have a
+// reader.
+const cleanInterval = 5 * time.Minute
 
 // Service is the shared artifact runtime. It registers processors, persists
 // complete outputs through Store, and schedules generation on the task runner.
@@ -165,7 +172,7 @@ func (s *Service) schedule(ctx context.Context, request Request, wait time.Durat
 	spec := handler.Spec()
 	info, err := s.lookupInfo(request.Handler, spec, resolved)
 	if err == nil {
-		return scheduled{spec: spec, resolved: resolved, info: info}, nil
+		return scheduled{spec: spec, resolved: resolved, info: s.withRef(info, request.Handler, spec, resolved)}, nil
 	}
 	if !errors.Is(err, errCacheMiss) {
 		return scheduled{}, err
@@ -185,7 +192,7 @@ func (s *Service) schedule(ctx context.Context, request Request, wait time.Durat
 				return scheduled{}, err
 			}
 		}
-		return scheduled{spec: spec, resolved: resolved, info: info}, nil
+		return scheduled{spec: spec, resolved: resolved, info: s.withRef(info, request.Handler, spec, resolved)}, nil
 	case task.Error:
 		if created.Error != nil {
 			return scheduled{}, created.Error
@@ -215,7 +222,7 @@ func (s *Service) generateLocked(ctx types.TaskCtx, request Request, handler Han
 		return Info{}, err
 	}
 	if info, err := s.lookupInfo(request.Handler, spec, resolved); !errors.Is(err, errCacheMiss) {
-		return info, err
+		return s.withRef(info, request.Handler, spec, resolved), err
 	}
 	unlock, err := s.store.Lock(bucket, resolved.Key)
 	if err != nil {
@@ -223,7 +230,7 @@ func (s *Service) generateLocked(ctx types.TaskCtx, request Request, handler Han
 	}
 	defer unlock()
 	if info, err := s.lookupInfo(request.Handler, spec, resolved); !errors.Is(err, errCacheMiss) {
-		return info, err
+		return s.withRef(info, request.Handler, spec, resolved), err
 	}
 	writer, err := s.store.Create(bucket, resolved.Key, resolved.Fingerprint)
 	if err != nil {
@@ -236,7 +243,66 @@ func (s *Service) generateLocked(ctx types.TaskCtx, request Request, handler Han
 	if err := writer.Close(); err != nil {
 		return s.finishProduce(request.Handler, spec, resolved, err)
 	}
-	return writer.info(), nil
+	return s.withRef(writer.info(), request.Handler, spec, resolved), nil
+}
+
+func (s *Service) withRef(info Info, handler string, spec Spec, resolved ResolvedRequest) Info {
+	bucket, _, err := bindCache(spec, handler, resolved)
+	if err != nil {
+		return info
+	}
+	info.Ref = s.store.Ref(bucket, resolved.Key)
+	return info
+}
+
+// OpenCached returns a stored artifact by ref. A miss, expiry, or source
+// mismatch is not-found and does not start generation.
+func (s *Service) OpenCached(entry types.IEntry, handlerName, ref string) (*Artifact, error) {
+	handler, err := s.resolveHandler(handlerName)
+	if err != nil {
+		return nil, err
+	}
+	bucket, cacheKey, err := SplitRef(ref)
+	if err != nil {
+		return nil, err
+	}
+	spec := handler.Spec()
+	policy, ok := bucketPolicy(handlerName, spec, bucket)
+	if !ok {
+		return nil, apierr.NewNotFoundMessageError("artifact not found")
+	}
+	cache, err := s.store.cache(bucket)
+	if err != nil {
+		return nil, apierr.NewNotFoundMessageError("artifact not found")
+	}
+	rec, _, err := cache.ReadMeta(cacheKey)
+	if err != nil {
+		return nil, apierr.NewNotFoundMessageError("artifact not found")
+	}
+	if rec.Failed || rec.CreatedAt.IsZero() ||
+		(policy.TTL > 0 && time.Since(rec.CreatedAt) > policy.TTL) ||
+		!fingerprintMatchesSource(entry, rec.Fingerprint) {
+		_ = s.store.removeByKey(bucket, cacheKey, cache)
+		return nil, apierr.NewNotFoundMessageError("artifact not found")
+	}
+	return s.store.OpenStorage(bucket, cacheKey)
+}
+
+func bucketPolicy(handler string, spec Spec, bucket string) (Policy, bool) {
+	for _, cache := range spec.Caches {
+		if cacheBucket(handler, cache.Name) == bucket {
+			return cache.Policy, true
+		}
+	}
+	return Policy{}, false
+}
+
+func fingerprintMatchesSource(entry types.IEntry, fingerprint string) bool {
+	if entry == nil {
+		return false
+	}
+	_, source := sourceIdentity(entry)
+	return fingerprint == source || strings.HasPrefix(fingerprint, source+"|")
 }
 
 func (s *Service) finishProduce(handler string, spec Spec, resolved ResolvedRequest, err error) (Info, error) {
@@ -347,7 +413,12 @@ func taskName(request Request) string {
 	if request.Args == "" {
 		return path
 	}
-	return path + "#" + request.Args
+	args := request.Args
+	if len(args) > 80 {
+		sum := sha256.Sum256([]byte(args))
+		args = hex.EncodeToString(sum[:8])
+	}
+	return path + "#" + args
 }
 
 // SysConfig exposes live handler configuration through the single artifact

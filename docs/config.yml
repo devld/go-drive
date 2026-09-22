@@ -175,6 +175,10 @@ archive:
   content-cache-size: 4g
   # Validity period of cached decompressed archive content artifacts.
   content-cache-ttl: 24h
+  # How long a generated zip download can be fetched after it is published.
+  # The same zip may be served again during this period. An open download is
+  # kept past it until the reader finishes.
+  pack-ttl: 1m
 
 auth:
   # User session validity

@@ -58,6 +58,7 @@ api:
     unsupported: Unsupported archive format
     process_failed: Failed to process archive
     member_not_found: File not found in the archive
+    pack_expired: Packaged download expired, please try again
   zip:
     size_exceed: Exceeds the maximum allowed size {{ 1 }}
 storage:

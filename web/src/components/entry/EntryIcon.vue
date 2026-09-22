@@ -21,9 +21,13 @@
 </template>
 <script setup lang="ts">
 import { getEntryIcon } from './file-icon'
-import { fileThumbnailUrl } from '@/api/artifact'
-import { entryMatches } from '@/utils'
-import { ref, computed, watch } from 'vue'
+import {
+  ARTIFACT_THUMBNAIL,
+  artifactRefUrl,
+  prepareArtifact,
+} from '@/api/artifact'
+import { entryMatches, taskDone } from '@/utils'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Entry } from '@/types'
 import { useAppStore } from '@/store'
 import type { IconName } from '@/components/icons'
@@ -59,24 +63,48 @@ const supportThumbnail = computed(() => {
     ? extensions.includes('/')
     : entryMatches(entry, extensions)
 })
-const thumbnail = computed(() => {
-  if (supportThumbnail.value || props.entry.meta.hasThumbnail) {
-    return fileThumbnailUrl(props.entry.path, props.entry.meta)
-  }
-  return undefined
-})
-
-watch(thumbnail, () => {
-  err.value = null
-  thumbnailLoaded.value = false
-})
+const thumbnail = ref<string>()
+let thumbnailRequest = 0
 
 watch(
-  () => props.showThumbnail,
-  () => {
+  () =>
+    [
+      props.showThumbnail,
+      props.entry.path,
+      props.entry.meta?.hasThumbnail,
+      supportThumbnail.value,
+    ] as const,
+  async ([show, path, hasThumbnail, supported]) => {
+    const request = ++thumbnailRequest
+    thumbnail.value = undefined
+    err.value = null
     thumbnailLoaded.value = false
-  }
+    if (!show || (!supported && !hasThumbnail)) return
+    try {
+      const prepared = await prepareArtifact(
+        path,
+        props.entry.meta,
+        ARTIFACT_THUMBNAIL
+      )
+      const info =
+        'info' in prepared ? prepared.info : await taskDone(prepared.task)
+      if (request !== thumbnailRequest || !info || !info.ref) return
+      thumbnail.value = artifactRefUrl(
+        path,
+        props.entry.meta,
+        ARTIFACT_THUMBNAIL,
+        info.ref
+      )
+    } catch {
+      if (request === thumbnailRequest) err.value = new Event('error')
+    }
+  },
+  { immediate: true }
 )
+
+onBeforeUnmount(() => {
+  thumbnailRequest++
+})
 
 const onLoad = () => (thumbnailLoaded.value = true)
 const onError = (e: Event) => {

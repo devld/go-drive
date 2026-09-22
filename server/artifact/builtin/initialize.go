@@ -12,6 +12,7 @@ import (
 	"go-drive/server/artifact"
 	_ "go-drive/server/artifact/archive"
 	_ "go-drive/server/artifact/thumbnail"
+	_ "go-drive/server/artifact/zip"
 )
 
 // Initialize creates the shared artifact service, constructs every registered

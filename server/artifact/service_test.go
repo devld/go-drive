@@ -1,6 +1,7 @@
 package artifact
 
 import (
+	"context"
 	"errors"
 	"go-drive/common"
 	apierr "go-drive/common/errors"
@@ -8,6 +9,7 @@ import (
 	"go-drive/common/types"
 	"io"
 	"testing"
+	"time"
 )
 
 type registryTestProcessor struct{}
@@ -430,6 +432,9 @@ func TestServiceResolveSelectsStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("content generate() = %#v %v", info, err)
 	}
+	if info.Ref == "" {
+		t.Fatal("content Info.Ref is empty")
+	}
 	if _, err := generateRequest(svc, Request{Handler: "split", Args: "missing"}); !apierr.IsNotFoundError(err) {
 		t.Fatalf("unknown store generate() = %v, want not found", err)
 	}
@@ -469,3 +474,79 @@ func (h *cacheableFailureHandler) Produce(types.TaskCtx, Request, Writer) error 
 func (h *cacheableFailureHandler) Spec() Spec {
 	return Spec{Caches: []CacheSpec{{}}}
 }
+
+func TestPrepareResultCarriesRef(t *testing.T) {
+	handler := &countingProduceHandler{}
+	svc := newTestService(t, syncRunner{})
+	if err := svc.install("preview", handler); err != nil {
+		t.Fatal(err)
+	}
+	entry := &identityTestEntry{path: "demo.zip", real: "drive/demo.zip", size: 4, modTime: 1}
+	prepare := func(args string) Info {
+		t.Helper()
+		result, err := svc.Prepare(context.Background(), Request{
+			Handler: "preview",
+			Source:  entry,
+			Args:    args,
+		}, time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Task != nil {
+			t.Fatalf("args %q returned a task: %#v", args, result.Task)
+		}
+		if result.Info.Ref == "" {
+			t.Fatal("Info.Ref is empty")
+		}
+		return result.Info
+	}
+	first := prepare("index")
+	second := prepare("content:docs/info.md")
+	if first.Ref != second.Ref {
+		t.Fatalf("ref changed without a new cache slot: %q %q", first.Ref, second.Ref)
+	}
+	if handler.calls != 1 {
+		t.Fatalf("produce calls = %d, want 1", handler.calls)
+	}
+	opened, err := svc.OpenCached(entry, "preview", first.Ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(opened.Body)
+	_ = opened.Body.Close()
+	if err != nil || string(body) != "ok" {
+		t.Fatalf("cached body = %q %v", body, err)
+	}
+	if _, err := svc.OpenCached(entry, "preview", "missing"); !apierr.IsNotFoundError(err) {
+		t.Fatalf("missing ref = %v", err)
+	}
+	other := &identityTestEntry{path: "other.zip", real: "drive/other.zip", size: 4, modTime: 1}
+	if _, err := svc.OpenCached(other, "preview", first.Ref); !apierr.IsNotFoundError(err) {
+		t.Fatalf("ref for another path = %v", err)
+	}
+}
+
+type syncRunner struct{}
+
+func (syncRunner) Execute(runnable task.Runnable, options ...task.Option) (task.Task, error) {
+	return syncRunner{}.ExecuteAndWait(context.Background(), runnable, 0, options...)
+}
+
+func (syncRunner) ExecuteAndWait(ctx context.Context, runnable task.Runnable, _ time.Duration, _ ...task.Option) (task.Task, error) {
+	result, err := runnable(task.NewContextWrapper(ctx))
+	if err != nil {
+		return task.Task{Status: task.Error, Error: err}, nil
+	}
+	return task.Task{Status: task.Done, Result: result}, nil
+}
+
+func (syncRunner) RegisterGroup(string, int) error { return nil }
+func (syncRunner) GetTask(string) (task.Task, error) {
+	return task.Task{}, task.ErrorNotFound
+}
+func (syncRunner) GetTasks(string) ([]task.Task, error) { return nil, nil }
+func (syncRunner) StopTask(string) (task.Task, error) {
+	return task.Task{}, task.ErrorNotFound
+}
+func (syncRunner) RemoveTask(string) error { return nil }
+func (syncRunner) Dispose() error          { return nil }

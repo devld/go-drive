@@ -305,7 +305,7 @@ func TestPreviewerReportsProgressAndSpec(t *testing.T) {
 		t.Fatalf("progress = %d/%d, want %d/%d", ctx.GetProgress(), ctx.GetTotal(), size, size)
 	}
 	registration := previewer.Spec()
-	if len(registration.Caches) != 2 {
+	if len(registration.Caches) != 3 {
 		t.Fatalf("archive caches = %#v", registration.Caches)
 	}
 	var contentMax int64 = -1

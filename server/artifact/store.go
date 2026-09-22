@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -52,6 +53,9 @@ type Info struct {
 	Name     string `json:"name,omitempty"`
 	MimeType string `json:"mimeType,omitempty"`
 	Size     int64  `json:"size"`
+	// Ref retrieves this cached artifact with GET ?ref=. It does not repeat
+	// the request args and does not start generation.
+	Ref string `json:"ref"`
 }
 
 // errCacheMiss is returned by Lookup when no usable record exists.
@@ -93,6 +97,11 @@ type Store struct {
 	policies    map[string]Policy
 }
 
+// Policy controls one bucket. TTL is how long a finished artifact stays after
+// it is published. Zero means the next cleanup removes it once no reader has
+// it open. A positive TTL keeps it at least that long. An open reader is kept
+// either way. MaxBytes evicts the oldest artifacts after the byte budget is
+// exceeded; zero disables that limit.
 type Policy struct {
 	TTL      time.Duration
 	MaxBytes int64
@@ -258,12 +267,49 @@ func (w *storeWriter) release() {
 	w.store.markActive(w.key, -1)
 }
 
+// Ref is the cache address of a logical key. It stays valid until the blob
+// expires or the source identity no longer matches.
+func (s *Store) Ref(bucket, logicalKey string) string {
+	return bucket + ":" + s.artifactKey(bucket, logicalKey)
+}
+
+func SplitRef(ref string) (bucket, cacheKey string, err error) {
+	bucket, cacheKey, ok := strings.Cut(ref, ":")
+	if !ok || !validRefBucket(bucket) || !validStorageKey(cacheKey) {
+		return "", "", apierr.NewNotFoundMessageError("artifact not found")
+	}
+	return bucket, cacheKey, nil
+}
+
+func validRefBucket(bucket string) bool {
+	if bucket == "" || strings.Contains(bucket, "/") || strings.Contains(bucket, ".") {
+		return false
+	}
+	for _, r := range bucket {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-' {
+			return false
+		}
+	}
+	return true
+}
+
+func validStorageKey(key string) bool {
+	if len(key) != sha256.Size*2 {
+		return false
+	}
+	_, err := hex.DecodeString(key)
+	return err == nil
+}
+
 func (s *Store) Open(bucket string, key string) (*Artifact, error) {
+	return s.OpenStorage(bucket, s.artifactKey(bucket, key))
+}
+
+func (s *Store) OpenStorage(bucket, cacheKey string) (*Artifact, error) {
 	cache, err := s.cache(bucket)
 	if err != nil {
 		return nil, err
 	}
-	cacheKey := s.artifactKey(bucket, key)
 	s.markActive(cacheKey, 1)
 	ephemeral := s.isEphemeral(cacheKey)
 	rec, size, body, err := cache.Open(cacheKey)
@@ -339,7 +385,7 @@ func (s *Store) Clean(bucket string, ttl time.Duration, maxBytes int64) (int, er
 		case !rec.CreatedAt.IsZero():
 			createdAt, dropNow = rec.CreatedAt, false
 		}
-		if !dropNow && ttl > 0 && time.Since(createdAt) > ttl {
+		if !dropNow && expired(ttl, createdAt) {
 			dropNow = true
 		}
 		if dropNow {
@@ -377,6 +423,16 @@ func (s *Store) policy(bucket string) (Policy, bool) {
 	defer mutex.Unlock()
 	policy, ok := s.policies[bucket]
 	return policy, ok
+}
+
+// expired reports whether a published artifact is due for removal. A zero TTL
+// is due on every cleanup; removal still waits for that tick and skips open
+// readers. A positive TTL is due only after it has elapsed.
+func expired(ttl time.Duration, createdAt time.Time) bool {
+	if ttl == 0 {
+		return true
+	}
+	return ttl > 0 && time.Since(createdAt) > ttl
 }
 
 func (s *Store) removeByKey(bucket string, key string, cache *typeCache) error {

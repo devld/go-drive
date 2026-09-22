@@ -237,7 +237,11 @@
   </div>
 </template>
 <script setup lang="ts">
-import { fileThumbnailUrl } from '@/api/artifact'
+import {
+  ARTIFACT_THUMBNAIL,
+  artifactRefUrl,
+  prepareArtifact,
+} from '@/api/artifact'
 import { fileUrl } from '@/api'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { useAppStore } from '@/store'
@@ -247,8 +251,9 @@ import {
   entryMatches,
   filenameBase,
   filenameExt,
+  taskDone,
 } from '@/utils'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { EntryHandlerContext } from '../types'
 
 interface Track {
@@ -315,14 +320,36 @@ const supportThumbnail = (entry: Entry) => {
   return !!extensions && entryMatches(entry, extensions)
 }
 
-const currentCover = computed(() => {
-  const track = currentTrack.value
-  if (!track) return undefined
-  if (supportThumbnail(track.entry)) {
-    return fileThumbnailUrl(track.entry.path, track.entry.meta)
-  }
-  return undefined
-})
+const currentCover = ref<string>()
+let coverRequest = 0
+watch(
+  () => currentTrack.value?.entry.path,
+  async () => {
+    const request = ++coverRequest
+    const entry = currentTrack.value?.entry
+    currentCover.value = undefined
+    if (!entry || !supportThumbnail(entry)) return
+    try {
+      const prepared = await prepareArtifact(
+        entry.path,
+        entry.meta,
+        ARTIFACT_THUMBNAIL
+      )
+      const info =
+        'info' in prepared ? prepared.info : await taskDone(prepared.task)
+      if (request !== coverRequest || !info || !info.ref) return
+      currentCover.value = artifactRefUrl(
+        entry.path,
+        entry.meta,
+        ARTIFACT_THUMBNAIL,
+        info.ref
+      )
+    } catch {
+      currentCover.value = undefined
+    }
+  },
+  { immediate: true }
+)
 
 const formatTime = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds < 0) seconds = 0

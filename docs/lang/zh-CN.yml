@@ -58,6 +58,7 @@ api:
     unsupported: 不支持的压缩包格式
     process_failed: 无法处理该压缩包
     member_not_found: 压缩包中找不到该文件
+    pack_expired: 打包下载已过期，请重试
   zip:
     size_exceed: 超过最大允许的大小 {{ 1 }}
 storage:
