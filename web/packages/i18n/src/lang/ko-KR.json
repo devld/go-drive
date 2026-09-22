@@ -438,6 +438,10 @@
       "empty": "이 폴더는 비어 있습니다",
       "download": "다운로드",
       "n_selected": "{n}개 선택됨",
+      "extract_to": "압축 해제",
+      "extract_open_title": "압축 해제 위치",
+      "extracting": "압축 해제 중",
+      "extracting_progress": "압축 해제 중 {p}",
       "packaging": "압축 중",
       "packaging_progress": "압축 중 {p}",
       "pack_expired": "압축 다운로드가 만료되었습니다. 다시 시도해 주세요"

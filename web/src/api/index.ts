@@ -121,6 +121,19 @@ export function moveEntry(from: string, to: string, override?: boolean) {
   })
 }
 
+export function extractArchive(
+  source: string,
+  dest: string,
+  members: string[],
+  override?: boolean
+) {
+  return http.post<Task<void>>(
+    '/archive-extract',
+    { source, dest, members, override: !!override },
+    { headers: pathPasswordHeaders(source) }
+  )
+}
+
 export function getTask<T>(id: string) {
   return http.get<Task<T>>(`/tasks/${id}`)
 }

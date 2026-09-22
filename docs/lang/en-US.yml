@@ -59,6 +59,7 @@ api:
     process_failed: Failed to process archive
     member_not_found: File not found in the archive
     pack_expired: Packaged download expired, please try again
+    dest_not_dir: Destination is not a directory
   zip:
     size_exceed: Exceeds the maximum allowed size {{ 1 }}
 storage:

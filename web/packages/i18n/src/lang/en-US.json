@@ -438,6 +438,10 @@
       "empty": "This folder is empty",
       "download": "Download",
       "n_selected": "{n} selected",
+      "extract_to": "Extract to",
+      "extract_open_title": "Extract to",
+      "extracting": "Extracting",
+      "extracting_progress": "Extracting {p}",
       "packaging": "Packaging",
       "packaging_progress": "Packaging {p}",
       "pack_expired": "Packaged download expired, please try again"

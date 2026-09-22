@@ -80,7 +80,7 @@ const emit = defineEmits<{
 }>()
 
 const dirMode = ref(false)
-const path = ref('')
+const path = ref(typeof props.opts.path === 'string' ? props.opts.path : '')
 const currentEntry = ref<Entry>()
 const selection = ref<Entry[]>([])
 const max = ref(0)

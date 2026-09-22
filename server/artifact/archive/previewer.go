@@ -90,6 +90,7 @@ type Previewer struct {
 var (
 	_ artifact.Handler  = (*Previewer)(nil)
 	_ types.IDisposable = (*Previewer)(nil)
+	_ MemberExtractor   = (*Previewer)(nil)
 )
 
 func init() {

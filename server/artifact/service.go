@@ -110,6 +110,10 @@ func (s *Service) resolveHandler(name string) (Handler, error) {
 	return handler, nil
 }
 
+func (s *Service) Handler(name string) (Handler, error) {
+	return s.resolveHandler(name)
+}
+
 // FetchResult is the outcome of Service.Fetch. Artifact is set when a body is
 // ready to stream. Task is set when generation is still running after the wait.
 type FetchResult struct {

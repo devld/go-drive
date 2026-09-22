@@ -108,6 +108,14 @@
             >
               {{ $t('handler.archive.download') }}
             </SimpleButton>
+            <SimpleButton
+              small
+              icon="copy"
+              :loading="extracting"
+              @click="extractTo"
+            >
+              {{ $t('handler.archive.extract_to') }}
+            </SimpleButton>
           </span>
         </div>
       </div>
@@ -127,13 +135,13 @@ import {
   getArchiveIndex,
   prepareArtifact,
 } from '@/api/artifact'
-import { deleteTask } from '@/api'
+import { deleteTask, extractArchive } from '@/api'
 import type { EntryEventData } from '@/components/entry'
 import ErrorView from '@/components/ErrorView.vue'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { Entry, Task, TaskProgress } from '@/types'
-import { formatBytes, TASK_CANCELLED, taskDone } from '@/utils'
-import { alert, loading as showTaskLoading } from '@/utils/ui-utils'
+import { dir, formatBytes, TASK_CANCELLED, taskDone } from '@/utils'
+import { alert, loading as showTaskLoading, open } from '@/utils/ui-utils'
 import { T } from '@go-drive/i18n'
 import { LoadingState } from '@go-drive/utils'
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
@@ -159,7 +167,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits<{ (e: 'close'): void }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'refresh'): void }>()
 
 const currentDir = ref('')
 const childrenByParent = shallowRef<Map<string, ArchiveEntry[]>>(new Map())
@@ -200,6 +208,7 @@ const selectedMembers = computed(() =>
   mergeArchiveSelection(selected.value, childrenByParent.value)
 )
 const selectedCount = computed(() => selectedMembers.value.length)
+const extracting = ref(false)
 const packaging = ref(false)
 
 const isChecked = (item: ArchiveEntry) =>
@@ -374,6 +383,57 @@ const downloadSelected = async () => {
     if (e !== TASK_CANCELLED) alert(e.message)
   } finally {
     packaging.value = false
+    showTaskLoading()
+  }
+}
+
+const extractTo = async () => {
+  const members = selectedMembers.value
+  if (members.length === 0) return
+  let destPath = ''
+  try {
+    const dest = await open({
+      title: T('handler.archive.extract_open_title'),
+      type: 'dir',
+      filter: 'write',
+      path: dir(props.entry.path),
+    })
+    destPath = dest.path
+  } catch {
+    return
+  }
+
+  extracting.value = true
+  let canceled = false
+  let task: Task<void> | undefined
+  const onCancel = () => {
+    canceled = true
+    return task && deleteTask(task.id)
+  }
+  try {
+    showTaskLoading({
+      text: T('handler.archive.extracting'),
+      onCancel,
+    })
+    await taskDone(extractArchive(props.entry.path, destPath, members), (running) => {
+      if (canceled) return false
+      task = running
+      showTaskLoading({
+        text: T('handler.archive.extracting_progress', {
+          p: running.progress
+            ? `${formatBytes(running.progress.loaded)}/${formatBytes(
+                running.progress.total
+              )}`
+            : '',
+        }),
+        onCancel,
+      })
+    })
+    emit('refresh')
+  } catch (e: any) {
+    if (e !== TASK_CANCELLED) alert(e.message)
+  } finally {
+    extracting.value = false
     showTaskLoading()
   }
 }

@@ -104,7 +104,18 @@ func (f *Drive) newFsFile(path string, file os.FileInfo) (types.IEntry, error) {
 
 func (f *Drive) getPath(path string) string {
 	path = utils.CleanPath(path)
-	return filepath.Join(f.path, filepath.FromSlash(path))
+	if path == "" {
+		return f.path
+	}
+	rel := filepath.FromSlash(path)
+	if !filepath.IsLocal(rel) {
+		panic("invalid file key")
+	}
+	full := filepath.Join(f.path, rel)
+	if !strings.HasPrefix(full, f.path+string(filepath.Separator)) {
+		panic("invalid file key")
+	}
+	return full
 }
 
 func (f *Drive) isRootPath(path string) bool {

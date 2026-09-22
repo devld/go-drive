@@ -7,6 +7,7 @@ export interface OpenDialogOptions<T extends Entry | Entry[] = Entry | Entry[]>
   type?: 'dir' | 'file'
   filter?: ((e: Entry) => boolean) | string
   max?: number
+  path?: string
 }
 
 const OpenDialog = createDialog('OpenDialog', OpenDialogInner)

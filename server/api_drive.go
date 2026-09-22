@@ -70,6 +70,7 @@ func InitDriveRoutes(
 	r := router.Group("/", tokenAuth)
 
 	r.POST("/artifact/:handler", dr._getDrive, dr.postArtifact)
+	r.POST("/archive-extract", dr._getDrive, dr.archiveExtract)
 
 	// list entries/drives
 	router.GET("/list", SignatureAuth(signer, userDAO, false), tokenAuth, dr._getDrive, dr.list)
