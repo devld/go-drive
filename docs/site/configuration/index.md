@@ -65,6 +65,8 @@ archive:
   # Complete decompressed member artifacts use a separate byte/TTL policy.
   content-cache-size: 4g
   content-cache-ttl: 24h
+  # How long a generated zip download stays available.
+  pack-ttl: 1m
 
 auth:
   validity: 2h
@@ -161,6 +163,8 @@ decompressed member; and `max-entries` bounds the indexed member count.
 inspecting archives. The complete member index uses `index-ttl`. Decompressed
 member preview bodies are complete artifacts and use the independent
 `content-cache-size` byte budget and `content-cache-ttl` validity period.
+`pack-ttl` is how long a generated zip download stays available after it is
+created.
 
 Archive inspection can continue in the background when a request reaches its
 short response wait. The Web UI polls the task and opens the completed

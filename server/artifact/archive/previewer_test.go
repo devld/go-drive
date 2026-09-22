@@ -163,22 +163,22 @@ func makeZip(t *testing.T) (string, int64) {
 	return file.Name(), info.Size()
 }
 
-func TestPreviewerLoadIndexUsesOwnCachedArtifact(t *testing.T) {
+func TestPreviewerCachedIndexUsesOwnCachedArtifact(t *testing.T) {
 	previewer := &Previewer{cache: &stubArtifactCache{body: `[{"path":"a.txt","name":"a.txt","type":"file","size":1}]`}}
-	entries, err := previewer.loadIndex(task.DummyContext(), &testEntry{path: "demo.zip"})
-	if err != nil {
-		t.Fatal(err)
+	entries, ok := previewer.cachedIndex(&testEntry{path: "demo.zip"})
+	if !ok {
+		t.Fatal("cached index miss")
 	}
 	if len(entries) != 1 || entries[0].Path != "a.txt" {
 		t.Fatalf("cached index = %+v", entries)
 	}
 }
 
-func TestPreviewerLoadIndexRebuildsWhenCacheMisses(t *testing.T) {
+func TestPreviewerBuildIndexRebuildsWhenCacheMisses(t *testing.T) {
 	filename, size := makeZip(t)
 	previewer := newTestPreviewer(t, archiveTestConfig(), t.TempDir())
 	previewer.cache = &stubArtifactCache{err: errors.New("missing")}
-	entries, err := previewer.loadIndex(task.DummyContext(), &testEntry{
+	entries, err := previewer.buildIndex(task.DummyContext(), &testEntry{
 		path: "demo.zip", filename: filename, size: size,
 	})
 	if err != nil {
@@ -189,16 +189,36 @@ func TestPreviewerLoadIndexRebuildsWhenCacheMisses(t *testing.T) {
 	}
 }
 
+func TestPreviewerOpensMemberWithoutCachedIndex(t *testing.T) {
+	filename, size := makeZip(t)
+	reads := &atomic.Int32{}
+	previewer := newTestPreviewer(t, archiveTestConfig(), t.TempDir())
+	entry := &testEntry{path: "demo.zip", filename: filename, size: size, reads: reads}
+	content := produceBody(t, previewer, nil, artifact.Request{
+		Source: entry, Args: argsContentPrefix + "README.txt",
+	})
+	if string(content) != "archive preview" {
+		t.Fatalf("content = %q", content)
+	}
+	if got := reads.Load(); got != 1 {
+		t.Fatalf("source opens = %d, want 1", got)
+	}
+}
+
 type stubArtifactCache struct {
 	body string
 	err  error
 }
 
+type bytesReadSeekCloser struct{ *bytes.Reader }
+
+func (bytesReadSeekCloser) Close() error { return nil }
+
 func (c *stubArtifactCache) Get(_ types.IEntry, _ string) (*artifact.Artifact, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
-	return &artifact.Artifact{Size: int64(len(c.body)), Body: io.NopCloser(bytes.NewReader([]byte(c.body)))}, nil
+	return &artifact.Artifact{Size: int64(len(c.body)), Body: bytesReadSeekCloser{Reader: bytes.NewReader([]byte(c.body))}}, nil
 }
 
 func TestPreviewerProducesIndexAndContent(t *testing.T) {
@@ -305,7 +325,7 @@ func TestPreviewerReportsProgressAndSpec(t *testing.T) {
 		t.Fatalf("progress = %d/%d, want %d/%d", ctx.GetProgress(), ctx.GetTotal(), size, size)
 	}
 	registration := previewer.Spec()
-	if len(registration.Caches) != 2 {
+	if len(registration.Caches) != 3 {
 		t.Fatalf("archive caches = %#v", registration.Caches)
 	}
 	var contentMax int64 = -1

@@ -426,14 +426,21 @@
     },
     "zip": {
       "name": "打包下载",
-      "desc": "创建 zip 压缩包"
+      "desc": "创建 zip 压缩包",
+      "packaging": "正在打包",
+      "packaging_progress": "正在打包 {p}",
+      "pack_expired": "打包下载已过期，请重试"
     },
     "archive": {
-      "name": "压缩包预览",
+      "name": "打开压缩包",
       "desc": "浏览压缩包内容",
       "parent": "上一级",
       "empty": "此目录为空",
-      "download": "下载"
+      "download": "下载",
+      "n_selected": "已选 {n} 项",
+      "packaging": "正在打包",
+      "packaging_progress": "正在打包 {p}",
+      "pack_expired": "打包下载已过期，请重试"
     },
     "delete": {
       "name": "删除",

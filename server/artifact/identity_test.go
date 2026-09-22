@@ -28,30 +28,29 @@ func (e *identityTestEntry) GetURL(context.Context) (*types.ContentURL, error) {
 func (e *identityTestEntry) GetDispatchedDrive() (string, types.IDrive)        { return "drive", nil }
 func (e *identityTestEntry) GetRealPath() string                               { return e.real }
 
-func TestBindSourceComposesHandlerIdentity(t *testing.T) {
+func TestBindSourceKeepsHandlerFields(t *testing.T) {
+	handler := ResolvedRequest{Key: "member", Fingerprint: "v1", Cache: "content"}
 	entry := &identityTestEntry{path: "photos/a.png", real: "drive/photos/a.png", size: 10, modTime: 1}
-	got := bindSource(entry, ResolvedRequest{Key: "member", Fingerprint: "v1"})
-	wantKey := "drive/photos/a.png|member"
-	if got.Key != wantKey {
-		t.Fatalf("Key = %q, want %q", got.Key, wantKey)
+	got := bindSource(entry, handler)
+	if got.ResolvedRequest != handler {
+		t.Fatalf("handler fields = %#v, want %#v", got.ResolvedRequest, handler)
+	}
+	if got.fullKey != "drive/photos/a.png|member" {
+		t.Fatalf("fullKey = %q", got.fullKey)
 	}
 	wantFP := "path=photos/a.png|type=file|size=10|mod=1|v1"
-	if got.Fingerprint != wantFP {
-		t.Fatalf("Fingerprint = %q, want %q", got.Fingerprint, wantFP)
+	if got.fullFingerprint != wantFP {
+		t.Fatalf("fullFingerprint = %q, want %q", got.fullFingerprint, wantFP)
 	}
 	entry.size++
-	after := bindSource(entry, ResolvedRequest{Key: "member", Fingerprint: "v1"})
-	if after.Key != got.Key {
-		t.Fatalf("Key changed after source update: %q -> %q", got.Key, after.Key)
+	after := bindSource(entry, handler)
+	if after.ResolvedRequest != handler {
+		t.Fatalf("handler fields changed after source update: %#v", after.ResolvedRequest)
 	}
-	if after.Fingerprint == got.Fingerprint {
-		t.Fatal("Fingerprint did not change after source update")
+	if after.fullKey != got.fullKey {
+		t.Fatalf("fullKey changed after source update: %q -> %q", got.fullKey, after.fullKey)
 	}
-}
-
-func TestBindSourceSkipsNilEntry(t *testing.T) {
-	got := bindSource(nil, ResolvedRequest{Key: "k", Fingerprint: "fp"})
-	if got.Key != "k" || got.Fingerprint != "fp" {
-		t.Fatalf("bindSource(nil) = %#v", got)
+	if after.fullFingerprint == got.fullFingerprint {
+		t.Fatal("fullFingerprint did not change after source update")
 	}
 }

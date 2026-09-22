@@ -25,5 +25,5 @@ export default {
     const maxSize = config.maxSize
     return maxSize === undefined || entry.size < 0 || entry.size <= maxSize
   },
-  order: -100,
+  order: 2001,
 } as EntryHandler

@@ -29,7 +29,7 @@ Open `http://localhost:8089`. See [Installation and startup](./getting-started/)
 
 - Browse, upload, download, copy, move, rename, and delete files, with drag-and-drop, paste upload, chunked upload, and ZIP downloads.
 - Users, groups, root-path isolation, and per-path read/write permissions.
-- Image, audio, video, text, code, PDF, and configurable external viewers.
+- Image, audio, video, text, code, PDF, ZIP/7z/RAR archives, and configurable external viewers.
 - Built-in image and text thumbnails; the official Docker image also includes libvips and ffmpeg.
 - Filename search, WebDAV service, path mounts, and path attributes.
 - File buckets with access controls, upload tokens, type/size limits, and hotlink protection.

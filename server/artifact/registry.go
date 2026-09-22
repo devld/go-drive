@@ -38,12 +38,12 @@ type Request struct {
 }
 
 // ResolvedRequest is Handler.Resolve's result: which Spec.Caches bucket, and
-// the handler's own key fragment and generator identity. Service prepends the
-// source entry's stable slot (real path) and changing identity (path,
-// type, size, mtime) before talking to Store. Handler Key is extra slot
-// identity that is not the source entry, such as an archive member. Handler
-// Fingerprint is generator version and settings (for example v1). Cache
-// selects a Spec.Caches bucket; empty uses the handler's only cache.
+// the handler's own key fragment and generator identity. Service does not
+// rewrite these fields. The store key is the source real path plus Key.
+// Handler Key is extra slot identity that is not the source entry, such as an
+// archive member. Clients receive Cache and Key in Ref as cacheName:key.
+// Handler Fingerprint is generator version and settings (for example v1).
+// Cache selects a Spec.Caches bucket; empty uses the handler's only cache.
 type ResolvedRequest struct {
 	Key         string
 	Fingerprint string
@@ -70,10 +70,18 @@ type Cache interface {
 	Get(source types.IEntry, args string) (*Artifact, error)
 }
 
+// OptionReader is the operator settings store. Handlers read their own keys.
+type OptionReader interface {
+	GetValue(key string) types.SV
+}
+
 // HandlerContext is the shared constructor input used when the artifact
 // service creates registered handlers.
 type HandlerContext struct {
 	Config common.Config
+	// Options is the process options DAO. It is nil in tests that do not
+	// configure operator settings.
+	Options OptionReader
 	// Cache is bound to this handler's name by Service. Get must not
 	// schedule Produce.
 	Cache Cache

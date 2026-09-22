@@ -3,7 +3,7 @@ title: 站点设置
 description: 自定义 go-drive 品牌、匿名访问、文件处理、界面外观、注入样式及其他浏览器端站点行为。
 lang: zh-CN
 translation_key: site-settings
-source_hash: 22bdd3bf6665cf9f0e12532ddbc02acc8c6a6eaaecaa4a1aca52db4b0a5c4382
+source_hash: 597b0d56d434a55b3473f9faf7227927b8ae2373b3fda41bae7cdd46a82a21e0
 ---
 
 # 站点设置
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 ## 文件预览
 
-可分别配置文本、图片、音频、视频、Monaco 和外部预览器的扩展名。详细格式和第三方隐私影响见[文件预览与缩略图](./preview-thumbnail.html)。
+可分别配置文本、图片、音频、视频、Monaco 和外部预览器的扩展名。ZIP、7z 和 RAR 可在浏览器中打开，大小限制写在 `config.yml`。详细格式和第三方隐私影响见[文件预览与缩略图](./preview-thumbnail.html)。
 
 ## 匿名用户根路径
 

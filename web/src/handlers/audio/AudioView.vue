@@ -237,8 +237,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { fileThumbnailUrl } from '@/api/artifact'
-import { fileUrl } from '@/api'
+import { artifactURL, fileUrl } from '@/api'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { useAppStore } from '@/store'
 import { Entry } from '@/types'
@@ -319,7 +318,7 @@ const currentCover = computed(() => {
   const track = currentTrack.value
   if (!track) return undefined
   if (supportThumbnail(track.entry)) {
-    return fileThumbnailUrl(track.entry.path, track.entry.meta)
+    return artifactURL(track.entry.path, track.entry.meta, 'thumbnail')
   }
   return undefined
 })

@@ -6,17 +6,21 @@ import (
 	"go-drive/common/types"
 )
 
-// bindSource prepends the source entry's stable slot and changing identity
-// onto a handler Resolve result. Handlers only describe their own key
-// fragment and generator settings; they do not encode entry metadata.
-func bindSource(entry types.IEntry, resolved ResolvedRequest) ResolvedRequest {
-	if entry == nil {
-		return resolved
-	}
+// resolvedRequest is a handler Resolve result plus the store identity Service
+// derives from the source entry. Handler fields are copied, not rewritten.
+type resolvedRequest struct {
+	ResolvedRequest
+	fullKey         string
+	fullFingerprint string
+}
+
+func bindSource(entry types.IEntry, handler ResolvedRequest) resolvedRequest {
 	key, fingerprint := sourceIdentity(entry)
-	resolved.Key = joinIdentity(key, resolved.Key)
-	resolved.Fingerprint = joinIdentity(fingerprint, resolved.Fingerprint)
-	return resolved
+	return resolvedRequest{
+		ResolvedRequest: handler,
+		fullKey:         joinIdentity(key, handler.Key),
+		fullFingerprint: joinIdentity(fingerprint, handler.Fingerprint),
+	}
 }
 
 func sourceIdentity(entry types.IEntry) (key, fingerprint string) {

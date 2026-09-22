@@ -3,7 +3,7 @@ title: 配置文件参考
 description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: a2301b407d9981e0d344a87ce260eec93f511aad7f776b2866170811adbe1321
+source_hash: 6ee487017790b0c9e8b70f71d74b30aa5b319f4b32b3e01f66764e010836a4fe
 ---
 
 # 配置文件参考
@@ -66,6 +66,8 @@ archive:
   # 解压文件产物使用独立的总字节数和 TTL 限制。
   content-cache-size: 4g
   content-cache-ttl: 24h
+  # 打包 zip 生成后可下载的时长。
+  pack-ttl: 1m
 
 auth:
   validity: 2h
@@ -155,7 +157,7 @@ auth:
 
 ## 压缩包预览
 
-内置压缩包处理器支持 ZIP、7z 和 RAR。`max-size` 限制服务器检查的压缩文件大小，`max-member-size` 限制单个解压文件大小，`max-entries` 限制索引的内部文件数量。`cache-items` 和 `cache-size` 限制检查压缩包时使用的远程稀疏源文件缓存，`index-ttl` 控制完整内部文件索引的有效期。解压文件预览会生成完整产物，并使用独立的 `content-cache-size` 总字节数上限和 `content-cache-ttl` 有效期。
+内置压缩包处理器支持 ZIP、7z 和 RAR。`max-size` 限制服务器检查的压缩文件大小，`max-member-size` 限制单个解压文件大小，`max-entries` 限制索引的内部文件数量。`cache-items` 和 `cache-size` 限制检查压缩包时使用的远程稀疏源文件缓存，`index-ttl` 控制完整内部文件索引的有效期。解压文件预览会生成完整产物，并使用独立的 `content-cache-size` 总字节数上限和 `content-cache-ttl` 有效期。`pack-ttl` 控制打包 zip 生成后可下载的时长。
 
 请求达到短等待时间后，压缩包检查仍可在后台继续执行。Web UI 会轮询任务并在产物完成后打开；关闭预览窗口只会停止轮询，不会取消后台处理。
 

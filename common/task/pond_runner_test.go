@@ -71,6 +71,46 @@ func TestExecuteAndWaitContinuesAfterTimeout(t *testing.T) {
 	}
 }
 
+func TestExecuteAndWaitContinuesAfterContextCancel(t *testing.T) {
+	runner := newTestRunner(t, 1)
+	release := make(chan struct{})
+	finished := make(chan struct{})
+	started := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+
+	errCh := make(chan error, 1)
+	var snapshot Task
+	go func() {
+		var err error
+		snapshot, err = runner.ExecuteAndWait(ctx, func(types.TaskCtx) (any, error) {
+			close(started)
+			<-release
+			close(finished)
+			return "done", nil
+		}, time.Minute)
+		errCh <- err
+	}()
+	<-started
+	cancel()
+	if err := <-errCh; err != nil {
+		t.Fatalf("canceled wait returned error: %v", err)
+	}
+	if snapshot.ID == "" {
+		t.Fatal("canceled wait returned an empty snapshot")
+	}
+
+	close(release)
+	select {
+	case <-finished:
+	case <-time.After(time.Second):
+		t.Fatal("task did not continue in the background")
+	}
+	completed := waitForTask(t, runner, snapshot.ID, Done)
+	if completed.Result != "done" {
+		t.Fatalf("unexpected result: %#v", completed.Result)
+	}
+}
+
 func TestExecuteAndWaitPanicsForNilContext(t *testing.T) {
 	runner := newTestRunner(t, 1)
 	defer func() {

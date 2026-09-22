@@ -13,12 +13,17 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 var artifactLog = logging.For("artifact")
 
-const cleanInterval = 12 * time.Hour
+// cleanInterval is how often expired artifacts are removed from disk. Pack
+// downloads stay fetchable for archive.pack-ttl (default one minute) even
+// when this scan has not run yet. Cleanup skips artifacts that still have a
+// reader.
+const cleanInterval = 30 * time.Minute
 
 // Service is the shared artifact runtime. It registers processors, persists
 // complete outputs through Store, and schedules generation on the task runner.
@@ -35,7 +40,7 @@ var (
 	_ types.IDisposable = (*Service)(nil)
 )
 
-func NewService(config common.Config, runner task.Runner) (*Service, error) {
+func NewService(config common.Config, runner task.Runner, options OptionReader) (*Service, error) {
 	tempDir := config.TempDir
 	if tempDir == "" {
 		tempDir = os.TempDir()
@@ -51,8 +56,9 @@ func NewService(config common.Config, runner task.Runner) (*Service, error) {
 	}
 	for _, entry := range handlerFactories {
 		handlerCtx := HandlerContext{
-			Config: config,
-			Cache:  handlerCache{service: service, handler: entry.name},
+			Config:  config,
+			Options: options,
+			Cache:   handlerCache{service: service, handler: entry.name},
 		}
 		handler, err := entry.factory(handlerCtx)
 		if err != nil {
@@ -110,11 +116,20 @@ type FetchResult struct {
 	Task     *task.Task
 }
 
+// ArtifactInfo is the client-facing description of a ready artifact. Info is
+// embedded so JSON serialization inlines the stored fields next to ref.
+type ArtifactInfo struct {
+	Info
+	// Ref retrieves this cached artifact with GET ?ref=. It does not repeat
+	// the request args and does not start generation.
+	Ref string `json:"ref"`
+}
+
 // PrepareResult is the outcome of Service.Prepare. Info is set when the
 // artifact is already stored. Task is set when generation is still running
 // after the wait.
 type PrepareResult struct {
-	Info Info
+	Info ArtifactInfo
 	Task *task.Task
 }
 
@@ -146,10 +161,30 @@ func (s *Service) Prepare(ctx context.Context, request Request, wait time.Durati
 	return PrepareResult{Info: got.info}, nil
 }
 
+// OpenCached returns a stored artifact by ref. A miss or expiry is not-found
+// and does not start generation. The ref is cacheName:key for this handler.
+// source supplies the real path that was stored with that fragment. Validity
+// and expiry are decided by the store.
+func (s *Service) OpenCached(handlerName string, source types.IEntry, ref string) (*Artifact, error) {
+	handler, err := s.resolveHandler(handlerName)
+	if err != nil {
+		return nil, err
+	}
+	resolved, err := resolveRef(handler, source, ref)
+	if err != nil {
+		return nil, err
+	}
+	bucket, _, err := bindCache(handler.Spec(), handlerName, resolved)
+	if err != nil {
+		return nil, apierr.NewNotFoundMessageError("artifact not found")
+	}
+	return s.store.Open(bucket, resolved.fullKey)
+}
+
 type scheduled struct {
 	spec     Spec
-	resolved ResolvedRequest
-	info     Info
+	resolved resolvedRequest
+	info     ArtifactInfo
 	task     *task.Task
 }
 
@@ -178,7 +213,7 @@ func (s *Service) schedule(ctx context.Context, request Request, wait time.Durat
 	}
 	switch created.Status {
 	case task.Done:
-		info, ok := created.Result.(Info)
+		info, ok := created.Result.(ArtifactInfo)
 		if !ok {
 			info, err = s.lookupInfo(request.Handler, spec, resolved)
 			if err != nil {
@@ -208,26 +243,26 @@ func (s *Service) open(request Request) (*Artifact, error) {
 	return s.openResolved(request.Handler, handler.Spec(), resolved)
 }
 
-func (s *Service) generateLocked(ctx types.TaskCtx, request Request, handler Handler, resolved ResolvedRequest) (Info, error) {
+func (s *Service) generateLocked(ctx types.TaskCtx, request Request, handler Handler, resolved resolvedRequest) (ArtifactInfo, error) {
 	spec := handler.Spec()
 	bucket, _, err := bindCache(spec, request.Handler, resolved)
 	if err != nil {
-		return Info{}, err
+		return ArtifactInfo{}, err
 	}
 	if info, err := s.lookupInfo(request.Handler, spec, resolved); !errors.Is(err, errCacheMiss) {
 		return info, err
 	}
-	unlock, err := s.store.Lock(bucket, resolved.Key)
+	unlock, err := s.store.Lock(bucket, resolved.fullKey)
 	if err != nil {
-		return Info{}, err
+		return ArtifactInfo{}, err
 	}
 	defer unlock()
 	if info, err := s.lookupInfo(request.Handler, spec, resolved); !errors.Is(err, errCacheMiss) {
 		return info, err
 	}
-	writer, err := s.store.Create(bucket, resolved.Key, resolved.Fingerprint)
+	writer, err := s.store.Create(bucket, resolved.fullKey, resolved.fullFingerprint)
 	if err != nil {
-		return Info{}, err
+		return ArtifactInfo{}, err
 	}
 	defer writer.Abort()
 	if err := handler.Produce(ctx, request, writer); err != nil {
@@ -236,26 +271,30 @@ func (s *Service) generateLocked(ctx types.TaskCtx, request Request, handler Han
 	if err := writer.Close(); err != nil {
 		return s.finishProduce(request.Handler, spec, resolved, err)
 	}
-	return writer.info(), nil
+	return withRef(writer.info(), resolved.Cache, resolved.Key), nil
 }
 
-func (s *Service) finishProduce(handler string, spec Spec, resolved ResolvedRequest, err error) (Info, error) {
+func (s *Service) finishProduce(handler string, spec Spec, resolved resolvedRequest, err error) (ArtifactInfo, error) {
 	s.storeFailure(handler, spec, resolved, err)
 	if cached, ok := errors.AsType[cacheableError](err); ok {
-		return Info{}, cached.error
+		return ArtifactInfo{}, cached.error
 	}
-	return Info{}, err
+	return ArtifactInfo{}, err
 }
 
-func (s *Service) lookupInfo(handler string, spec Spec, resolved ResolvedRequest) (Info, error) {
+func (s *Service) lookupInfo(handler string, spec Spec, resolved resolvedRequest) (ArtifactInfo, error) {
 	bucket, policy, err := bindCache(spec, handler, resolved)
 	if err != nil {
-		return Info{}, err
+		return ArtifactInfo{}, err
 	}
-	return s.store.Lookup(bucket, resolved.Key, resolved.Fingerprint, policy.TTL)
+	info, err := s.store.Lookup(bucket, resolved.fullKey, resolved.fullFingerprint, policy.TTL)
+	if err != nil {
+		return ArtifactInfo{}, err
+	}
+	return withRef(info, resolved.Cache, resolved.Key), nil
 }
 
-func (s *Service) openResolved(handler string, spec Spec, resolved ResolvedRequest) (*Artifact, error) {
+func (s *Service) openResolved(handler string, spec Spec, resolved resolvedRequest) (*Artifact, error) {
 	bucket, _, err := bindCache(spec, handler, resolved)
 	if err != nil {
 		return nil, err
@@ -266,10 +305,10 @@ func (s *Service) openResolved(handler string, spec Spec, resolved ResolvedReque
 		}
 		return nil, err
 	}
-	return s.store.Open(bucket, resolved.Key)
+	return s.store.Open(bucket, resolved.fullKey)
 }
 
-func (s *Service) storeFailure(handler string, spec Spec, resolved ResolvedRequest, err error) {
+func (s *Service) storeFailure(handler string, spec Spec, resolved resolvedRequest, err error) {
 	if err == nil || !IsCacheable(err) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return
 	}
@@ -278,7 +317,7 @@ func (s *Service) storeFailure(handler string, spec Spec, resolved ResolvedReque
 		artifactLog.Warnf("write artifact failure record handler=%s: %v", handler, bindErr)
 		return
 	}
-	if writeErr := s.store.WriteFailure(bucket, resolved.Key, resolved.Fingerprint); writeErr != nil {
+	if writeErr := s.store.WriteFailure(bucket, resolved.fullKey, resolved.fullFingerprint); writeErr != nil {
 		artifactLog.Warnf("write artifact failure record handler=%s: %v", handler, writeErr)
 	}
 }
@@ -296,12 +335,27 @@ func (c handlerCache) Get(source types.IEntry, args string) (*Artifact, error) {
 	})
 }
 
-func resolveRequest(handler Handler, request Request) (ResolvedRequest, error) {
-	resolved, err := handler.Resolve(request)
+func resolveRequest(handler Handler, request Request) (resolvedRequest, error) {
+	handlerResolved, err := handler.Resolve(request)
 	if err != nil {
-		return ResolvedRequest{}, err
+		return resolvedRequest{}, err
 	}
-	return bindSource(request.Source, resolved), nil
+	return bindSource(request.Source, handlerResolved), nil
+}
+
+func resolveRef(handler Handler, source types.IEntry, ref string) (resolvedRequest, error) {
+	cache, key, ok := strings.Cut(ref, ":")
+	if !ok {
+		return resolvedRequest{}, apierr.NewNotFoundMessageError("artifact not found")
+	}
+	if _, _, err := resolveCache(handler.Spec(), cache); err != nil {
+		return resolvedRequest{}, apierr.NewNotFoundMessageError("artifact not found")
+	}
+	return bindSource(source, ResolvedRequest{Cache: cache, Key: key}), nil
+}
+
+func withRef(info Info, cache, key string) ArtifactInfo {
+	return ArtifactInfo{Info: info, Ref: cache + ":" + key}
 }
 
 func cacheBucket(handler, cache string) string {
@@ -311,8 +365,8 @@ func cacheBucket(handler, cache string) string {
 	return handler + "-" + cache
 }
 
-func resolveCache(registration Spec, name string) (string, Policy, error) {
-	caches := registration.Caches
+func resolveCache(spec Spec, name string) (string, Policy, error) {
+	caches := spec.Caches
 	if name == "" {
 		if len(caches) != 1 {
 			return "", Policy{}, apierr.NewNotFoundMessageError("unknown artifact cache")
@@ -327,7 +381,7 @@ func resolveCache(registration Spec, name string) (string, Policy, error) {
 	return "", Policy{}, apierr.NewNotFoundMessageError("unknown artifact cache")
 }
 
-func bindCache(spec Spec, handler string, resolved ResolvedRequest) (string, Policy, error) {
+func bindCache(spec Spec, handler string, resolved resolvedRequest) (string, Policy, error) {
 	cache, policy, err := resolveCache(spec, resolved.Cache)
 	if err != nil {
 		return "", Policy{}, err
@@ -339,15 +393,10 @@ func taskGroup(handler string) string {
 	return "artifact/" + handler
 }
 
+// taskName is the label stored on the task and returned to clients. It is the
+// source path, without args.
 func taskName(request Request) string {
-	if request.Source == nil {
-		return request.Handler
-	}
-	path := request.Source.Path()
-	if request.Args == "" {
-		return path
-	}
-	return path + "#" + request.Args
+	return request.Source.Path()
 }
 
 // SysConfig exposes live handler configuration through the single artifact

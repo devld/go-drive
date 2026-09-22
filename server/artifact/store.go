@@ -4,8 +4,6 @@
 package artifact
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"go-drive/common/driveutil"
@@ -45,9 +43,9 @@ type Meta struct {
 	ModTime  time.Time `json:"modTime,omitzero"`
 }
 
-// Info is the public description of a ready artifact. The store slot is derived
-// from the cache bucket and key; the storage key is not exposed. Ignore Info
-// when the accompanying error is not nil.
+// Info is the stored description of a ready artifact. Service wraps it when a
+// retrieval ref is part of the response. Ignore Info when the accompanying
+// error is not nil.
 type Info struct {
 	Name     string `json:"name,omitempty"`
 	MimeType string `json:"mimeType,omitempty"`
@@ -60,7 +58,10 @@ var errCacheMiss = errors.New("artifact cache miss")
 type Artifact struct {
 	Meta Meta
 	Size int64
-	Body io.ReadCloser
+	// Body is the cached payload, reopened after generation finishes.
+	// It is an io.ReadSeekCloser, the same shape http.ServeContent uses
+	// for HEAD, GET, and Range.
+	Body io.ReadSeekCloser
 }
 
 type blobMeta struct {
@@ -85,14 +86,18 @@ type Store struct {
 	cacheMu sync.RWMutex
 	caches  map[string]*typeCache
 
-	activeMu    sync.Mutex
-	active      map[string]int
-	ephemeralMu sync.Mutex
-	ephemeral   map[string]bool
-	cleanMu     map[string]*sync.Mutex
-	policies    map[string]Policy
+	cleanMu  map[string]*sync.Mutex
+	policies map[string]Policy
+
+	useMu     sync.Mutex
+	using     map[string]map[string]int
+	ephemeral map[string]map[string]bool
 }
 
+// Policy controls one bucket. TTL is how long a finished artifact stays after
+// it is published; it must be positive. An open reader is kept either way.
+// MaxBytes evicts the oldest artifacts after the byte budget is exceeded; zero
+// disables that limit.
 type Policy struct {
 	TTL      time.Duration
 	MaxBytes int64
@@ -108,10 +113,10 @@ func NewStore(root string) (*Store, error) {
 	store := &Store{
 		root:      root,
 		caches:    make(map[string]*typeCache),
-		active:    make(map[string]int),
-		ephemeral: make(map[string]bool),
 		cleanMu:   make(map[string]*sync.Mutex),
 		policies:  make(map[string]Policy),
+		using:     make(map[string]map[string]int),
+		ephemeral: make(map[string]map[string]bool),
 	}
 	return store, nil
 }
@@ -133,6 +138,10 @@ func (s *Store) registerType(bucket string, policy Policy) error {
 	s.caches[bucket] = cache
 	s.cleanMu[bucket] = &sync.Mutex{}
 	s.policies[bucket] = policy
+	s.useMu.Lock()
+	s.using[bucket] = make(map[string]int)
+	s.ephemeral[bucket] = make(map[string]bool)
+	s.useMu.Unlock()
 	s.cacheMu.Unlock()
 
 	if _, err := s.Clean(bucket, policy.TTL, policy.MaxBytes); err != nil {
@@ -156,7 +165,7 @@ func (s *Store) Lock(bucket string, key string) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	return cache.Lock(s.artifactKey(bucket, key)), nil
+	return cache.Lock(key), nil
 }
 
 func (s *Store) Lookup(bucket string, key, fingerprint string, ttl time.Duration) (Info, error) {
@@ -164,17 +173,16 @@ func (s *Store) Lookup(bucket string, key, fingerprint string, ttl time.Duration
 	if err != nil {
 		return Info{}, err
 	}
-	cacheKey := s.artifactKey(bucket, key)
-	rec, size, err := cache.ReadMeta(cacheKey)
+	rec, size, err := cache.ReadMeta(key)
 	if err != nil {
 		if !apierr.IsNotFoundError(err) {
-			_ = s.removeByKey(bucket, cacheKey, cache)
+			_ = s.removeByKey(bucket, key, cache)
 		}
 		return Info{}, errCacheMiss
 	}
 	if rec.Fingerprint != fingerprint || rec.CreatedAt.IsZero() ||
-		(ttl > 0 && time.Since(rec.CreatedAt) > ttl) {
-		_ = s.removeByKey(bucket, cacheKey, cache)
+		time.Since(rec.CreatedAt) > ttl {
+		_ = s.removeByKey(bucket, key, cache)
 		return Info{}, errCacheMiss
 	}
 	if rec.Failed {
@@ -185,23 +193,23 @@ func (s *Store) Lookup(bucket string, key, fingerprint string, ttl time.Duration
 
 // Create starts one artifact record. WriteMeta must be called before writing
 // bytes. Close publishes it; Abort discards it. Callers normally hold Lock
-// for the same bucket/key while processing.
+// for the same bucket/key while processing. The key is stored as given; the
+// blob cache hashes it for the file name.
 func (s *Store) Create(bucket string, key, fingerprint string) (*storeWriter, error) {
 	cache, err := s.cache(bucket)
 	if err != nil {
 		return nil, err
 	}
-	cacheKey := s.artifactKey(bucket, key)
-	blob, err := cache.Create(cacheKey)
+	blob, err := cache.Create(key)
 	if err != nil {
 		return nil, err
 	}
-	s.markActive(cacheKey, 1)
+	s.pin(bucket, key)
 	return &storeWriter{
 		BlobWriter:  blob,
 		store:       s,
 		bucket:      bucket,
-		key:         cacheKey,
+		key:         key,
 		fingerprint: fingerprint,
 	}, nil
 }
@@ -232,7 +240,7 @@ func (w *storeWriter) Close() error {
 	if err == nil && !w.released {
 		if policy, ok := w.store.policy(w.bucket); ok && policy.MaxBytes > 0 {
 			if w.Size() > policy.MaxBytes {
-				w.store.markEphemeral(w.key, true)
+				w.store.setEphemeral(w.bucket, w.key)
 			}
 			_, _ = w.store.Clean(w.bucket, policy.TTL, policy.MaxBytes)
 		}
@@ -255,32 +263,42 @@ func (w *storeWriter) release() {
 		return
 	}
 	w.released = true
-	w.store.markActive(w.key, -1)
+	w.store.unpin(w.bucket, w.key)
 }
 
+// Open returns a published artifact that is still inside the bucket TTL.
+// Failed and expired records are not-found. Expired records are removed.
+// Fingerprint matching stays with Lookup.
 func (s *Store) Open(bucket string, key string) (*Artifact, error) {
+	policy, ok := s.policy(bucket)
+	if !ok {
+		return nil, apierr.NewNotFoundMessageError("artifact not found")
+	}
 	cache, err := s.cache(bucket)
 	if err != nil {
-		return nil, err
+		return nil, apierr.NewNotFoundMessageError("artifact not found")
 	}
-	cacheKey := s.artifactKey(bucket, key)
-	s.markActive(cacheKey, 1)
-	ephemeral := s.isEphemeral(cacheKey)
-	rec, size, body, err := cache.Open(cacheKey)
+	s.pin(bucket, key)
+	rec, size, body, err := cache.Open(key)
 	if err != nil {
-		s.markActive(cacheKey, -1)
-		return nil, err
+		s.unpin(bucket, key)
+		return nil, apierr.NewNotFoundMessageError("artifact not found")
+	}
+	if rec.CreatedAt.IsZero() || time.Since(rec.CreatedAt) > policy.TTL {
+		_ = body.Close()
+		s.unpin(bucket, key)
+		_ = s.removeByKey(bucket, key, cache)
+		return nil, apierr.NewNotFoundMessageError("artifact not found")
 	}
 	if rec.Failed {
 		_ = body.Close()
-		s.markActive(cacheKey, -1)
+		s.unpin(bucket, key)
 		return nil, apierr.NewNotFoundError()
 	}
-	return &Artifact{Meta: rec.public(), Size: size, Body: &trackedBody{ReadCloser: body, done: func() {
-		s.markActive(cacheKey, -1)
-		if ephemeral {
-			s.clearEphemeral(cacheKey)
-			_ = s.removeByKey(bucket, cacheKey, cache)
+	return &Artifact{Meta: rec.public(), Size: size, Body: &trackedBody{ReadSeekCloser: body, done: func() {
+		s.unpin(bucket, key)
+		if s.takeEphemeral(bucket, key) {
+			_ = s.removeByKey(bucket, key, cache)
 		}
 	}}}, nil
 }
@@ -290,7 +308,7 @@ func (s *Store) WriteFailure(bucket string, key, fingerprint string) error {
 	if err != nil {
 		return err
 	}
-	writer, err := cache.Create(s.artifactKey(bucket, key))
+	writer, err := cache.Create(key)
 	if err != nil {
 		return err
 	}
@@ -314,59 +332,54 @@ func (s *Store) Clean(bucket string, ttl time.Duration, maxBytes int64) (int, er
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	items, err := cache.Items()
-	if err != nil {
-		return 0, err
-	}
-	type kept struct {
+	type candidate struct {
 		key       string
 		createdAt time.Time
 		size      int64
 	}
-	keptItems := make([]kept, 0, len(items))
+	var drop []string
+	var kept []candidate
 	var total int64
-	removed := 0
-	drop := func(key string) {
-		if s.removeByKeyUnlocked(cache, key) == nil {
-			removed++
+	if err := cache.Visit(func(key string, meta blobMeta, size int64) error {
+		expired := meta.CreatedAt.IsZero() || time.Since(meta.CreatedAt) > ttl
+		if expired {
+			drop = append(drop, key)
+			return nil
 		}
-	}
-	for _, cached := range items {
-		rec, size, readErr := cache.ReadMeta(cached.Key)
-		createdAt, dropNow := time.Time{}, true
-		switch {
-		case readErr != nil:
-		case !rec.CreatedAt.IsZero():
-			createdAt, dropNow = rec.CreatedAt, false
+		if meta.Failed {
+			return nil
 		}
-		if !dropNow && ttl > 0 && time.Since(createdAt) > ttl {
-			dropNow = true
-		}
-		if dropNow {
-			drop(cached.Key)
-			continue
-		}
-		if rec.Failed {
-			continue
-		}
-		keptItems = append(keptItems, kept{key: cached.Key, createdAt: createdAt, size: size})
+		kept = append(kept, candidate{key: key, createdAt: meta.CreatedAt, size: size})
 		total += size
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+	removed := 0
+	discard := func(key string) bool {
+		if err := s.removeByKeyUnlocked(bucket, cache, key); err != nil {
+			return false
+		}
+		removed++
+		return true
+	}
+	for _, key := range drop {
+		discard(key)
 	}
 	if maxBytes <= 0 || total <= maxBytes {
 		return removed, nil
 	}
-	sort.Slice(keptItems, func(i, j int) bool {
-		return keptItems[i].createdAt.Before(keptItems[j].createdAt)
+	sort.Slice(kept, func(i, j int) bool {
+		return kept[i].createdAt.Before(kept[j].createdAt)
 	})
-	for _, candidate := range keptItems {
+	for _, candidate := range kept {
 		if total <= maxBytes {
 			break
 		}
-		if s.removeByKeyUnlocked(cache, candidate.key) != nil {
+		if !discard(candidate.key) {
 			continue
 		}
 		total -= candidate.size
-		removed++
 	}
 	return removed, nil
 }
@@ -383,61 +396,68 @@ func (s *Store) removeByKey(bucket string, key string, cache *typeCache) error {
 	mutex := s.cleanMu[bucket]
 	mutex.Lock()
 	defer mutex.Unlock()
-	return s.removeByKeyUnlocked(cache, key)
+	return s.removeByKeyUnlocked(bucket, cache, key)
 }
 
-func (s *Store) removeByKeyUnlocked(cache *typeCache, key string) error {
-	if s.isActive(key) {
+func (s *Store) removeByKeyUnlocked(bucket string, cache *typeCache, key string) error {
+	if s.busy(bucket, key) {
 		return errors.New("artifact is active")
 	}
-	s.clearEphemeral(key)
-	return cache.Remove(key)
-}
-
-// artifactKey is the storage key for a bucket/source pair.
-func (s *Store) artifactKey(bucket string, key string) string {
-	logicalKey := bucket + "|" + key
-	digest := sha256.Sum256([]byte(logicalKey))
-	return hex.EncodeToString(digest[:])
-}
-
-func (s *Store) markActive(id string, delta int) {
-	s.activeMu.Lock()
-	defer s.activeMu.Unlock()
-	s.active[id] += delta
-	if s.active[id] <= 0 {
-		delete(s.active, id)
+	if err := cache.Remove(key); err != nil {
+		return err
 	}
+	s.clearEphemeral(bucket, key)
+	return nil
 }
 
-func (s *Store) isActive(id string) bool {
-	s.activeMu.Lock()
-	defer s.activeMu.Unlock()
-	return s.active[id] > 0
+func (s *Store) pin(bucket, key string) {
+	s.useMu.Lock()
+	defer s.useMu.Unlock()
+	s.using[bucket][key]++
 }
 
-func (s *Store) markEphemeral(id string, value bool) {
-	s.ephemeralMu.Lock()
-	defer s.ephemeralMu.Unlock()
-	if value {
-		s.ephemeral[id] = true
-	} else {
-		delete(s.ephemeral, id)
+func (s *Store) unpin(bucket, key string) {
+	s.useMu.Lock()
+	defer s.useMu.Unlock()
+	users := s.using[bucket]
+	if users[key] <= 1 {
+		delete(users, key)
+		return
 	}
+	users[key]--
 }
 
-func (s *Store) clearEphemeral(id string) {
-	s.markEphemeral(id, false)
+func (s *Store) busy(bucket, key string) bool {
+	s.useMu.Lock()
+	defer s.useMu.Unlock()
+	return s.using[bucket][key] > 0
 }
 
-func (s *Store) isEphemeral(id string) bool {
-	s.ephemeralMu.Lock()
-	defer s.ephemeralMu.Unlock()
-	return s.ephemeral[id]
+func (s *Store) setEphemeral(bucket, key string) {
+	s.useMu.Lock()
+	defer s.useMu.Unlock()
+	s.ephemeral[bucket][key] = true
+}
+
+func (s *Store) takeEphemeral(bucket, key string) bool {
+	s.useMu.Lock()
+	defer s.useMu.Unlock()
+	marks := s.ephemeral[bucket]
+	if !marks[key] {
+		return false
+	}
+	delete(marks, key)
+	return true
+}
+
+func (s *Store) clearEphemeral(bucket, key string) {
+	s.useMu.Lock()
+	defer s.useMu.Unlock()
+	delete(s.ephemeral[bucket], key)
 }
 
 type trackedBody struct {
-	io.ReadCloser
+	io.ReadSeekCloser
 	done func()
 	once sync.Once
 }
@@ -445,7 +465,7 @@ type trackedBody struct {
 func (b *trackedBody) Close() error {
 	var err error
 	b.once.Do(func() {
-		err = b.ReadCloser.Close()
+		err = b.ReadSeekCloser.Close()
 		b.done()
 	})
 	return err
