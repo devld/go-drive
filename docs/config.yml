@@ -159,6 +159,9 @@ thumbnail:
 
 # Archive preview supports zip, 7z, and rar files.
 archive:
+  # Concurrent archive preview tasks, and separately concurrent zip packing
+  # tasks. Defaults to 4.
+  #concurrent: 4
   # Maximum compressed archive size that may be inspected.
   max-size: 2g
   # Maximum uncompressed member size that may be streamed.

@@ -43,7 +43,7 @@ The external service must be able to access `{URL}`. When enabled, a signed file
 
 ZIP, 7z, and RAR files open in the browser. You can walk the folder tree, download individual files, or pack a selection as a zip.
 
-Size and cache limits live under `archive` in `config.yml`, including `max-size`, `max-member-size`, `max-entries`, and `pack-ttl` (how long a generated zip download stays available). See [Configuration](../configuration/).
+Size and cache limits live under `archive` in `config.yml`, including `max-size`, `max-member-size`, `max-entries`, `pack-ttl` (how long a generated zip download stays available), and `concurrent` (archive preview and zip packing each default to 4). See [Configuration](../configuration/).
 
 ## Thumbnail handlers
 

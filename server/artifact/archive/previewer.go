@@ -83,6 +83,7 @@ type Previewer struct {
 	contentTTL    time.Duration
 	packTTL       time.Duration
 	contentSize   int64
+	concurrency   int
 	sources       *driveutil.CacheFilePool
 	cache         artifact.Cache
 }
@@ -137,6 +138,7 @@ func NewPreviewer(ctx artifact.HandlerContext) (artifact.Handler, error) {
 		contentTTL:    contentTTL,
 		packTTL:       packTTL,
 		contentSize:   contentSize,
+		concurrency:   utils.PositiveOr(config.Concurrent, common.DefaultArchiveConcurrent),
 		sources:       sources,
 		cache:         ctx.Cache,
 	}
@@ -150,6 +152,7 @@ func (s *Previewer) Spec() artifact.Spec {
 			{Name: cacheContent, Policy: artifact.Policy{TTL: s.contentTTL, MaxBytes: s.contentSize}},
 			{Name: cachePack, Policy: artifact.Policy{TTL: s.packTTL}},
 		},
+		Concurrency: s.concurrency,
 		Config: types.M{
 			"extensions": supportedExtensions,
 			"maxSize":    s.maxSize,

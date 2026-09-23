@@ -55,6 +55,7 @@ thumbnail:
 
 # Archive preview supports zip, 7z, and rar files.
 archive:
+  # concurrent: 4            # Archive preview and zip packing, each defaults to 4
   max-size: 2g
   max-member-size: 512m
   max-entries: 100000
@@ -164,7 +165,8 @@ inspecting archives. The complete member index uses `index-ttl`. Decompressed
 member preview bodies are complete artifacts and use the independent
 `content-cache-size` byte budget and `content-cache-ttl` validity period.
 `pack-ttl` is how long a generated zip download stays available after it is
-created.
+created. `concurrent` limits archive preview tasks and zip packing tasks
+separately; each group defaults to 4.
 
 Archive inspection can continue in the background when a request reaches its
 short response wait. The Web UI polls the task and opens the completed

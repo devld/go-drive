@@ -58,12 +58,16 @@ const (
 	DefaultArchiveContentCacheSize = int64(4 * 1024 * 1024 * 1024)
 	DefaultArchiveContentCacheTTL  = 24 * time.Hour
 	DefaultArchivePackTTL          = time.Minute
-	DefaultAuthValidity            = 2 * time.Hour
-	DefaultAuthAutoRefresh         = true
-	DefaultSignatureTTL            = 12 * time.Hour
-	DefaultWebDavPrefix            = "/dav"
-	DefaultWebDavMaxCacheItems     = 1000
-	DefaultSearcher                = "sqlite"
+	// DefaultArchiveConcurrent is the task-group limit for archive preview and
+	// for zip packing. Each group uses this value. These tasks are mostly IO.
+	DefaultArchiveConcurrent = 4
+
+	DefaultAuthValidity        = 2 * time.Hour
+	DefaultAuthAutoRefresh     = true
+	DefaultSignatureTTL        = 12 * time.Hour
+	DefaultWebDavPrefix        = "/dav"
+	DefaultWebDavMaxCacheItems = 1000
+	DefaultSearcher            = "sqlite"
 
 	DefaultCacheType                      = "mem"
 	DefaultCacheCleanPeriod time.Duration = 10 * time.Minute
@@ -164,6 +168,9 @@ type ArchiveConfig struct {
 	// when a source file changed after it was built. An open download is not
 	// removed. Disk cleanup runs on a slower timer than this validity.
 	PackTTL time.Duration `yaml:"pack-ttl"`
+	// Concurrent is the task limit for archive preview and, separately, for zip
+	// packing. Zero uses DefaultArchiveConcurrent.
+	Concurrent int `yaml:"concurrent"`
 }
 
 type ThumbnailHandlerItem struct {
@@ -315,6 +322,7 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 	}
 	config.Archive.ContentCacheTTL = utils.PositiveOr(config.Archive.ContentCacheTTL, DefaultArchiveContentCacheTTL)
 	config.Archive.PackTTL = utils.PositiveOr(config.Archive.PackTTL, DefaultArchivePackTTL)
+	config.Archive.Concurrent = utils.PositiveOr(config.Archive.Concurrent, DefaultArchiveConcurrent)
 
 	e := parseDBConfig(&config.DB)
 	if e != nil {
