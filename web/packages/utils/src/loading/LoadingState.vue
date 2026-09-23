@@ -14,7 +14,7 @@
     <span
       class="loading-state__content"
       :class="{
-        'glass-surface': surface && ['page', 'dialog'].includes(variant),
+        'glass-surface': surface && variant === 'page',
       }"
     >
       <LoadingIndicator class="loading-state__indicator" />
@@ -152,8 +152,6 @@ const displayText = computed(() => props.text?.toString() ?? '')
     min-width: 176px;
     max-width: calc(100vw - 48px);
     padding: 22px 24px;
-    border-radius: var(--radius-dialog);
-    box-shadow: var(--shadow-elevated);
   }
 
   .loading-state__indicator {

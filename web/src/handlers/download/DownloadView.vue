@@ -1,9 +1,8 @@
 <template>
   <div
-    class="download-view-page glass-surface"
+    class="download-view-page"
     data-ui="preview"
     data-handler="download"
-    data-surface="glass"
   >
     <h1 class="page-title">
       <span>{{ $t('hv.download.download') }}</span>
@@ -91,8 +90,6 @@ const downloadFiles = () => {
 .download-view-page {
   position: relative;
   width: 300px;
-  background-color: var(--color-bg-glass);
-  box-shadow: var(--shadow-elevated);
   padding: 16px 16px 20px;
 
   .page-title {

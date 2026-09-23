@@ -71,11 +71,6 @@ defineExpose({ show, hide })
 .dialog-view.loading-dialog {
   background-color: var(--color-loading-overlay);
   z-index: 9999;
-
-  .dialog-view__content {
-    box-shadow: none;
-    background-color: transparent;
-  }
 }
 
 .loading-dialog__content {

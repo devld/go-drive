@@ -1,9 +1,8 @@
 <template>
   <div
-    class="permissions-view glass-surface"
+    class="permissions-view"
     data-ui="preview"
     data-handler="permissions"
-    data-surface="glass"
   >
     <HandlerTitleBar :title="filename" @close="emit('close')">
       <template #actions>
@@ -78,8 +77,6 @@ const setSaveState = (saved: boolean) => {
   width: 340px;
   padding: 48px 16px 16px;
   height: 300px;
-  background-color: var(--color-bg-glass);
-  box-shadow: var(--shadow-elevated);
 
   .handler-title-bar {
     position: absolute;

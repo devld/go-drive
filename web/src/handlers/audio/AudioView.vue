@@ -1,9 +1,8 @@
 <template>
   <div
-    class="audio-view-page glass-surface"
+    class="audio-view-page"
     data-ui="preview"
     data-handler="audio"
-    data-surface="glass"
   >
     <HandlerTitleBar :title="entry.name" @close="emit('close')" />
 
@@ -496,7 +495,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding-top: 48px;
-  background-color: var(--color-bg-glass);
   color: var(--color-text);
 
   .handler-title-bar {

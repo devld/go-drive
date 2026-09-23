@@ -76,7 +76,7 @@ const handle: EntryHandlerViewHandle = {
 defineExpose(handle)
 </script>
 <style lang="scss">
-.entry-handler-dialog {
+.entry-handler-dialog.dialog-view--fullscreen {
   .dialog-view__content {
     background-color: transparent;
     -webkit-backdrop-filter: none;

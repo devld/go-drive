@@ -1,9 +1,8 @@
 <template>
   <div
-    class="archive-view glass-surface"
+    class="archive-view"
     data-ui="preview"
     data-handler="archive"
-    data-surface="glass"
   >
     <HandlerTitleBar :title="entry.name" @close="emit('close')" />
 
@@ -416,8 +415,6 @@ onBeforeUnmount(() => {
   width: min(520px, calc(100vw - 48px));
   height: min(520px, calc(100vh - 96px));
   overflow: hidden;
-  background-color: var(--color-bg-glass);
-  box-shadow: var(--shadow-elevated);
 }
 
 .archive-view__body {
