@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common"
+	apierr "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
 	"go-drive/common/registry"
@@ -13,65 +14,78 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/alitto/pond/v2"
 	"github.com/google/uuid"
 	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
-type PondRunner struct {
-	pool           pond.Pool
-	maxConcurrency int
-	groupMu        sync.RWMutex
-	groupPools     map[string]pond.Pool
-	store          cmap.ConcurrentMap[string, *pondTaskCtx]
-	tickerStop     func()
+type taskRunner struct {
+	mu         sync.Mutex
+	running    int
+	maxRun     int
+	waiting    []*taskCtx
+	maxWait    int
+	groups     map[string]*taskGroup
+	stopped    bool
+	wg         sync.WaitGroup
+	store      cmap.ConcurrentMap[string, *taskCtx]
+	tickerStop func()
+}
+
+// taskGroup limits how many tasks of one exact group may run. Waiting tasks
+// share taskRunner.waiting.
+type taskGroup struct {
+	limit   int
+	running int
 }
 
 var cleanThreshold = 10 * time.Minute
 
 var taskLog = logging.For("task")
 
-func NewPondRunner(config common.Config, ch *registry.ComponentsHolder) *PondRunner {
-	tr := &PondRunner{
-		pool:           pond.NewPool(config.MaxConcurrentTask),
-		maxConcurrency: config.MaxConcurrentTask,
-		groupPools:     make(map[string]pond.Pool),
-		store:          cmap.New[*pondTaskCtx](),
+func NewTaskRunner(config common.Config, ch *registry.ComponentsHolder) Runner {
+	tr := &taskRunner{
+		maxRun:  config.MaxConcurrentTask,
+		maxWait: config.MaxConcurrentTask,
+		groups:  make(map[string]*taskGroup),
+		store:   cmap.New[*taskCtx](),
 	}
 	tr.tickerStop = utils.TimeTick(tr.clean, 30*time.Second)
 	ch.Add(registry.KeyTaskRunner, tr)
 	return tr
 }
 
-var _ Runner = (*PondRunner)(nil)
+var _ Runner = (*taskRunner)(nil)
 
-func (t *PondRunner) RegisterGroup(group string, concurrency int) error {
+func (t *taskRunner) RegisterGroup(group string, concurrency int) error {
 	if concurrency <= 0 {
 		return nil
 	}
 	if !IsValidGroup(group) {
 		return fmt.Errorf("invalid task group %q", group)
 	}
-	t.groupMu.Lock()
-	defer t.groupMu.Unlock()
-	if _, exists := t.groupPools[group]; exists {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if _, exists := t.groups[group]; exists {
 		return fmt.Errorf("task group %q is already registered", group)
 	}
-	if concurrency < t.maxConcurrency {
-		t.groupPools[group] = t.pool.NewSubpool(concurrency)
+	if concurrency > t.maxRun {
+		taskLog.Warnf("task group %s concurrency %d exceeds global task concurrency %d; using global limit",
+			logging.Sanitize(group), concurrency, t.maxRun)
+		concurrency = t.maxRun
+	}
+	// A limit that matches the global pool needs no separate cap.
+	if concurrency == t.maxRun {
+		t.groups[group] = &taskGroup{}
 		return nil
 	}
-	if concurrency > t.maxConcurrency {
-		taskLog.Warnf("task group %s concurrency %d exceeds global task concurrency %d; using global limit",
-			logging.Sanitize(group), concurrency, t.maxConcurrency)
-	}
-	t.groupPools[group] = t.pool
+	t.groups[group] = &taskGroup{limit: concurrency}
 	return nil
 }
 
-func (t *PondRunner) createTask(runnable Runnable, options ...Option) *pondTaskCtx {
+func (t *taskRunner) createTask(runnable Runnable, options ...Option) *taskCtx {
 	task := &Task{
 		ID:        uuid.New().String(),
 		Status:    Pending,
@@ -84,7 +98,7 @@ func (t *PondRunner) createTask(runnable Runnable, options ...Option) *pondTaskC
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	w := &pondTaskCtx{
+	w := &taskCtx{
 		Context:  ctx,
 		cancelFn: cancelFunc,
 		runnable: runnable,
@@ -97,43 +111,38 @@ func (t *PondRunner) createTask(runnable Runnable, options ...Option) *pondTaskC
 	return w
 }
 
-func (t *PondRunner) Execute(runnable Runnable, option ...Option) (Task, error) {
+func (t *taskRunner) Execute(runnable Runnable, option ...Option) (Task, error) {
 	w := t.createTask(runnable, option...)
-	pool := t.poolFor(w.task.Group)
-	if e := pool.Go(func() { execute(w) }); e != nil {
+	if e := t.submit(w); e != nil {
+		w.cancelFn()
 		t.store.Remove(w.task.ID)
-		t.logSubmitError(pool, w, e)
 		return w.snapshot(), e
 	}
 	return w.snapshot(), nil
 }
 
 // ExecuteAndWait waits for a detached task while the caller remains
-// interested in its result. The waiter context and timeout never cancel the
-// task; StopTask is the explicit cancellation mechanism. A canceled or
-// timed-out wait returns the current snapshot with a nil error.
-func (t *PondRunner) ExecuteAndWait(ctx context.Context, runnable Runnable, timeout time.Duration, option ...Option) (Task, error) {
+// interested in its result. A non-positive timeout has no deadline. The waiter
+// context and timeout never cancel the task; StopTask is the explicit
+// cancellation mechanism. A canceled or timed-out wait returns the current
+// snapshot with a nil error.
+func (t *taskRunner) ExecuteAndWait(ctx context.Context, runnable Runnable, timeout time.Duration, option ...Option) (Task, error) {
 	waitDone := ctx.Done()
 	w := t.createTask(runnable, option...)
-	pool := t.poolFor(w.task.Group)
-
-	timer := time.NewTimer(timeout)
-	if timeout <= 0 {
-		timer.Stop()
-	}
 	done := make(chan struct{})
-	defer timer.Stop()
+	var finished sync.Once
+	w.done = func() { finished.Do(func() { close(done) }) }
 
-	if e := pool.Go(func() {
-		execute(w)
-		close(done)
-	}); e != nil {
+	if e := t.submit(w); e != nil {
+		w.cancelFn()
 		t.store.Remove(w.task.ID)
-		t.logSubmitError(pool, w, e)
+		w.done()
 		return w.snapshot(), e
 	}
 	var timerC <-chan time.Time
 	if timeout > 0 {
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
 		timerC = timer.C
 	}
 	select {
@@ -150,27 +159,113 @@ func (t *PondRunner) ExecuteAndWait(ctx context.Context, runnable Runnable, time
 	return w.snapshot(), nil
 }
 
-func (t *PondRunner) poolFor(group string) pond.Pool {
-	t.groupMu.RLock()
-	defer t.groupMu.RUnlock()
-	if pool, ok := t.groupPools[group]; ok {
-		return pool
+func (t *taskRunner) submit(w *taskCtx) error {
+	t.mu.Lock()
+	if t.stopped {
+		t.mu.Unlock()
+		return unavailable()
 	}
-	return t.pool
+	if t.canStartLocked(w) {
+		t.accountLocked(w)
+		t.mu.Unlock()
+		t.launch(w)
+		return nil
+	}
+	if len(t.waiting) < t.maxWait {
+		t.waiting = append(t.waiting, w)
+		t.mu.Unlock()
+		return nil
+	}
+	running, waiting := t.running, len(t.waiting)
+	t.mu.Unlock()
+	taskLog.Warnf("task queue full id=%s group=%s name=%s running=%d waiting=%d",
+		w.task.ID, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name), running, waiting)
+	return unavailable()
 }
 
-func (t *PondRunner) logSubmitError(pool pond.Pool, w *pondTaskCtx, e error) {
-	if errors.Is(e, pond.ErrQueueFull) {
-		taskLog.Warnf("task queue full id=%s group=%s name=%s waiting=%d queue_size=%d: %v",
-			w.task.ID, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name),
-			pool.WaitingTasks(), pool.QueueSize(), e)
-		return
-	}
-	taskLog.Errorf("task submission failed id=%s group=%s name=%s: %v",
-		w.task.ID, logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name), e)
+func unavailable() error {
+	return apierr.NewUnavailableError(i18n.T("error.task_queue_full"))
 }
 
-func (t *PondRunner) GetTasks(group string) ([]Task, error) {
+// canStartLocked reports whether w can take a global running slot. t.mu is held.
+func (t *taskRunner) canStartLocked(w *taskCtx) bool {
+	if w.canceled.Load() || t.running >= t.maxRun {
+		return false
+	}
+	g := t.groups[w.task.Group]
+	return g == nil || g.limit <= 0 || g.running < g.limit
+}
+
+func (t *taskRunner) accountLocked(w *taskCtx) {
+	t.running++
+	t.wg.Add(1)
+	if g := t.groups[w.task.Group]; g != nil && g.limit > 0 {
+		g.running++
+	}
+}
+
+func (t *taskRunner) launch(tasks ...*taskCtx) {
+	for _, w := range tasks {
+		go func() {
+			defer t.wg.Done()
+			t.execute(w)
+		}()
+	}
+}
+
+func (t *taskRunner) release(w *taskCtx) {
+	t.mu.Lock()
+	if t.running > 0 {
+		t.running--
+	}
+	if g := t.groups[w.task.Group]; g != nil && g.limit > 0 && g.running > 0 {
+		g.running--
+	}
+	var ready, dropped []*taskCtx
+	if !t.stopped {
+		ready, dropped = t.collectLocked()
+	}
+	t.mu.Unlock()
+	for _, item := range dropped {
+		item.doneNotify()
+	}
+	t.launch(ready...)
+}
+
+// collectLocked pulls tasks that can start and drops canceled ones. t.mu is held.
+// A task whose group is full stays in place so a later task can pass it.
+func (t *taskRunner) collectLocked() (ready, dropped []*taskCtx) {
+	kept := make([]*taskCtx, 0, len(t.waiting))
+	for _, w := range t.waiting {
+		if w.canceled.Load() {
+			dropped = append(dropped, w)
+			continue
+		}
+		if !t.canStartLocked(w) {
+			kept = append(kept, w)
+			continue
+		}
+		t.accountLocked(w)
+		ready = append(ready, w)
+	}
+	t.waiting = kept
+	return ready, dropped
+}
+
+func (t *taskRunner) dequeue(w *taskCtx) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for i, item := range t.waiting {
+		if item != w {
+			continue
+		}
+		t.waiting = append(t.waiting[:i], t.waiting[i+1:]...)
+		return true
+	}
+	return false
+}
+
+func (t *taskRunner) GetTasks(group string) ([]Task, error) {
 	tasks := make([]Task, 0)
 	for _, w := range t.store.Items() {
 		task := w.snapshot()
@@ -181,7 +276,7 @@ func (t *PondRunner) GetTasks(group string) ([]Task, error) {
 	return tasks, nil
 }
 
-func (t *PondRunner) GetTask(id string) (Task, error) {
+func (t *taskRunner) GetTask(id string) (Task, error) {
 	w, ok := t.store.Get(id)
 	if !ok {
 		return Task{}, ErrorNotFound
@@ -189,7 +284,7 @@ func (t *PondRunner) GetTask(id string) (Task, error) {
 	return w.snapshot(), nil
 }
 
-func (t *PondRunner) StopTask(id string) (Task, error) {
+func (t *taskRunner) StopTask(id string) (Task, error) {
 	w, ok := t.store.Get(id)
 	if !ok {
 		return Task{}, ErrorNotFound
@@ -198,33 +293,48 @@ func (t *PondRunner) StopTask(id string) (Task, error) {
 		return task, nil
 	}
 	w.cancel()
+	if t.dequeue(w) {
+		w.doneNotify()
+	}
 	taskLog.Debugf("task canceled id=%s group=%s name=%s", id,
 		logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name))
 	return w.snapshot(), nil
 }
 
-func (t *PondRunner) RemoveTask(id string) error {
+func (t *taskRunner) RemoveTask(id string) error {
 	w, ok := t.store.Get(id)
 	if !ok {
 		return ErrorNotFound
 	}
 	w.cancel()
+	if t.dequeue(w) {
+		w.doneNotify()
+	}
 	t.store.Remove(w.task.ID)
 	taskLog.Debugf("task removed id=%s group=%s name=%s", id,
 		logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name))
 	return nil
 }
 
-func (t *PondRunner) Dispose() error {
-	t.store.IterCb(func(key string, v *pondTaskCtx) { v.cancel() })
+func (t *taskRunner) Dispose() error {
+	t.mu.Lock()
+	t.stopped = true
+	waiting := t.waiting
+	t.waiting = nil
+	t.mu.Unlock()
+	for _, w := range waiting {
+		w.cancel()
+		w.doneNotify()
+	}
+	t.store.IterCb(func(key string, v *taskCtx) { v.cancel() })
 	t.tickerStop()
-	t.pool.StopAndWait()
+	t.wg.Wait()
 	return nil
 }
 
-func (t *PondRunner) clean() {
+func (t *taskRunner) clean() {
 	ids := make([]string, 0)
-	t.store.IterCb(func(key string, t *pondTaskCtx) {
+	t.store.IterCb(func(key string, t *taskCtx) {
 		task := t.snapshot()
 		if task.Finished() && (time.Now().Unix()-task.UpdatedAt.Unix() > int64(cleanThreshold.Seconds())) {
 			ids = append(ids, task.ID)
@@ -238,7 +348,7 @@ func (t *PondRunner) clean() {
 	}
 }
 
-func (t *PondRunner) Status() (string, types.SM, error) {
+func (t *taskRunner) Status() (string, types.SM, error) {
 	total := 0
 	pending := 0
 	running := 0
@@ -246,7 +356,7 @@ func (t *PondRunner) Status() (string, types.SM, error) {
 	err := 0
 	canceled := 0
 
-	t.store.IterCb(func(key string, v *pondTaskCtx) {
+	t.store.IterCb(func(key string, v *taskCtx) {
 		switch v.snapshot().Status {
 		case Pending:
 			pending++
@@ -271,20 +381,22 @@ func (t *PondRunner) Status() (string, types.SM, error) {
 	}, nil
 }
 
-type pondTaskCtx struct {
+type taskCtx struct {
 	context.Context
 
 	cancelFn func()
 	runnable Runnable
 	task     *Task
 	mux      sync.RWMutex
+	canceled atomic.Bool
+	done     func()
 }
 
-func (w *pondTaskCtx) TaskID() string {
+func (w *taskCtx) TaskID() string {
 	return w.task.ID
 }
 
-func (w *pondTaskCtx) Progress(loaded int64, abs bool) {
+func (w *taskCtx) Progress(loaded int64, abs bool) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
 	if w.Err() != nil || w.task.Finished() {
@@ -298,7 +410,7 @@ func (w *pondTaskCtx) Progress(loaded int64, abs bool) {
 	w.task.UpdatedAt = time.Now()
 }
 
-func (w *pondTaskCtx) Total(total int64, abs bool) {
+func (w *taskCtx) Total(total int64, abs bool) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
 	if w.Err() != nil || w.task.Finished() {
@@ -312,25 +424,26 @@ func (w *pondTaskCtx) Total(total int64, abs bool) {
 	w.task.UpdatedAt = time.Now()
 }
 
-func (w *pondTaskCtx) GetProgress() int64 {
+func (w *taskCtx) GetProgress() int64 {
 	w.mux.RLock()
 	defer w.mux.RUnlock()
 	return w.task.Progress.Loaded
 }
 
-func (w *pondTaskCtx) GetTotal() int64 {
+func (w *taskCtx) GetTotal() int64 {
 	w.mux.RLock()
 	defer w.mux.RUnlock()
 	return w.task.Progress.Total
 }
 
-func (w *pondTaskCtx) snapshot() Task {
+func (w *taskCtx) snapshot() Task {
 	w.mux.RLock()
 	defer w.mux.RUnlock()
 	return *w.task
 }
 
-func (w *pondTaskCtx) cancel() {
+func (w *taskCtx) cancel() {
+	w.canceled.Store(true)
 	w.mux.Lock()
 	defer w.mux.Unlock()
 	if w.task.Finished() {
@@ -340,7 +453,22 @@ func (w *pondTaskCtx) cancel() {
 	w.task.Status = Canceled
 }
 
-func execute(w *pondTaskCtx) {
+func (w *taskCtx) doneNotify() {
+	if w.done != nil {
+		w.done()
+	}
+}
+
+func (t *taskRunner) execute(w *taskCtx) {
+	defer w.doneNotify()
+	defer t.release(w)
+	// Status is recorded before this runs, including from the panic defer below.
+	defer w.cancelFn()
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			finishTask(w, nil, fmt.Errorf("task panicked: %v\n%s", recovered, debug.Stack()))
+		}
+	}()
 	w.mux.Lock()
 	if w.Err() != nil || w.task.Finished() {
 		w.mux.Unlock()
@@ -352,16 +480,11 @@ func execute(w *pondTaskCtx) {
 	taskLog.Debugf("task started id=%s group=%s name=%s", w.task.ID,
 		logging.Sanitize(w.task.Group), logging.Sanitize(w.task.Name))
 
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			finishTask(w, nil, fmt.Errorf("task panicked: %v\n%s", recovered, debug.Stack()))
-		}
-	}()
 	r, e := w.runnable(w)
 	finishTask(w, r, e)
 }
 
-func finishTask(w *pondTaskCtx, result any, taskErr error) {
+func finishTask(w *taskCtx, result any, taskErr error) {
 	w.mux.Lock()
 	if w.Err() != nil {
 		w.task.Status = Canceled

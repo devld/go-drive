@@ -20,9 +20,13 @@ func TestZipPackTTLDefaultsToOneMinute(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	caches := handler.Spec().Caches
+	spec := handler.Spec()
+	caches := spec.Caches
 	if len(caches) != 1 || caches[0].Policy.TTL != time.Minute {
 		t.Fatalf("pack cache = %#v, want TTL 1m", caches)
+	}
+	if spec.Concurrency != common.DefaultArchiveConcurrent {
+		t.Fatalf("concurrency = %d, want %d", spec.Concurrency, common.DefaultArchiveConcurrent)
 	}
 }
 

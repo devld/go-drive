@@ -20,7 +20,7 @@ func TestInitializeRegistersBuiltInArtifactProcessors(t *testing.T) {
 			Concurrent: 1,
 		},
 	}
-	runner := task.NewPondRunner(config, components)
+	runner := task.NewTaskRunner(config, components)
 	t.Cleanup(func() { _ = components.Dispose() })
 
 	artifacts, err := Initialize(config, nil, runner, components)

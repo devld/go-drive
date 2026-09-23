@@ -3,7 +3,7 @@ title: 配置文件参考
 description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: 6ee487017790b0c9e8b70f71d74b30aa5b319f4b32b3e01f66764e010836a4fe
+source_hash: f7e45f76897a406a5244b364467b9f12aca2d5c6d28a9e7de403733e05a60b64
 ---
 
 # 配置文件参考
@@ -56,6 +56,7 @@ thumbnail:
 
 # 压缩包预览支持 zip、7z 和 rar。
 archive:
+  # concurrent: 4            # 压缩包预览和 zip 打包各自的并发，默认都是 4
   max-size: 2g
   max-member-size: 512m
   max-entries: 100000
@@ -101,7 +102,7 @@ web-path: ""
 | `trusted-proxies` | 空 | 可以提供 `X-Forwarded-For` 的代理 IP/CIDR |
 | `data-dir` | `./data` | 数据库、本地盘、脚本、会话、缓存等数据目录 |
 | `temp-dir` | `data-dir/temp` | 上传、复制等临时文件目录 |
-| `max-concurrent-task` | `100` | 复制、移动、删除等后台任务并发数 |
+| `max-concurrent-task` | `100` | 复制、移动、删除等后台任务并发数。同样数量的任务可以等待，超出后提交会被拒绝 |
 | `free-fs` | `false` | 是否允许本地 Drive 使用绝对路径；风险很高 |
 | `signature-ttl` | `12h` | 文件内容和缩略图签名 URL 的有效时间 |
 | `oauth-redirect-uri` | 项目回调页 | OneDrive/Google Drive OAuth 回调地址 |
@@ -157,7 +158,7 @@ auth:
 
 ## 压缩包预览
 
-内置压缩包处理器支持 ZIP、7z 和 RAR。`max-size` 限制服务器检查的压缩文件大小，`max-member-size` 限制单个解压文件大小，`max-entries` 限制索引的内部文件数量。`cache-items` 和 `cache-size` 限制检查压缩包时使用的远程稀疏源文件缓存，`index-ttl` 控制完整内部文件索引的有效期。解压文件预览会生成完整产物，并使用独立的 `content-cache-size` 总字节数上限和 `content-cache-ttl` 有效期。`pack-ttl` 控制打包 zip 生成后可下载的时长。
+内置压缩包处理器支持 ZIP、7z 和 RAR。`max-size` 限制服务器检查的压缩文件大小，`max-member-size` 限制单个解压文件大小，`max-entries` 限制索引的内部文件数量。`cache-items` 和 `cache-size` 限制检查压缩包时使用的远程稀疏源文件缓存，`index-ttl` 控制完整内部文件索引的有效期。解压文件预览会生成完整产物，并使用独立的 `content-cache-size` 总字节数上限和 `content-cache-ttl` 有效期。`pack-ttl` 控制打包 zip 生成后可下载的时长。`concurrent` 分别限制压缩包预览和 zip 打包的并发任务数，每组默认都是 4。
 
 请求达到短等待时间后，压缩包检查仍可在后台继续执行。Web UI 会轮询任务并在产物完成后打开；关闭预览窗口只会停止轮询，不会取消后台处理。
 

@@ -54,7 +54,8 @@ data-dir: ./data
 # Temp dir. Default is data-dir/temp
 temp-dir: ""
 
-# Concurrent task. eg. copy, move, delete
+# Concurrent running tasks, such as copy, move, and delete.
+# The same number of tasks may wait. Further submissions are rejected.
 max-concurrent-task: 100
 
 # Disable 'Local Drive' file path limitation.
@@ -159,6 +160,9 @@ thumbnail:
 
 # Archive preview supports zip, 7z, and rar files.
 archive:
+  # Concurrent archive preview tasks, and separately concurrent zip packing
+  # tasks. Defaults to 4.
+  #concurrent: 4
   # Maximum compressed archive size that may be inspected.
   max-size: 2g
   # Maximum uncompressed member size that may be streamed.

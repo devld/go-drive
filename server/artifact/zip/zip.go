@@ -49,8 +49,9 @@ func (h *Handler) sizeLimit() (int64, string) {
 }
 
 type Handler struct {
-	ttl     time.Duration
-	options artifact.OptionReader
+	ttl         time.Duration
+	concurrency int
+	options     artifact.OptionReader
 }
 
 func init() {
@@ -59,12 +60,14 @@ func init() {
 
 func NewHandler(ctx artifact.HandlerContext) (artifact.Handler, error) {
 	ttl := utils.PositiveOr(ctx.Config.Archive.PackTTL, common.DefaultArchivePackTTL)
-	return &Handler{ttl: ttl, options: ctx.Options}, nil
+	concurrency := utils.PositiveOr(ctx.Config.Archive.Concurrent, common.DefaultArchiveConcurrent)
+	return &Handler{ttl: ttl, concurrency: concurrency, options: ctx.Options}, nil
 }
 
 func (h *Handler) Spec() artifact.Spec {
 	return artifact.Spec{
-		Caches: []artifact.CacheSpec{{Policy: artifact.Policy{TTL: h.ttl}}},
+		Caches:      []artifact.CacheSpec{{Policy: artifact.Policy{TTL: h.ttl}}},
+		Concurrency: h.concurrency,
 	}
 }
 

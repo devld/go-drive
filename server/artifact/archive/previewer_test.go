@@ -328,6 +328,9 @@ func TestPreviewerReportsProgressAndSpec(t *testing.T) {
 	if len(registration.Caches) != 3 {
 		t.Fatalf("archive caches = %#v", registration.Caches)
 	}
+	if registration.Concurrency != common.DefaultArchiveConcurrent {
+		t.Fatalf("concurrency = %d, want %d", registration.Concurrency, common.DefaultArchiveConcurrent)
+	}
 	var contentMax int64 = -1
 	for _, cache := range registration.Caches {
 		if cache.Name == cacheContent {

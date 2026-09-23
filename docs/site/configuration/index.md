@@ -55,6 +55,7 @@ thumbnail:
 
 # Archive preview supports zip, 7z, and rar files.
 archive:
+  # concurrent: 4            # Archive preview and zip packing, each defaults to 4
   max-size: 2g
   max-member-size: 512m
   max-entries: 100000
@@ -100,7 +101,7 @@ web-path: ""
 | `trusted-proxies` | Empty | Proxy IPs/CIDRs allowed to supply `X-Forwarded-For` |
 | `data-dir` | `./data` | Database, local files, scripts, sessions, and cache data |
 | `temp-dir` | `data-dir/temp` | Temporary files for upload, copy, and related work |
-| `max-concurrent-task` | `100` | Concurrent copy, move, delete, and background tasks |
+| `max-concurrent-task` | `100` | Concurrent copy, move, delete, and background tasks. The same number may wait; further submissions are rejected |
 | `free-fs` | `false` | Allow local drives to use absolute paths; high risk |
 | `signature-ttl` | `12h` | Lifetime of signed file-content and thumbnail URLs |
 | `oauth-redirect-uri` | Project callback page | OAuth callback for OneDrive/Google Drive |
@@ -164,7 +165,8 @@ inspecting archives. The complete member index uses `index-ttl`. Decompressed
 member preview bodies are complete artifacts and use the independent
 `content-cache-size` byte budget and `content-cache-ttl` validity period.
 `pack-ttl` is how long a generated zip download stays available after it is
-created.
+created. `concurrent` limits archive preview tasks and zip packing tasks
+separately; each group defaults to 4.
 
 Archive inspection can continue in the background when a request reaches its
 short response wait. The Web UI polls the task and opens the completed

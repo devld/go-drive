@@ -3,7 +3,7 @@ title: 文件预览与缩略图
 description: 为图片、视频、音频封面、文本、PDF、压缩包和 Office 文档配置 go-drive 文件预览器与缩略图处理器。
 lang: zh-CN
 translation_key: preview-thumbnail
-source_hash: 40f0c99c3d4dc4d885c85573c0f1279c6e0a6a94135f36d7e61876fec7a2dea3
+source_hash: fab0e719a09b30c13874b2c1f5eac8dd588ca055aaafd13f88da12402067b57d
 ---
 
 # 文件预览与缩略图
@@ -44,7 +44,7 @@ docx,doc,xlsx,xls,pptx,ppt https://view.officeapps.live.com/op/embed.aspx?src={U
 
 ZIP、7z 和 RAR 可在浏览器中打开。你可以浏览其中的目录、下载单个文件，或将所选内容打包为 zip。
 
-大小和缓存限制写在 `config.yml` 的 `archive` 下，包括 `max-size`、`max-member-size`、`max-entries`，以及控制打包 zip 可下载时长的 `pack-ttl`。详见[配置文件参考](../configuration/)。
+大小和缓存限制写在 `config.yml` 的 `archive` 下，包括 `max-size`、`max-member-size`、`max-entries`、控制打包 zip 可下载时长的 `pack-ttl`，以及 `concurrent`（压缩包预览和 zip 打包各自默认 4）。详见[配置文件参考](../configuration/)。
 
 ## 缩略图处理器
 
