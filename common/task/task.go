@@ -66,15 +66,17 @@ type TaskIDProvider interface {
 
 type Runner interface {
 	Execute(runnable Runnable, options ...Option) (Task, error)
-	// ExecuteAndWait limits only how long the caller waits. The task is created
-	// with its own detached context and continues in the background after the
-	// waiter context or timeout is done. Ending the wait returns the current
-	// snapshot and a nil error. The error is only for failing to submit the
-	// task.
+	// ExecuteAndWait limits only how long the caller waits. A non-positive timeout
+	// has no deadline. The task is created with its own detached context and
+	// continues in the background after the waiter context or timeout is done.
+	// Ending the wait returns the current snapshot and a nil error. The error is
+	// only for failing to submit the task.
 	ExecuteAndWait(ctx context.Context, runnable Runnable, timeout time.Duration, options ...Option) (Task, error)
-	// RegisterGroup bounds concurrency for one exact task group. Non-positive
+	// RegisterGroup bounds how many tasks of one exact group may run at once.
+	// Tasks that cannot start yet wait in the runner's single queue. Non-positive
 	// concurrency is a no-op. Duplicate names return an error. Unregistered
-	// groups use the runner's global limit.
+	// groups, and groups whose limit is at least the runner's global limit, are
+	// limited only by that global queue.
 	RegisterGroup(group string, concurrency int) error
 	GetTask(id string) (Task, error)
 	GetTasks(group string) ([]Task, error)

@@ -8,13 +8,14 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/registry"
 	"go-drive/common/types"
+	"strings"
 	"testing"
 	"time"
 )
 
-func newTestRunner(t *testing.T, concurrency int) *PondRunner {
+func newTestRunner(t *testing.T, concurrency int) Runner {
 	t.Helper()
-	runner := NewPondRunner(common.Config{MaxConcurrentTask: concurrency}, registry.NewComponentHolder())
+	runner := NewTaskRunner(common.Config{MaxConcurrentTask: concurrency}, registry.NewComponentHolder())
 	t.Cleanup(func() {
 		if e := runner.Dispose(); e != nil {
 			t.Errorf("dispose runner: %v", e)
@@ -23,7 +24,7 @@ func newTestRunner(t *testing.T, concurrency int) *PondRunner {
 	return runner
 }
 
-func waitForTask(t *testing.T, runner *PondRunner, id, status string) Task {
+func waitForTask(t *testing.T, runner Runner, id, status string) Task {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
@@ -111,6 +112,73 @@ func TestExecuteAndWaitContinuesAfterContextCancel(t *testing.T) {
 	}
 }
 
+func TestExecuteAndWaitNonPositiveTimeoutWaitsForTask(t *testing.T) {
+	for _, timeout := range []time.Duration{0, -time.Second} {
+		t.Run(timeout.String(), func(t *testing.T) {
+			runner := newTestRunner(t, 1)
+			release := make(chan struct{})
+			started := make(chan struct{})
+			go func() {
+				<-started
+				time.Sleep(30 * time.Millisecond)
+				close(release)
+			}()
+
+			task, e := runner.ExecuteAndWait(context.Background(), func(ctx types.TaskCtx) (any, error) {
+				close(started)
+				<-release
+				return "done", nil
+			}, timeout)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if task.Status != Done || task.Result != "done" {
+				t.Fatalf("task = %#v, want completed result", task)
+			}
+		})
+	}
+}
+
+func TestTaskContextCanceledAfterCompletion(t *testing.T) {
+	tests := []struct {
+		name    string
+		run     func() (any, error)
+		status  string
+		wantErr string
+	}{
+		{name: "success", run: func() (any, error) { return "ok", nil }, status: Done},
+		{name: "error", run: func() (any, error) { return nil, errors.New("boom") }, status: Error, wantErr: "boom"},
+		{name: "panic", run: func() (any, error) { panic("boom") }, status: Error, wantErr: "task panicked: boom"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			runner := newTestRunner(t, 1)
+			var got types.TaskCtx
+			task, e := runner.ExecuteAndWait(context.Background(), func(ctx types.TaskCtx) (any, error) {
+				got = ctx
+				return test.run()
+			}, time.Second)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if task.Status != test.status {
+				t.Fatalf("status = %q, want %s", task.Status, test.status)
+			}
+			if test.wantErr != "" && (task.Error == nil || !strings.Contains(task.Error.Error(), test.wantErr)) {
+				t.Fatalf("error = %v, want containing %q", task.Error, test.wantErr)
+			}
+			select {
+			case <-got.Done():
+			case <-time.After(time.Second):
+				t.Fatal("task context was not canceled after completion")
+			}
+			if !errors.Is(got.Err(), context.Canceled) {
+				t.Fatalf("context error = %v, want canceled", got.Err())
+			}
+		})
+	}
+}
+
 func TestExecuteAndWaitPanicsForNilContext(t *testing.T) {
 	runner := newTestRunner(t, 1)
 	defer func() {
@@ -145,6 +213,41 @@ func TestRunnerSnapshotsDuringProgressUpdates(t *testing.T) {
 		}
 	}
 	waitForTask(t, runner, task.ID, Done)
+}
+
+func TestExecuteRejectsTaskWhenQueueIsFull(t *testing.T) {
+	runner := newTestRunner(t, 1)
+	release := make(chan struct{})
+	started := make(chan struct{})
+	if _, e := runner.Execute(func(ctx types.TaskCtx) (any, error) {
+		close(started)
+		<-release
+		return nil, nil
+	}); e != nil {
+		t.Fatal(e)
+	}
+	<-started
+	queued, e := runner.Execute(func(ctx types.TaskCtx) (any, error) {
+		return nil, nil
+	})
+	if e != nil {
+		t.Fatal(e)
+	}
+	rejected, e := runner.Execute(func(ctx types.TaskCtx) (any, error) {
+		return nil, nil
+	})
+	close(release)
+	unavailable, ok := errors.AsType[err.UnavailableError](e)
+	if !ok {
+		t.Fatalf("submit error = %v, want unavailable", e)
+	}
+	if unavailable.Code() != 503 {
+		t.Fatalf("status = %d, want 503", unavailable.Code())
+	}
+	if _, getErr := runner.GetTask(rejected.ID); !errors.Is(getErr, ErrorNotFound) {
+		t.Fatalf("rejected task lookup = %v", getErr)
+	}
+	waitForTask(t, runner, queued.ID, Done)
 }
 
 func TestStopTaskCancelsRunningTask(t *testing.T) {

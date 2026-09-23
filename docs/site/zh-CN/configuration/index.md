@@ -3,7 +3,7 @@ title: 配置文件参考
 description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: 507c8380cf34f11a4d70173510c210356d35e13523bfac2d4682477a4bc7125b
+source_hash: f7e45f76897a406a5244b364467b9f12aca2d5c6d28a9e7de403733e05a60b64
 ---
 
 # 配置文件参考
@@ -102,7 +102,7 @@ web-path: ""
 | `trusted-proxies` | 空 | 可以提供 `X-Forwarded-For` 的代理 IP/CIDR |
 | `data-dir` | `./data` | 数据库、本地盘、脚本、会话、缓存等数据目录 |
 | `temp-dir` | `data-dir/temp` | 上传、复制等临时文件目录 |
-| `max-concurrent-task` | `100` | 复制、移动、删除等后台任务并发数 |
+| `max-concurrent-task` | `100` | 复制、移动、删除等后台任务并发数。同样数量的任务可以等待，超出后提交会被拒绝 |
 | `free-fs` | `false` | 是否允许本地 Drive 使用绝对路径；风险很高 |
 | `signature-ttl` | `12h` | 文件内容和缩略图签名 URL 的有效时间 |
 | `oauth-redirect-uri` | 项目回调页 | OneDrive/Google Drive OAuth 回调地址 |

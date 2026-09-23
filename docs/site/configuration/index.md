@@ -101,7 +101,7 @@ web-path: ""
 | `trusted-proxies` | Empty | Proxy IPs/CIDRs allowed to supply `X-Forwarded-For` |
 | `data-dir` | `./data` | Database, local files, scripts, sessions, and cache data |
 | `temp-dir` | `data-dir/temp` | Temporary files for upload, copy, and related work |
-| `max-concurrent-task` | `100` | Concurrent copy, move, delete, and background tasks |
+| `max-concurrent-task` | `100` | Concurrent copy, move, delete, and background tasks. The same number may wait; further submissions are rejected |
 | `free-fs` | `false` | Allow local drives to use absolute paths; high risk |
 | `signature-ttl` | `12h` | Lifetime of signed file-content and thumbnail URLs |
 | `oauth-redirect-uri` | Project callback page | OAuth callback for OneDrive/Google Drive |

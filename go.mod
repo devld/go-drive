@@ -3,7 +3,6 @@ module go-drive
 go 1.26.4
 
 require (
-	github.com/alitto/pond/v2 v2.7.1
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.31.16
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.20

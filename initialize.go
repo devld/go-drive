@@ -84,7 +84,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	}
 
 	phase = initPhase("task runner")
-	runner := task.NewPondRunner(config, ch)
+	runner := task.NewTaskRunner(config, ch)
 	if err := phase(nil); err != nil {
 		return nil, err
 	}

@@ -54,7 +54,8 @@ data-dir: ./data
 # Temp dir. Default is data-dir/temp
 temp-dir: ""
 
-# Concurrent task. eg. copy, move, delete
+# Concurrent running tasks, such as copy, move, and delete.
+# The same number of tasks may wait. Further submissions are rejected.
 max-concurrent-task: 100
 
 # Disable 'Local Drive' file path limitation.

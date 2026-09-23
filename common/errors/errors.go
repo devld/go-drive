@@ -93,12 +93,25 @@ type UnsupportedError struct {
 	msg string
 }
 
+// UnavailableError 503
+type UnavailableError struct {
+	msg string
+}
+
 func (n UnsupportedError) Error() string {
 	return n.msg
 }
 
 func (n UnsupportedError) Code() int {
 	return http.StatusForbidden
+}
+
+func (u UnavailableError) Error() string {
+	return u.msg
+}
+
+func (u UnavailableError) Code() int {
+	return http.StatusServiceUnavailable
 }
 
 type RemoteAPIError struct {
@@ -197,6 +210,10 @@ func NewUnsupportedError() UnsupportedError {
 
 func NewUnsupportedMessageError(msg string) UnsupportedError {
 	return UnsupportedError{msg}
+}
+
+func NewUnavailableError(msg string) UnavailableError {
+	return UnavailableError{msg}
 }
 
 func NewRemoteAPIError(code int, msg string) RemoteAPIError {
