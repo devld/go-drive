@@ -5,6 +5,11 @@ export interface ArchiveEntry {
   size: number
   modTime: number
   mimeType?: string
+  /** Raw symlink target from the archive index. Empty when the entry is not a link. */
+  link?: string
+  /** Resolved archive path of link. Set only when the target stays inside the archive. */
+  follow?: string
+  followType?: 'dir' | 'file'
 }
 
 function parentPath(path: string) {
@@ -24,7 +29,9 @@ function virtualDir(path: string): ArchiveEntry {
 }
 
 function compareEntries(a: ArchiveEntry, b: ArchiveEntry) {
-  if (a.type !== b.type) return a.type === 'dir' ? -1 : 1
+  const aDir = a.type === 'dir' || a.followType === 'dir'
+  const bDir = b.type === 'dir' || b.followType === 'dir'
+  if (aDir !== bDir) return aDir ? -1 : 1
   return a.name.localeCompare(b.name)
 }
 
@@ -61,16 +68,74 @@ export function buildArchiveTree(entries: ArchiveEntry[]): Map<string, ArchiveEn
       existing.size = item.size
       existing.modTime = item.modTime
       existing.mimeType = item.mimeType
+      existing.link = item.link
       continue
     }
     nodes.set(item.path, item)
     addChild(children, parent, item)
   }
 
+  for (const node of nodes.values()) {
+    if (!node.link) continue
+    const resolved = resolveArchiveLink(node.path, nodes)
+    if (!resolved) continue
+    const target = nodes.get(resolved)
+    if (!target) continue
+    node.follow = resolved
+    node.followType = target.type
+  }
+
   for (const list of children.values()) {
     list.sort(compareEntries)
   }
   return children
+}
+
+// resolveArchiveLink walks each path component so a link to another link
+// lands on the final file or directory. Absolute targets, paths that leave
+// the archive, and cycles stay unresolved.
+function resolveArchiveLink(
+  linkPath: string,
+  nodes: Map<string, ArchiveEntry>
+): string | undefined {
+  const seen = new Set<string>()
+
+  const resolve = (path: string): string | undefined => {
+    if (seen.has(path)) return undefined
+    const node = nodes.get(path)
+    if (!node) return undefined
+    if (!node.link) return path
+    seen.add(path)
+    const raw = node.link
+    if (raw.startsWith('/') || raw.includes('\\') || raw.includes('\0')) {
+      return undefined
+    }
+    const base = parentPath(path)
+    const parts = (base ? `${base}/${raw}` : raw).split('/')
+    const out: string[] = []
+    for (const part of parts) {
+      if (part === '' || part === '.') continue
+      if (part === '..') {
+        if (out.length === 0) return undefined
+        out.pop()
+        continue
+      }
+      out.push(part)
+      const sofar = out.join('/')
+      const mid = nodes.get(sofar)
+      if (mid?.link) {
+        const resolvedMid = resolve(sofar)
+        if (!resolvedMid) return undefined
+        out.splice(0, out.length, ...resolvedMid.split('/').filter(Boolean))
+      }
+    }
+    const finalPath = out.join('/')
+    if (!nodes.has(finalPath)) return undefined
+    if (nodes.get(finalPath)?.link) return resolve(finalPath)
+    return finalPath
+  }
+
+  return resolve(linkPath)
 }
 
 function collectDescendants(

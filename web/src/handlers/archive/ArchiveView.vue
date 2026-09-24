@@ -56,36 +56,35 @@
                 @change="toggleItem(item)"
               />
             </label>
-            <button
-              v-if="item.type === 'dir'"
+            <component
+              :is="opensDir(item) ? 'button' : 'div'"
               class="archive-view__entry-main"
-              type="button"
+              :type="opensDir(item) ? 'button' : undefined"
               @click="openDir(item)"
             >
-              <EntryIcon
-                class="archive-view__entry-icon"
-                :entry="toIconEntry(item)"
-                :show-thumbnail="false"
-              />
+              <span class="archive-view__icon">
+                <EntryIcon
+                  class="archive-view__entry-icon"
+                  :entry="toIconEntry(item)"
+                  :show-thumbnail="false"
+                />
+                <span
+                  v-if="item.link"
+                  class="archive-view__link-badge glass-surface"
+                  :title="item.link"
+                >
+                  <Icon name="corner-up-right" />
+                </span>
+              </span>
               <span class="archive-view__entry-name" :title="item.name">{{
                 item.name
               }}</span>
-            </button>
-            <div v-else class="archive-view__entry-main">
-              <EntryIcon
-                class="archive-view__entry-icon"
-                :entry="toIconEntry(item)"
-                :show-thumbnail="false"
-              />
-              <span class="archive-view__entry-name" :title="item.name">{{
-                item.name
-              }}</span>
-              <span class="archive-view__entry-size">
+              <span v-if="!opensDir(item)" class="archive-view__entry-size">
                 {{ formatBytes(item.size) }}
               </span>
-            </div>
+            </component>
             <SimpleButton
-              v-if="item.type === 'file'"
+              v-if="item.type === 'file' && item.followType !== 'dir'"
               class="archive-view__download"
               variant="plain"
               small
@@ -239,7 +238,7 @@ const toggleItem = (item: ArchiveEntry) => {
 }
 
 const toIconEntry = (item: ArchiveEntry): Entry => ({
-  type: item.type,
+  type: item.followType === 'dir' ? 'dir' : item.type,
   name: item.name,
   path: item.path,
   size: item.size,
@@ -298,7 +297,14 @@ const load = async () => {
   }
 }
 
+const opensDir = (item: ArchiveEntry) =>
+  item.type === 'dir' || item.followType === 'dir'
+
 const openDir = (item: ArchiveEntry) => {
+  if (item.followType === 'dir' && item.follow) {
+    currentDir.value = item.follow
+    return
+  }
   if (item.type !== 'dir') return
   currentDir.value = item.path
 }
@@ -312,14 +318,19 @@ const onPathChange = ({ path, event }: EntryEventData) => {
 const download = async (item: ArchiveEntry) => {
   const request = ++downloadRequest
   downloadingPath.value = item.path
+  // A resolved file link downloads the target member. Broken links and
+  // multi-select packing still use the link's own path.
+  const path = item.followType === 'file' && item.follow ? item.follow : item.path
+  const slash = path.lastIndexOf('/')
+  const name = slash < 0 ? path : path.slice(slash + 1)
   try {
-    const info = await waitReady(archiveContentArgs(item.path), request, () => downloadRequest)
+    const info = await waitReady(archiveContentArgs(path), request, () => downloadRequest)
     if (request !== downloadRequest || !info || !info.ref) return
     const link = document.createElement('a')
     link.href = artifactURL(props.entry.path, props.entry.meta, ARCHIVE_HANDLER, {
       ref: info.ref,
     })
-    link.download = item.name
+    link.download = name || item.name
     link.target = '_blank'
     link.rel = 'noreferrer noopener nofollow'
     link.click()
@@ -504,11 +515,35 @@ button.archive-view__entry-main {
   cursor: pointer;
 }
 
-.archive-view__entry-icon.entry-icon {
+.archive-view__icon {
+  position: relative;
   flex: none;
   width: 28px;
   height: 28px;
+}
+
+.archive-view__entry-icon.entry-icon {
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
+}
+
+.archive-view__link-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+  border-radius: 50%;
+
+  .icon {
+    width: 10px;
+    height: 10px;
+  }
 }
 
 .archive-view__entry-name {
@@ -531,6 +566,7 @@ button.archive-view__entry-main {
   flex: none;
   margin-right: 4px;
   font-size: 22px;
+  color: var(--color-text-muted);
 }
 
 .archive-view__empty {

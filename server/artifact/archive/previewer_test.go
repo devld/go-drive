@@ -399,6 +399,76 @@ func TestFindEntryBinarySearch(t *testing.T) {
 	}
 }
 
+func TestPreviewerIndexRecordsExistingSymlinkTarget(t *testing.T) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	body, err := zw.Create("note.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := body.Write([]byte("hello")); err != nil {
+		t.Fatal(err)
+	}
+	linkHeader := &zip.FileHeader{Name: "alias.txt"}
+	linkHeader.SetMode(os.ModeSymlink | 0o777)
+	link, err := zw.CreateHeader(linkHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := link.Write([]byte("note.txt")); err != nil {
+		t.Fatal(err)
+	}
+	dirHeader := &zip.FileHeader{Name: "docs/"}
+	dirHeader.SetMode(os.ModeDir | 0o755)
+	if _, err := zw.CreateHeader(dirHeader); err != nil {
+		t.Fatal(err)
+	}
+	dirLinkHeader := &zip.FileHeader{Name: "docs-link"}
+	dirLinkHeader.SetMode(os.ModeSymlink | 0o777)
+	dirLink, err := zw.CreateHeader(dirLinkHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dirLink.Write([]byte("docs")); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	archivePath := filepath.Join(t.TempDir(), "links.zip")
+	if err := os.WriteFile(archivePath, buf.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reads := &atomic.Int32{}
+	previewer := newTestPreviewer(t, archiveTestConfig(), t.TempDir())
+	entry := &testEntry{
+		path: "links.zip", filename: archivePath, seekable: true,
+		size: int64(buf.Len()), reads: reads,
+	}
+	indexBody := produceBody(t, previewer, nil, artifact.Request{Source: entry, Args: argsIndex})
+	var entries []Entry
+	if err := json.Unmarshal(indexBody, &entries); err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]Entry{}
+	for _, item := range entries {
+		byName[item.Name] = item
+	}
+	if byName["note.txt"].Link != "" || byName["docs"].Link != "" {
+		t.Fatalf("non-link entries recorded a target: %+v", entries)
+	}
+	if byName["alias.txt"].Link != "note.txt" || byName["alias.txt"].Type != types.TypeFile {
+		t.Fatalf("file link = %+v", byName["alias.txt"])
+	}
+	if byName["docs-link"].Link != "docs" || byName["docs-link"].Type != types.TypeFile {
+		t.Fatalf("dir link = %+v", byName["docs-link"])
+	}
+	if reads.Load() == 0 {
+		t.Fatal("index did not read the archive")
+	}
+}
+
 func TestDetectFormat(t *testing.T) {
 	tests := []struct {
 		name string

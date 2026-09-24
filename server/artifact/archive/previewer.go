@@ -34,6 +34,10 @@ import (
 
 const archiveArtifactVersion = 1
 
+// archiveIndexVersion changes when the index JSON gains fields readers must
+// see immediately. Content and pack fingerprints stay on archiveArtifactVersion.
+const archiveIndexVersion = 2
+
 const (
 	handlerName = "archive"
 
@@ -66,6 +70,10 @@ type Entry struct {
 	Size     int64           `json:"size"`
 	ModTime  int64           `json:"modTime"`
 	MimeType string          `json:"mimeType,omitempty"`
+	// Link is the symlink target recorded by the format while the index was
+	// built. It is empty for every other entry. Populating it does not read
+	// any additional archive bytes.
+	Link string `json:"link,omitempty"`
 }
 
 // OpenedMember owns both the decompressed member and the source archive. The
@@ -228,7 +236,7 @@ func (s *Previewer) Resolve(request artifact.Request) (artifact.ResolvedRequest,
 	default:
 		return artifact.ResolvedRequest{
 			Fingerprint: fmt.Sprintf("archive-index-v%d|max-size=%d|max-entries=%d",
-				archiveArtifactVersion, s.maxSize, s.maxEntries),
+				archiveIndexVersion, s.maxSize, s.maxEntries),
 			Cache: cacheIndex,
 		}, nil
 	}
@@ -541,6 +549,12 @@ func (s *Previewer) indexFromFS(archiveFS fs.FS) ([]Entry, error) {
 		}
 		if entryType == types.TypeFile {
 			member.MimeType = mime.TypeByExtension(strings.ToLower(pathpkg.Ext(name)))
+		}
+		// Zip extraction already reads a symlink body to fill LinkTarget before
+		// this callback runs. Other formats leave it empty. Do not open the
+		// entry again here.
+		if linked, ok := info.(archives.FileInfo); ok {
+			member.Link = linked.LinkTarget
 		}
 		seen[name] = struct{}{}
 		result = append(result, member)
