@@ -40,19 +40,28 @@
           :value="downloadLinks"
           @focus="downloadLinksFocus"
         ></textarea>
-        <a class="download-button" href="javascript:;" @click="downloadFiles">
+        <a class="download-button" href="javascript:;" @click="downloadSelected">
           {{ $t('hv.download.downloads', { n: entry.length }) }}
         </a>
       </template>
     </div>
   </div>
 </template>
-<script setup lang="ts">
-import { filename, formatBytes } from '@/utils'
+<script lang="ts">
 import { fileUrl } from '@/api'
-import { computed, ref } from 'vue'
 import { Entry } from '@/types'
+import { filename } from '@/utils'
 import { triggerDownloadFile } from '@go-drive/utils'
+
+export function downloadFiles(entries: Entry[]) {
+  entries.forEach((file) => {
+    triggerDownloadFile(fileUrl(file.path, file.meta), filename(file.path))
+  })
+}
+</script>
+<script setup lang="ts">
+import { formatBytes } from '@/utils'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   entry: {
@@ -80,10 +89,8 @@ const downloadLinksFocus = () => {
   linksEl.value!.scrollLeft = 0
 }
 
-const downloadFiles = () => {
-  props.entry.forEach((f) => {
-    triggerDownloadFile(fileUrl(f.path, f.meta), filename(f.path))
-  })
+const downloadSelected = () => {
+  downloadFiles(props.entry)
 }
 </script>
 <style lang="scss">

@@ -5,6 +5,8 @@ import type { IconName } from '@/components/icons'
 
 export interface EntryHandlerExecutionOption {
   ctx: EntryHandlerContext
+  /** How the handler was invoked. Defaults to a direct entry open. */
+  source?: EntryHandlerSource
   uiUtils: UIUtils
   onRefresh?: () => void
   onClose?: (entry: Entry | Entry[]) => void
@@ -64,6 +66,13 @@ export interface EntryHandlerContext {
   options: ConfigOptionsMap
 }
 
+/** `entry` is a direct open. `menu` is the entry context menu. */
+export type EntryHandlerSource = 'entry' | 'menu'
+
+export interface EntryHandlerFuncContext extends EntryHandlerContext {
+  source: EntryHandlerSource
+}
+
 export interface EntryHandlerSupportsParams<A = Entry | Entry[]> {
   entry: A
   parent?: Entry
@@ -82,12 +91,14 @@ export type EntrySupportsFunc<A> = (
 export interface EntryHandlerFuncReturns {
   /** should the entries list update */
   update?: boolean
+  /** show this handler's declared view */
+  view?: boolean
 }
 
 export type EntryHandlerFunc<A> = (
   data: EntryHandlerExecutionParams<A>,
   uiUtils: UIUtils,
-  ctx: EntryHandlerContext
+  ctx: EntryHandlerFuncContext
 ) => Promise<EntryHandlerFuncReturns | undefined>
 
 export interface BaseEntryHandler<A> {

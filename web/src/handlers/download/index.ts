@@ -1,6 +1,6 @@
 import { T } from '@go-drive/i18n'
 import { EntryHandler } from '../types'
-import DownloadView from './DownloadView.vue'
+import DownloadView, { downloadFiles } from './DownloadView.vue'
 
 export default {
   name: 'download',
@@ -16,4 +16,9 @@ export default {
   multiple: true,
   supports: ({ entry }) => entry.every((e) => e.type === 'file'),
   order: 2000,
+  handler: async ({ entry }, _, { source }) => {
+    if (source === 'entry') return { view: true }
+
+    downloadFiles(entry)
+  },
 } as EntryHandler

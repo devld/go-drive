@@ -227,7 +227,7 @@ const onHandlerBeingExecute = (
   handler: EntryHandler,
   entry: Entry | Entry[]
 ) => {
-  if (handler.view && !Array.isArray(entry)) {
+  if (handler.view && !handler.handler && !Array.isArray(entry)) {
     if (
       currentTempRoute &&
       isRouteForHandlerView(currentTempRoute, handler.name, entry.name)
@@ -301,7 +301,7 @@ const onEntryClicked = ({ entry, event }: EntryEventData) => {
 
 const onEntryMenuClicked = ({ entry, menu }: EntryMenuClickData) => {
   closeEntryMenu(false)
-  executeHandler(menu.name, entry)
+  executeHandler(menu.name, entry, 'menu')
 }
 
 const closeEntryMenu = (restoreFocus = true) => {
@@ -393,7 +393,7 @@ const showEntryMenu = ({ entry, event }: EntryEventData) => {
     if (event.altKey) {
       let download
       if ((download = menu.menus.find((e) => e.name === 'download'))) {
-        executeHandler(download.name, menu.entry)
+        executeHandler(download.name, menu.entry, 'menu')
         return
       }
     }

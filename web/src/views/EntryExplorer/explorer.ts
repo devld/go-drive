@@ -11,6 +11,7 @@ import {
   EntryHandlerContext,
   EntryHandlerExecutionOption,
   EntryHandlerExecutionParams,
+  EntryHandlerSource,
 } from '@/handlers/types'
 import { Entry, EntryPathMeta, User } from '@/types'
 import { dir, getRouteQuery, pathClean } from '@/utils'
@@ -166,7 +167,8 @@ export const useEntryHandler = (
 
   const executeHandler = async (
     handlerName: string,
-    entry: Entry | Entry[]
+    entry: Entry | Entry[],
+    source: EntryHandlerSource = 'entry'
   ) => {
     const handler = getHandler(handlerName)
     if (!handler) return false
@@ -177,19 +179,17 @@ export const useEntryHandler = (
       return false
     }
 
-    if (handler.view) {
-      viewHandler.show(
-        handler.name,
-        getEntryHandlerData(entry),
-        handlerOpt.value
-      )
-      return true
-    } else if (handler.handler) {
-      executeFunctionalHandler(
-        handler.name,
-        getEntryHandlerData(entry),
-        handlerOpt.value
-      )
+    const data = getEntryHandlerData(entry)
+    const opt: EntryHandlerExecutionOption = { ...handlerOpt.value, source }
+
+    if (handler.handler) {
+      const result = await executeFunctionalHandler(handler.name, data, opt)
+      if (result && result.view) {
+        viewHandler.show(handler.name, data, opt)
+      }
+      return result !== false
+    } else if (handler.view) {
+      viewHandler.show(handler.name, data, opt)
       return true
     }
     return false

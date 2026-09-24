@@ -14,6 +14,7 @@ import {
   EntryHandlerContext,
   EntryHandlerExecutionOption,
   EntryHandlerExecutionParams,
+  EntryHandlerFuncReturns,
   EntryHandlersMenu,
   EntryHandlerViewHandle,
 } from './types'
@@ -93,26 +94,26 @@ export const createViewHandler = () => {
   }
 }
 
-export const executeFunctionalHandler = (
+export const executeFunctionalHandler = async (
   handlerName: string,
   data: EntryHandlerExecutionParams,
   opt: EntryHandlerExecutionOption
-) => {
+): Promise<EntryHandlerFuncReturns | false | undefined> => {
   const h = getHandler(handlerName)
   if (!h || !isHandlerSupports(h, opt.ctx, data)) return false
 
   if (typeof h.handler !== 'function') return false
 
-  h.handler(
-    processEntryHandlerExecutionParams(data, h) as any,
-    opt.uiUtils,
-    opt.ctx
-  ).then(
-    (r) => {
-      if (r?.update) opt.onRefresh?.()
-    },
-    (e) => {
-      console.error('entry handler error', e)
-    }
-  )
+  try {
+    const result = await h.handler(
+      processEntryHandlerExecutionParams(data, h) as any,
+      opt.uiUtils,
+      { ...opt.ctx, source: opt.source ?? 'entry' }
+    )
+    if (result?.update) opt.onRefresh?.()
+    return result
+  } catch (e) {
+    console.error('entry handler error', e)
+    return false
+  }
 }
