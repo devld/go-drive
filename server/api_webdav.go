@@ -10,6 +10,7 @@ import (
 	"go-drive/server/webdav"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -23,9 +24,13 @@ var webdavHTTPMethods = []string{
 func InitWebdavAccess(router gin.IRouter, config common.Config,
 	access *drive.Access, userAuth *auth.UserAuth) error {
 
+	tempDir := filepath.Join(config.TempDir, "webdav")
+	if e := os.MkdirAll(tempDir, 0700); e != nil {
+		return e
+	}
 	cfp, e := driveutil.NewCacheFilePool(driveutil.CacheFilePoolOptions{
 		MaxEntries: config.WebDav.MaxCacheItems,
-		Dir:        config.TempDir,
+		Dir:        tempDir,
 	})
 	if e != nil {
 		return e
@@ -36,6 +41,7 @@ func InitWebdavAccess(router gin.IRouter, config common.Config,
 		cfp:     cfp,
 		config:  config,
 		lockSys: webdav.NewMemLS(),
+		tempDir: tempDir,
 	}
 
 	withAuth := router.Group(config.WebDav.Prefix, BasicAuth(userAuth, "webdav", config.WebDav.AllowAnonymous))
@@ -56,6 +62,7 @@ type webdavAccess struct {
 	cfp     *driveutil.CacheFilePool
 	lockSys webdav.LockSystem
 	config  common.Config
+	tempDir string
 }
 
 func (w *webdavAccess) ServeHTTP(c *gin.Context) {
@@ -68,7 +75,7 @@ func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 		return
 	}
 
-	driveFs, e := driveutil.NewDriveFS(c.Request.Context(), drive, w.config.TempDir, w.cfp)
+	driveFs, e := driveutil.NewDriveFS(c.Request.Context(), drive, w.tempDir, w.cfp)
 	if e != nil {
 		logging.For("webdav").Errorf("DriveFS creation failed method=%s path=%s: %v",
 			c.Request.Method, logging.Sanitize(c.Request.URL.Path), e)

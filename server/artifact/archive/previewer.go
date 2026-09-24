@@ -98,8 +98,9 @@ func init() {
 }
 
 // NewPreviewer creates the archive preview processor. Persistence, locking, and
-// task scheduling stay in the shared artifact service. Local *os.File sources
-// are used directly; other sources go through CacheFilePool.
+// task scheduling stay in the shared artifact service. Archive bytes are read
+// through DriveFS, which uses a native file when the entry already provides
+// one and otherwise reads through the source cache pool.
 func NewPreviewer(ctx artifact.HandlerContext) (artifact.Handler, error) {
 	tempDir := ctx.Config.TempDir
 	if tempDir == "" {

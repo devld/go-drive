@@ -3,6 +3,7 @@ package driveutil
 import (
 	"context"
 	"errors"
+	"fmt"
 	err "go-drive/common/errors"
 	"go-drive/common/logging"
 	"io"
@@ -12,8 +13,14 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	lru "github.com/hashicorp/golang-lru/v2"
+)
+
+const (
+	cacheBlockSize = 10 * 1024 * 1024
+	cacheMapCells  = 20
 )
 
 type ReaderGetter func(context.Context, int64, int64) (io.ReadCloser, error)
@@ -84,8 +91,10 @@ func (cfp *CacheFilePool) Has(key string) bool {
 // GetReader returns a seekable reader backed by the cache pool. ctx belongs to
 // this reader: it cancels waiting and reading for this caller only. Source
 // fills use a separate context so one cancelled reader does not abort others.
-// That fill is cancelled when the last reader leaves while a download is still
-// running.
+// A fill that has already started keeps running after the last reader leaves,
+// and the sparse file stays in the pool for the next reader. New ranges are
+// requested only while a reader is reading. The fill is cancelled when the
+// entry is evicted or the download fails.
 func (cfp *CacheFilePool) GetReader(ctx context.Context, key string, size int64, getReader ReaderGetter) (io.ReadSeekCloser, error) {
 	if cf, ok := cfp.entries.Get(key); ok {
 		if reader, e := cf.Reader(ctx); e == nil {
@@ -117,6 +126,7 @@ func (cfp *CacheFilePool) GetReader(ctx context.Context, key string, size int64,
 	fillCtx, fillCancel := context.WithCancel(context.Background())
 	newCf := &cacheFile{
 		name:       name,
+		key:        key,
 		size:       size,
 		getReader:  getReader,
 		fillCtx:    fillCtx,
@@ -208,7 +218,9 @@ func (cfp *CacheFilePool) Dispose() error {
 
 type cacheFile struct {
 	name       string
+	key        string
 	size       int64
+	fetches    atomic.Int64
 	getReader  ReaderGetter
 	fillCtx    context.Context
 	fillCancel context.CancelFunc
@@ -247,6 +259,7 @@ func (cf *cacheFile) Reader(ctx context.Context) (*cacheFileReader, error) {
 	}
 
 	cfr := &cacheFileReader{
+		cf:          cf,
 		f:           f,
 		size:        cf.size,
 		rl:          cf.rl,
@@ -257,6 +270,7 @@ func (cf *cacheFile) Reader(ctx context.Context) (*cacheFileReader, error) {
 	cfr.release = func() { cf.releaseReader(cfr) }
 
 	cf.readers[cfr] = struct{}{}
+	logging.For("f-cache").Infof("open key=%s size=%d", logging.Sanitize(cf.key), cf.size)
 	return cfr, nil
 }
 
@@ -339,7 +353,7 @@ func (cf *cacheFile) readRequest(ctx context.Context, start, readLen int64) erro
 		return nil
 	}
 	end := start + readLen
-	blockSize := int64(10 * 1024 * 1024) // 10M
+	blockSize := int64(cacheBlockSize)
 
 	var offset, size int64
 
@@ -393,6 +407,7 @@ func (cf *cacheFile) readRequest(ctx context.Context, start, readLen int64) erro
 	if size <= 0 {
 		size = cf.size - offset
 	}
+	cf.fetches.Add(1)
 	cf.startWriter(reader, offset, size)
 	return nil
 }
@@ -409,7 +424,7 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, length int64) {
 		if offset > 0 {
 			_, e = writer.Seek(offset, io.SeekStart)
 			if e != nil {
-				logging.For("f-cache").Errorf("cache_file_pool seek error: %v", e)
+				logging.For("f-cache").Errorf("seek error: %v", e)
 				_ = cf.closeWithError(e)
 				return
 			}
@@ -436,12 +451,12 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, length int64) {
 			if nr > 0 {
 				nw, ew := writer.Write(readBuf[:nr])
 				if ew != nil {
-					logging.For("f-cache").Errorf("cache_file_pool write error: %v", ew)
+					logging.For("f-cache").Errorf("write error: %v", ew)
 					_ = cf.closeWithError(ew)
 					return
 				}
 				if nw != nr {
-					logging.For("f-cache").Errorf("cache_file_pool short write: wrote %d of %d bytes", nw, nr)
+					logging.For("f-cache").Errorf("short write: wrote %d of %d bytes", nw, nr)
 					_ = cf.closeWithError(io.ErrShortWrite)
 					return
 				}
@@ -454,7 +469,7 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, length int64) {
 			}
 			if er != nil {
 				if er != io.EOF {
-					logging.For("f-cache").Errorf("cache_file_pool read error: %v", er)
+					logging.For("f-cache").Errorf("read error: %v", er)
 					_ = cf.closeWithError(er)
 					return
 				}
@@ -468,21 +483,14 @@ func (cf *cacheFile) startWriter(reader io.ReadCloser, offset, length int64) {
 func (cf *cacheFile) releaseReader(cfr *cacheFileReader) {
 	cf.mu.Lock()
 	delete(cf.readers, cfr)
-	var evict func()
-	if len(cf.readers) == 0 && len(cf.writers) > 0 {
-		if cf.startCloseLocked(context.Canceled) {
-			evict = cf.evict
-		}
-	} else {
-		cf.removeFileIfIdleLocked()
-	}
+	// In-flight block downloads keep writing. No reader remains to request
+	// further ranges, and the sparse file stays until eviction or a real error.
+	cf.removeFileIfIdleLocked()
 	cf.mu.Unlock()
-	if evict != nil {
-		evict()
-	}
 }
 
 type cacheFileReader struct {
+	cf   *cacheFile
 	f    *os.File
 	pos  int64
 	size int64
@@ -503,11 +511,10 @@ func (cfr *cacheFileReader) Read(p []byte) (n int, err error) {
 	cfr.mu.Lock()
 	defer cfr.mu.Unlock()
 
-	end := cfr.pos + int64(len(p))
-	if end > cfr.size {
-		end = cfr.size
-	}
+	end := min(cfr.pos+int64(len(p)), cfr.size)
 	readLen := end - cfr.pos
+	logging.For("f-cache").Debugf("read key=%s pos=%d len=%d size=%d",
+		logging.Sanitize(cfr.cf.key), cfr.pos, readLen, cfr.size)
 
 	if e := cfr.readRequest(cfr.ctx, cfr.pos, readLen); e != nil {
 		return 0, e
@@ -542,6 +549,8 @@ func (cfr *cacheFileReader) ReadAt(p []byte, off int64) (n int, err error) {
 	if remaining := cfr.size - off; readLen > remaining {
 		readLen = remaining
 	}
+	logging.For("f-cache").Debugf("read key=%s pos=%d len=%d size=%d",
+		logging.Sanitize(cfr.cf.key), off, readLen, cfr.size)
 	if e := cfr.readRequest(cfr.ctx, off, readLen); e != nil {
 		return 0, e
 	}
@@ -576,6 +585,8 @@ func (cfr *cacheFileReader) Seek(offset int64, whence int) (int64, error) {
 		return 0, os.ErrInvalid
 	}
 	cfr.pos = pos
+	logging.For("f-cache").Debugf("seek key=%s pos=%d size=%d",
+		logging.Sanitize(cfr.cf.key), pos, cfr.size)
 	return cfr.pos, nil
 }
 
@@ -583,8 +594,106 @@ func (cfr *cacheFileReader) Close() error {
 	cfr.once.Do(func() {
 		cfr.err = cfr.f.Close()
 		cfr.release()
+		cause := cfr.cf.terminalError()
+		if cause == nil {
+			cause = cfr.err
+		}
+		cfr.cf.writeCloseLog(cause)
 	})
 	return cfr.err
+}
+
+func (cf *cacheFile) writeCloseLog(cause error) {
+	downloaded, ranges := cf.rl.coverage()
+	if cf.size > 0 && downloaded > cf.size {
+		downloaded = cf.size
+	}
+	percent := "-"
+	if cf.size > 0 {
+		percent = fmt.Sprintf("%.1f%%", float64(downloaded)*100/float64(cf.size))
+	}
+	bar := downloadMap(cf.size, ranges)
+	logger := logging.For("f-cache")
+	key := logging.Sanitize(cf.key)
+	fetches := cf.fetches.Load()
+	if cause != nil {
+		logger.Infof("closed key=%s error=%v downloaded=%d/%d (%s) fetches=%d [%s]",
+			key, cause, downloaded, cf.size, percent, fetches, bar)
+		return
+	}
+	logger.Infof("closed key=%s downloaded=%d/%d (%s) fetches=%d [%s]",
+		key, downloaded, cf.size, percent, fetches, bar)
+}
+
+// downloadMapRamp grows denser from an empty cell to a full one.
+// Scaled cells use the intermediate glyphs for a partial download.
+const downloadMapRamp = "_.:-=+*#"
+
+// downloadMap draws downloaded ranges as one character per 10MiB block.
+// Files longer than 20 blocks are scaled onto 20 characters. An unscaled cell
+// is '#' only when that whole block is downloaded. A scaled cell uses
+// downloadMapRamp to show how much of the cell has been downloaded.
+func downloadMap(size int64, ranges [][]int64) string {
+	if size <= 0 {
+		return ""
+	}
+	chunks := (size + cacheBlockSize - 1) / cacheBlockSize
+	cells := chunks
+	if cells > cacheMapCells {
+		cells = cacheMapCells
+	}
+	if cells < 1 {
+		cells = 1
+	}
+	scaled := chunks > cacheMapCells
+	buf := make([]byte, cells)
+	for i := int64(0); i < cells; i++ {
+		var start, end int64
+		if scaled {
+			start = size * i / cells
+			end = size * (i + 1) / cells
+		} else {
+			start = i * cacheBlockSize
+			end = min(start+cacheBlockSize, size)
+		}
+		buf[i] = downloadGlyph(rangeDownloaded(ranges, start, end), end-start, scaled)
+	}
+	return string(buf)
+}
+
+func downloadGlyph(covered, total int64, scaled bool) byte {
+	if covered <= 0 || total <= 0 {
+		return '_'
+	}
+	if !scaled || covered >= total {
+		if covered >= total {
+			return '#'
+		}
+		return '_'
+	}
+	partials := len(downloadMapRamp) - 2
+	idx := 1 + int(covered*int64(partials)/total)
+	if idx >= len(downloadMapRamp)-1 {
+		idx = len(downloadMapRamp) - 2
+	}
+	return downloadMapRamp[idx]
+}
+
+func rangeDownloaded(ranges [][]int64, start, end int64) int64 {
+	var downloaded int64
+	for _, ran := range ranges {
+		lo, hi := ran[0], ran[1]
+		if lo < start {
+			lo = start
+		}
+		if hi > end {
+			hi = end
+		}
+		if hi > lo {
+			downloaded += hi - lo
+		}
+	}
+	return downloaded
 }
 
 func newRangeLock(max int64) *rangeLock {
@@ -653,6 +762,18 @@ func (rl *rangeLock) tryExclusiveFeed(start, l int64) bool {
 	}
 	rl._feed(start, l)
 	return true
+}
+
+func (rl *rangeLock) coverage() (int64, [][]int64) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	ranges := make([][]int64, len(rl.ranges))
+	var downloaded int64
+	for i, ran := range rl.ranges {
+		ranges[i] = []int64{ran[0], ran[1]}
+		downloaded += ran[1] - ran[0]
+	}
+	return downloaded, ranges
 }
 
 func (rl *rangeLock) feed(start, l int64) {

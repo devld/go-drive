@@ -23,6 +23,7 @@ type DriveFSFile interface {
 	fs.File
 	fs.ReadDirFile
 	io.Seeker
+	io.ReaderAt
 	io.Writer
 	Readdir(count int) ([]fs.FileInfo, error)
 	GetURL(ctx context.Context) (string, error)
@@ -88,6 +89,16 @@ func (w *DriveFS) OpenFile(ctx context.Context, name string, flag int, _ os.File
 	return w.newDriveFSFile(ctx, entry, flag), nil
 }
 
+// OpenEntry opens an existing file entry. Read-only opens use a native
+// *os.File when the entry already provides one, and otherwise use the cache
+// pool. This is the same read path as OpenFile.
+func (w *DriveFS) OpenEntry(ctx context.Context, entry types.IEntry) (DriveFSFile, error) {
+	if entry == nil || !entry.Type().IsFile() {
+		return nil, os.ErrInvalid
+	}
+	return w.newDriveFSFile(ctx, entry, os.O_RDONLY), nil
+}
+
 func (w *DriveFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	name = utils.CleanPath(name)
 	entries, e := w.drive.List(w.ctx, name)
@@ -123,7 +134,7 @@ func (w *DriveFS) Rename(ctx context.Context, oldName, newName string) error {
 
 func (w *DriveFS) newDriveFSFile(ctx context.Context, e types.IEntry, flag int) *driveFSFile {
 	var seekPos int64 = 0
-	if flag&os.O_APPEND != 0 {
+	if flag&os.O_APPEND != 0 && flag&os.O_TRUNC == 0 {
 		seekPos = e.Size()
 	}
 	return &driveFSFile{
@@ -150,9 +161,12 @@ type driveFSFile struct {
 	seekPos  int64
 	mu       sync.Mutex
 
-	modified bool
-	tempDir  string
-	openFlag int
+	modified    bool
+	replaced    bool
+	writeFailed bool
+	attempted   bool
+	tempDir     string
+	openFlag    int
 }
 
 func (w *driveFSFile) Close() error {
@@ -163,6 +177,13 @@ func (w *driveFSFile) Close() error {
 		_ = w.reader.Close()
 	}
 
+	// A truncated or newly created file is saved even when Write was never
+	// called, so an empty PUT still creates or clears the remote file.
+	if !w.attempted && w.file == nil && w.replacesContent() {
+		if e := w.getFile(); e != nil {
+			return e
+		}
+	}
 	if w.file == nil {
 		return nil
 	}
@@ -173,7 +194,7 @@ func (w *driveFSFile) Close() error {
 		_ = os.Remove(file.Name())
 	}()
 
-	if w.modified {
+	if w.modified || (w.replaced && !w.writeFailed) {
 		stat, e := file.Stat()
 		if e != nil {
 			return e
@@ -197,18 +218,40 @@ func (w *driveFSFile) getFile() error {
 	}
 
 	if w.openFlag == os.O_RDONLY {
+		cacheKey := cacheFileKey(w.e)
+		if w.fs.cfp == nil || !w.fs.cfp.Has(cacheKey) {
+			file, e := openLocalFile(w.ctx, w.e)
+			if e != nil {
+				return e
+			}
+			if file != nil {
+				if w.seekPos != 0 {
+					if _, e = file.Seek(w.seekPos, io.SeekStart); e != nil {
+						_ = file.Close()
+						return e
+					}
+				}
+				w.reader = file
+				return nil
+			}
+		}
 		if w.fs.cfp == nil {
 			return errors.New("not readable")
 		}
-		cacheKey := fmt.Sprintf("m:%d,s:%d,", w.e.ModTime(), w.e.Size())
-		if dispatcherEntry, ok := IEntryAs[types.IDispatcherEntry](w.e); ok {
-			cacheKey += "rp:" + dispatcherEntry.GetRealPath()
-		} else {
-			cacheKey += "p:" + w.e.Path()
-		}
 		reader, e := w.fs.cfp.GetReader(w.ctx, cacheKey, w.e.Size(),
 			func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
-				return GetIContentReader(ctx, w.e, start, size)
+				reader, e := GetIContentReader(ctx, w.e, start, size)
+				if e != nil {
+					return nil, e
+				}
+				progress, ok := w.ctx.(types.TaskCtx)
+				if !ok {
+					return reader, nil
+				}
+				return struct {
+					io.Reader
+					io.Closer
+				}{ProgressReader(reader, progress), reader}, nil
 			},
 		)
 		if e != nil {
@@ -224,12 +267,13 @@ func (w *driveFSFile) getFile() error {
 	}
 
 	var file *os.File
-	if w.openFlag&os.O_CREATE != 0 || w.openFlag&os.O_TRUNC != 0 {
+	if w.replacesContent() {
 		tempFile, e := os.CreateTemp(w.tempDir, "go-drive-temp")
 		if e != nil {
 			return e
 		}
 		file = tempFile
+		w.replaced = true
 	} else {
 		tempFile, e := CopyIContentToTempFile(task.NewContextWrapper(w.ctx), w.e, w.tempDir)
 		if e != nil {
@@ -270,6 +314,24 @@ func (w *driveFSFile) Read(p []byte) (n int, err error) {
 	return
 }
 
+func (w *driveFSFile) ReadAt(p []byte, off int64) (n int, err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if !w.e.Type().IsFile() {
+		return 0, os.ErrInvalid
+	}
+	if e := w.getFile(); e != nil {
+		return 0, e
+	}
+	if ra, ok := w.reader.(io.ReaderAt); ok {
+		return ra.ReadAt(p, off)
+	}
+	if w.file != nil {
+		return w.file.ReadAt(p, off)
+	}
+	return 0, os.ErrInvalid
+}
+
 func (w *driveFSFile) Seek(offset int64, whence int) (int64, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -279,6 +341,9 @@ func (w *driveFSFile) Seek(offset int64, whence int) (int64, error) {
 	if w.file == nil {
 		// a fake file opened with flag = 0, used to get file size
 		size := w.e.Size()
+		if w.replacesContent() {
+			size = 0
+		}
 		pos := w.seekPos
 
 		switch whence {
@@ -287,7 +352,7 @@ func (w *driveFSFile) Seek(offset int64, whence int) (int64, error) {
 		case io.SeekCurrent:
 			pos += offset
 		case io.SeekEnd:
-			pos += size + offset
+			pos = size + offset
 		default:
 			pos = -1
 		}
@@ -331,7 +396,20 @@ func (w *driveFSFile) Readdir(count int) ([]fs.FileInfo, error) {
 }
 
 func (w *driveFSFile) Stat() (fs.FileInfo, error) {
-	return entryToFileInfo(w.e), nil
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	info := entryFileInfo{w.e}
+	if w.file != nil {
+		stat, e := w.file.Stat()
+		if e != nil {
+			return nil, e
+		}
+		return fileStat{info, stat.Size(), stat.ModTime()}, nil
+	}
+	if w.replacesContent() {
+		return fileStat{info, 0, info.ModTime()}, nil
+	}
+	return info, nil
 }
 
 func (w *driveFSFile) Write(p []byte) (n int, err error) {
@@ -343,14 +421,30 @@ func (w *driveFSFile) Write(p []byte) (n int, err error) {
 	if !w.e.Meta().Writable {
 		return 0, os.ErrPermission
 	}
+	w.attempted = true
 	if e := w.getFile(); e != nil {
 		return 0, e
 	}
 	n, err = w.file.Write(p)
 	if err == nil {
 		w.modified = true
+	} else {
+		w.writeFailed = true
 	}
 	return
+}
+
+// replacesContent reports whether this open starts from an empty file.
+// O_TRUNC clears an existing file. A createdEntry has no content to copy.
+func (w *driveFSFile) replacesContent() bool {
+	if w.e == nil || !w.e.Type().IsFile() || w.openFlag == os.O_RDONLY {
+		return false
+	}
+	if w.openFlag&os.O_TRUNC != 0 {
+		return true
+	}
+	_, created := w.e.(*createdEntry)
+	return created
 }
 
 func (w *driveFSFile) GetURL(ctx context.Context) (string, error) {
@@ -381,6 +475,33 @@ func (w *driveFSFile) ReadDir(n int) ([]fs.DirEntry, error) {
 	), nil
 }
 
+func cacheFileKey(entry types.IEntry) string {
+	suffix := fmt.Sprintf(",m:%d,s:%d", entry.ModTime(), entry.Size())
+	if dispatcherEntry, ok := IEntryAs[types.IDispatcherEntry](entry); ok {
+		return "rp:" + dispatcherEntry.GetRealPath() + suffix
+	}
+	return "p:" + entry.Path() + suffix
+}
+
+// openLocalFile returns a native *os.File when GetReader already provides one.
+// URL-capable entries skip this probe so the range cache can fetch them. A
+// non-file reader is closed and the caller should use the cache pool.
+func openLocalFile(ctx context.Context, entry types.IEntry) (*os.File, error) {
+	if _, err := entry.GetURL(ctx); err == nil {
+		return nil, nil
+	}
+	reader, err := entry.GetReader(ctx, -1, -1)
+	if err != nil {
+		return nil, err
+	}
+	file, ok := reader.(*os.File)
+	if !ok {
+		_ = reader.Close()
+		return nil, nil
+	}
+	return file, nil
+}
+
 func entryToFileInfo(e types.IEntry) fs.FileInfo {
 	return entryFileInfo{e}
 }
@@ -395,6 +516,21 @@ func entriesToFileInfos(es []types.IEntry) []fs.FileInfo {
 
 type entryFileInfo struct {
 	e types.IEntry
+}
+
+// fileStat reports the size and modification time of the temp file being written.
+type fileStat struct {
+	entryFileInfo
+	size    int64
+	modTime time.Time
+}
+
+func (f fileStat) Size() int64 {
+	return f.size
+}
+
+func (f fileStat) ModTime() time.Time {
+	return f.modTime
 }
 
 func (e entryFileInfo) Name() string {

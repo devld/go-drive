@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -316,59 +317,92 @@ func TestCacheFilePool_CancelDoesNotInterruptOtherReaders(t *testing.T) {
 	}
 }
 
-func TestCacheFilePool_LastReaderCancelStopsFill(t *testing.T) {
+func TestCacheFilePool_LastReaderKeepsInFlightFill(t *testing.T) {
 	dir := t.TempDir()
 	pool, err := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
 	if err != nil {
 		t.Fatal(err)
 	}
+	data := bytes.Repeat([]byte("cached-file-a"), 32)
 
 	started := make(chan struct{})
-	stopped := make(chan error, 1)
+	release := make(chan struct{})
+	var fetches atomic.Int32
 	getter := func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
-		return &blockedFillReader{ctx: ctx, started: started, stopped: stopped}, nil
+		fetches.Add(1)
+		inner, err := byteReaderGetter(data)(ctx, start, size)
+		if err != nil {
+			return nil, err
+		}
+		return &releaseReader{Reader: inner, ctx: ctx, release: release, started: started}, nil
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	r, err := pool.GetReader(ctx, "a", 32, getter)
+	r, err := pool.GetReader(ctx, "a", int64(len(data)), getter)
 	if err != nil {
 		t.Fatal(err)
 	}
+	readErr := make(chan error, 1)
 	go func() {
-		_, _ = io.ReadAll(r)
+		_, err := io.ReadAll(r)
 		_ = r.Close()
+		readErr <- err
 	}()
 	<-started
 	cancel()
+	if err := <-readErr; !errors.Is(err, context.Canceled) {
+		t.Fatalf("reader error = %v, want context.Canceled", err)
+	}
 	select {
-	case err := <-stopped:
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("fill stop = %v, want context.Canceled", err)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("fill continued after the last reader closed")
+	case <-time.After(50 * time.Millisecond):
+	case <-release:
+	}
+	if !pool.Has("a") {
+		t.Fatal("cache entry was removed after the last reader closed")
+	}
+	if n := countCacheFiles(t, dir); n != 1 {
+		t.Fatalf("cache files = %d, want 1", n)
+	}
+
+	close(release)
+	r2, err := pool.GetReader(context.Background(), "a", int64(len(data)), getter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = r2.Close() }()
+	got, err := io.ReadAll(r2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, data) {
+		t.Fatal("reused cache payload mismatch")
+	}
+	if got := fetches.Load(); got != 1 {
+		t.Fatalf("fetches = %d, want 1", got)
 	}
 }
 
-type blockedFillReader struct {
+// releaseReader blocks the first source read until release is closed, or until
+// the fill context is cancelled.
+type releaseReader struct {
+	io.Reader
 	ctx     context.Context
+	release <-chan struct{}
 	started chan struct{}
-	stopped chan error
 	once    sync.Once
 }
 
-func (r *blockedFillReader) Read([]byte) (int, error) {
+func (r *releaseReader) Read(p []byte) (int, error) {
 	r.once.Do(func() { close(r.started) })
-	<-r.ctx.Done()
-	err := r.ctx.Err()
 	select {
-	case r.stopped <- err:
-	default:
+	case <-r.release:
+	case <-r.ctx.Done():
+		return 0, r.ctx.Err()
 	}
-	return 0, err
+	return r.Reader.Read(p)
 }
 
-func (r *blockedFillReader) Close() error { return nil }
+func (r *releaseReader) Close() error { return nil }
 
 func TestCacheFilePool_ConcurrentReaders(t *testing.T) {
 	dir := t.TempDir()
@@ -498,4 +532,36 @@ func TestCacheFilePool_EvictionKeepsFileWhileActive(t *testing.T) {
 
 	_ = r1.Close()
 	eventually(t, 2*time.Second, func() bool { return countCacheFiles(t, dir) == 1 })
+}
+
+func TestDownloadMap(t *testing.T) {
+	block := int64(cacheBlockSize)
+	if got := downloadMap(0, nil); got != "" {
+		t.Fatalf("empty file: got %q", got)
+	}
+	if got := downloadMap(block, [][]int64{{0, block}}); got != "#" {
+		t.Fatalf("one full block: got %q", got)
+	}
+	if got := downloadMap(block*3, [][]int64{{block, block * 2}}); got != "_#_" {
+		t.Fatalf("middle block: got %q", got)
+	}
+	if got := downloadMap(block*2, [][]int64{{0, block / 2}}); got != "__" {
+		t.Fatalf("partial block: got %q", got)
+	}
+	if got := downloadMap(block*21, [][]int64{{0, block * 21}}); got != strings.Repeat("#", cacheMapCells) {
+		t.Fatalf("scaled full file: got %q", got)
+	}
+	half := strings.Repeat("#", cacheMapCells/2) + strings.Repeat("_", cacheMapCells/2)
+	if got := downloadMap(block*40, [][]int64{{0, block * 20}}); got != half {
+		t.Fatalf("scaled half file: got %q", got)
+	}
+	// 40 blocks scale to 20 cells, so the first cell is two blocks. One downloaded block is half of that cell.
+	partial := "=" + strings.Repeat("_", cacheMapCells-1)
+	if got := downloadMap(block*40, [][]int64{{0, block}}); got != partial {
+		t.Fatalf("scaled partial cell: got %q", got)
+	}
+	sparse := "." + strings.Repeat("_", cacheMapCells-1)
+	if got := downloadMap(block*40, [][]int64{{0, 1}}); got != sparse {
+		t.Fatalf("scaled sparse cell: got %q", got)
+	}
 }
