@@ -30,7 +30,7 @@ export default {
     description: T('handler.zip.desc'),
     icon: 'archive',
   },
-  supports: () => true,
+  supports: [],
   multiple: true,
   handler: async ({ entry: entries, parent }, { alert, loading }) => {
     let task: Task<ArtifactInfo> | undefined

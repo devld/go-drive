@@ -1,5 +1,5 @@
 import type { ConfigOptionsMap } from '@/store/options'
-import { Config, Entry, User } from '@/types'
+import type { Config, Entry, EntryType, User } from '@/types'
 import { UIUtils } from '@/utils/ui-utils'
 import type { IconName } from '@/components/icons'
 
@@ -88,6 +88,16 @@ export type EntrySupportsFunc<A> = (
   ctx: EntryHandlerContext
 ) => boolean
 
+export type EntryHandlerSupportsConfig = [
+  type?: EntryType | readonly EntryType[],
+  extensions?: string,
+  maxSize?: number,
+]
+
+export type EntryHandlerSupports<A> =
+  | EntrySupportsFunc<A>
+  | EntryHandlerSupportsConfig
+
 export interface EntryHandlerFuncReturns {
   /** should the entries list update */
   update?: boolean
@@ -105,7 +115,7 @@ export interface BaseEntryHandler<A> {
   name: string
   display: EntryHandlerDisplay<A>
   style?: EntryHandlerStyle
-  supports: EntrySupportsFunc<A>
+  supports: EntryHandlerSupports<A>
   multiple?: boolean
   view?: EntryHandlerView
   handler?: EntryHandlerFunc<A>
