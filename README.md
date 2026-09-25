@@ -199,4 +199,6 @@ Contributions are welcome! Please:
 
 ## License
 
-Released under the [MIT License](LICENSE). Copyright © 2020 devld.
+go-drive is released under the [MIT License](LICENSE). Copyright © 2020 devld.
+
+`server/webdav` is a modified copy of `golang.org/x/net/webdav`, including that package's internal fork of `encoding/xml`. It remains Copyright The Go Authors and is covered by the BSD-3-Clause license. See [NOTICE](NOTICE).

@@ -16,7 +16,7 @@ $(build_dir)/$(target_name).tar.gz: $(build_dir)/$(target_name)
 $(build_dir)/$(target_name).zip: $(build_dir)/$(target_name)
 	cd $(work_dir); zip -q -r $(target_name).zip $(target_name)
 
-$(build_dir)/$(target_name): $(build_dir)/go-drive $(build_dir)/config.yml
+$(build_dir)/$(target_name): $(build_dir)/go-drive $(build_dir)/config.yml $(build_dir)/LICENSE $(build_dir)/NOTICE $(build_dir)/LICENSE-webdav
 
 # The web UI (web/dist) and i18n files (docs/lang) are embedded into the binary,
 # so the frontend must be built before linking. The web UI embed only happens
@@ -32,6 +32,15 @@ $(build_dir)/go-drive: $(build_dir) web/dist
 
 $(build_dir)/config.yml: $(build_dir)
 	cp docs/config.yml $(build_dir)/
+
+$(build_dir)/LICENSE: LICENSE $(build_dir)
+	cp LICENSE $(build_dir)/
+
+$(build_dir)/NOTICE: NOTICE $(build_dir)
+	cp NOTICE $(build_dir)/
+
+$(build_dir)/LICENSE-webdav: server/webdav/LICENSE $(build_dir)
+	cp server/webdav/LICENSE $(build_dir)/LICENSE-webdav
 
 web/dist:
 	cd web; npm install && npm run build
