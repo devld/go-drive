@@ -74,6 +74,9 @@ The whole application ships as a single self-contained binary (the web UI and i1
 | Google Drive | Google Drive |
 | Dropbox | Implemented as a scripted (JavaScript) drive |
 | Qiniu | Qiniu Cloud, implemented as a scripted (JavaScript) drive |
+| 123Pan Open | 123Pan official Open API, implemented as a scripted (JavaScript) drive |
+| pCloud | pCloud HTTP API, implemented as a scripted (JavaScript) drive |
+| Yandex Disk | Yandex Disk REST API, implemented as a scripted (JavaScript) drive |
 
 See the [documentation](https://go-drive.top) for per-drive setup details.
 
