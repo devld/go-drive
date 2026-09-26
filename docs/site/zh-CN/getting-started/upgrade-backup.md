@@ -3,7 +3,7 @@ title: 升级、备份与恢复
 description: 安全升级 go-drive，并备份或恢复数据库、配置、本地文件、会话、脚本及生成的缓存数据。
 lang: zh-CN
 translation_key: upgrade-backup
-source_hash: 98ce5aee55fb83b5e59d1fdb9bf700263cbde1c8e550b8b619d9d51f3c015bf5
+source_hash: 4def8d4e0b97b85a93fd5e6a283b3c3373dafc43960adb20bc7fa33d5e96d4dd
 ---
 
 # 升级、备份与恢复
@@ -18,6 +18,8 @@ source_hash: 98ce5aee55fb83b5e59d1fdb9bf700263cbde1c8e550b8b619d9d51f3c015bf5
 不要只复制 `data.db`。SQLite 默认使用 WAL，运行期间还可能存在 `data.db-wal` 和 `data.db-shm`；最稳妥的做法是在停止进程后备份整个数据目录。
 
 对于 MySQL，使用数据库自身的一致性备份工具，同时备份 `data-dir` 中的本地文件、脚本 Drive 和其他非数据库数据。
+
+数据库里的网盘机密由 `GO_DRIVE_ENCRYPTION_KEY` 或 `data-dir/encryption.key` 加密。恢复数据库时必须使用同一把密钥。
 
 ## Docker 升级
 

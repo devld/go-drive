@@ -29,6 +29,8 @@ type memDriveData struct {
 	data types.SM
 }
 
+func (m *memDriveData) SaveEncrypted(data types.SM) error { return m.Save(data) }
+
 func (m *memDriveData) Save(data types.SM) error {
 	if m.data == nil {
 		m.data = types.SM{}

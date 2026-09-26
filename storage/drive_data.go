@@ -4,23 +4,28 @@ import (
 	"errors"
 	"go-drive/common/driveutil"
 	"go-drive/common/registry"
+	"go-drive/common/secretbox"
 	"go-drive/common/types"
 
 	"gorm.io/gorm"
 )
 
 type DriveDataDAO struct {
-	db *DB
+	db      *DB
+	secrets *secretbox.Box
 }
 
 func NewDriveDataDAO(db *DB, ch *registry.ComponentsHolder) *DriveDataDAO {
-	dao := &DriveDataDAO{db}
+	dao := &DriveDataDAO{
+		db:      db,
+		secrets: ch.Get(registry.KeySecretBox).(*secretbox.Box),
+	}
 	ch.Add(registry.KeyDriveDataDAO, dao)
 	return dao
 }
 
 func (d *DriveDataDAO) GetDataStore(ns string) driveutil.DriveDataStore {
-	return &dbDriveNamespacedDataStore{db: d.db, ns: ns}
+	return &dbDriveNamespacedDataStore{db: d.db, ns: ns, secrets: d.secrets}
 }
 
 func (d *DriveDataDAO) Remove(ns string) error {
@@ -28,8 +33,9 @@ func (d *DriveDataDAO) Remove(ns string) error {
 }
 
 type dbDriveNamespacedDataStore struct {
-	ns string
-	db *DB
+	ns      string
+	db      *DB
+	secrets *secretbox.Box
 }
 
 func (d *dbDriveNamespacedDataStore) save(db *gorm.DB, key string, value string) error {
@@ -60,6 +66,18 @@ func (d *dbDriveNamespacedDataStore) Save(m types.SM) error {
 	})
 }
 
+func (d *dbDriveNamespacedDataStore) SaveEncrypted(m types.SM) error {
+	sealed := make(types.SM, len(m))
+	for key, val := range m {
+		encrypted, e := d.secrets.Encrypt(val)
+		if e != nil {
+			return e
+		}
+		sealed[key] = encrypted
+	}
+	return d.Save(sealed)
+}
+
 func (d *dbDriveNamespacedDataStore) Load(key string, keys ...string) (types.SM, error) {
 	items := make([]types.DriveData, 0)
 	query := d.db.C().Where("`drive` = ?", d.ns)
@@ -71,7 +89,11 @@ func (d *dbDriveNamespacedDataStore) Load(key string, keys ...string) (types.SM,
 	}
 	r := make(types.SM, len(items))
 	for _, i := range items {
-		r[i.Key] = i.Value
+		opened, e := d.secrets.Decrypt(i.Value)
+		if e != nil {
+			return nil, e
+		}
+		r[i.Key] = opened
 	}
 	return r, nil
 }

@@ -32,8 +32,11 @@ type OAuthConfig struct {
 type DriveCacheFactory = func(EntryDeserialize) DriveCache
 
 // DriveDataStore is a place to store drive's runtime data, such as token, refresh token.
+// Save writes plaintext. SaveEncrypted seals each non-empty value.
+// Load opens values that carry the seal marker and returns other values unchanged.
 type DriveDataStore interface {
 	Save(types.SM) error
+	SaveEncrypted(types.SM) error
 	Load(string, ...string) (types.SM, error)
 	Clear() error
 }

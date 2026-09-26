@@ -18,6 +18,8 @@ Do not copy only `data.db`. SQLite uses WAL by default and `data.db-wal` and `da
 
 For MySQL, use the database server's consistency-aware backup tools and separately back up local files, script drives, and other non-database content in `data-dir`.
 
+Drive secrets in the database are sealed with `GO_DRIVE_ENCRYPTION_KEY` or `data-dir/encryption.key`. A database backup cannot be restored without the same secret.
+
 ## Upgrade with Docker
 
 ```bash

@@ -3,7 +3,7 @@ title: 配置文件参考
 description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: f7e45f76897a406a5244b364467b9f12aca2d5c6d28a9e7de403733e05a60b64
+source_hash: 4799943162deaeee50eb14f47706e1d0a12ae812f3ecab9720679cc4de49ceb9
 ---
 
 # 配置文件参考
@@ -116,6 +116,8 @@ web-path: ""
 SQLite 适合单实例部署。数据库位于 `data-dir/<db.name>`，默认启用 WAL 和 5 秒 busy timeout。
 
 MySQL 至少需要设置 `type`、`host`、`name`、`user` 和 `password`。`db.config` 会作为 DSN 参数传给 GORM；不要把真实密码提交到版本库。
+
+网盘密码、私钥和 OAuth token 写入数据库前会加密。首次启动时，如果没有设置 `GO_DRIVE_ENCRYPTION_KEY`，go-drive 会在 `data-dir/encryption.key` 生成密钥文件（权限 `0600`）。环境变量和文件同时存在时，内容必须一致。请把实际使用的那一份和数据库一起备份；密钥丢失后，已保存的网盘机密无法解密，需要重新填写。
 
 ## LDAP
 

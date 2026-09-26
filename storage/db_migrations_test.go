@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"go-drive/common/driveutil"
+	"go-drive/common/secretbox"
 	"go-drive/common/types"
 
 	"gorm.io/driver/sqlite"
@@ -390,4 +391,100 @@ func TestRunDBMigrationsAlwaysRunsEveryStartup(t *testing.T) {
 	if version != 1 {
 		t.Fatalf("version = %d, want 1", version)
 	}
+}
+
+func TestMigrateEncryptDriveSecretsSealsExistingFields(t *testing.T) {
+	db := newIsolatedGormDB(t)
+	secrets, e := secretbox.New("migration-test")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = db.Create(&types.Drive{
+		Name: "files", Type: "s3", Enabled: true,
+		Config: `{"id":"ak","secret":"sk","bucket":"b"}`,
+	}).Error; e != nil {
+		t.Fatal(e)
+	}
+	if e = db.Create(&types.Drive{
+		Name: "local", Type: "fs", Enabled: true, Config: `{"path":"photos"}`,
+	}).Error; e != nil {
+		t.Fatal(e)
+	}
+	rows := []types.DriveData{
+		{Drive: "cloud", Key: driveutil.DsKeyToken, Value: "access"},
+		{Drive: "cloud", Key: driveutil.DsKeyRefreshToken, Value: "refresh"},
+		{Drive: "cloud", Key: "drive_id", Value: "root"},
+	}
+	if e = db.Create(&rows).Error; e != nil {
+		t.Fatal(e)
+	}
+
+	if e = migrateEncryptDriveSecrets(db, secrets); e != nil {
+		t.Fatal(e)
+	}
+	if e = migrateEncryptDriveSecrets(db, secrets); e != nil {
+		t.Fatal(e)
+	}
+
+	var s3 types.Drive
+	if e = db.Where("`name` = ?", "files").First(&s3).Error; e != nil {
+		t.Fatal(e)
+	}
+	config := types.SM{}
+	if e = json.Unmarshal([]byte(s3.Config), &config); e != nil {
+		t.Fatal(e)
+	}
+	opened, e := secrets.Decrypt(config["secret"])
+	if e != nil {
+		t.Fatal(e)
+	}
+	config["secret"] = opened
+	if config["id"] != "ak" || config["secret"] != "sk" || config["bucket"] != "b" {
+		t.Fatalf("config = %#v", config)
+	}
+	if !secretbox.IsSealed(mustConfigField(t, s3.Config, "secret")) {
+		t.Fatal("secret was not sealed")
+	}
+	if mustConfigField(t, s3.Config, "id") != "ak" {
+		t.Fatal("id was sealed")
+	}
+
+	var local types.Drive
+	if e = db.Where("`name` = ?", "local").First(&local).Error; e != nil {
+		t.Fatal(e)
+	}
+	if local.Config != `{"path":"photos"}` {
+		t.Fatalf("fs config changed: %s", local.Config)
+	}
+
+	var stored []types.DriveData
+	if e = db.Where("`drive` = ?", "cloud").Find(&stored).Error; e != nil {
+		t.Fatal(e)
+	}
+	got := types.SM{}
+	for _, row := range stored {
+		got[row.Key] = row.Value
+	}
+	if !secretbox.IsSealed(got[driveutil.DsKeyToken]) || !secretbox.IsSealed(got[driveutil.DsKeyRefreshToken]) {
+		t.Fatalf("oauth values = %#v", got)
+	}
+	if got["drive_id"] != "root" {
+		t.Fatalf("drive_id = %q", got["drive_id"])
+	}
+	token, e := secrets.Decrypt(got[driveutil.DsKeyToken])
+	if e != nil {
+		t.Fatal(e)
+	}
+	if token != "access" {
+		t.Fatalf("token = %q", token)
+	}
+}
+
+func mustConfigField(t *testing.T, raw, field string) string {
+	t.Helper()
+	values := types.SM{}
+	if e := json.Unmarshal([]byte(raw), &values); e != nil {
+		t.Fatal(e)
+	}
+	return values[field]
 }

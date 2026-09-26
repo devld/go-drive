@@ -17,8 +17,8 @@ translation_key: security
 - Apply least privilege to anonymous users, normal users, group root paths, and path permissions.
 - Keep anonymous WebDAV access disabled by default.
 - Use LDAPS/StartTLS and certificate validation for LDAP.
-- Back up the database and data directory regularly and test restores.
-- Never expose database passwords, OAuth secrets, LDAP credentials, or file-bucket tokens in repositories, logs, or issues.
+- Back up the database and data directory regularly and test restores. Include `data-dir/encryption.key`, or keep a copy of `GO_DRIVE_ENCRYPTION_KEY`, with that backup.
+- Never expose database passwords, OAuth secrets, LDAP credentials, file-bucket tokens, or the drive encryption key in repositories, logs, or issues.
 
 ## Authentication and sessions
 

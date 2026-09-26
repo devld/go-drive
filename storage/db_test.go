@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"go-drive/common/registry"
+	"go-drive/common/secretbox"
 	"go-drive/common/types"
 	"go-drive/testutil"
 	"os"
@@ -15,6 +16,9 @@ func newTestDB(t *testing.T) (*DB, *registry.ComponentsHolder, func()) {
 	t.Helper()
 	config := testutil.DefaultTestConfig() // uses shared config from GetSharedTestConfig
 	ch := registry.NewComponentHolder()
+	if _, err := secretbox.Open(config.DataDir, ch); err != nil {
+		t.Fatalf("secretbox.Open: %v", err)
+	}
 	db, err := NewDB(config, ch)
 	if err != nil {
 		t.Fatalf("NewDB: %v", err)

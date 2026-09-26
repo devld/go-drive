@@ -49,6 +49,9 @@ db:
 # - temp: Temp dir
 # - thumbnails: Thumbnail cache dir
 # - data.db: SQLite database file
+# - encryption.key: key that seals drive secrets stored in the database.
+#   GO_DRIVE_ENCRYPTION_KEY overrides this file. When both are set they must match.
+#   Back this file up with the database. Losing it makes stored secrets unreadable.
 data-dir: ./data
 
 # Temp dir. Default is data-dir/temp

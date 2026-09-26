@@ -2,6 +2,7 @@ package server
 
 import (
 	"go-drive/common/registry"
+	"go-drive/common/secretbox"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/storage"
@@ -22,6 +23,9 @@ func newTestDBTokenStore(t *testing.T) (*DBTokenStore, *storage.UserDAO, func())
 	t.Helper()
 	config, _ := testutil.GetSharedTestConfig()
 	ch := registry.NewComponentHolder()
+	if _, e := secretbox.Open(config.DataDir, ch); e != nil {
+		t.Fatalf("secretbox.Open: %v", e)
+	}
 	db, e := storage.NewDB(config, ch)
 	if e != nil {
 		t.Fatalf("NewDB: %v", e)
