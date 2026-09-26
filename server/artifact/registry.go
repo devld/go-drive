@@ -75,10 +75,11 @@ type OptionReader interface {
 	GetValue(key string) types.SV
 }
 
-// HandlerContext is the shared constructor input used when the artifact
+// HandlerDeps is the shared constructor input used when the artifact
 // service creates registered handlers.
-type HandlerContext struct {
-	Config common.Config
+type HandlerDeps struct {
+	Config  common.Config
+	DriveFS *driveutil.DriveFS
 	// Options is the process options DAO. It is nil in tests that do not
 	// configure operator settings.
 	Options OptionReader
@@ -88,7 +89,7 @@ type HandlerContext struct {
 }
 
 // HandlerFactory constructs a handler from the shared artifact runtime.
-type HandlerFactory func(HandlerContext) (Handler, error)
+type HandlerFactory func(HandlerDeps) (Handler, error)
 
 type handlerFactoryEntry struct {
 	name    string

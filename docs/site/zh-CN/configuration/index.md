@@ -3,7 +3,7 @@ title: 配置文件参考
 description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: 4799943162deaeee50eb14f47706e1d0a12ae812f3ecab9720679cc4de49ceb9
+source_hash: 8449fb3c1b9c03e25b41c6de2f27a0bd22248dbd8215599f04e65a30cb7391d9
 ---
 
 # 配置文件参考
@@ -35,6 +35,10 @@ db:
 
 data-dir: ./data
 temp-dir: ""                 # 空值表示 data-dir/temp
+# WebDAV 与压缩包预览共用的 DriveFS 源文件缓存。
+vfs:
+  cache-items: 1000
+  cache-size: 4g
 
 drives-dir: script-drives
 drive-uploaders-dir: drive-uploaders
@@ -60,9 +64,6 @@ archive:
   max-size: 2g
   max-member-size: 512m
   max-entries: 100000
-  # 检查压缩包时使用的远程稀疏源文件缓存限制。
-  cache-items: 128
-  cache-size: 4g
   index-ttl: 24h
   # 解压文件产物使用独立的总字节数和 TTL 限制。
   content-cache-size: 4g
@@ -79,7 +80,6 @@ auth:
 #   enabled: true
 #   prefix: /dav
 #   allow-anonymous: false
-#   max-cache-items: 1000
 
 search:
   enabled: false
@@ -102,6 +102,8 @@ web-path: ""
 | `trusted-proxies` | 空 | 可以提供 `X-Forwarded-For` 的代理 IP/CIDR |
 | `data-dir` | `./data` | 数据库、本地盘、脚本、会话、缓存等数据目录 |
 | `temp-dir` | `data-dir/temp` | 上传、复制等临时文件目录 |
+| `vfs.cache-items` | `1000` | WebDAV 与压缩包预览共用的 DriveFS 源文件缓存条目上限 |
+| `vfs.cache-size` | `4g` | 该缓存的总字节上限 |
 | `max-concurrent-task` | `100` | 复制、移动、删除等后台任务并发数。同样数量的任务可以等待，超出后提交会被拒绝 |
 | `free-fs` | `false` | 是否允许本地 Drive 使用绝对路径；风险很高 |
 | `signature-ttl` | `12h` | 文件内容和缩略图签名 URL 的有效时间 |
@@ -160,7 +162,7 @@ auth:
 
 ## 压缩包预览
 
-内置压缩包处理器支持 ZIP、7z 和 RAR。`max-size` 限制服务器检查的压缩文件大小，`max-member-size` 限制单个解压文件大小，`max-entries` 限制索引的内部文件数量。`cache-items` 和 `cache-size` 限制检查压缩包时使用的远程稀疏源文件缓存，`index-ttl` 控制完整内部文件索引的有效期。解压文件预览会生成完整产物，并使用独立的 `content-cache-size` 总字节数上限和 `content-cache-ttl` 有效期。`pack-ttl` 控制打包 zip 生成后可下载的时长。`concurrent` 分别限制压缩包预览和 zip 打包的并发任务数，每组默认都是 4。
+内置压缩包处理器支持 ZIP、7z 和 RAR。`max-size` 限制服务器检查的压缩文件大小，`max-member-size` 限制单个解压文件大小，`max-entries` 限制索引的内部文件数量。`index-ttl` 控制完整内部文件索引的有效期。解压文件预览会生成完整产物，并使用独立的 `content-cache-size` 总字节数上限和 `content-cache-ttl` 有效期。`pack-ttl` 控制打包 zip 生成后可下载的时长。`concurrent` 分别限制压缩包预览和 zip 打包的并发任务数，每组默认都是 4。
 
 请求达到短等待时间后，压缩包检查仍可在后台继续执行。Web UI 会轮询任务并在产物完成后打开；关闭预览窗口只会停止轮询，不会取消后台处理。
 
@@ -168,8 +170,6 @@ auth:
 
 - WebDAV 默认关闭。`allow-anonymous` 仍受路径权限约束；公开启用前务必测试匿名权限。
 - 搜索器当前为 `sqlite`，旧的 `bleve` 配置已经无效。
-- `web-dav.max-cache-items` 控制 WebDAV 文件对象缓存上限。
-- 全局 `cache` 当前使用内存实现，`clean-period` 控制定期清理周期。
 
 更多内容：
 

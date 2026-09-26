@@ -3,7 +3,7 @@ title: 通过 WebDAV 访问
 description: 启用 go-drive WebDAV 服务，并通过反向代理连接桌面、移动端、Linux 和命令行客户端。
 lang: zh-CN
 translation_key: webdav-access
-source_hash: c8be6341b2f8b9111fdee54b1e3f81903f2832be6cf9026a78482fcf5a528634
+source_hash: f5bee153ee993a8d946bd35999014e24afae1e49f2b1259543c0cedcce5c653c
 ---
 
 # 通过 WebDAV 访问
@@ -15,7 +15,6 @@ web-dav:
   enabled: true
   prefix: /dav
   allow-anonymous: false
-  max-cache-items: 1000
 ```
 
 重启后，WebDAV 地址为：
@@ -36,7 +35,6 @@ web-dav:
   enabled: true
   prefix: /drive/dav
   allow-anonymous: false
-  max-cache-items: 1000
 ```
 
 客户端地址是 `https://example.com/drive/dav/`。代理必须转发 `PROPFIND`、`PROPPATCH`、`MKCOL`、`COPY`、`MOVE`、`LOCK`、`UNLOCK`、`PUT` 和 `DELETE` 等方法。
@@ -53,7 +51,7 @@ web-dav:
 
 ## 缓存和临时空间
 
-WebDAV 将虚拟 Drive 适配成文件系统接口。部分操作需要在 `temp-dir` 缓存文件；`max-cache-items` 控制同时缓存的文件对象数。大量并发或大文件操作时监控临时目录空间。
+WebDAV 将虚拟 Drive 适配成文件系统接口，并通过共用的 DriveFS 源文件缓存读取文件内容。`vfs.cache-items` 和 `vfs.cache-size` 限制该缓存。大量并发或大文件操作时监控临时目录空间。
 
 ## 客户端示例
 

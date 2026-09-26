@@ -58,11 +58,9 @@ func defaultTestConfigWithDirs(dataDir, tempDir string) common.Config {
 			TTL: common.DefaultThumbnailTTL,
 		},
 		Archive: common.ArchiveConfig{
-			MaxSize:       "2g",
-			MaxMemberSize: "512m",
+			MaxSize:       common.DefaultArchiveMaxSize,
+			MaxMemberSize: common.DefaultArchiveMaxMembers,
 			MaxEntries:    common.DefaultArchiveMaxEntries,
-			CacheItems:    common.DefaultArchiveCacheItems,
-			CacheSize:     "4g",
 			IndexTTL:      common.DefaultArchiveIndexTTL,
 		},
 		Auth: common.AuthConfig{
@@ -71,9 +69,12 @@ func defaultTestConfigWithDirs(dataDir, tempDir string) common.Config {
 		},
 		SignatureTTL: common.DefaultSignatureTTL,
 		WebDav: common.WebDavConfig{
-			Enabled:       false,
-			Prefix:        common.DefaultWebDavPrefix,
-			MaxCacheItems: common.DefaultWebDavMaxCacheItems,
+			Enabled: false,
+			Prefix:  common.DefaultWebDavPrefix,
+		},
+		VFS: common.VFSConfig{
+			CacheItems: common.DefaultVFSCacheItems,
+			CacheSize:  common.DefaultVFSCacheSize,
 		},
 		Search: common.SearchConfig{
 			Type: common.DefaultSearcher,

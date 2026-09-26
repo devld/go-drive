@@ -3,7 +3,7 @@ title: 反向代理和子路径部署
 description: 将 go-drive 部署到 Nginx 等反向代理之后，正确配置 HTTPS 请求头、WebSocket 转发和子路径访问。
 lang: zh-CN
 translation_key: reverse-proxy
-source_hash: 862b075a3d8c2ff0c6810bd223636ec393f23579e2d6e7e4cc985921dffcefab
+source_hash: d80e35240f60f52ac4c33a60743361351027368760435028f78a20b349168adb
 ---
 
 # 反向代理和子路径部署
@@ -48,7 +48,6 @@ web-dav:
   enabled: true
   prefix: /drive/dav
   allow-anonymous: false
-  max-cache-items: 1000
 
 trusted-proxies:
   - 127.0.0.1

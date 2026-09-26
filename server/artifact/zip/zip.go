@@ -58,10 +58,10 @@ func init() {
 	artifact.RegisterHandler(HandlerName, NewHandler)
 }
 
-func NewHandler(ctx artifact.HandlerContext) (artifact.Handler, error) {
-	ttl := utils.PositiveOr(ctx.Config.Archive.PackTTL, common.DefaultArchivePackTTL)
-	concurrency := utils.PositiveOr(ctx.Config.Archive.Concurrent, common.DefaultArchiveConcurrent)
-	return &Handler{ttl: ttl, concurrency: concurrency, options: ctx.Options}, nil
+func NewHandler(deps artifact.HandlerDeps) (artifact.Handler, error) {
+	ttl := utils.PositiveOr(deps.Config.Archive.PackTTL, common.DefaultArchivePackTTL)
+	concurrency := utils.PositiveOr(deps.Config.Archive.Concurrent, common.DefaultArchiveConcurrent)
+	return &Handler{ttl: ttl, concurrency: concurrency, options: deps.Options}, nil
 }
 
 func (h *Handler) Spec() artifact.Spec {

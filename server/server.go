@@ -36,6 +36,7 @@ func InitServer(config common.Config,
 	bus event.Bus,
 	rootDrive *drive.RootDrive,
 	driveAccess *drive.Access,
+	driveFS *driveutil.DriveFS,
 	searcher *search.Service,
 	tokenStore types.TokenStore,
 	artifactService *artifact.Service,
@@ -102,7 +103,7 @@ func InitServer(config common.Config,
 	}
 
 	if config.WebDav.Enabled {
-		if e := InitWebdavAccess(engine, config, driveAccess, userAuth); e != nil {
+		if e := InitWebdavAccess(engine, config, driveAccess, userAuth, driveFS); e != nil {
 			return nil, e
 		}
 	}

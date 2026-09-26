@@ -34,6 +34,10 @@ db:
 
 data-dir: ./data
 temp-dir: ""                 # Empty means data-dir/temp
+# DriveFS source cache shared by WebDAV and archive preview.
+vfs:
+  cache-items: 1000
+  cache-size: 4g
 
 drives-dir: script-drives
 drive-uploaders-dir: drive-uploaders
@@ -59,9 +63,6 @@ archive:
   max-size: 2g
   max-member-size: 512m
   max-entries: 100000
-  # Sparse remote source cache limits used while inspecting an archive.
-  cache-items: 128
-  cache-size: 4g
   index-ttl: 24h
   # Complete decompressed member artifacts use a separate byte/TTL policy.
   content-cache-size: 4g
@@ -78,7 +79,6 @@ auth:
 #   enabled: true
 #   prefix: /dav
 #   allow-anonymous: false
-#   max-cache-items: 1000
 
 search:
   enabled: false
@@ -101,6 +101,8 @@ web-path: ""
 | `trusted-proxies` | Empty | Proxy IPs/CIDRs allowed to supply `X-Forwarded-For` |
 | `data-dir` | `./data` | Database, local files, scripts, sessions, and cache data |
 | `temp-dir` | `data-dir/temp` | Temporary files for upload, copy, and related work |
+| `vfs.cache-items` | `1000` | Maximum number of files in the DriveFS source cache shared by WebDAV and archive preview |
+| `vfs.cache-size` | `4g` | Maximum total bytes in that cache |
 | `max-concurrent-task` | `100` | Concurrent copy, move, delete, and background tasks. The same number may wait; further submissions are rejected |
 | `free-fs` | `false` | Allow local drives to use absolute paths; high risk |
 | `signature-ttl` | `12h` | Lifetime of signed file-content and thumbnail URLs |
@@ -162,8 +164,7 @@ Handler types are `image`, `text`, and `shell`. Shell handlers accept `shell`, `
 The built-in archive handler supports ZIP, 7z, and RAR. `max-size` limits the
 compressed source inspected by the server; `max-member-size` limits one
 decompressed member; and `max-entries` bounds the indexed member count.
-`cache-items` and `cache-size` limit the sparse remote source cache used while
-inspecting archives. The complete member index uses `index-ttl`. Decompressed
+The complete member index uses `index-ttl`. Decompressed
 member preview bodies are complete artifacts and use the independent
 `content-cache-size` byte budget and `content-cache-ttl` validity period.
 `pack-ttl` is how long a generated zip download stays available after it is
@@ -178,8 +179,6 @@ artifact; closing the view only stops polling.
 
 - WebDAV is disabled by default. `allow-anonymous` remains subject to path permissions; test anonymous access before public deployment.
 - The current search engine is `sqlite`; the old `bleve` setting is invalid.
-- `web-dav.max-cache-items` limits the WebDAV file-object cache.
-- The global `cache` currently uses an in-memory implementation; `clean-period` controls periodic cleanup.
 
 See also:
 

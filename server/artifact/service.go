@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common"
+	"go-drive/common/driveutil"
 	apierr "go-drive/common/errors"
 	"go-drive/common/logging"
 	"go-drive/common/task"
@@ -40,7 +41,7 @@ var (
 	_ types.IDisposable = (*Service)(nil)
 )
 
-func NewService(config common.Config, runner task.Runner, options OptionReader) (*Service, error) {
+func NewService(config common.Config, runner task.Runner, options OptionReader, files *driveutil.DriveFS) (*Service, error) {
 	tempDir := config.TempDir
 	if tempDir == "" {
 		tempDir = os.TempDir()
@@ -55,12 +56,13 @@ func NewService(config common.Config, runner task.Runner, options OptionReader) 
 		handlers: make(map[string]Handler),
 	}
 	for _, entry := range handlerFactories {
-		handlerCtx := HandlerContext{
+		handlerDeps := HandlerDeps{
 			Config:  config,
 			Options: options,
 			Cache:   handlerCache{service: service, handler: entry.name},
+			DriveFS: files,
 		}
-		handler, err := entry.factory(handlerCtx)
+		handler, err := entry.factory(handlerDeps)
 		if err != nil {
 			return nil, fmt.Errorf("create artifact handler %q: %w", entry.name, err)
 		}

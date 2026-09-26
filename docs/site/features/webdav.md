@@ -14,7 +14,6 @@ web-dav:
   enabled: true
   prefix: /dav
   allow-anonymous: false
-  max-cache-items: 1000
 ```
 
 After restarting, the WebDAV address is:
@@ -35,7 +34,6 @@ web-dav:
   enabled: true
   prefix: /drive/dav
   allow-anonymous: false
-  max-cache-items: 1000
 ```
 
 The client address is `https://example.com/drive/dav/`. The proxy must forward methods including `PROPFIND`, `PROPPATCH`, `MKCOL`, `COPY`, `MOVE`, `LOCK`, `UNLOCK`, `PUT`, and `DELETE`.
@@ -52,7 +50,7 @@ For a public read-only service, make sure `ANY` has no write permission.
 
 ## Cache and temporary space
 
-WebDAV adapts virtual Drives to a filesystem interface. Some operations cache files in `temp-dir`; `max-cache-items` controls the number of file objects cached simultaneously. Monitor temporary-directory space during high concurrency or large-file operations.
+WebDAV adapts virtual Drives to a filesystem interface and reads file bytes through the shared DriveFS source cache. `vfs.cache-items` and `vfs.cache-size` limit that cache. Monitor temporary-directory space during high concurrency or large-file operations.
 
 ## Client examples
 

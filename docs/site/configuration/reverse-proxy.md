@@ -47,7 +47,6 @@ web-dav:
   enabled: true
   prefix: /drive/dav
   allow-anonymous: false
-  max-cache-items: 1000
 
 trusted-proxies:
   - 127.0.0.1
