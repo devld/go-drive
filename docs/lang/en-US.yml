@@ -104,6 +104,39 @@ drive:
     oauth_text: Connect to Google Drive
     drive_label: Drive
     my_drive_name: My Drive
+  mega:
+    name: MEGA
+    readme: MEGA cloud drive, see [Setup MEGA](https://go-drive.top/drives/mega)
+    form:
+      email:
+        label: Email
+        description: MEGA account email
+      password:
+        label: Password
+        description: MEGA account password
+      mfa:
+        label: Two-factor code
+        description: MEGA asks for this code only when the account has two-factor authentication and a new session is needed. The code is used once and is not saved.
+      root_path:
+        label: Root
+        description: Folder inside the MEGA cloud drive. Empty uses the cloud drive root. Inbox, rubbish, and incoming shares are not mounted.
+      delete_mode:
+        label: Permanent delete
+        description: Permanently delete files instead of moving them to the MEGA rubbish bin. Leave this unchecked to use the rubbish bin. Replaced files follow the same choice. The rubbish bin is not mounted here.
+      https:
+        label: HTTPS transfers
+        description: Use HTTPS for file transfers. MEGA recommends plain HTTP because file contents are already encrypted. Enable this when the network blocks HTTP.
+    missing_credentials: Email and password are required
+    bad_credentials: Invalid MEGA email or password
+    mfa_required: MEGA requires a two-factor code
+    blocked: MEGA account is blocked
+    quota: MEGA storage or transfer quota is exhausted
+    session_expired: MEGA session expired, please reload the drive
+    root_not_found: "MEGA folder '{{ 1 }}' was not found"
+    root_not_dir: "MEGA path '{{ 1 }}' is not a folder"
+    cannot_delete_root: Root cannot be deleted
+    cannot_list_file: Cannot list a file
+    not_a_directory: Parent path is not a folder
   onedrive:
     name: OneDrive
     readme: OneDrive, see [Setup OneDrive](https://go-drive.top/drives/onedrive)

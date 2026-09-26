@@ -28,10 +28,11 @@ type ReaderGetter func(context.Context, types.ReaderRange) (io.ReadCloser, error
 
 // CacheFilePoolOptions controls both the number and the approximate total
 // compressed size of cached sources. MaxBytes is zero for an unlimited byte
-// budget.
+// budget. BlockSize is the aligned fill size; zero uses the 10MiB default.
 type CacheFilePoolOptions struct {
 	MaxEntries   int
 	MaxBytes     int64
+	BlockSize    int64
 	Dir          string
 	CleanStartup bool
 }
@@ -52,7 +53,14 @@ func NewCacheFilePool(options CacheFilePoolOptions) (*CacheFilePool, error) {
 	if options.CleanStartup {
 		cleanupCacheFiles(dir)
 	}
-	pool := &CacheFilePool{dir: dir, maxBytes: options.MaxBytes}
+	pool := &CacheFilePool{
+		dir:       dir,
+		maxBytes:  options.MaxBytes,
+		blockSize: cacheBlockSize,
+	}
+	if options.BlockSize > 0 {
+		pool.blockSize = options.BlockSize
+	}
 	pool.entries, e = lru.NewWithEvict(maxCache, pool.onCacheEvicted)
 	if e != nil {
 		return nil, e
@@ -75,12 +83,13 @@ func cleanupCacheFiles(dir string) {
 }
 
 type CacheFilePool struct {
-	dir      string
-	entries  *lru.Cache[string, *cacheFile]
-	maxBytes int64
-	bytesMu  sync.Mutex
-	bytes    int64
-	mu       sync.Mutex
+	dir       string
+	entries   *lru.Cache[string, *cacheFile]
+	maxBytes  int64
+	blockSize int64
+	bytesMu   sync.Mutex
+	bytes     int64
+	mu        sync.Mutex
 }
 
 // Has reports whether a source currently has a live in-memory cache entry.
@@ -129,6 +138,7 @@ func (cfp *CacheFilePool) GetReader(ctx context.Context, key string, size int64,
 		name:       name,
 		key:        key,
 		size:       size,
+		blockSize:  cfp.blockSize,
 		getReader:  getReader,
 		fillCtx:    fillCtx,
 		fillCancel: fillCancel,
@@ -221,6 +231,7 @@ type cacheFile struct {
 	name       string
 	key        string
 	size       int64
+	blockSize  int64
 	fetches    atomic.Int64
 	getReader  ReaderGetter
 	fillCtx    context.Context
@@ -354,7 +365,7 @@ func (cf *cacheFile) readRequest(ctx context.Context, start, readLen int64) erro
 		return nil
 	}
 	end := start + readLen
-	blockSize := int64(cacheBlockSize)
+	blockSize := cf.blockSize
 
 	var offset, size int64
 
@@ -613,7 +624,7 @@ func (cf *cacheFile) writeCloseLog(cause error) {
 	if cf.size > 0 {
 		percent = fmt.Sprintf("%.1f%%", float64(downloaded)*100/float64(cf.size))
 	}
-	bar := downloadMap(cf.size, ranges)
+	bar := downloadMap(cf.size, cf.blockSize, ranges)
 	logger := logging.For("f-cache")
 	key := logging.Sanitize(cf.key)
 	fetches := cf.fetches.Load()
@@ -630,15 +641,18 @@ func (cf *cacheFile) writeCloseLog(cause error) {
 // Scaled cells use the intermediate glyphs for a partial download.
 const downloadMapRamp = "_.:-=+*#"
 
-// downloadMap draws downloaded ranges as one character per 10MiB block.
+// downloadMap draws downloaded ranges as one character per fill block.
 // Files longer than 20 blocks are scaled onto 20 characters. An unscaled cell
 // is '#' only when that whole block is downloaded. A scaled cell uses
 // downloadMapRamp to show how much of the cell has been downloaded.
-func downloadMap(size int64, ranges [][]int64) string {
+func downloadMap(size, blockSize int64, ranges [][]int64) string {
 	if size <= 0 {
 		return ""
 	}
-	chunks := (size + cacheBlockSize - 1) / cacheBlockSize
+	if blockSize <= 0 {
+		blockSize = cacheBlockSize
+	}
+	chunks := (size + blockSize - 1) / blockSize
 	cells := chunks
 	if cells > cacheMapCells {
 		cells = cacheMapCells
@@ -654,8 +668,8 @@ func downloadMap(size int64, ranges [][]int64) string {
 			start = size * i / cells
 			end = size * (i + 1) / cells
 		} else {
-			start = i * cacheBlockSize
-			end = min(start+cacheBlockSize, size)
+			start = i * blockSize
+			end = min(start+blockSize, size)
 		}
 		buf[i] = downloadGlyph(rangeDownloaded(ranges, start, end), end-start, scaled)
 	}

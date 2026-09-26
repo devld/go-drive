@@ -20,12 +20,13 @@ Add, edit, and enable Drives under **Admin → Drives**. After saving the config
 | S3 | Yes | Yes | Yes (files) | Browser direct upload/download or forced proxy |
 | OneDrive | Yes | Yes | Yes (files) | Browser direct upload/download or forced proxy |
 | Google Drive | Yes | Yes | Yes (files) | Supports exporting native Google files |
+| MEGA | Yes | Yes | No | Client-side encryption; file contents pass through go-drive |
 
 “Native copy” means the remote service can copy a file within the same Drive. Directory copies, cross-Drive copies, and types without native copy support are recursively read and written by go-drive, consuming server bandwidth and temporary space.
 
 ## Cache
 
-FTP, SFTP, WebDAV, S3, OneDrive, and Google Drive all provide `cache_ttl`. A value greater than zero caches directory entries to reduce remote requests. After a configuration change or a direct change in the external system, the interface may briefly show stale content.
+FTP, SFTP, WebDAV, S3, OneDrive, and Google Drive provide `cache_ttl`. A value greater than zero caches directory entries to reduce remote requests. After a configuration change or a direct change in the external system, the interface may briefly show stale content. MEGA keeps its node tree in memory after login, so it has no entry cache.
 
 - Normal interface operations try to invalidate the relevant cache entries.
 - External changes do not notify go-drive.

@@ -163,6 +163,38 @@ func TestCacheFilePool_ReadFull(t *testing.T) {
 	_ = r.Close()
 }
 
+func TestCacheFilePool_BlockSizeAlignsFills(t *testing.T) {
+	dir := t.TempDir()
+	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 2, Dir: dir, BlockSize: 4})
+	if e != nil {
+		t.Fatal(e)
+	}
+	data := []byte("0123456789")
+	var calls [][2]int64
+	getter := func(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
+		calls = append(calls, [2]int64{rg.Start, rg.Size})
+		return byteReaderGetter(data)(ctx, rg)
+	}
+	reader, e := pool.GetReader(context.Background(), "aligned", int64(len(data)), getter)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer func() { _ = reader.Close() }()
+	if _, e = reader.Seek(9, io.SeekStart); e != nil {
+		t.Fatal(e)
+	}
+	buf := make([]byte, 1)
+	if _, e = io.ReadFull(reader, buf); e != nil {
+		t.Fatal(e)
+	}
+	if buf[0] != '9' {
+		t.Fatalf("byte = %q", buf)
+	}
+	if len(calls) != 1 || calls[0] != [2]int64{8, 2} {
+		t.Fatalf("fills = %v", calls)
+	}
+}
+
 func TestCacheFilePool_SeekRead(t *testing.T) {
 	dir := t.TempDir()
 	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
@@ -537,32 +569,32 @@ func TestCacheFilePool_EvictionKeepsFileWhileActive(t *testing.T) {
 
 func TestDownloadMap(t *testing.T) {
 	block := int64(cacheBlockSize)
-	if got := downloadMap(0, nil); got != "" {
+	if got := downloadMap(0, block, nil); got != "" {
 		t.Fatalf("empty file: got %q", got)
 	}
-	if got := downloadMap(block, [][]int64{{0, block}}); got != "#" {
+	if got := downloadMap(block, block, [][]int64{{0, block}}); got != "#" {
 		t.Fatalf("one full block: got %q", got)
 	}
-	if got := downloadMap(block*3, [][]int64{{block, block * 2}}); got != "_#_" {
+	if got := downloadMap(block*3, block, [][]int64{{block, block * 2}}); got != "_#_" {
 		t.Fatalf("middle block: got %q", got)
 	}
-	if got := downloadMap(block*2, [][]int64{{0, block / 2}}); got != "__" {
+	if got := downloadMap(block*2, block, [][]int64{{0, block / 2}}); got != "__" {
 		t.Fatalf("partial block: got %q", got)
 	}
-	if got := downloadMap(block*21, [][]int64{{0, block * 21}}); got != strings.Repeat("#", cacheMapCells) {
+	if got := downloadMap(block*21, block, [][]int64{{0, block * 21}}); got != strings.Repeat("#", cacheMapCells) {
 		t.Fatalf("scaled full file: got %q", got)
 	}
 	half := strings.Repeat("#", cacheMapCells/2) + strings.Repeat("_", cacheMapCells/2)
-	if got := downloadMap(block*40, [][]int64{{0, block * 20}}); got != half {
+	if got := downloadMap(block*40, block, [][]int64{{0, block * 20}}); got != half {
 		t.Fatalf("scaled half file: got %q", got)
 	}
 	// 40 blocks scale to 20 cells, so the first cell is two blocks. One downloaded block is half of that cell.
 	partial := "=" + strings.Repeat("_", cacheMapCells-1)
-	if got := downloadMap(block*40, [][]int64{{0, block}}); got != partial {
+	if got := downloadMap(block*40, block, [][]int64{{0, block}}); got != partial {
 		t.Fatalf("scaled partial cell: got %q", got)
 	}
 	sparse := "." + strings.Repeat("_", cacheMapCells-1)
-	if got := downloadMap(block*40, [][]int64{{0, 1}}); got != sparse {
+	if got := downloadMap(block*40, block, [][]int64{{0, 1}}); got != sparse {
 		t.Fatalf("scaled sparse cell: got %q", got)
 	}
 }

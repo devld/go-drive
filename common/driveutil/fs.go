@@ -132,8 +132,8 @@ func (w *BoundDriveFS) OpenFile(ctx context.Context, name string, flag int, _ os
 	return w.newDriveFSFile(ctx, entry, flag), nil
 }
 
-// OpenEntry opens an existing file entry. Read-only opens use a native
-// *os.File when the entry already provides one, and otherwise use the cache
+// OpenEntry opens an existing file entry. Read-only opens use a seekable
+// reader when the entry already provides one, and otherwise use the cache
 // pool. This is the same read path as OpenFile.
 func (w *BoundDriveFS) OpenEntry(ctx context.Context, entry types.IEntry) (DriveFSFile, error) {
 	if entry == nil || !entry.Type().IsFile() {
@@ -526,10 +526,11 @@ func cacheFileKey(entry types.IEntry) (string, error) {
 	return fmt.Sprintf("%s,m:%d,s:%d", resolved.GetRealPath(), entry.ModTime(), entry.Size()), nil
 }
 
-// openLocalFile returns a native *os.File when GetReader already provides one.
-// URL-capable entries skip this probe so the range cache can fetch them. A
-// non-file reader is closed and the caller should use the cache pool.
-func openLocalFile(ctx context.Context, entry types.IEntry) (*os.File, error) {
+// openLocalFile returns a seekable reader when GetReader already provides one.
+// A native file and a drive-owned content cache both qualify, so those reads
+// do not also fill the shared DriveFS pool. URL-capable entries skip this
+// probe so the shared pool can fetch them by range. Any other reader is closed.
+func openLocalFile(ctx context.Context, entry types.IEntry) (io.ReadSeekCloser, error) {
 	if _, err := entry.GetURL(ctx); err == nil {
 		return nil, nil
 	}
@@ -537,12 +538,11 @@ func openLocalFile(ctx context.Context, entry types.IEntry) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	file, ok := reader.(*os.File)
-	if !ok {
-		_ = reader.Close()
-		return nil, nil
+	if seeker, ok := reader.(io.ReadSeekCloser); ok {
+		return seeker, nil
 	}
-	return file, nil
+	_ = reader.Close()
+	return nil, nil
 }
 
 func entriesToFileInfos(es []types.IEntry) []fs.FileInfo {

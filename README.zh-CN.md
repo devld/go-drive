@@ -202,3 +202,5 @@ npm run build-web  # 生产构建
 go-drive 基于 [MIT 许可证](LICENSE) 发布。版权所有 © 2020 devld。
 
 `server/webdav` 是 `golang.org/x/net/webdav` 的修改副本，包含该包内对 `encoding/xml` 的分叉。这部分代码的版权属于 The Go Authors，适用 BSD-3-Clause 许可证。详见 [NOTICE](NOTICE)。
+
+`drive/mega/internal/gomega` 是 `github.com/t3rm1n4l/go-mega` 的修改副本。这部分代码的版权属于 Sarath Lakshman（2019），适用 MIT 许可证。详见 [NOTICE](NOTICE)。

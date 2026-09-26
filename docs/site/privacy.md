@@ -38,7 +38,7 @@ The server records runtime errors and diagnostic information, which may include 
 
 Data is sent to third parties only when the operator configures or a user invokes the corresponding feature:
 
-- Storage backends such as OneDrive, Google Drive, S3, FTP, SFTP, and WebDAV receive authentication information, paths, file contents, and operation requests.
+- Storage backends such as OneDrive, Google Drive, MEGA, S3, FTP, SFTP, and WebDAV receive authentication information, paths, file contents, and operation requests. MEGA file contents are encrypted in go-drive before they are uploaded.
 - LDAP/LDAPS servers receive login usernames and passwords for authentication and may return group membership.
 - Microsoft and Google external file previewers receive a signed URL that can access the file.
 - Administrator-installed script Drives, job scripts, uploaders, and shell thumbnail commands may access the network or process file contents.

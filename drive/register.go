@@ -7,6 +7,7 @@ import (
 	"go-drive/drive/fs"
 	"go-drive/drive/ftp"
 	"go-drive/drive/gdrive"
+	"go-drive/drive/mega"
 	"go-drive/drive/onedrive"
 	"go-drive/drive/s3"
 	"go-drive/drive/script"
@@ -20,6 +21,7 @@ func RegisterAllDrives(ctx context.Context, config common.Config, driveRegistry 
 	fs.RegisterDrive(driveRegistry)
 	ftp.RegisterDrive(driveRegistry)
 	gdrive.RegisterDrive(driveRegistry)
+	mega.RegisterDrive(driveRegistry)
 	onedrive.RegisterDrive(driveRegistry)
 	s3.RegisterDrive(driveRegistry)
 	sftp.RegisterDrive(driveRegistry)

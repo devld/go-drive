@@ -1,14 +1,14 @@
 ---
 title: "go-drive: Self-Hosted File Manager for S3, WebDAV, and Cloud Storage"
 titleTemplate: false
-description: Manage local files, S3, WebDAV, FTP, SFTP, OneDrive, and Google Drive in one self-hosted go-drive server.
+description: Manage local files, S3, WebDAV, FTP, SFTP, OneDrive, Google Drive, and MEGA in one self-hosted go-drive server.
 lang: en
 translation_key: home
 ---
 
 # go-drive
 
-go-drive is a self-hosted file management server written in Go and Vue/TypeScript. It unifies local files, FTP, SFTP, WebDAV, S3, OneDrive, Google Drive, and script-based drives in one virtual directory tree, with permissions, search, WebDAV access, file buckets, thumbnails, and automated jobs.
+go-drive is a self-hosted file management server written in Go and Vue/TypeScript. It unifies local files, FTP, SFTP, WebDAV, S3, OneDrive, Google Drive, MEGA, and script-based drives in one virtual directory tree, with permissions, search, WebDAV access, file buckets, thumbnails, and automated jobs.
 
 > The default account on first startup is `admin` with password `123456`. Change it immediately after signing in, and read the [security guide](./configuration/security.html) before exposing the service publicly.
 
@@ -47,6 +47,7 @@ Open `http://localhost:8089`. See [Installation and startup](./getting-started/)
 | S3 | Amazon S3 and compatible storage | Endpoint, region, path style, proxied transfer |
 | OneDrive | Personal, organization, and SharePoint drives | Region, tenant, proxied transfer, cache |
 | Google Drive | Personal and shared drives | Cache |
+| MEGA | MEGA cloud drive | Email, password, root folder, cache |
 | Dropbox, Qiniu, and others | JavaScript extensions | Script drive repository |
 
 See the [drive overview](./drives/) for configuration details and capability limitations.

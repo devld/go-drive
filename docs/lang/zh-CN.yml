@@ -104,6 +104,39 @@ drive:
     oauth_text: 连接到 Google Drive
     drive_label: Drive
     my_drive_name: My Drive
+  mega:
+    name: MEGA
+    readme: MEGA 云盘，请参阅 [配置 MEGA](https://go-drive.top/drives/mega)
+    form:
+      email:
+        label: 邮箱
+        description: MEGA 账号邮箱
+      password:
+        label: 密码
+        description: MEGA 账号密码
+      mfa:
+        label: 双重验证码
+        description: 仅当账号开启了双重验证且需要新建会话时填写。验证码只用一次，不会保存。
+      root_path:
+        label: 根目录
+        description: MEGA 云盘中的文件夹。留空表示云盘根目录。不挂载收件箱、回收站和收到的共享。
+      delete_mode:
+        label: 永久删除
+        description: 勾选后删除文件时永久删除，不勾选则移到 MEGA 回收站。覆盖文件时也会按此处理被替换的文件。此 Drive 不挂载回收站。
+      https:
+        label: HTTPS 传输
+        description: 文件传输使用 HTTPS。MEGA 建议使用 HTTP，因为文件内容已经加密。网络拦截 HTTP 时再启用。
+    missing_credentials: 必须填写邮箱和密码
+    bad_credentials: MEGA 邮箱或密码不正确
+    mfa_required: MEGA 需要双重验证码
+    blocked: MEGA 账号已被冻结
+    quota: MEGA 存储或传输配额已用尽
+    session_expired: MEGA 会话已过期，请重新加载盘
+    root_not_found: "找不到 MEGA 文件夹 '{{ 1 }}'"
+    root_not_dir: "MEGA 路径 '{{ 1 }}' 不是文件夹"
+    cannot_delete_root: 不能删除根目录
+    cannot_list_file: 不能列出文件
+    not_a_directory: 父路径不是文件夹
   onedrive:
     name: OneDrive
     readme: OneDrive, 请参阅 [配置 OneDrive](https://go-drive.top/drives/onedrive)
