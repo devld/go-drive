@@ -103,7 +103,7 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry T
 		"GO_DRIVE_ENTRY_URL="+entry.GetExternalURL())
 
 	if entry.Type().IsFile() && s.writeContent {
-		reader, e := driveutil.GetIContentReader(ctx, entry, -1, -1)
+		reader, e := driveutil.GetIContentReader(ctx, entry, types.FullReaderRange())
 		if e != nil {
 			return e
 		}

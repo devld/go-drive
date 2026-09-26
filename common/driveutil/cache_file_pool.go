@@ -6,6 +6,7 @@ import (
 	"fmt"
 	err "go-drive/common/errors"
 	"go-drive/common/logging"
+	"go-drive/common/types"
 	"io"
 	"math"
 	"os"
@@ -23,7 +24,7 @@ const (
 	cacheMapCells  = 20
 )
 
-type ReaderGetter func(context.Context, int64, int64) (io.ReadCloser, error)
+type ReaderGetter func(context.Context, types.ReaderRange) (io.ReadCloser, error)
 
 // CacheFilePoolOptions controls both the number and the approximate total
 // compressed size of cached sources. MaxBytes is zero for an unlimited byte
@@ -382,7 +383,7 @@ func (cf *cacheFile) readRequest(ctx context.Context, start, readLen int64) erro
 
 	var reader io.ReadCloser
 
-	rc, e := cf.getReader(cf.fillCtx, offset, size)
+	rc, e := cf.getReader(cf.fillCtx, types.ReaderRange{Start: offset, Size: size})
 	if e == nil {
 		reader = rc
 	} else {
@@ -394,7 +395,7 @@ func (cf *cacheFile) readRequest(ctx context.Context, start, readLen int64) erro
 			// the whole file is being downloaded
 			return nil
 		}
-		rc, e = cf.getReader(cf.fillCtx, -1, -1)
+		rc, e = cf.getReader(cf.fillCtx, types.FullReaderRange())
 		if e != nil {
 			_ = cf.closeWithError(e)
 			return e

@@ -32,7 +32,7 @@ func newTextTypeHandler(c types.SM) (TypeHandler, error) {
 }
 
 func (t *textTypeHandler) CreateThumbnail(ctx context.Context, entry ThumbnailEntry, dest io.Writer) error {
-	reader, e := driveutil.GetIContentReader(ctx, entry, -1, -1)
+	reader, e := driveutil.GetIContentReader(ctx, entry, types.FullReaderRange())
 	if e != nil {
 		return e
 	}

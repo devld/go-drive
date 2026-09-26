@@ -234,11 +234,12 @@ declare interface DriveMethods {
     override: boolean,
     config: SM
   ): DriveUploadConfig | undefined;
-  getReader?(
-    entry: EntryRecord,
-    start: number,
-    size: number
-  ): Reader;
+  /**
+   * Read file content. `range.isFullRequest()` is a full-content request.
+   * For a partial read, send `range.buildHttpRangeHeader()` and check the
+   * response status. Omit this when `getURL` is implemented.
+   */
+  getReader?(entry: EntryRecord, range: ReaderRange): Reader;
   getURL?(entry: EntryRecord): ContentURL;
   getThumbnail?(entry: EntryRecord): Reader | ContentURL;
   /**

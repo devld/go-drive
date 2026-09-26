@@ -66,7 +66,7 @@ func (initTestEntry) Meta() types.EntryMeta                      { return types.
 func (initTestEntry) Drive() types.IDrive                        { return nil }
 func (initTestEntry) GetDispatchedDrive() (string, types.IDrive) { return "drive", nil }
 func (initTestEntry) GetRealPath() string                        { return "drive/file" }
-func (initTestEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (initTestEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, nil
 }
 func (initTestEntry) GetURL(context.Context) (*types.ContentURL, error) { return nil, nil }

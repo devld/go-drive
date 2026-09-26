@@ -337,7 +337,7 @@ func (f *fsFile) Name() string {
 	return utils.PathBase(f.path)
 }
 
-func (f *fsFile) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+func (f *fsFile) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	if !f.Type().IsFile() {
 		return nil, err.NewNotAllowedError()
 	}
@@ -353,13 +353,13 @@ func (f *fsFile) GetReader(ctx context.Context, start, size int64) (io.ReadClose
 	if e != nil {
 		return nil, e
 	}
-	if start >= 0 {
-		_, e = file.Seek(start, io.SeekStart)
+	if !rg.IsFullRequest() {
+		_, e = file.Seek(rg.Start, io.SeekStart)
 		if e != nil {
 			return nil, e
 		}
-		if size > 0 {
-			return driveutil.LimitReadCloser(file, size), nil
+		if rg.Size > 0 {
+			return driveutil.LimitReadCloser(file, rg.Size), nil
 		}
 	}
 	return file, nil

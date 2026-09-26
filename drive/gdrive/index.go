@@ -459,7 +459,7 @@ func (g *gdriveEntry) Name() string {
 	return utils.PathBase(g.path)
 }
 
-func (g *gdriveEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (g *gdriveEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewUnsupportedError()
 }
 

@@ -206,9 +206,9 @@ Return the `EntryRecord` at one non-root path. The Go runtime serves `get("")` a
 
 Return all direct children. Handle every remote page, marker, or cursor rather than returning only the first page. Return `[]` for an empty directory.
 
-#### `getReader(entry, start, size) -> ReadCloser`
+#### `getReader(entry, range) -> ReadCloser`
 
-Read file content. `start === -1 && size === -1` means the complete content. For range reads, send an appropriate Range header and validate the response status. If `getURL` is implemented, omit `getReader`; the runtime throws `new UnsupportedError()`.
+Read file content. `range` is a `ReaderRange`. `range.isFullRequest()` is true when `start < 0`, `size < 0`, or both are `0`, and means the complete content (`new ReaderRange(-1, -1)`). For a partial read, send `range.buildHttpRangeHeader()` and validate the response status. If `getURL` is implemented, omit `getReader`; the runtime throws `new UnsupportedError()`.
 
 ### Write methods
 
@@ -369,7 +369,8 @@ arguments before constructing the log message.
 - `buildEntriesTree(entry, byteProgress?, progress?)`.
 - `flattenEntriesTree(node, deepFirst?)`.
 - `findEntries(rootDrive, pattern, bytesProgress?, progress?)`.
-- `Entry` (host class from `Drive.list` / `selfDrive.get`, not `EntryRecord`): getters `path/name/type/size/meta/modTime/unwrap/data/drive`; methods `getUrl/getReader`.
+- `ReaderRange`: `new ReaderRange(start, size)`. Getters `start`/`size`. `isFullRequest()` is true when `start < 0`, `size < 0`, or both are `0`. `buildHttpRangeHeader()` is the HTTP `Range` value, or `""` for a full-content request.
+- `Entry` (host class from `Drive.list` / `selfDrive.get`, not `EntryRecord`): getters `path/name/type/size/meta/modTime/unwrap/data/drive`; methods `getUrl/getReader(range?)`. An omitted `range` is a full-content request.
 
 ### Forms
 

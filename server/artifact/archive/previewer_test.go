@@ -44,7 +44,7 @@ func (e *testEntry) GetRealPath() string                        { return e.path 
 func (e *testEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return nil, driveErr.NewUnsupportedError()
 }
-func (e *testEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+func (e *testEntry) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	if e.reads != nil {
 		e.reads.Add(1)
 	}
@@ -52,27 +52,26 @@ func (e *testEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCl
 		return nil, err
 	}
 	if !e.seekable && e.data != nil {
-		startOffset := start
-		if startOffset < 0 {
-			startOffset = 0
+		if rg.IsFullRequest() {
+			return io.NopCloser(bytes.NewReader(e.data)), nil
 		}
 		end := int64(len(e.data))
-		if size > 0 && startOffset+size < end {
-			end = startOffset + size
+		if rg.Size > 0 && rg.Start+rg.Size < end {
+			end = rg.Start + rg.Size
 		}
-		return io.NopCloser(bytes.NewReader(e.data[startOffset:end])), nil
+		return io.NopCloser(bytes.NewReader(e.data[rg.Start:end])), nil
 	}
 	file, err := os.Open(e.filename)
 	if err != nil {
 		return nil, err
 	}
-	if start >= 0 {
-		if _, err := file.Seek(start, io.SeekStart); err != nil {
+	if !rg.IsFullRequest() {
+		if _, err := file.Seek(rg.Start, io.SeekStart); err != nil {
 			_ = file.Close()
 			return nil, err
 		}
-		if size > 0 {
-			return &limitedFile{File: file, Reader: io.LimitReader(file, size)}, nil
+		if rg.Size > 0 {
+			return &limitedFile{File: file, Reader: io.LimitReader(file, rg.Size)}, nil
 		}
 	}
 	return file, nil

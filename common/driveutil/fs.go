@@ -282,8 +282,8 @@ func (w *driveFSFile) getFile() error {
 			}
 		}
 		reader, e := w.fs.cfp.GetReader(w.ctx, cacheKey, w.e.Size(),
-			func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
-				reader, e := GetIContentReader(ctx, w.e, start, size)
+			func(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
+				reader, e := GetIContentReader(ctx, w.e, rg)
 				if e != nil {
 					return nil, e
 				}
@@ -533,7 +533,7 @@ func openLocalFile(ctx context.Context, entry types.IEntry) (*os.File, error) {
 	if _, err := entry.GetURL(ctx); err == nil {
 		return nil, nil
 	}
-	reader, err := entry.GetReader(ctx, -1, -1)
+	reader, err := entry.GetReader(ctx, types.FullReaderRange())
 	if err != nil {
 		return nil, err
 	}
@@ -664,7 +664,7 @@ func (c *createdEntry) Name() string {
 	return utils.PathBase(c.path)
 }
 
-func (c *createdEntry) GetReader(_ context.Context, _, _ int64) (io.ReadCloser, error) {
+func (c *createdEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewNotAllowedError()
 }
 

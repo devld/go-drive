@@ -97,7 +97,7 @@ func (e *mountNameTestEntry) Size() int64           { return 0 }
 func (e *mountNameTestEntry) Meta() types.EntryMeta { return types.EntryMeta{} }
 func (e *mountNameTestEntry) ModTime() int64        { return 0 }
 func (e *mountNameTestEntry) Drive() types.IDrive   { return e.drive }
-func (e *mountNameTestEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (e *mountNameTestEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	panic("not used")
 }
 func (e *mountNameTestEntry) GetURL(context.Context) (*types.ContentURL, error) {

@@ -556,10 +556,9 @@ func (s *s3Entry) Name() string {
 	return utils.PathBase(s.key)
 }
 
-func (s *s3Entry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+func (s *s3Entry) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	var awsRange *string
-	rangeStr := driveutil.BuildRangeHeader(start, size)
-	if rangeStr != "" {
+	if rangeStr := rg.BuildHTTPRangeHeader(); rangeStr != "" {
 		awsRange = aws.String(rangeStr)
 	}
 	obj, e := s.c.c.GetObject(ctx, &s3.GetObjectInput{

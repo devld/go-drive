@@ -28,7 +28,7 @@ func (e *testThumbnailEntry) Size() int64           { return e.size }
 func (e *testThumbnailEntry) ModTime() int64        { return e.modTime }
 func (e *testThumbnailEntry) Meta() types.EntryMeta { return types.EntryMeta{Readable: true} }
 func (e *testThumbnailEntry) Drive() types.IDrive   { return nil }
-func (e *testThumbnailEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (e *testThumbnailEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewReader(nil)), nil
 }
 func (e *testThumbnailEntry) GetURL(context.Context) (*types.ContentURL, error) { return nil, nil }

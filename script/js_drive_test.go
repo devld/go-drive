@@ -22,6 +22,7 @@ import (
 var (
 	_ ConsoleStringer = jsObjDrive{}
 	_ ConsoleStringer = jsObjEntry{}
+	_ ConsoleStringer = jsObjReaderRange{}
 	_ ConsoleStringer = jsObjBytes{}
 	_ ConsoleStringer = jsObjReader{}
 	_ ConsoleStringer = jsObjReadCloser{}
@@ -53,7 +54,7 @@ func (d totalChangingDrive) Save(ctx types.TaskCtx, path string, size int64, ove
 	return d.IDrive.Save(ctx, path, size, override, reader)
 }
 
-func (e inspectTestEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (e inspectTestEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewUnsupportedError()
 }
 
@@ -125,12 +126,86 @@ func TestEntryGetReaderFallsBackToURL(t *testing.T) {
 		},
 	}
 	mustDefineGlobal(t, vm, "entry", entry)
-	got, e := vm.Run(context.Background(), `entry.getReader(-1, -1).readAsString()`, "")
+	got, e := vm.Run(context.Background(), `entry.getReader(new ReaderRange(-1, -1)).readAsString()`, "")
 	if e != nil {
 		t.Fatal(e)
 	}
 	if got.String() != "from-url" {
 		t.Fatalf("getReader fallback = %q, want from-url", got.String())
+	}
+	got, e = vm.Run(context.Background(), `entry.getReader().readAsString()`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if got.String() != "from-url" {
+		t.Fatalf("getReader() fallback = %q, want from-url", got.String())
+	}
+}
+
+func TestEntryGetReaderDefaultsToFullRange(t *testing.T) {
+	vm := newPoolTestVM(t)
+	entry := &rangeCaptureEntry{inspectTestEntry: inspectTestEntry{path: "f", name: "f", typ: types.TypeFile}}
+	mustDefineGlobal(t, vm, "entry", entry)
+	got, e := vm.Run(context.Background(), `entry.getReader().readAsString()`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if got.String() != "ok" {
+		t.Fatalf("getReader() = %q, want ok", got.String())
+	}
+	if entry.rg != types.FullReaderRange() {
+		t.Fatalf("omitted range = %+v, want full request", entry.rg)
+	}
+	if _, e = vm.Run(context.Background(), `entry.getReader(1)`, ""); e == nil {
+		t.Fatal("getReader(number) should fail")
+	}
+}
+
+type rangeCaptureEntry struct {
+	inspectTestEntry
+	rg types.ReaderRange
+}
+
+func (e *rangeCaptureEntry) GetReader(_ context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
+	e.rg = rg
+	return io.NopCloser(strings.NewReader("ok")), nil
+}
+
+func TestReaderRangeJS(t *testing.T) {
+	vm := newPoolTestVM(t)
+	mustDefineGlobal(t, vm, "full", types.FullReaderRange())
+	mustDefineGlobal(t, vm, "part", types.ReaderRange{Start: 10, Size: 5})
+	got, e := vm.Run(context.Background(), `
+		var made = new ReaderRange(2, 4);
+		[
+			full instanceof ReaderRange,
+			full.isFullRequest(),
+			full.start,
+			full.size,
+			full.buildHttpRangeHeader(),
+			part.isFullRequest(),
+			part.buildHttpRangeHeader(),
+			made.isFullRequest(),
+			made.buildHttpRangeHeader(),
+			made.start,
+			made.size,
+			new ReaderRange(0, -1).isFullRequest(),
+			new ReaderRange(4, -1).buildHttpRangeHeader(),
+			new ReaderRange(0, 0).isFullRequest(),
+			new ReaderRange(0, 0).buildHttpRangeHeader(),
+			new ReaderRange(10, 0).isFullRequest(),
+			(function () {
+				try { new ReaderRange(1.5, 1); return false; }
+				catch (e) { return e instanceof TypeError; }
+			})()
+		].join("|");
+	`, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	want := "true|true|-1|-1||false|bytes=10-14|false|bytes=2-5|2|4|true||true||false|true"
+	if got.String() != want {
+		t.Fatalf("ReaderRange = %q, want %q", got.String(), want)
 	}
 }
 

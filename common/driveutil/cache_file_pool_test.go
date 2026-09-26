@@ -11,22 +11,23 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"go-drive/common/types"
 )
 
 // byteReaderGetter returns a ReaderGetter serving the given data. It handles
-// the "whole file" request (start == -1) used for files smaller than the block
-// size, as well as ranged requests.
+// a full-content ReaderRange used for files smaller than the block size, as
+// well as ranged requests.
 func byteReaderGetter(data []byte) ReaderGetter {
-	return func(_ context.Context, start, size int64) (io.ReadCloser, error) {
-		s := start
-		if s < 0 {
-			s = 0
+	return func(_ context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
+		if rg.IsFullRequest() {
+			return io.NopCloser(bytes.NewReader(data)), nil
 		}
 		end := int64(len(data))
-		if size > 0 && s+size < end {
-			end = s + size
+		if rg.Size > 0 && rg.Start+rg.Size < end {
+			end = rg.Start + rg.Size
 		}
-		return io.NopCloser(bytes.NewReader(data[s:end])), nil
+		return io.NopCloser(bytes.NewReader(data[rg.Start:end])), nil
 	}
 }
 
@@ -228,7 +229,7 @@ func TestCacheFilePool_ReturnsSourceErrorToWaitingReaders(t *testing.T) {
 		t.Fatal(e)
 	}
 	want := errors.New("source failed")
-	getter := func(context.Context, int64, int64) (io.ReadCloser, error) {
+	getter := func(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 		return nil, want
 	}
 	r1, e := p.GetReader(context.Background(), "error", 4, getter)
@@ -266,14 +267,14 @@ func TestCacheFilePool_CancelDoesNotInterruptOtherReaders(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
 	var startOnce sync.Once
-	getter := func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+	getter := func(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 		startOnce.Do(func() { close(started) })
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return byteReaderGetter(data)(ctx, start, size)
+		return byteReaderGetter(data)(ctx, rg)
 	}
 
 	ctx1, cancel1 := context.WithCancel(context.Background())
@@ -328,9 +329,9 @@ func TestCacheFilePool_LastReaderKeepsInFlightFill(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
 	var fetches atomic.Int32
-	getter := func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+	getter := func(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 		fetches.Add(1)
-		inner, err := byteReaderGetter(data)(ctx, start, size)
+		inner, err := byteReaderGetter(data)(ctx, rg)
 		if err != nil {
 			return nil, err
 		}

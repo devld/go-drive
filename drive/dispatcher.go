@@ -444,7 +444,7 @@ func (d *driveEntry) Name() string {
 	return d.name
 }
 
-func (d *driveEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (d *driveEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewNotAllowedError()
 }
 
