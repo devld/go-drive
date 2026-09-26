@@ -66,14 +66,14 @@ func registerTestHandler(t *testing.T, name string, handler Handler) {
 	t.Helper()
 	snapshot := append([]handlerFactoryEntry(nil), handlerFactories...)
 	t.Cleanup(func() { handlerFactories = snapshot })
-	RegisterHandler(name, func(HandlerContext) (Handler, error) {
+	RegisterHandler(name, func(HandlerDeps) (Handler, error) {
 		return handler, nil
 	})
 }
 
 func newTestService(t *testing.T, runner task.Runner) *Service {
 	t.Helper()
-	svc, err := NewService(common.Config{TempDir: t.TempDir()}, runner, nil)
+	svc, err := NewService(common.Config{TempDir: t.TempDir()}, runner, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestServiceRegistersGenericArtifactType(t *testing.T) {
 			Config:      types.M{"extensions": "foo,bar"},
 		}},
 	})
-	svc, err := NewService(common.Config{TempDir: t.TempDir()}, runner, nil)
+	svc, err := NewService(common.Config{TempDir: t.TempDir()}, runner, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +236,7 @@ func TestRegisterHandlerPanicsOnDuplicate(t *testing.T) {
 	snapshot := append([]handlerFactoryEntry(nil), handlerFactories...)
 	t.Cleanup(func() { handlerFactories = snapshot })
 
-	RegisterHandler("test-handler", func(HandlerContext) (Handler, error) {
+	RegisterHandler("test-handler", func(HandlerDeps) (Handler, error) {
 		return registryTestHandler{}, nil
 	})
 	defer func() {
@@ -244,7 +244,7 @@ func TestRegisterHandlerPanicsOnDuplicate(t *testing.T) {
 			t.Fatal("duplicate RegisterHandler did not panic")
 		}
 	}()
-	RegisterHandler("test-handler", func(HandlerContext) (Handler, error) {
+	RegisterHandler("test-handler", func(HandlerDeps) (Handler, error) {
 		return registryTestHandler{}, nil
 	})
 }
@@ -359,12 +359,12 @@ func TestHandlerCacheReadsOnlyOwnArtifacts(t *testing.T) {
 	t.Cleanup(func() { handlerFactories = snapshot })
 
 	var owner, peer *scopedCacheHandler
-	RegisterHandler("owner", func(ctx HandlerContext) (Handler, error) {
-		owner = &scopedCacheHandler{cache: ctx.Cache, body: "mine"}
+	RegisterHandler("owner", func(deps HandlerDeps) (Handler, error) {
+		owner = &scopedCacheHandler{cache: deps.Cache, body: "mine"}
 		return owner, nil
 	})
-	RegisterHandler("peer", func(ctx HandlerContext) (Handler, error) {
-		peer = &scopedCacheHandler{cache: ctx.Cache, body: "theirs"}
+	RegisterHandler("peer", func(deps HandlerDeps) (Handler, error) {
+		peer = &scopedCacheHandler{cache: deps.Cache, body: "theirs"}
 		return peer, nil
 	})
 	svc := newTestService(t, nil)

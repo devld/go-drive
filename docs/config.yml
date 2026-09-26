@@ -57,6 +57,13 @@ data-dir: ./data
 # Temp dir. Default is data-dir/temp
 temp-dir: ""
 
+# DriveFS source cache shared by WebDAV and archive preview.
+vfs:
+  # Maximum number of cached source files. Default is 1000.
+  cache-items: 1000
+  # Maximum total bytes kept in that cache. Default is 4g.
+  cache-size: 4g
+
 # Concurrent running tasks, such as copy, move, and delete.
 # The same number of tasks may wait. Further submissions are rejected.
 max-concurrent-task: 100
@@ -172,10 +179,6 @@ archive:
   max-member-size: 512m
   # Maximum number of entries indexed from one archive.
   max-entries: 100000
-  # Maximum number of remote archive source files kept in the sparse cache.
-  cache-items: 128
-  # Maximum total compressed bytes kept in the sparse cache.
-  cache-size: 4g
   # Validity period of the persisted archive member index.
   index-ttl: 24h
   # Maximum total decompressed archive content bytes kept in the artifact cache.
@@ -232,8 +235,6 @@ auth:
 #  prefix: /dav
 # allow anonymous access?
 #  allow-anonymous: false
-# maximum number of files to be cached at the same time, default is 1000
-#  max-cache-items: 1000
 
 # Search configuration
 search:

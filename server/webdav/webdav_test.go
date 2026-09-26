@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go-drive/common"
 	"go-drive/common/driveutil"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -268,11 +269,11 @@ type permissionDrive struct {
 }
 
 type permissionDriveFileSystem struct {
-	*driveutil.DriveFS
+	*driveutil.BoundDriveFS
 }
 
 func (fs permissionDriveFileSystem) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (File, error) {
-	return fs.DriveFS.OpenFile(ctx, name, flag, perm)
+	return fs.BoundDriveFS.OpenFile(ctx, name, flag, perm)
 }
 
 func TestMKCOLPathPermissionReturnsForbidden(t *testing.T) {
@@ -284,10 +285,12 @@ func TestMKCOLPathPermissionReturnsForbidden(t *testing.T) {
 		Policy:     types.PolicyAccept,
 	}})
 	d := drive.NewPermissionWrapperDrive(&permissionDrive{}, permissions)
-	fs, e := driveutil.NewDriveFS(context.Background(), d, t.TempDir(), nil)
+	files, e := driveutil.NewDriveFS(common.Config{TempDir: t.TempDir()})
 	if e != nil {
-		t.Fatalf("NewDriveFS: %v", e)
+		t.Fatal(e)
 	}
+	t.Cleanup(func() { _ = files.Dispose() })
+	fs := files.Bind(context.Background(), d)
 
 	h := &Handler{
 		FileSystem: permissionDriveFileSystem{fs},

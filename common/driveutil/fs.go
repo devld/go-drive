@@ -2,8 +2,8 @@ package driveutil
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"go-drive/common"
 	err "go-drive/common/errors"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -11,12 +11,55 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
 
-func NewDriveFS(ctx context.Context, d types.IDrive, tempDir string, cfp *CacheFilePool) (*DriveFS, error) {
-	return &DriveFS{drive: d, tempDir: tempDir, cfp: cfp, ctx: ctx}, nil
+// DriveFS is the process-wide file adapter. It owns the shared source cache
+// used by WebDAV and archive preview. Bind scopes it to one drive.
+type DriveFS struct {
+	tempDir string
+	cfp     *CacheFilePool
+}
+
+func NewDriveFS(config common.Config) (*DriveFS, error) {
+	tempDir := config.TempDir
+	if tempDir == "" {
+		tempDir = os.TempDir()
+	}
+	dir := filepath.Join(tempDir, "drive-fs")
+	if e := os.MkdirAll(dir, 0700); e != nil {
+		return nil, e
+	}
+	items := utils.PositiveOr(config.VFS.CacheItems, common.DefaultVFSCacheItems)
+	maxBytes := config.VFS.CacheSize.DataSize(common.DefaultVFSCacheSize.DataSize(0))
+	pool, e := NewCacheFilePool(CacheFilePoolOptions{
+		MaxEntries:   items,
+		MaxBytes:     maxBytes,
+		Dir:          dir,
+		CleanStartup: true,
+	})
+	if e != nil {
+		return nil, e
+	}
+	return &DriveFS{tempDir: tempDir, cfp: pool}, nil
+}
+
+func (fs *DriveFS) Bind(ctx context.Context, drive types.IDrive) *BoundDriveFS {
+	if fs == nil {
+		fs = &DriveFS{}
+	}
+	return &BoundDriveFS{drive: drive, tempDir: fs.tempDir, cfp: fs.cfp, ctx: ctx}
+}
+
+func (fs *DriveFS) Dispose() error {
+	if fs == nil || fs.cfp == nil {
+		return nil
+	}
+	e := fs.cfp.Dispose()
+	fs.cfp = nil
+	return e
 }
 
 type DriveFSFile interface {
@@ -29,7 +72,7 @@ type DriveFSFile interface {
 	GetURL(ctx context.Context) (string, error)
 }
 
-type DriveFS struct {
+type BoundDriveFS struct {
 	drive   types.IDrive
 	tempDir string
 
@@ -38,15 +81,15 @@ type DriveFS struct {
 	ctx context.Context
 }
 
-func (w *DriveFS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
+func (w *BoundDriveFS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 	entry, e := w.drive.Get(ctx, utils.CleanPath(name))
 	if e != nil {
 		return nil, mapError(e)
 	}
-	return entryToFileInfo(entry), nil
+	return entryFileInfo{entry}, nil
 }
 
-func (w *DriveFS) Open(name string) (fs.File, error) {
+func (w *BoundDriveFS) Open(name string) (fs.File, error) {
 	r, e := w.OpenFile(w.ctx, name, os.O_RDONLY, 0644)
 	if e != nil {
 		if err.IsNotFoundError(e) {
@@ -57,7 +100,7 @@ func (w *DriveFS) Open(name string) (fs.File, error) {
 	return r, nil
 }
 
-func (w *DriveFS) OpenFile(ctx context.Context, name string, flag int, _ os.FileMode) (DriveFSFile, error) {
+func (w *BoundDriveFS) OpenFile(ctx context.Context, name string, flag int, _ os.FileMode) (DriveFSFile, error) {
 	if flag&os.O_SYNC != 0 {
 		return nil, os.ErrInvalid
 	}
@@ -92,14 +135,14 @@ func (w *DriveFS) OpenFile(ctx context.Context, name string, flag int, _ os.File
 // OpenEntry opens an existing file entry. Read-only opens use a native
 // *os.File when the entry already provides one, and otherwise use the cache
 // pool. This is the same read path as OpenFile.
-func (w *DriveFS) OpenEntry(ctx context.Context, entry types.IEntry) (DriveFSFile, error) {
+func (w *BoundDriveFS) OpenEntry(ctx context.Context, entry types.IEntry) (DriveFSFile, error) {
 	if entry == nil || !entry.Type().IsFile() {
 		return nil, os.ErrInvalid
 	}
 	return w.newDriveFSFile(ctx, entry, os.O_RDONLY), nil
 }
 
-func (w *DriveFS) ReadDir(name string) ([]fs.DirEntry, error) {
+func (w *BoundDriveFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	name = utils.CleanPath(name)
 	entries, e := w.drive.List(w.ctx, name)
 	if e != nil {
@@ -107,11 +150,11 @@ func (w *DriveFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	}
 	return utils.ArrayMap(
 		entries,
-		func(t *types.IEntry) fs.DirEntry { return entryToFileInfo(*t).(entryFileInfo) },
+		func(t *types.IEntry) fs.DirEntry { return entryFileInfo{*t} },
 	), nil
 }
 
-func (w *DriveFS) Mkdir(ctx context.Context, name string, _ os.FileMode) error {
+func (w *BoundDriveFS) Mkdir(ctx context.Context, name string, _ os.FileMode) error {
 	_, e := w.drive.MakeDir(ctx, utils.CleanPath(name))
 	if err.IsPermissionDeniedNotFoundError(e) {
 		return os.ErrPermission
@@ -119,11 +162,11 @@ func (w *DriveFS) Mkdir(ctx context.Context, name string, _ os.FileMode) error {
 	return mapError(e)
 }
 
-func (w *DriveFS) RemoveAll(ctx context.Context, name string) error {
+func (w *BoundDriveFS) RemoveAll(ctx context.Context, name string) error {
 	return mapError(w.drive.Delete(task.NewContextWrapper(ctx), utils.CleanPath(name)))
 }
 
-func (w *DriveFS) Rename(ctx context.Context, oldName, newName string) error {
+func (w *BoundDriveFS) Rename(ctx context.Context, oldName, newName string) error {
 	from, e := w.drive.Get(ctx, utils.CleanPath(oldName))
 	if e != nil {
 		return mapError(e)
@@ -132,7 +175,7 @@ func (w *DriveFS) Rename(ctx context.Context, oldName, newName string) error {
 	return mapError(e)
 }
 
-func (w *DriveFS) newDriveFSFile(ctx context.Context, e types.IEntry, flag int) *driveFSFile {
+func (w *BoundDriveFS) newDriveFSFile(ctx context.Context, e types.IEntry, flag int) *driveFSFile {
 	var seekPos int64 = 0
 	if flag&os.O_APPEND != 0 && flag&os.O_TRUNC == 0 {
 		seekPos = e.Size()
@@ -149,7 +192,7 @@ func (w *DriveFS) newDriveFSFile(ctx context.Context, e types.IEntry, flag int) 
 }
 
 type driveFSFile struct {
-	fs  *DriveFS
+	fs  *BoundDriveFS
 	ctx context.Context
 
 	e      types.IEntry
@@ -218,8 +261,11 @@ func (w *driveFSFile) getFile() error {
 	}
 
 	if w.openFlag == os.O_RDONLY {
-		cacheKey := cacheFileKey(w.e)
-		if w.fs.cfp == nil || !w.fs.cfp.Has(cacheKey) {
+		cacheKey, e := cacheFileKey(w.e)
+		if e != nil {
+			return e
+		}
+		if !w.fs.cfp.Has(cacheKey) {
 			file, e := openLocalFile(w.ctx, w.e)
 			if e != nil {
 				return e
@@ -234,9 +280,6 @@ func (w *driveFSFile) getFile() error {
 				w.reader = file
 				return nil
 			}
-		}
-		if w.fs.cfp == nil {
-			return errors.New("not readable")
 		}
 		reader, e := w.fs.cfp.GetReader(w.ctx, cacheKey, w.e.Size(),
 			func(ctx context.Context, start, size int64) (io.ReadCloser, error) {
@@ -475,12 +518,12 @@ func (w *driveFSFile) ReadDir(n int) ([]fs.DirEntry, error) {
 	), nil
 }
 
-func cacheFileKey(entry types.IEntry) string {
-	suffix := fmt.Sprintf(",m:%d,s:%d", entry.ModTime(), entry.Size())
-	if dispatcherEntry, ok := IEntryAs[types.IDispatcherEntry](entry); ok {
-		return "rp:" + dispatcherEntry.GetRealPath() + suffix
+func cacheFileKey(entry types.IEntry) (string, error) {
+	resolved, ok := IEntryAs[types.IDispatcherEntry](entry)
+	if !ok || resolved.GetRealPath() == "" {
+		return "", fmt.Errorf("entry %q has no real path", entry.Path())
 	}
-	return "p:" + entry.Path() + suffix
+	return fmt.Sprintf("%s,m:%d,s:%d", resolved.GetRealPath(), entry.ModTime(), entry.Size()), nil
 }
 
 // openLocalFile returns a native *os.File when GetReader already provides one.
@@ -502,14 +545,10 @@ func openLocalFile(ctx context.Context, entry types.IEntry) (*os.File, error) {
 	return file, nil
 }
 
-func entryToFileInfo(e types.IEntry) fs.FileInfo {
-	return entryFileInfo{e}
-}
-
 func entriesToFileInfos(es []types.IEntry) []fs.FileInfo {
 	fi := make([]fs.FileInfo, 0, len(es))
 	for _, e := range es {
-		fi = append(fi, entryToFileInfo(e))
+		fi = append(fi, entryFileInfo{e})
 	}
 	return fi
 }

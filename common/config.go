@@ -48,25 +48,24 @@ const (
 	DefaultMaxConcurrentTask       = 100
 	DefaultFreeFs                  = false
 	DefaultThumbnailTTL            = 30 * 24 * time.Hour
-	DefaultArchiveMaxSize          = int64(2 * 1024 * 1024 * 1024)
-	DefaultArchiveMaxMembers       = int64(512 * 1024 * 1024)
+	DefaultArchiveMaxSize          = types.SV("2g")
+	DefaultArchiveMaxMembers       = types.SV("512m")
 	DefaultArchiveMaxEntries       = 100000
-	DefaultArchiveCacheItems       = 128
-	DefaultArchiveCacheSize        = int64(4 * 1024 * 1024 * 1024)
 	DefaultArchiveIndexTTL         = 24 * time.Hour
-	DefaultArchiveContentCacheSize = int64(4 * 1024 * 1024 * 1024)
+	DefaultArchiveContentCacheSize = types.SV("4g")
 	DefaultArchiveContentCacheTTL  = 24 * time.Hour
 	DefaultArchivePackTTL          = time.Minute
 	// DefaultArchiveConcurrent is the task-group limit for archive preview and
 	// for zip packing. Each group uses this value. These tasks are mostly IO.
 	DefaultArchiveConcurrent = 4
 
-	DefaultAuthValidity        = 2 * time.Hour
-	DefaultAuthAutoRefresh     = true
-	DefaultSignatureTTL        = 12 * time.Hour
-	DefaultWebDavPrefix        = "/dav"
-	DefaultWebDavMaxCacheItems = 1000
-	DefaultSearcher            = "sqlite"
+	DefaultAuthValidity    = 2 * time.Hour
+	DefaultAuthAutoRefresh = true
+	DefaultSignatureTTL    = 12 * time.Hour
+	DefaultWebDavPrefix    = "/dav"
+	DefaultSearcher        = "sqlite"
+	DefaultVFSCacheItems   = 1000
+	DefaultVFSCacheSize    = types.SV("4g")
 
 	DefaultCacheType                      = "mem"
 	DefaultCacheCleanPeriod time.Duration = 10 * time.Minute
@@ -123,6 +122,9 @@ type Config struct {
 
 	Search SearchConfig `yaml:"search"`
 
+	// VFS holds the DriveFS source cache shared by WebDAV and archive preview.
+	VFS VFSConfig `yaml:"vfs"`
+
 	Cache CacheConfig `yaml:"cache"`
 
 	Version string
@@ -157,8 +159,6 @@ type ArchiveConfig struct {
 	MaxSize          types.SV      `yaml:"max-size"`
 	MaxMemberSize    types.SV      `yaml:"max-member-size"`
 	MaxEntries       int           `yaml:"max-entries"`
-	CacheItems       int           `yaml:"cache-items"`
-	CacheSize        types.SV      `yaml:"cache-size"`
 	IndexTTL         time.Duration `yaml:"index-ttl"`
 	ContentCacheSize types.SV      `yaml:"content-cache-size"`
 	ContentCacheTTL  time.Duration `yaml:"content-cache-ttl"`
@@ -199,7 +199,6 @@ type WebDavConfig struct {
 	Enabled        bool   `yaml:"enabled"`
 	Prefix         string `yaml:"prefix"`
 	AllowAnonymous bool   `yaml:"allow-anonymous"`
-	MaxCacheItems  int    `yaml:"max-cache-items"`
 }
 
 type SearchConfig struct {
@@ -211,6 +210,12 @@ type SearchConfig struct {
 type CacheConfig struct {
 	Type        string        `yaml:"type"`
 	CleanPeriod time.Duration `yaml:"clean-period"`
+}
+
+// VFSConfig limits the DriveFS source cache shared by WebDAV and archive preview.
+type VFSConfig struct {
+	CacheItems int      `yaml:"cache-items"`
+	CacheSize  types.SV `yaml:"cache-size"`
 }
 
 func InitConfig() (Config, error) {
@@ -232,13 +237,11 @@ func InitConfig() (Config, error) {
 			TTL: DefaultThumbnailTTL,
 		},
 		Archive: ArchiveConfig{
-			MaxSize:          types.SV("2g"),
-			MaxMemberSize:    types.SV("512m"),
+			MaxSize:          DefaultArchiveMaxSize,
+			MaxMemberSize:    DefaultArchiveMaxMembers,
 			MaxEntries:       DefaultArchiveMaxEntries,
-			CacheItems:       DefaultArchiveCacheItems,
-			CacheSize:        types.SV("4g"),
 			IndexTTL:         DefaultArchiveIndexTTL,
-			ContentCacheSize: types.SV("4g"),
+			ContentCacheSize: DefaultArchiveContentCacheSize,
 			ContentCacheTTL:  DefaultArchiveContentCacheTTL,
 			PackTTL:          DefaultArchivePackTTL,
 		},
@@ -248,9 +251,12 @@ func InitConfig() (Config, error) {
 		},
 		SignatureTTL: DefaultSignatureTTL,
 		WebDav: WebDavConfig{
-			Enabled:       false,
-			Prefix:        DefaultWebDavPrefix,
-			MaxCacheItems: DefaultWebDavMaxCacheItems,
+			Enabled: false,
+			Prefix:  DefaultWebDavPrefix,
+		},
+		VFS: VFSConfig{
+			CacheItems: DefaultVFSCacheItems,
+			CacheSize:  DefaultVFSCacheSize,
 		},
 		Search: SearchConfig{
 			Type: DefaultSearcher,
@@ -305,19 +311,19 @@ func InitConfig() (Config, error) {
 
 	config.Thumbnail.Concurrent = utils.PositiveOr(config.Thumbnail.Concurrent, max(runtime.NumCPU()/2, 1))
 	if config.Archive.MaxSize == "" {
-		config.Archive.MaxSize = types.SV("2g")
+		config.Archive.MaxSize = DefaultArchiveMaxSize
 	}
 	if config.Archive.MaxMemberSize == "" {
-		config.Archive.MaxMemberSize = types.SV("512m")
+		config.Archive.MaxMemberSize = DefaultArchiveMaxMembers
 	}
 	config.Archive.MaxEntries = utils.PositiveOr(config.Archive.MaxEntries, DefaultArchiveMaxEntries)
-	config.Archive.CacheItems = utils.PositiveOr(config.Archive.CacheItems, DefaultArchiveCacheItems)
-	if config.Archive.CacheSize == "" {
-		config.Archive.CacheSize = types.SV("4g")
+	config.VFS.CacheItems = utils.PositiveOr(config.VFS.CacheItems, DefaultVFSCacheItems)
+	if config.VFS.CacheSize == "" {
+		config.VFS.CacheSize = DefaultVFSCacheSize
 	}
 	config.Archive.IndexTTL = utils.PositiveOr(config.Archive.IndexTTL, DefaultArchiveIndexTTL)
 	if config.Archive.ContentCacheSize == "" {
-		config.Archive.ContentCacheSize = types.SV("4g")
+		config.Archive.ContentCacheSize = DefaultArchiveContentCacheSize
 	}
 	config.Archive.ContentCacheTTL = utils.PositiveOr(config.Archive.ContentCacheTTL, DefaultArchiveContentCacheTTL)
 	config.Archive.PackTTL = utils.PositiveOr(config.Archive.PackTTL, DefaultArchivePackTTL)

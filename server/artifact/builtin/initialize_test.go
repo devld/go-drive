@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"go-drive/common"
+	"go-drive/common/driveutil"
 	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -23,7 +24,12 @@ func TestInitializeRegistersBuiltInArtifactProcessors(t *testing.T) {
 	runner := task.NewTaskRunner(config)
 	t.Cleanup(func() { _ = components.Dispose() })
 
-	artifacts, err := Initialize(config, nil, runner)
+	files, err := driveutil.NewDriveFS(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = files.Dispose() })
+	artifacts, err := Initialize(config, nil, runner, files)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,13 +57,15 @@ func TestInitializeRegistersBuiltInArtifactProcessors(t *testing.T) {
 
 type initTestEntry struct{}
 
-func (initTestEntry) Path() string          { return "file" }
-func (initTestEntry) Name() string          { return "file" }
-func (initTestEntry) Type() types.EntryType { return types.TypeFile }
-func (initTestEntry) Size() int64           { return 1 }
-func (initTestEntry) ModTime() int64        { return 1 }
-func (initTestEntry) Meta() types.EntryMeta { return types.EntryMeta{Readable: true} }
-func (initTestEntry) Drive() types.IDrive   { return nil }
+func (initTestEntry) Path() string                               { return "file" }
+func (initTestEntry) Name() string                               { return "file" }
+func (initTestEntry) Type() types.EntryType                      { return types.TypeFile }
+func (initTestEntry) Size() int64                                { return 1 }
+func (initTestEntry) ModTime() int64                             { return 1 }
+func (initTestEntry) Meta() types.EntryMeta                      { return types.EntryMeta{Readable: true} }
+func (initTestEntry) Drive() types.IDrive                        { return nil }
+func (initTestEntry) GetDispatchedDrive() (string, types.IDrive) { return "drive", nil }
+func (initTestEntry) GetRealPath() string                        { return "drive/file" }
 func (initTestEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
 	return nil, nil
 }

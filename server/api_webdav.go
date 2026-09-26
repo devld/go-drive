@@ -10,7 +10,6 @@ import (
 	"go-drive/server/webdav"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -22,26 +21,12 @@ var webdavHTTPMethods = []string{
 }
 
 func InitWebdavAccess(router gin.IRouter, config common.Config,
-	access *drive.Access, userAuth *auth.UserAuth) error {
-
-	tempDir := filepath.Join(config.TempDir, "webdav")
-	if e := os.MkdirAll(tempDir, 0700); e != nil {
-		return e
-	}
-	cfp, e := driveutil.NewCacheFilePool(driveutil.CacheFilePoolOptions{
-		MaxEntries: config.WebDav.MaxCacheItems,
-		Dir:        tempDir,
-	})
-	if e != nil {
-		return e
-	}
-
+	access *drive.Access, userAuth *auth.UserAuth, files *driveutil.DriveFS) error {
 	wa := &webdavAccess{
 		access:  access,
-		cfp:     cfp,
+		files:   files,
 		config:  config,
 		lockSys: webdav.NewMemLS(),
-		tempDir: tempDir,
 	}
 
 	withAuth := router.Group(config.WebDav.Prefix, BasicAuth(userAuth, "webdav", config.WebDav.AllowAnonymous))
@@ -59,10 +44,9 @@ func InitWebdavAccess(router gin.IRouter, config common.Config,
 
 type webdavAccess struct {
 	access  *drive.Access
-	cfp     *driveutil.CacheFilePool
+	files   *driveutil.DriveFS
 	lockSys webdav.LockSystem
 	config  common.Config
-	tempDir string
 }
 
 func (w *webdavAccess) ServeHTTP(c *gin.Context) {
@@ -75,13 +59,7 @@ func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 		return
 	}
 
-	driveFs, e := driveutil.NewDriveFS(c.Request.Context(), drive, w.tempDir, w.cfp)
-	if e != nil {
-		logging.For("webdav").Errorf("DriveFS creation failed method=%s path=%s: %v",
-			c.Request.Method, logging.Sanitize(c.Request.URL.Path), e)
-		c.AbortWithError(http.StatusInternalServerError, e)
-		return
-	}
+	driveFs := w.files.Bind(c.Request.Context(), drive)
 
 	started := time.Now()
 	handler := webdav.Handler{
@@ -103,9 +81,9 @@ func (w *webdavAccess) ServeHTTP(c *gin.Context) {
 }
 
 type webDavFS struct {
-	*driveutil.DriveFS
+	*driveutil.BoundDriveFS
 }
 
 func (wfs webDavFS) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
-	return wfs.DriveFS.OpenFile(ctx, name, flag, perm)
+	return wfs.BoundDriveFS.OpenFile(ctx, name, flag, perm)
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common"
+	"go-drive/common/driveutil"
 	"go-drive/common/task"
 	"go-drive/server/artifact"
 	_ "go-drive/server/artifact/archive"
@@ -16,11 +17,11 @@ import (
 
 // Initialize creates the shared artifact service, constructs every registered
 // handler, and installs their artifact types.
-func Initialize(config common.Config, options artifact.OptionReader, runner task.Runner) (*artifact.Service, error) {
+func Initialize(config common.Config, options artifact.OptionReader, runner task.Runner, files *driveutil.DriveFS) (*artifact.Service, error) {
 	if runner == nil {
 		return nil, errors.New("artifact task runner is required")
 	}
-	artifacts, err := artifact.NewService(config, runner, options)
+	artifacts, err := artifact.NewService(config, runner, options, files)
 	if err != nil {
 		return nil, fmt.Errorf("create artifact service: %w", err)
 	}

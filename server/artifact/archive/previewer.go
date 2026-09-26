@@ -20,9 +20,7 @@ import (
 	"io"
 	"io/fs"
 	"mime"
-	"os"
 	pathpkg "path"
-	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -92,13 +90,12 @@ type Previewer struct {
 	packTTL       time.Duration
 	contentSize   int64
 	concurrency   int
-	sources       *driveutil.CacheFilePool
+	files         *driveutil.DriveFS
 	cache         artifact.Cache
 }
 
 var (
-	_ artifact.Handler  = (*Previewer)(nil)
-	_ types.IDisposable = (*Previewer)(nil)
+	_ artifact.Handler = (*Previewer)(nil)
 )
 
 func init() {
@@ -109,35 +106,21 @@ func init() {
 // task scheduling stay in the shared artifact service. Archive bytes are read
 // through DriveFS, which uses a native file when the entry already provides
 // one and otherwise reads through the source cache pool.
-func NewPreviewer(ctx artifact.HandlerContext) (artifact.Handler, error) {
-	tempDir := ctx.Config.TempDir
-	if tempDir == "" {
-		tempDir = os.TempDir()
+func NewPreviewer(deps artifact.HandlerDeps) (artifact.Handler, error) {
+	if deps.DriveFS == nil {
+		return nil, errors.New("archive preview requires drive fs")
 	}
-	config := ctx.Config.Archive
-	maxSize := utils.PositiveOr(config.MaxSize.DataSize(common.DefaultArchiveMaxSize), common.DefaultArchiveMaxSize)
-	maxMemberSize := utils.PositiveOr(config.MaxMemberSize.DataSize(common.DefaultArchiveMaxMembers), common.DefaultArchiveMaxMembers)
+	config := deps.Config.Archive
+	defaultMaxSize := common.DefaultArchiveMaxSize.DataSize(0)
+	defaultMaxMemberSize := common.DefaultArchiveMaxMembers.DataSize(0)
+	maxSize := utils.PositiveOr(config.MaxSize.DataSize(defaultMaxSize), defaultMaxSize)
+	maxMemberSize := utils.PositiveOr(config.MaxMemberSize.DataSize(defaultMaxMemberSize), defaultMaxMemberSize)
 	maxEntries := utils.PositiveOr(config.MaxEntries, common.DefaultArchiveMaxEntries)
-	cacheItems := utils.PositiveOr(config.CacheItems, common.DefaultArchiveCacheItems)
-	cacheSize := utils.PositiveOr(config.CacheSize.DataSize(common.DefaultArchiveCacheSize), common.DefaultArchiveCacheSize)
 	indexTTL := utils.PositiveOr(config.IndexTTL, common.DefaultArchiveIndexTTL)
 	contentTTL := utils.PositiveOr(config.ContentCacheTTL, common.DefaultArchiveContentCacheTTL)
-	contentSize := utils.PositiveOr(config.ContentCacheSize.DataSize(common.DefaultArchiveContentCacheSize), common.DefaultArchiveContentCacheSize)
+	defaultContentSize := common.DefaultArchiveContentCacheSize.DataSize(0)
+	contentSize := utils.PositiveOr(config.ContentCacheSize.DataSize(defaultContentSize), defaultContentSize)
 	packTTL := utils.PositiveOr(config.PackTTL, common.DefaultArchivePackTTL)
-
-	sourceDir := filepath.Join(tempDir, "archive-sources")
-	if e := os.MkdirAll(sourceDir, 0700); e != nil {
-		return nil, e
-	}
-	sources, e := driveutil.NewCacheFilePool(driveutil.CacheFilePoolOptions{
-		MaxEntries:   cacheItems,
-		MaxBytes:     cacheSize,
-		Dir:          sourceDir,
-		CleanStartup: true,
-	})
-	if e != nil {
-		return nil, e
-	}
 
 	s := &Previewer{
 		maxSize:       maxSize,
@@ -148,8 +131,8 @@ func NewPreviewer(ctx artifact.HandlerContext) (artifact.Handler, error) {
 		packTTL:       packTTL,
 		contentSize:   contentSize,
 		concurrency:   utils.PositiveOr(config.Concurrent, common.DefaultArchiveConcurrent),
-		sources:       sources,
-		cache:         ctx.Cache,
+		files:         deps.DriveFS,
+		cache:         deps.Cache,
 	}
 	return s, nil
 }
@@ -167,15 +150,6 @@ func (s *Previewer) Spec() artifact.Spec {
 			"maxSize":    s.maxSize,
 		},
 	}
-}
-
-func (s *Previewer) Dispose() error {
-	if s == nil || s.sources == nil {
-		return nil
-	}
-	err := s.sources.Dispose()
-	s.sources = nil
-	return err
 }
 
 type archiveArgsKind int

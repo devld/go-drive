@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common"
+	"go-drive/common/driveutil"
 	driveErr "go-drive/common/errors"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -31,13 +32,15 @@ type testEntry struct {
 	reads    *atomic.Int32
 }
 
-func (e *testEntry) Path() string          { return e.path }
-func (e *testEntry) Name() string          { return filepath.Base(e.path) }
-func (e *testEntry) Type() types.EntryType { return types.TypeFile }
-func (e *testEntry) Size() int64           { return e.size }
-func (e *testEntry) ModTime() int64        { return e.modTime }
-func (e *testEntry) Meta() types.EntryMeta { return types.EntryMeta{Readable: true} }
-func (e *testEntry) Drive() types.IDrive   { return nil }
+func (e *testEntry) Path() string                               { return e.path }
+func (e *testEntry) Name() string                               { return filepath.Base(e.path) }
+func (e *testEntry) Type() types.EntryType                      { return types.TypeFile }
+func (e *testEntry) Size() int64                                { return e.size }
+func (e *testEntry) ModTime() int64                             { return e.modTime }
+func (e *testEntry) Meta() types.EntryMeta                      { return types.EntryMeta{Readable: true} }
+func (e *testEntry) Drive() types.IDrive                        { return nil }
+func (e *testEntry) GetDispatchedDrive() (string, types.IDrive) { return "drive", nil }
+func (e *testEntry) GetRealPath() string                        { return e.path }
 func (e *testEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return nil, driveErr.NewUnsupportedError()
 }
@@ -87,24 +90,26 @@ func archiveTestConfig() common.ArchiveConfig {
 		MaxSize:       "1m",
 		MaxMemberSize: "1m",
 		MaxEntries:    100,
-		CacheItems:    2,
-		CacheSize:     "2m",
 		IndexTTL:      time.Hour,
 	}
 }
 
 func newTestPreviewer(t *testing.T, config common.ArchiveConfig, tempDir string) *Previewer {
 	t.Helper()
-	handler, err := NewPreviewer(artifact.HandlerContext{
-		Config: common.Config{TempDir: tempDir, Archive: config},
-		Cache:  &stubArtifactCache{err: errors.New("missing")},
+	files, err := driveutil.NewDriveFS(common.Config{TempDir: tempDir, VFS: common.VFSConfig{CacheItems: 2, CacheSize: "2m"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = files.Dispose() })
+	handler, err := NewPreviewer(artifact.HandlerDeps{
+		Config:  common.Config{TempDir: tempDir, Archive: config},
+		Cache:   &stubArtifactCache{err: errors.New("missing")},
+		DriveFS: files,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	previewer := handler.(*Previewer)
-	t.Cleanup(func() { _ = previewer.Dispose() })
-	return previewer
+	return handler.(*Previewer)
 }
 
 func produceBody(t *testing.T, previewer *Previewer, ctx types.TaskCtx, request artifact.Request) []byte {

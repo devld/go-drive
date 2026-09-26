@@ -16,7 +16,7 @@ import (
 )
 
 func TestZipPackTTLDefaultsToOneMinute(t *testing.T) {
-	handler, e := NewHandler(artifact.HandlerContext{Config: common.Config{}})
+	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{}})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -44,7 +44,7 @@ func TestZipProducePacksDriveFiles(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	handler, e := NewHandler(artifact.HandlerContext{Config: common.Config{Archive: common.ArchiveConfig{PackTTL: time.Minute}}})
+	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{Archive: common.ArchiveConfig{PackTTL: time.Minute}}})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -71,7 +71,7 @@ func TestZipProduceReportsTotalWhileWalking(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	handler, e := NewHandler(artifact.HandlerContext{Config: common.Config{}})
+	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{}})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -94,7 +94,7 @@ func TestZipKeepsMemberPathRelative(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	handler, e := NewHandler(artifact.HandlerContext{Config: common.Config{}})
+	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{}})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -248,7 +248,7 @@ func TestZipOptionLimitsSelection(t *testing.T) {
 		t.Fatal(e)
 	}
 	source, _ := drive.Get(context.Background(), "")
-	handler, e := NewHandler(artifact.HandlerContext{Config: common.Config{}, Options: fixedOption("1")})
+	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{}, Options: fixedOption("1")})
 	if e != nil {
 		t.Fatal(e)
 	}

@@ -119,8 +119,15 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	}
 	ch.Add(dbTokenStore)
 
+	phase = initPhase("drive fs")
+	driveFS, err := driveutil.NewDriveFS(config)
+	if err := phase(err); err != nil {
+		return nil, config, err
+	}
+	ch.Add(driveFS)
+
 	phase = initPhase("artifact previews")
-	artifactService, err := artifactinit.Initialize(config, optionsDAO, runner)
+	artifactService, err := artifactinit.Initialize(config, optionsDAO, runner, driveFS)
 	if err := phase(err); err != nil {
 		return nil, config, err
 	}
@@ -157,7 +164,7 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	failBanGroup := server.NewFailBanGroup(10 * time.Minute)
 	ch.Add(failBanGroup)
 	ch.Add(server.NewRuntimeStat())
-	engine, err := server.InitServer(config, ch, driveRegistry, userAuth, failBanGroup, bus, rootDrive, access,
+	engine, err := server.InitServer(config, ch, driveRegistry, userAuth, failBanGroup, bus, rootDrive, access, driveFS,
 		service, dbTokenStore, artifactService, signer, chunkUploader, runner,
 		optionsDAO, userDAO, groupDAO, driveDAO, driveDataDAO, pathPermissionDAO,
 		pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO,

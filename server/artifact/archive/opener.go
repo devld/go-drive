@@ -3,7 +3,6 @@ package archive
 import (
 	"errors"
 	"fmt"
-	"go-drive/common/driveutil"
 	"go-drive/common/types"
 	"io"
 	pathpkg "path"
@@ -42,11 +41,7 @@ func (s *Previewer) openSourceAndFormat(ctx types.TaskCtx, entry types.IEntry) (
 	if size > s.maxSize {
 		return nil, nil, notFound(msgArchiveTooLarge)
 	}
-	dfs, e := driveutil.NewDriveFS(ctx, entry.Drive(), "", s.sources)
-	if e != nil {
-		return nil, nil, e
-	}
-	file, e := dfs.OpenEntry(ctx, entry)
+	file, e := s.files.Bind(ctx, entry.Drive()).OpenEntry(ctx, entry)
 	if e != nil {
 		return nil, nil, e
 	}

@@ -44,17 +44,17 @@ func init() {
 
 // NewMaker creates a thumbnail artifact processor. Persistence and task
 // scheduling stay in the shared artifact service.
-func NewMaker(ctx artifact.HandlerContext) (artifact.Handler, error) {
-	handlers, e := createHandlers(ctx.Config.Thumbnail.Handlers)
+func NewMaker(deps artifact.HandlerDeps) (artifact.Handler, error) {
+	handlers, e := createHandlers(deps.Config.Thumbnail.Handlers)
 	if e != nil {
 		return nil, e
 	}
 
 	m := &Maker{
 		handlers:    handlers,
-		apiPath:     ctx.Config.APIPath,
-		validity:    ctx.Config.Thumbnail.TTL,
-		concurrency: ctx.Config.Thumbnail.Concurrent,
+		apiPath:     deps.Config.APIPath,
+		validity:    deps.Config.Thumbnail.TTL,
+		concurrency: deps.Config.Thumbnail.Concurrent,
 	}
 	return m, nil
 }

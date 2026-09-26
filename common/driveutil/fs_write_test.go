@@ -13,10 +13,7 @@ import (
 
 func TestDriveFSWriteSavesEmptyCreateAndTruncate(t *testing.T) {
 	d := newWriteDrive(map[string][]byte{"old.txt": []byte("hello")})
-	fs, e := NewDriveFS(context.Background(), d, t.TempDir(), nil)
-	if e != nil {
-		t.Fatal(e)
-	}
+	fs := (&DriveFS{tempDir: t.TempDir()}).Bind(context.Background(), d)
 
 	created, e := fs.OpenFile(context.Background(), "new.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if e != nil {
@@ -67,10 +64,7 @@ func TestDriveFSWriteSavesEmptyCreateAndTruncate(t *testing.T) {
 
 func TestDriveFSCreateWithoutTruncKeepsExistingBytes(t *testing.T) {
 	d := newWriteDrive(map[string][]byte{"old.txt": []byte("hello")})
-	fs, e := NewDriveFS(context.Background(), d, t.TempDir(), nil)
-	if e != nil {
-		t.Fatal(e)
-	}
+	fs := (&DriveFS{tempDir: t.TempDir()}).Bind(context.Background(), d)
 
 	f, e := fs.OpenFile(context.Background(), "old.txt", os.O_RDWR|os.O_CREATE, 0644)
 	if e != nil {
@@ -103,10 +97,7 @@ func TestDriveFSCreateWithoutTruncKeepsExistingBytes(t *testing.T) {
 
 func TestDriveFSReadWriteCloseWithoutWriteDoesNotSave(t *testing.T) {
 	d := newWriteDrive(map[string][]byte{"old.txt": []byte("hello")})
-	fs, e := NewDriveFS(context.Background(), d, t.TempDir(), nil)
-	if e != nil {
-		t.Fatal(e)
-	}
+	fs := (&DriveFS{tempDir: t.TempDir()}).Bind(context.Background(), d)
 	f, e := fs.OpenFile(context.Background(), "old.txt", os.O_RDWR, 0644)
 	if e != nil {
 		t.Fatal(e)

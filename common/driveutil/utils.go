@@ -453,11 +453,7 @@ func FindEntries(ctx types.TaskCtx, root types.IDrive, pattern string, bytesProg
 		ctx = task.DummyContext()
 	}
 	result := make([]types.IEntry, 0)
-	dfs, e := NewDriveFS(ctx, root, "", nil)
-	if e != nil {
-		return nil, e
-	}
-	e = doublestar.GlobWalk(dfs, pattern, func(path string, d fs.DirEntry) error {
+	e := doublestar.GlobWalk(newWalkDriveFS(ctx, root), pattern, func(path string, d fs.DirEntry) error {
 		entry, e := root.Get(ctx, path)
 		if e != nil {
 			return e
