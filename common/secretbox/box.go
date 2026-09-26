@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"io"
 	"os"
 	"path/filepath"
@@ -52,11 +51,10 @@ func New(secret string) (*Box, error) {
 	return &Box{key: key}, nil
 }
 
-// Open loads the deployment secret and registers the box on ch.
-// An environment variable is used when set. Otherwise the key file in dataDir
-// is used, and created when it does not exist. The process refuses to start
-// when both are present and different.
-func Open(dataDir string, ch *registry.ComponentsHolder) (*Box, error) {
+// Open loads the deployment secret. An environment variable is used when set.
+// Otherwise the key file in dataDir is used, and created when it does not exist.
+// The process refuses to start when both are present and different.
+func Open(dataDir string) (*Box, error) {
 	env := strings.TrimSpace(os.Getenv(EnvKey))
 	path := filepath.Join(dataDir, keyFileName)
 	fileSecret, fileErr := readSecretFile(path)
@@ -86,11 +84,7 @@ func Open(dataDir string, ch *registry.ComponentsHolder) (*Box, error) {
 		logging.For("secretbox").Infof("generated encryption key at %s", path)
 		box, e = New(secret)
 	}
-	if e != nil {
-		return nil, e
-	}
-	ch.Add(registry.KeySecretBox, box)
-	return box, nil
+	return box, e
 }
 
 func readSecretFile(path string) (string, error) {

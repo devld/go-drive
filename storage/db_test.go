@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"go-drive/common/registry"
 	"go-drive/common/secretbox"
 	"go-drive/common/types"
 	"go-drive/testutil"
@@ -12,20 +11,19 @@ import (
 	"testing"
 )
 
-func newTestDB(t *testing.T) (*DB, *registry.ComponentsHolder, func()) {
+func newTestDB(t *testing.T) (*DB, *secretbox.Box, func()) {
 	t.Helper()
 	config := testutil.DefaultTestConfig() // uses shared config from GetSharedTestConfig
-	ch := registry.NewComponentHolder()
-	if _, err := secretbox.Open(config.DataDir, ch); err != nil {
+	secrets, err := secretbox.Open(config.DataDir)
+	if err != nil {
 		t.Fatalf("secretbox.Open: %v", err)
 	}
-	db, err := NewDB(config, ch)
+	db, err := NewDB(config, secrets)
 	if err != nil {
 		t.Fatalf("NewDB: %v", err)
 	}
-	return db, ch, func() {
+	return db, secrets, func() {
 		_ = db.Dispose()
-		_ = ch.Dispose()
 	}
 }
 
@@ -76,7 +74,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNewDB(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, secrets, cleanup := newTestDB(t)
 	defer cleanup()
 
 	if db == nil {
@@ -85,8 +83,8 @@ func TestNewDB(t *testing.T) {
 	if db.C() == nil {
 		t.Fatal("DB.C() is nil")
 	}
-	if ch == nil {
-		t.Fatal("ComponentsHolder is nil")
+	if secrets == nil {
+		t.Fatal("secret box is nil")
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"go-drive/common"
 	err "go-drive/common/errors"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"strings"
 	"testing"
@@ -15,7 +14,7 @@ import (
 
 func newTestRunner(t *testing.T, concurrency int) Runner {
 	t.Helper()
-	runner := NewTaskRunner(common.Config{MaxConcurrentTask: concurrency}, registry.NewComponentHolder())
+	runner := NewTaskRunner(common.Config{MaxConcurrentTask: concurrency})
 	t.Cleanup(func() {
 		if e := runner.Dispose(); e != nil {
 			t.Errorf("dispose runner: %v", e)

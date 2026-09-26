@@ -7,12 +7,12 @@ import (
 )
 
 func TestPathMountDAO_SaveMountsUpdatesExistingRecord(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
 	if e := db.C().Where("1 = 1").Delete(&types.PathMount{}).Error; e != nil {
 		t.Fatalf("clear mounts: %v", e)
 	}
-	dao := NewPathMountDAO(db, ch)
+	dao := NewPathMountDAO(db)
 	parent := "drive/parent"
 	if e := dao.SaveMounts([]types.PathMount{{Path: &parent, Name: "mounted", MountAt: "source/one"}}, true); e != nil {
 		t.Fatalf("create mount: %v", e)
@@ -34,12 +34,12 @@ func TestPathMountDAO_SaveMountsUpdatesExistingRecord(t *testing.T) {
 }
 
 func TestPathMountDAO_SaveMountsDoesNotDuplicateExistingPath(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
 	if e := db.C().Where("1 = 1").Delete(&types.PathMount{}).Error; e != nil {
 		t.Fatalf("clear mounts: %v", e)
 	}
-	dao := NewPathMountDAO(db, ch)
+	dao := NewPathMountDAO(db)
 	parent := "drive/parent"
 	e := dao.SaveMounts([]types.PathMount{
 		{Path: &parent, Name: "mounted", MountAt: "source/one"},

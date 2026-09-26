@@ -6,7 +6,6 @@ import (
 	"fmt"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
-	"go-drive/common/registry"
 	"go-drive/common/secretbox"
 	"go-drive/common/types"
 	"strings"
@@ -19,13 +18,8 @@ type DriveDAO struct {
 	secrets *secretbox.Box
 }
 
-func NewDriveDAO(db *DB, ch *registry.ComponentsHolder) *DriveDAO {
-	dao := &DriveDAO{
-		db:      db,
-		secrets: ch.Get(registry.KeySecretBox).(*secretbox.Box),
-	}
-	ch.Add(registry.KeyDrivesDAO, dao)
-	return dao
+func NewDriveDAO(db *DB, secrets *secretbox.Box) *DriveDAO {
+	return &DriveDAO{db: db, secrets: secrets}
 }
 
 func (d *DriveDAO) GetDrives() ([]types.Drive, error) {

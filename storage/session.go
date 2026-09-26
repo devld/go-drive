@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"go-drive/common/registry"
 	"go-drive/common/types"
 )
 
@@ -11,10 +10,8 @@ type SessionDAO struct {
 	db *DB
 }
 
-func NewSessionDAO(db *DB, ch *registry.ComponentsHolder) *SessionDAO {
-	dao := &SessionDAO{db: db}
-	ch.Add(registry.KeySessionDAO, dao)
-	return dao
+func NewSessionDAO(db *DB) *SessionDAO {
+	return &SessionDAO{db: db}
 }
 
 // Create inserts a new session row.

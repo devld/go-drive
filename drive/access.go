@@ -3,7 +3,6 @@ package drive
 import (
 	"go-drive/common/event"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/storage"
@@ -24,11 +23,10 @@ type Access struct {
 	options  *storage.OptionsDAO
 	pathMeta *storage.PathMetaDAO
 
-	ch  *registry.ComponentsHolder
 	bus event.Bus
 }
 
-func NewAccess(ch *registry.ComponentsHolder,
+func NewAccess(
 	rootDrive *RootDrive, permissionDAO *storage.PathPermissionDAO,
 	options *storage.OptionsDAO, pathMeta *storage.PathMetaDAO,
 	bus event.Bus) (*Access, error) {
@@ -39,14 +37,11 @@ func NewAccess(ch *registry.ComponentsHolder,
 		permissionDAO: permissionDAO,
 		options:       options,
 		pathMeta:      pathMeta,
-		ch:            ch,
 		bus:           bus,
 	}
 	if e := da.ReloadPerm(); e != nil {
 		return nil, e
 	}
-
-	ch.Add(registry.KeyDriveAccess, da)
 	return da, nil
 }
 
@@ -113,7 +108,7 @@ func (da *Access) GetDrive(session types.Principal) (types.IDrive, error) {
 }
 
 func (da *Access) GetRootDrive(session *types.Principal) types.IDrive {
-	return NewListenerWrapper(da.rootDrive.Get(), types.DriveListenerContext{
+	return NewListenerWrapper(da.rootDrive.Get(), types.DriveEvent{
 		Principal: session,
 		Drive:     da.rootDrive.Get(),
 	}, da.bus)

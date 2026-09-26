@@ -7,10 +7,10 @@ import (
 )
 
 func TestDriveDataStoreLoadAllAndClearEmptyValues(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, secrets, cleanup := newTestDB(t)
 	defer cleanup()
 
-	store := NewDriveDataDAO(db, ch).GetDataStore("drive-1")
+	store := NewDriveDataDAO(db, secrets).GetDataStore("drive-1")
 	if e := store.Save(types.SM{"first": "one", "second": "two"}); e != nil {
 		t.Fatal(e)
 	}
@@ -39,10 +39,10 @@ func TestDriveDataStoreLoadAllAndClearEmptyValues(t *testing.T) {
 }
 
 func TestDriveDataStoreSaveEncryptedRoundTrip(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, secrets, cleanup := newTestDB(t)
 	defer cleanup()
 
-	store := NewDriveDataDAO(db, ch).GetDataStore("drive-1")
+	store := NewDriveDataDAO(db, secrets).GetDataStore("drive-1")
 	if e := store.SaveEncrypted(types.SM{"token": "access", "note": ""}); e != nil {
 		t.Fatal(e)
 	}

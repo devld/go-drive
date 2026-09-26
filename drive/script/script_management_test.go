@@ -14,7 +14,6 @@ import (
 
 	"go-drive/common"
 	"go-drive/common/driveutil"
-	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
 )
@@ -53,7 +52,7 @@ defineDrive(
 	if e := os.WriteFile(filepath.Join(drivesDir, "example.js"), []byte(content), 0644); e != nil {
 		t.Fatal(e)
 	}
-	driveRegistry := driveutil.NewDriveRegistry(registry.NewComponentHolder())
+	driveRegistry := driveutil.NewDriveRegistry()
 	t.Cleanup(func() { _ = driveRegistry.ReplaceDriveGroup("script/", nil) })
 
 	if e := RegisterAllScriptDrives(context.Background(), config, driveRegistry); e != nil {

@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"go-drive/common/registry"
 )
 
 func TestEncryptDecryptRoundTrip(t *testing.T) {
@@ -70,7 +68,7 @@ func TestDecryptRejectsForeignSeal(t *testing.T) {
 func TestOpenUsesEnvAndRejectsMismatch(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(EnvKey, "env-secret")
-	box, e := Open(dir, registry.NewComponentHolder())
+	box, e := Open(dir)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -85,12 +83,12 @@ func TestOpenUsesEnvAndRejectsMismatch(t *testing.T) {
 	if e = os.WriteFile(filepath.Join(dir, keyFileName), []byte("file-secret\n"), 0o600); e != nil {
 		t.Fatal(e)
 	}
-	if _, e = Open(dir, registry.NewComponentHolder()); e == nil {
+	if _, e = Open(dir); e == nil {
 		t.Fatal("expected mismatch")
 	}
 
 	t.Setenv(EnvKey, "")
-	fromFile, e := Open(dir, registry.NewComponentHolder())
+	fromFile, e := Open(dir)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -102,7 +100,7 @@ func TestOpenUsesEnvAndRejectsMismatch(t *testing.T) {
 func TestOpenGeneratesKeyFile(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(EnvKey, "")
-	if _, e := Open(dir, registry.NewComponentHolder()); e != nil {
+	if _, e := Open(dir); e != nil {
 		t.Fatal(e)
 	}
 	info, e := os.Stat(filepath.Join(dir, keyFileName))
@@ -112,7 +110,7 @@ func TestOpenGeneratesKeyFile(t *testing.T) {
 	if info.Mode().Perm() != 0o600 {
 		t.Fatalf("mode = %o", info.Mode().Perm())
 	}
-	again, e := Open(dir, registry.NewComponentHolder())
+	again, e := Open(dir)
 	if e != nil {
 		t.Fatal(e)
 	}

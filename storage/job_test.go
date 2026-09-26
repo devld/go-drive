@@ -8,9 +8,9 @@ import (
 )
 
 func TestJobDAO_GetJob_notFoundReturnsNotFound(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewJobDAO(db, ch)
+	dao := NewJobDAO(db)
 	_, e := dao.GetJob(999999)
 	if e == nil {
 		t.Fatal("expected error for nonexistent job")
@@ -22,9 +22,9 @@ func TestJobDAO_GetJob_notFoundReturnsNotFound(t *testing.T) {
 }
 
 func TestJobDAO_GetJobExecutionsPagination(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewJobDAO(db, ch)
+	dao := NewJobDAO(db)
 
 	for i := range 5 {
 		if e := dao.AddJobExecution(&types.JobExecution{

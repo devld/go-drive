@@ -1,13 +1,12 @@
 package driveutil
 
 import (
-	"go-drive/common/registry"
 	"reflect"
 	"testing"
 )
 
 func TestReplaceDriveGroupAndUnregisterDrive(t *testing.T) {
-	driveRegistry := NewDriveRegistry(registry.NewComponentHolder())
+	driveRegistry := NewDriveRegistry()
 	prefix := "test/registry/"
 	t.Cleanup(func() { _ = driveRegistry.ReplaceDriveGroup(prefix, nil) })
 
@@ -35,7 +34,7 @@ func TestReplaceDriveGroupAndUnregisterDrive(t *testing.T) {
 }
 
 func TestGetRegisteredDrivesPreservesRegistrationOrder(t *testing.T) {
-	driveRegistry := NewDriveRegistry(registry.NewComponentHolder())
+	driveRegistry := NewDriveRegistry()
 	prefix := "test/order/"
 	t.Cleanup(func() { _ = driveRegistry.ReplaceDriveGroup(prefix, nil) })
 

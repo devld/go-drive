@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 
@@ -14,10 +13,8 @@ type OptionsDAO struct {
 	cache *utils.KVCache[types.Option]
 }
 
-func NewOptionsDAO(db *DB, ch *registry.ComponentsHolder) *OptionsDAO {
-	dao := &OptionsDAO{db: db, cache: utils.NewKVCache[types.Option](0, 0)}
-	ch.Add(registry.KeyOptionsDAO, dao)
-	return dao
+func NewOptionsDAO(db *DB) *OptionsDAO {
+	return &OptionsDAO{db: db, cache: utils.NewKVCache[types.Option](0, 0)}
 }
 
 func (d *OptionsDAO) Set(key, value string) error {

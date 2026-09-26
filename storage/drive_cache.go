@@ -5,7 +5,6 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"time"
@@ -18,10 +17,8 @@ type DriveCacheDAO struct {
 	timerStop func()
 }
 
-func NewDriveCacheDAO(db *DB, ch *registry.ComponentsHolder) *DriveCacheDAO {
-	c := &DriveCacheDAO{db: db}
-	ch.Add(registry.KeyDriveCacheDAO, c)
-	return c
+func NewDriveCacheDAO(db *DB) *DriveCacheDAO {
+	return &DriveCacheDAO{db: db}
 }
 
 func (d *DriveCacheDAO) StartCleaner(period time.Duration) {

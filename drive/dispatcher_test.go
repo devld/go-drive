@@ -6,7 +6,6 @@ import (
 	"go-drive/common"
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
-	"go-drive/common/registry"
 	"go-drive/common/secretbox"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -38,19 +37,19 @@ func newTestDispatcher(t *testing.T, driveNames []string) (
 ) {
 	t.Helper()
 	config = testutil.DefaultTestConfig()
-	ch := registry.NewComponentHolder()
-	if _, e := secretbox.Open(config.DataDir, ch); e != nil {
+	secrets, e := secretbox.Open(config.DataDir)
+	if e != nil {
 		t.Fatalf("secretbox.Open: %v", e)
 	}
-	driveutil.NewDriveRegistry(ch)
-	if e := RegisterAllDrives(context.Background(), config, ch); e != nil {
+	driveRegistry := driveutil.NewDriveRegistry()
+	if e := RegisterAllDrives(context.Background(), config, driveRegistry); e != nil {
 		t.Fatalf("RegisterAllDrives: %v", e)
 	}
-	db, e := storage.NewDB(config, ch)
+	db, e := storage.NewDB(config, secrets)
 	if e != nil {
 		t.Fatalf("NewDB: %v", e)
 	}
-	mountDAO = storage.NewPathMountDAO(db, ch)
+	mountDAO = storage.NewPathMountDAO(db)
 	dispatcher := NewDispatcherDrive(config)
 	d = NewPathMountOverlayDrive(dispatcher, mountDAO)
 
@@ -64,7 +63,6 @@ func newTestDispatcher(t *testing.T, driveNames []string) (
 		}
 	}
 
-	driveRegistry := ch.Get(registry.KeyDriveRegistry).(*driveutil.DriveRegistry)
 	cfg := driveRegistry.GetDrive("fs")
 	if cfg == nil {
 		t.Fatal("fs drive not registered")
@@ -87,7 +85,6 @@ func newTestDispatcher(t *testing.T, driveNames []string) (
 	cleanup = func() {
 		_ = dispatcher.Dispose()
 		_ = db.Dispose()
-		_ = ch.Dispose()
 	}
 	return
 }

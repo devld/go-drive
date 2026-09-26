@@ -8,9 +8,9 @@ import (
 )
 
 func TestUserDAO_AddUser_passwordNotReturned(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewUserDAO(db, ch)
+	dao := NewUserDAO(db)
 	u, e := dao.AddUser(types.User{Username: "u1", Password: "plain"})
 	if e != nil {
 		t.Fatalf("AddUser: %v", e)
@@ -21,9 +21,9 @@ func TestUserDAO_AddUser_passwordNotReturned(t *testing.T) {
 }
 
 func TestUserDAO_AddUser_duplicateReturnsNotAllowed(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewUserDAO(db, ch)
+	dao := NewUserDAO(db)
 	_, _ = dao.AddUser(types.User{Username: "dup", Password: "p"})
 	_, e := dao.AddUser(types.User{Username: "dup", Password: "p2"})
 	if e == nil {
@@ -36,9 +36,9 @@ func TestUserDAO_AddUser_duplicateReturnsNotAllowed(t *testing.T) {
 }
 
 func TestUserDAO_GetUser_notFoundReturnsNotFound(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewUserDAO(db, ch)
+	dao := NewUserDAO(db)
 	_, e := dao.GetUser("nonexistent")
 	if e == nil {
 		t.Fatal("expected error for nonexistent user")
@@ -50,9 +50,9 @@ func TestUserDAO_GetUser_notFoundReturnsNotFound(t *testing.T) {
 }
 
 func TestUserDAO_UpdateUser_notFoundReturnsNotFound(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewUserDAO(db, ch)
+	dao := NewUserDAO(db)
 	e := dao.UpdateUser("nonexistent", types.User{RootPath: "/"})
 	if e == nil {
 		t.Fatal("expected error when updating nonexistent user")
@@ -64,9 +64,9 @@ func TestUserDAO_UpdateUser_notFoundReturnsNotFound(t *testing.T) {
 }
 
 func TestUserDAO_DeleteUser_notFoundReturnsNotFound(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewUserDAO(db, ch)
+	dao := NewUserDAO(db)
 	e := dao.DeleteUser("nonexistent")
 	if e == nil {
 		t.Fatal("expected error when deleting nonexistent user")

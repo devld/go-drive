@@ -5,7 +5,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"strconv"
 	"time"
@@ -24,7 +23,7 @@ func init() {
 			{Field: "schedule", Label: t("schedule"), Description: t("schedule_desc"), Type: "text", Required: true},
 		},
 		Validate: validateCronConfig,
-		Factory: func(executor *JobExecutor, ch *registry.ComponentsHolder) IJobTriggerInstance {
+		Factory: func(executor *JobExecutor, _ JobTriggerDeps) IJobTriggerInstance {
 			return newCronTrigger(executor)
 		},
 	})

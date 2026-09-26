@@ -44,15 +44,10 @@ type commonRoute struct {
 }
 
 func (cr *commonRoute) getConfig(c *gin.Context) {
-	cs := cr.ch.Gets(func(c any) bool {
-		_, ok := c.(types.ISysConfig)
-		return ok
-	})
-
 	configMap := make(types.M)
 
-	for _, sc := range cs {
-		name, m, e := sc.(types.ISysConfig).SysConfig()
+	for _, sc := range registry.Gets[types.ISysConfig](cr.ch) {
+		name, m, e := sc.SysConfig()
 		if e != nil {
 			_ = c.Error(e)
 			return

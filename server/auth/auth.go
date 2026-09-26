@@ -8,7 +8,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/storage"
 )
@@ -74,9 +73,8 @@ type UserAuth struct {
 // NewUserAuth builds the provider chain.
 // The local provider is always implicit (no config needed).
 // Additional providers are created from config using the factory registry.
-func NewUserAuth(configs []common.AuthProviderConfig, ch *registry.ComponentsHolder) (*UserAuth, error) {
-	userDAO := ch.Get(registry.KeyUserDAO).(*storage.UserDAO)
-	local := newLocalAuthProvider(ch)
+func NewUserAuth(configs []common.AuthProviderConfig, userDAO *storage.UserDAO, groupDAO *storage.GroupDAO) (*UserAuth, error) {
+	local := newLocalAuthProvider(userDAO)
 
 	providers := make([]namedProvider, 0, len(configs))
 	for _, cfg := range configs {
@@ -84,7 +82,7 @@ func NewUserAuth(configs []common.AuthProviderConfig, ch *registry.ComponentsHol
 		if def == nil {
 			return nil, fmt.Errorf("unknown auth provider type: %s", cfg.Type)
 		}
-		p, e := def.Factory(cfg.Config, ch)
+		p, e := def.Factory(cfg.Config, userDAO, groupDAO)
 		if e != nil {
 			logging.For("auth").Errorf("authentication provider initialization failed provider=%s: %v",
 				logging.Sanitize(cfg.Type), e)

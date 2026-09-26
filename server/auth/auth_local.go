@@ -5,7 +5,6 @@ import (
 
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/storage"
 
@@ -16,8 +15,7 @@ type localAuthProvider struct {
 	userDAO *storage.UserDAO
 }
 
-func newLocalAuthProvider(ch *registry.ComponentsHolder) *localAuthProvider {
-	userDAO := ch.Get(registry.KeyUserDAO).(*storage.UserDAO)
+func newLocalAuthProvider(userDAO *storage.UserDAO) *localAuthProvider {
 	return &localAuthProvider{userDAO: userDAO}
 }
 

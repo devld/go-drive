@@ -20,13 +20,14 @@ func TestInitializeRegistersBuiltInArtifactProcessors(t *testing.T) {
 			Concurrent: 1,
 		},
 	}
-	runner := task.NewTaskRunner(config, components)
+	runner := task.NewTaskRunner(config)
 	t.Cleanup(func() { _ = components.Dispose() })
 
-	artifacts, err := Initialize(config, nil, runner, components)
+	artifacts, err := Initialize(config, nil, runner)
 	if err != nil {
 		t.Fatal(err)
 	}
+	components.Add(artifacts)
 	source := &initTestEntry{}
 	for _, handler := range []string{"thumbnail", "archive"} {
 		_, err := artifacts.Fetch(context.Background(), artifact.Request{Handler: handler, Source: source}, 0)
@@ -34,7 +35,8 @@ func TestInitializeRegistersBuiltInArtifactProcessors(t *testing.T) {
 			t.Fatalf("artifact handler %q was not registered: %v", handler, err)
 		}
 	}
-	if components.Get(registry.KeyArtifact) != artifacts {
+	found := registry.Gets[*artifact.Service](components)
+	if len(found) != 1 || found[0] != artifacts {
 		t.Fatal("artifact service was not registered")
 	}
 	name, configValues, err := artifacts.SysConfig()

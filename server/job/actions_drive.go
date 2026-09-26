@@ -5,11 +5,9 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
-	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
-	"go-drive/drive"
 	"path"
 	"strings"
 )
@@ -26,13 +24,13 @@ func init() {
 			{Field: "override", Label: t("override"), Description: t("override_desc"), Type: "checkbox"},
 			{Field: "move", Label: t("move"), Description: t("move_desc"), Type: "checkbox"},
 		},
-		Do: func(ctx types.TaskCtx, params types.SM, ch *registry.ComponentsHolder, log func(string)) error {
+		Do: func(ctx types.TaskCtx, params types.SM, action JobActionDeps, log func(string)) error {
 			src := strings.Split(params["src"], "\n")
 			dest := params["dest"]
 			move := params.GetBool("move")
 			override := params.GetBool("override")
 
-			drive := ch.Get(registry.KeyDriveAccess).(*drive.Access).GetRootDrive(nil)
+			root := action.Access.GetRootDrive(nil)
 			opCtx := task.NewTaskCtxWrapper(ctx, false, false)
 			matched := make([][]types.IEntry, 0, len(src))
 
@@ -40,7 +38,7 @@ func init() {
 				if from == "" {
 					continue
 				}
-				fromEntries, e := driveutil.FindEntries(opCtx, drive, from, false)
+				fromEntries, e := driveutil.FindEntries(opCtx, root, from, false)
 				if e != nil {
 					return e
 				}
@@ -52,14 +50,14 @@ func init() {
 				var e error
 				if move {
 					log(fmt.Sprintf("  move '%s'", fromEntry.Path()))
-					_, e = drive.Move(
+					_, e = root.Move(
 						opCtx,
 						fromEntry,
 						utils.CleanPath(path.Join(dest, fromEntry.Name())),
 						override)
 				} else {
 					log(fmt.Sprintf("  copy '%s'", fromEntry.Path()))
-					_, e = drive.Copy(
+					_, e = root.Copy(
 						opCtx,
 						fromEntry,
 						utils.CleanPath(path.Join(dest, fromEntry.Name())),
@@ -81,17 +79,17 @@ func init() {
 		ParamsForm: []types.FormItem{
 			{Field: "paths", Label: t("paths"), Description: t("paths_desc"), Type: "textarea", Required: true},
 		},
-		Do: func(ctx types.TaskCtx, params types.SM, ch *registry.ComponentsHolder, log func(string)) error {
+		Do: func(ctx types.TaskCtx, params types.SM, action JobActionDeps, log func(string)) error {
 			paths := strings.Split(params["paths"], "\n")
 
-			drive := ch.Get(registry.KeyDriveAccess).(*drive.Access).GetRootDrive(nil)
+			root := action.Access.GetRootDrive(nil)
 			opCtx := task.NewTaskCtxWrapper(ctx, false, false)
 			matched := make([][]types.IEntry, 0, len(paths))
 			for _, p := range paths {
 				if p == "" {
 					continue
 				}
-				entries, e := driveutil.FindEntries(opCtx, drive, p, false)
+				entries, e := driveutil.FindEntries(opCtx, root, p, false)
 				if e != nil {
 					return e
 				}
@@ -101,7 +99,7 @@ func init() {
 
 			return runEntryOperations(ctx, matched, true, func(entry types.IEntry) error {
 				log(fmt.Sprintf("  delete '%s'", entry.Path()))
-				e := drive.Delete(opCtx, entry.Path())
+				e := root.Delete(opCtx, entry.Path())
 				if e != nil && !err.IsNotFoundError(e) {
 					return e
 				}

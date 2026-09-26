@@ -8,7 +8,6 @@ import (
 	apierr "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"runtime/debug"
@@ -45,7 +44,7 @@ var cleanThreshold = 10 * time.Minute
 
 var taskLog = logging.For("task")
 
-func NewTaskRunner(config common.Config, ch *registry.ComponentsHolder) Runner {
+func NewTaskRunner(config common.Config) Runner {
 	tr := &taskRunner{
 		maxRun:  config.MaxConcurrentTask,
 		maxWait: config.MaxConcurrentTask,
@@ -53,7 +52,6 @@ func NewTaskRunner(config common.Config, ch *registry.ComponentsHolder) Runner {
 		store:   cmap.New[*taskCtx](),
 	}
 	tr.tickerStop = utils.TimeTick(tr.clean, 30*time.Second)
-	ch.Add(registry.KeyTaskRunner, tr)
 	return tr
 }
 

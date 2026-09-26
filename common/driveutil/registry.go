@@ -2,7 +2,6 @@ package driveutil
 
 import (
 	"fmt"
-	"go-drive/common/registry"
 	"strings"
 	"sync"
 )
@@ -14,10 +13,8 @@ type DriveRegistry struct {
 }
 
 // NewDriveRegistry creates an empty drive registry.
-func NewDriveRegistry(ch *registry.ComponentsHolder) *DriveRegistry {
-	driveRegistry := &DriveRegistry{}
-	ch.Add(registry.KeyDriveRegistry, driveRegistry)
-	return driveRegistry
+func NewDriveRegistry() *DriveRegistry {
+	return &DriveRegistry{}
 }
 
 // RegisterDrive registers a drive factory. Static factories are normally

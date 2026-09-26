@@ -5,9 +5,9 @@ import (
 )
 
 func TestPathMetaDAO_Get_missingReturnsNilNil(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewPathMetaDAO(db, ch)
+	dao := NewPathMetaDAO(db)
 	pm, e := dao.Get("/nonexistent/path")
 	if e != nil {
 		t.Fatalf("Get: %v", e)

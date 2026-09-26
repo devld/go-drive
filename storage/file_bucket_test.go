@@ -9,9 +9,9 @@ import (
 
 // GetBucket uses cache only; with a fresh DAO and no buckets in DB, any name returns NotFound.
 func TestFileBucketDAO_GetBucket_notInCacheReturnsNotFound(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewFileBucketDAO(db, ch)
+	dao := NewFileBucketDAO(db)
 	_, e := dao.GetBucket("nonexistent_bucket")
 	if e == nil {
 		t.Fatal("expected error for bucket not in cache")
@@ -23,9 +23,9 @@ func TestFileBucketDAO_GetBucket_notInCacheReturnsNotFound(t *testing.T) {
 }
 
 func TestFileBucketDAO_AddBucket_duplicateReturnsNotAllowed(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewFileBucketDAO(db, ch)
+	dao := NewFileBucketDAO(db)
 	b := types.FileBucket{
 		Name: "b1", TargetPath: "/t", SecretToken: "tok", URLTemplate: "/u",
 	}

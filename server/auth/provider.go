@@ -2,15 +2,15 @@ package auth
 
 import (
 	"fmt"
-	"go-drive/common/registry"
 	"go-drive/common/types"
+	"go-drive/storage"
 )
 
 // AuthProviderDef is the definition of an auth provider, registered at startup.
 type AuthProviderDef struct {
 	Name        string
 	DisplayName string
-	Factory     func(config types.M, ch *registry.ComponentsHolder) (AuthProvider, error)
+	Factory     func(config types.M, userDAO *storage.UserDAO, groupDAO *storage.GroupDAO) (AuthProvider, error)
 }
 
 var registeredProviderDefs = make(map[string]*AuthProviderDef)

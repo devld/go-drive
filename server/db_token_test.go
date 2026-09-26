@@ -1,7 +1,6 @@
 package server
 
 import (
-	"go-drive/common/registry"
 	"go-drive/common/secretbox"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -22,26 +21,24 @@ func TestMain(m *testing.M) {
 func newTestDBTokenStore(t *testing.T) (*DBTokenStore, *storage.UserDAO, func()) {
 	t.Helper()
 	config, _ := testutil.GetSharedTestConfig()
-	ch := registry.NewComponentHolder()
-	if _, e := secretbox.Open(config.DataDir, ch); e != nil {
+	secrets, e := secretbox.Open(config.DataDir)
+	if e != nil {
 		t.Fatalf("secretbox.Open: %v", e)
 	}
-	db, e := storage.NewDB(config, ch)
+	db, e := storage.NewDB(config, secrets)
 	if e != nil {
 		t.Fatalf("NewDB: %v", e)
 	}
-	userDAO := storage.NewUserDAO(db, ch)
-	sessionDAO := storage.NewSessionDAO(db, ch)
-	ts, e := NewDBTokenStore(sessionDAO, userDAO, config, ch)
+	userDAO := storage.NewUserDAO(db)
+	sessionDAO := storage.NewSessionDAO(db)
+	ts, e := NewDBTokenStore(sessionDAO, userDAO, config)
 	if e != nil {
 		_ = db.Dispose()
-		_ = ch.Dispose()
 		t.Fatalf("NewDBTokenStore: %v", e)
 	}
 	return ts, userDAO, func() {
 		_ = ts.Dispose()
 		_ = db.Dispose()
-		_ = ch.Dispose()
 	}
 }
 
