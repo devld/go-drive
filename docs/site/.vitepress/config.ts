@@ -94,7 +94,8 @@ const enSidebar = [
       { text: 'WebDAV', link: '/drives/webdav' },
       { text: 'S3', link: '/drives/s3' },
       { text: 'OneDrive', link: '/drives/onedrive' },
-      { text: 'Google Drive', link: '/drives/google-drive' }
+      { text: 'Google Drive', link: '/drives/google-drive' },
+      { text: 'MEGA', link: '/drives/mega' }
     ]
   },
   {
@@ -155,7 +156,8 @@ const zhSidebar = [
       { text: 'WebDAV', link: '/zh-CN/drives/webdav' },
       { text: 'S3', link: '/zh-CN/drives/s3' },
       { text: 'OneDrive', link: '/zh-CN/drives/onedrive' },
-      { text: 'Google Drive', link: '/zh-CN/drives/google-drive' }
+      { text: 'Google Drive', link: '/zh-CN/drives/google-drive' },
+      { text: 'MEGA', link: '/zh-CN/drives/mega' }
     ]
   },
   {

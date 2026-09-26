@@ -1,2 +1,3 @@
 web/public/** linguist-vendored
 server/webdav/** linguist-vendored
+drive/mega/internal/gomega/** linguist-vendored

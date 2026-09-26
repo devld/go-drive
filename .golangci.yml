@@ -20,4 +20,6 @@ linters:
     paths:
       # Forked encoding/xml from the Go standard library.
       - server/webdav/internal/xml
+      # Modified copy of github.com/t3rm1n4l/go-mega.
+      - drive/mega/internal/gomega
       - web/node_modules
