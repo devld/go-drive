@@ -3,7 +3,7 @@ title: Drive 总览
 description: 比较 go-drive 支持的存储后端、能力差异、配置要求及浏览器直传和直下限制。
 lang: zh-CN
 translation_key: drives
-source_hash: a8b26b8764f063973ca0c6b01b080f34e81b6b44983dd836c8cae5a0ddb89eab
+source_hash: 4cccec1205d8ceabb0443dadb6c547fd14ed97696c7f0c2984b701c4b7ec228b
 ---
 
 # Drive 总览
@@ -21,12 +21,13 @@ source_hash: a8b26b8764f063973ca0c6b01b080f34e81b6b44983dd836c8cae5a0ddb89eab
 | S3 | 是 | 是 | 是（文件） | 可由浏览器直传/直下或强制代理 |
 | OneDrive | 是 | 是 | 是（文件） | 可由浏览器直传/直下或强制代理 |
 | Google Drive | 是 | 是 | 是（文件） | 支持 Google 原生文档导出 |
+| MEGA | 是 | 是 | 否 | 客户端加密，文件内容经过 go-drive |
 
 “原生复制”表示同一 Drive 内可以让远端服务完成文件复制。目录复制、跨 Drive 复制或不支持原生复制的类型会由 go-drive 递归读取和写入，消耗服务器带宽和临时空间。
 
 ## 缓存
 
-FTP、SFTP、WebDAV、S3、OneDrive 和 Google Drive 都提供 `cache_ttl`。大于零时会缓存目录项以减少远端请求；配置变更或外部系统直接修改文件后，界面可能短时间显示旧内容。
+FTP、SFTP、WebDAV、S3、OneDrive 和 Google Drive 提供 `cache_ttl`。大于零时会缓存目录项以减少远端请求；配置变更或外部系统直接修改文件后，界面可能短时间显示旧内容。MEGA 在登录后把节点树放在内存中，没有条目缓存。
 
 - 日常界面操作会尽量使相关缓存失效。
 - 外部修改不会通知 go-drive。

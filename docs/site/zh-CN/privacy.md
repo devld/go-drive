@@ -3,7 +3,7 @@ title: 隐私与数据处理说明
 description: 了解 go-drive 存储和处理的数据、可选第三方服务接收的信息，以及管理员可控制的数据保留方式。
 lang: zh-CN
 translation_key: privacy
-source_hash: a79ea4d04440ea9c033839cc38272cd3911559f3cfb0efe19e2bbdf0108c5a0d
+source_hash: 63bb3c4247b20e981de59cf4408fa211e25c79c6548672b777e17bf12a5bcdf5
 ---
 
 # 隐私与数据处理说明
@@ -39,7 +39,7 @@ Web 界面使用浏览器存储保存登录 Token、列表显示偏好、导航�
 
 只有在部署者配置或用户使用相关功能时，数据才会发送到第三方：
 
-- OneDrive、Google Drive、S3、FTP、SFTP、WebDAV 等存储后端接收认证信息、路径、文件内容和操作请求。
+- OneDrive、Google Drive、MEGA、S3、FTP、SFTP、WebDAV 等存储后端接收认证信息、路径、文件内容和操作请求。MEGA 的文件内容会先在 go-drive 中加密，再上传。
 - LDAP/LDAPS 服务器接收登录用户名和密码以验证身份，并可能返回组成员关系。
 - Microsoft/Google 外部文件预览器会收到可访问文件的签名 URL。
 - 管理员安装的脚本 Drive、任务脚本、上传器和 shell 缩略图命令可能访问网络或处理文件内容。
