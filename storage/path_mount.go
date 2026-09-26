@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 
 	"gorm.io/gorm"
@@ -12,10 +11,8 @@ type PathMountDAO struct {
 	db *DB
 }
 
-func NewPathMountDAO(db *DB, ch *registry.ComponentsHolder) *PathMountDAO {
-	dao := &PathMountDAO{db}
-	ch.Add(registry.KeyPathMountDAO, dao)
-	return dao
+func NewPathMountDAO(db *DB) *PathMountDAO {
+	return &PathMountDAO{db}
 }
 
 func (p *PathMountDAO) GetMounts() ([]types.PathMount, error) {

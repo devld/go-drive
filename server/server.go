@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"go-drive/common"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/event"
 	"go-drive/common/i18n"
@@ -29,6 +30,9 @@ import (
 
 func InitServer(config common.Config,
 	ch *registry.ComponentsHolder,
+	driveRegistry *driveutil.DriveRegistry,
+	userAuth *auth.UserAuth,
+	failBanGroup *FailBanGroup,
 	bus event.Bus,
 	rootDrive *drive.RootDrive,
 	driveAccess *drive.Access,
@@ -75,16 +79,7 @@ func InitServer(config common.Config,
 
 	engine.Use(apiResultHandler(messageSource))
 
-	userAuth, e := auth.NewUserAuth(config.Auth.Providers, ch)
-	if e != nil {
-		return nil, e
-	}
-	ch.Add(registry.KeyUserAuth, userAuth)
-
 	router := engine.Group(config.APIPath)
-
-	failBanGroup := NewFailBanGroup(10 * time.Minute)
-	ch.Add(registry.KeyFailBanGroup, failBanGroup)
 
 	if e := InitCommonRoutes(ch, router, optionsDAO, tokenStore, runner); e != nil {
 		return nil, e
@@ -92,7 +87,7 @@ func InitServer(config common.Config,
 	if e := InitAuthRoutes(router, userAuth, tokenStore, failBanGroup); e != nil {
 		return nil, e
 	}
-	if e := InitAdminRoutes(router, ch, config, bus, runner, jobExecutor, driveAccess, rootDrive, searcher, tokenStore, optionsDAO,
+	if e := InitAdminRoutes(router, ch, driveRegistry, config, bus, runner, jobExecutor, driveAccess, rootDrive, searcher, tokenStore, optionsDAO,
 		userDAO, groupDAO, driveDAO, driveDataDAO, permissionDAO, pathMountDAO, pathMetaDAO, jobDAO, fileBucketDAO); e != nil {
 		return nil, e
 	}
@@ -118,8 +113,11 @@ func InitServer(config common.Config,
 		engine.NoRoute(func(c *gin.Context) { s.ServeHTTP(c.Writer, c.Request) })
 	}
 
-	ch.Add(registry.KeyRuntimeStat, runtimeStat{})
 	return engine, nil
+}
+
+func NewRuntimeStat() types.IStatistics {
+	return runtimeStat{}
 }
 
 func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {

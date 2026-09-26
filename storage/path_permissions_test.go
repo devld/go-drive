@@ -6,9 +6,9 @@ import (
 )
 
 func TestPathPermissionDAO_SavePathPermissions_replacesByPath(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewPathPermissionDAO(db, ch)
+	dao := NewPathPermissionDAO(db)
 	path := "test/path"
 	p1 := types.PathPermission{Subject: "u:alice", Permission: types.PermissionRead, Policy: types.PolicyAccept}
 	if e := dao.SavePathPermissions(path, []types.PathPermission{p1}); e != nil {

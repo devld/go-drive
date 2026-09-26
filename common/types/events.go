@@ -1,6 +1,6 @@
 package types
 
-type DriveListenerContext struct {
+type DriveEvent struct {
 	Principal *Principal
 	Drive     IDrive
 }

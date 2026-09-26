@@ -4,7 +4,6 @@ import (
 	"errors"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 
@@ -17,13 +16,11 @@ type UserDAO struct {
 	cache *utils.KVCache[types.User]
 }
 
-func NewUserDAO(db *DB, ch *registry.ComponentsHolder) *UserDAO {
-	dao := &UserDAO{
+func NewUserDAO(db *DB) *UserDAO {
+	return &UserDAO{
 		db:    db,
 		cache: utils.NewKVCache[types.User](0, 0),
 	}
-	ch.Add(registry.KeyUserDAO, dao)
-	return dao
 }
 
 func (u *UserDAO) GetUser(username string) (types.User, error) {

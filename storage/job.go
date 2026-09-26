@@ -3,7 +3,6 @@ package storage
 import (
 	"errors"
 	err "go-drive/common/errors"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 
 	"gorm.io/gorm"
@@ -13,10 +12,8 @@ type JobDAO struct {
 	db *DB
 }
 
-func NewJobDAO(db *DB, ch *registry.ComponentsHolder) *JobDAO {
-	dao := &JobDAO{db}
-	ch.Add(registry.KeyJobDAO, dao)
-	return dao
+func NewJobDAO(db *DB) *JobDAO {
+	return &JobDAO{db}
 }
 
 func (s *JobDAO) GetJobs(includeDisabled bool) ([]types.Job, error) {

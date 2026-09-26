@@ -3,7 +3,6 @@ package storage
 import (
 	"errors"
 	"go-drive/common/driveutil"
-	"go-drive/common/registry"
 	"go-drive/common/secretbox"
 	"go-drive/common/types"
 
@@ -15,13 +14,8 @@ type DriveDataDAO struct {
 	secrets *secretbox.Box
 }
 
-func NewDriveDataDAO(db *DB, ch *registry.ComponentsHolder) *DriveDataDAO {
-	dao := &DriveDataDAO{
-		db:      db,
-		secrets: ch.Get(registry.KeySecretBox).(*secretbox.Box),
-	}
-	ch.Add(registry.KeyDriveDataDAO, dao)
-	return dao
+func NewDriveDataDAO(db *DB, secrets *secretbox.Box) *DriveDataDAO {
+	return &DriveDataDAO{db: db, secrets: secrets}
 }
 
 func (d *DriveDataDAO) GetDataStore(ns string) driveutil.DriveDataStore {

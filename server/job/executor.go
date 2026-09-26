@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	err "go-drive/common/errors"
+	"go-drive/common/event"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/drive"
 	"go-drive/storage"
 	"strings"
 	"sync"
@@ -17,8 +18,8 @@ import (
 )
 
 type JobExecutor struct {
-	ch     *registry.ComponentsHolder
 	runner task.Runner
+	action JobActionDeps
 	jobDAO *storage.JobDAO
 
 	triggers   map[JobTriggerType]IJobTriggerInstance
@@ -27,19 +28,18 @@ type JobExecutor struct {
 	mu sync.RWMutex
 }
 
-func NewJobExecutor(jobDAO *storage.JobDAO, ch *registry.ComponentsHolder) (*JobExecutor, error) {
-	runner := ch.Get(registry.KeyTaskRunner).(task.Runner)
-
+func NewJobExecutor(jobDAO *storage.JobDAO, runner task.Runner, bus event.Bus, access *drive.Access) (*JobExecutor, error) {
 	executor := &JobExecutor{
-		ch:         ch,
 		runner:     runner,
+		action:     JobActionDeps{Access: access},
 		jobDAO:     jobDAO,
 		executions: make(map[uint]*jobExecutionItem),
 		triggers:   make(map[JobTriggerType]IJobTriggerInstance),
 	}
+	triggerDeps := JobTriggerDeps{Bus: bus}
 
 	for _, triggerDef := range GetTriggerDefs() {
-		executor.triggers[JobTriggerType(triggerDef.Name)] = triggerDef.Factory(executor, ch)
+		executor.triggers[JobTriggerType(triggerDef.Name)] = triggerDef.Factory(executor, triggerDeps)
 	}
 
 	e := executor.ReloadJobs()
@@ -48,8 +48,6 @@ func NewJobExecutor(jobDAO *storage.JobDAO, ch *registry.ComponentsHolder) (*Job
 	}
 
 	_ = jobDAO.UpdateAllRunningJobExecutionsToFailed()
-
-	ch.Add(registry.KeyJobExecutor, executor)
 	return executor, nil
 }
 
@@ -172,7 +170,7 @@ func (je *JobExecutor) executeJob(ctx types.TaskCtx, job types.Job,
 		}
 	}
 
-	e = actionDef.Do(executionCtx, params, je.ch, item.logger.Log)
+	e = actionDef.Do(executionCtx, params, je.action, item.logger.Log)
 	return
 }
 

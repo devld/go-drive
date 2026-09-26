@@ -8,7 +8,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/storage"
@@ -45,7 +44,7 @@ type dbTokenCacheItem struct {
 }
 
 func NewDBTokenStore(sessionDAO *storage.SessionDAO, userDAO *storage.UserDAO,
-	config common.Config, ch *registry.ComponentsHolder) (*DBTokenStore, error) {
+	config common.Config) (*DBTokenStore, error) {
 	authConfig := config.Auth
 	ts := &DBTokenStore{
 		sessionDAO:  sessionDAO,
@@ -55,7 +54,6 @@ func NewDBTokenStore(sessionDAO *storage.SessionDAO, userDAO *storage.UserDAO,
 		cache:       utils.NewKVCache[dbTokenCacheItem](sessionCacheMaxEntries, 0),
 	}
 	ts.stopCleaner = utils.TimeTick(ts.clean, authConfig.Validity)
-	ch.Add(registry.KeyTokenStore, ts)
 	return ts, nil
 }
 

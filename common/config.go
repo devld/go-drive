@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"net/url"
@@ -214,7 +213,7 @@ type CacheConfig struct {
 	CleanPeriod time.Duration `yaml:"clean-period"`
 }
 
-func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
+func InitConfig() (Config, error) {
 	config := Config{
 		Listen:  DefaultListen,
 		APIPath: DefaultAPIPath,
@@ -343,9 +342,11 @@ func InitConfig(ch *registry.ComponentsHolder) (Config, error) {
 		config.TempDir = tempDir
 	}
 
-	ch.Add(registry.KeyConfig, config)
-	ch.Add(registry.KeyVersionSysConfig, versionSysConfig{})
 	return config, nil
+}
+
+func NewVersionSysConfig() types.ISysConfig {
+	return versionSysConfig{}
 }
 
 func applyLoggingConfig(config *LoggingConfig) error {

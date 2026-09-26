@@ -158,7 +158,7 @@ func (cr *configRoute) savePathMounts(c *gin.Context) {
 		return
 	}
 	for _, m := range mounts {
-		cr.bus.PublishEntryUpdated(types.DriveListenerContext{
+		cr.bus.PublishEntryUpdated(types.DriveEvent{
 			Principal: &principal,
 			Drive:     cr.rootDrive.Get(),
 		}, path2.Join(*m.Path, m.Name), true)

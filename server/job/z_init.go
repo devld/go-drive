@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 )
 
@@ -41,7 +40,7 @@ func init() {
 				Forms:   flowForms,
 			}, Required: true},
 		},
-		Do: func(ctx types.TaskCtx, params types.SM, ch *registry.ComponentsHolder, logFn func(string)) error {
+		Do: func(ctx types.TaskCtx, params types.SM, action JobActionDeps, logFn func(string)) error {
 			ops := params.GetMapList("ops")
 			if len(ops) == 0 {
 				return errors.New("empty ops")
@@ -54,7 +53,7 @@ func init() {
 				actionDef := GetActionDef(actionKey)
 				delete(op, "$key")
 				delete(op, "_ignoreErr")
-				e := actionDef.Do(ctx, op, ch, logFn)
+				e := actionDef.Do(ctx, op, action, logFn)
 				if e != nil && !ignoreError {
 					return fmt.Errorf("flow execution error at step %d: %s", i+1, e.Error())
 				}

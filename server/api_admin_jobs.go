@@ -3,10 +3,10 @@ package server
 import (
 	err "go-drive/common/errors"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
+	"go-drive/drive"
 	s "go-drive/script"
 	"go-drive/server/job"
 	"go-drive/storage"
@@ -18,7 +18,7 @@ import (
 )
 
 type jobsRoute struct {
-	ch          *registry.ComponentsHolder
+	access      *drive.Access
 	runner      task.Runner
 	jobExecutor *job.JobExecutor
 	jobDAO      *storage.JobDAO
@@ -245,7 +245,7 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 	}
 	e = ExecuteTaskStreaming(c, jr.runner,
 		func(ctx types.TaskCtx) (any, error) {
-			e := job.ExecuteJobCode(ctx, code, nil, jr.ch, func(s string) {
+			e := job.ExecuteJobCode(ctx, code, nil, job.JobActionDeps{Access: jr.access}, func(s string) {
 				logging.For("job").Infof("[script eval] %s", s)
 				_, _ = w.Write([]byte(s + "\n"))
 				w.Flush()

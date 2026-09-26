@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
-	"go-drive/drive"
 	s "go-drive/script"
 	"strings"
 	"time"
@@ -35,7 +33,7 @@ func init() {
 				DefaultValue: defaultCodeValue, Required: true,
 			},
 		},
-		Do: func(ctx types.TaskCtx, params types.SM, ch *registry.ComponentsHolder, onLog func(s string)) error {
+		Do: func(ctx types.TaskCtx, params types.SM, action JobActionDeps, onLog func(s string)) error {
 			code := params["code"]
 			eventJSON := params[jobEventName]
 			event := make(types.M, 2)
@@ -43,13 +41,13 @@ func init() {
 			if e != nil {
 				return fmt.Errorf("failed to parse event: %s", e.Error())
 			}
-			return ExecuteJobCode(ctx, code, types.M{jobEventName: event}, ch, onLog)
+			return ExecuteJobCode(ctx, code, types.M{jobEventName: event}, action, onLog)
 		},
 	})
 }
 
 // ExecuteJobCode executes the code, and return the log and error
-func ExecuteJobCode(ctx types.TaskCtx, code any, globals types.M, ch *registry.ComponentsHolder, onLog func(string)) error {
+func ExecuteJobCode(ctx types.TaskCtx, code any, globals types.M, action JobActionDeps, onLog func(string)) error {
 	started := time.Now()
 	logging.For("job").Debugf("job script started")
 	vm, e := newJobVM(ctx)
@@ -58,7 +56,7 @@ func ExecuteJobCode(ctx types.TaskCtx, code any, globals types.M, ch *registry.C
 	}
 	defer func() { _ = vm.Dispose() }()
 
-	if e = vm.DefineGlobal("drive", ch.Get(registry.KeyDriveAccess).(*drive.Access).GetRootDrive(nil)); e != nil {
+	if e = vm.DefineGlobal("drive", action.Access.GetRootDrive(nil)); e != nil {
 		return e
 	}
 	progress := s.NewProgressReporter(ctx, true, true)

@@ -3,7 +3,6 @@ package storage
 import (
 	"go-drive/common"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/secretbox"
 	"time"
 
@@ -13,7 +12,7 @@ import (
 
 var dbLog = logging.For("db")
 
-func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
+func NewDB(config common.Config, secrets *secretbox.Box) (*DB, error) {
 	dbLog.Debugf("opening database type=%s", config.DB.Type)
 	dialect := config.GetDB()
 	gormConfig := logger.Config{
@@ -33,16 +32,13 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		return nil, e
 	}
 
-	secrets := ch.Get(registry.KeySecretBox).(*secretbox.Box)
 	if e := migrateAll(db, secrets); e != nil {
 		closeDB(db)
 		return nil, e
 	}
 	dbLog.Debugf("database ready type=%s", config.DB.Type)
 
-	d := &DB{db: db}
-	ch.Add(registry.KeyDB, d)
-	return d, nil
+	return &DB{db: db}, nil
 }
 
 type DB struct {

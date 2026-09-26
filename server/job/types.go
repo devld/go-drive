@@ -1,8 +1,9 @@
 package job
 
 import (
-	"go-drive/common/registry"
+	"go-drive/common/event"
 	"go-drive/common/types"
+	"go-drive/drive"
 )
 
 // JobTriggerDef represents a job trigger definition (similar to JobActionDef).
@@ -13,8 +14,14 @@ type JobTriggerDef struct {
 	Description string           `json:"description" i18n:""`
 	ParamsForm  []types.FormItem `json:"paramsForm"`
 
-	Validate func(config types.SM) error                                                    `json:"-"`
-	Factory  func(executor *JobExecutor, ch *registry.ComponentsHolder) IJobTriggerInstance `json:"-"`
+	Validate func(config types.SM) error                                          `json:"-"`
+	Factory  func(executor *JobExecutor, deps JobTriggerDeps) IJobTriggerInstance `json:"-"`
+}
+
+// JobTriggerDeps carries dependencies a trigger may use. Triggers do not
+// read them from the executor.
+type JobTriggerDeps struct {
+	Bus event.Bus
 }
 
 // JobActionDef represents a job action definition
@@ -24,7 +31,12 @@ type JobActionDef struct {
 	Description string           `json:"description" i18n:""`
 	ParamsForm  []types.FormItem `json:"paramsForm"`
 
-	Do func(types.TaskCtx, types.SM, *registry.ComponentsHolder, func(string)) error `json:"-"`
+	Do func(types.TaskCtx, types.SM, JobActionDeps, func(string)) error `json:"-"`
+}
+
+// JobActionDeps carries dependencies an action may use.
+type JobActionDeps struct {
+	Access *drive.Access
 }
 
 type IJobTriggerInstance interface {

@@ -3,7 +3,6 @@ package job
 import (
 	"context"
 	"errors"
-	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"testing"
@@ -55,7 +54,7 @@ func TestFlowResetsProgressBeforeEveryStep(t *testing.T) {
 	snapshots := make([][2]int64, 0, 2)
 	RegisterActionDef(JobActionDef{
 		Name: "test-progress-reset",
-		Do: func(types.TaskCtx, types.SM, *registry.ComponentsHolder, func(string)) error {
+		Do: func(types.TaskCtx, types.SM, JobActionDeps, func(string)) error {
 			snapshots = append(snapshots, [2]int64{ctx.GetProgress(), ctx.GetTotal()})
 			ctx.Progress(4, true)
 			ctx.Total(8, true)
@@ -66,7 +65,7 @@ func TestFlowResetsProgressBeforeEveryStep(t *testing.T) {
 	flow := GetActionDef("flow")
 	e := flow.Do(ctx, types.SM{
 		"ops": `[{"$key":"test-progress-reset"},{"$key":"test-progress-reset"}]`,
-	}, registry.NewComponentHolder(), func(string) {})
+	}, JobActionDeps{}, func(string) {})
 	if e != nil {
 		t.Fatal(e)
 	}

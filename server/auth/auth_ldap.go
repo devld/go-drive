@@ -14,7 +14,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/storage"
 )
@@ -96,13 +95,11 @@ type ldapAuthProvider struct {
 	groupDAO *storage.GroupDAO
 }
 
-func newLDAPAuthProvider(config types.M, ch *registry.ComponentsHolder) (AuthProvider, error) {
+func newLDAPAuthProvider(config types.M, userDAO *storage.UserDAO, groupDAO *storage.GroupDAO) (AuthProvider, error) {
 	cfg, e := parseLDAPConfig(config)
 	if e != nil {
 		return nil, e
 	}
-	userDAO := ch.Get(registry.KeyUserDAO).(*storage.UserDAO)
-	groupDAO := ch.Get(registry.KeyGroupDAO).(*storage.GroupDAO)
 	return &ldapAuthProvider{
 		config:   cfg,
 		userDAO:  userDAO,

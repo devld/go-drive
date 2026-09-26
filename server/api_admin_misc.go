@@ -93,13 +93,10 @@ func (mr *miscRoute) cleanupInvalidPathPermissionsAndMounts(c *gin.Context) {
 }
 
 func (mr *miscRoute) getSystemStats(c *gin.Context) {
-	stats := mr.ch.Gets(func(c any) bool {
-		_, ok := c.(types.IStatistics)
-		return ok
-	})
+	stats := registry.Gets[types.IStatistics](mr.ch)
 	res := make([]statItem, len(stats))
 	for i, s := range stats {
-		name, data, e := s.(types.IStatistics).Status()
+		name, data, e := s.Status()
 		if e != nil {
 			_ = c.Error(e)
 			return

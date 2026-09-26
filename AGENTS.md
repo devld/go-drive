@@ -49,6 +49,9 @@ assets.
 
 - Backend code should use `go-drive/common/logging` instead of the standard
   library `log` package directly.
+- Do not add logic in non-test code only to accommodate tests. Production code
+  should follow the real execution path; tests should set up that path instead
+  of requiring extra branches, nil checks, or fallbacks.
 - Update `docs/config.yml` when user-facing configuration changes.
 - When editing `docs/site`, keep each page's `source_hash` synchronized or CI
   will fail.

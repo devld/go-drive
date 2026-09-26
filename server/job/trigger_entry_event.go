@@ -5,7 +5,6 @@ import (
 	"go-drive/common/event"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"strconv"
 	"strings"
@@ -30,8 +29,8 @@ func init() {
 				}},
 		},
 		Validate: validateEntryTriggerConfig,
-		Factory: func(executor *JobExecutor, ch *registry.ComponentsHolder) IJobTriggerInstance {
-			return newEntryEventTrigger(executor, ch.Get(registry.KeyEventBus).(event.Bus))
+		Factory: func(executor *JobExecutor, deps JobTriggerDeps) IJobTriggerInstance {
+			return newEntryEventTrigger(executor, deps.Bus)
 		},
 	})
 }
@@ -171,11 +170,11 @@ func (eet *entryEventTrigger) checkAndTrigger(path string, entryEventType EntryE
 	}
 }
 
-func (eet *entryEventTrigger) onEntryUpdated(dc types.DriveListenerContext, path string, includeDescendants bool) {
+func (eet *entryEventTrigger) onEntryUpdated(event types.DriveEvent, path string, includeDescendants bool) {
 	eet.checkAndTrigger(path, "updated", includeDescendants)
 }
 
-func (eet *entryEventTrigger) onEntryDeleted(dc types.DriveListenerContext, path string) {
+func (eet *entryEventTrigger) onEntryDeleted(event types.DriveEvent, path string) {
 	eet.checkAndTrigger(path, "deleted", false)
 }
 

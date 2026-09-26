@@ -4,7 +4,6 @@ import (
 	"errors"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 
 	"gorm.io/gorm"
@@ -20,10 +19,8 @@ type GroupWithUsers struct {
 	Users []types.User `json:"users"`
 }
 
-func NewGroupDAO(db *DB, userDAO *UserDAO, ch *registry.ComponentsHolder) *GroupDAO {
-	dao := &GroupDAO{db: db, userDAO: userDAO}
-	ch.Add(registry.KeyGroupDAO, dao)
-	return dao
+func NewGroupDAO(db *DB, userDAO *UserDAO) *GroupDAO {
+	return &GroupDAO{db: db, userDAO: userDAO}
 }
 
 func (g *GroupDAO) ListGroup() ([]types.Group, error) {

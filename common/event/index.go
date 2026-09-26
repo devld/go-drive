@@ -1,35 +1,33 @@
 package event
 
 import (
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"sync"
 )
 
 type Unsubscribe func()
 
-type EntryAccessedHandler func(types.DriveListenerContext, string)
-type EntryUpdatedHandler func(types.DriveListenerContext, string, bool)
-type EntryDeletedHandler func(types.DriveListenerContext, string)
+type EntryAccessedHandler func(types.DriveEvent, string)
+type EntryUpdatedHandler func(types.DriveEvent, string, bool)
+type EntryDeletedHandler func(types.DriveEvent, string)
 
 // Bus is a synchronous, strongly typed in-process event bus. Publish takes a
 // snapshot of subscribers before invoking them, so handlers may safely publish
 // another event or unsubscribe without deadlocking the bus.
 type Bus interface {
-	PublishEntryAccessed(types.DriveListenerContext, string)
-	PublishEntryUpdated(types.DriveListenerContext, string, bool)
-	PublishEntryDeleted(types.DriveListenerContext, string)
+	PublishEntryAccessed(types.DriveEvent, string)
+	PublishEntryUpdated(types.DriveEvent, string, bool)
+	PublishEntryDeleted(types.DriveEvent, string)
 	SubscribeEntryAccessed(EntryAccessedHandler) Unsubscribe
 	SubscribeEntryUpdated(EntryUpdatedHandler) Unsubscribe
 	SubscribeEntryDeleted(EntryDeletedHandler) Unsubscribe
 }
 
-func NewBus(ch *registry.ComponentsHolder) Bus {
+func NewBus() Bus {
 	b := &bus{}
 	b.accessed.init()
 	b.updated.init()
 	b.deleted.init()
-	ch.Add(registry.KeyEventBus, b)
 	return b
 }
 
@@ -39,21 +37,21 @@ type bus struct {
 	deleted  subscriptions[EntryDeletedHandler]
 }
 
-func (b *bus) PublishEntryAccessed(ctx types.DriveListenerContext, path string) {
+func (b *bus) PublishEntryAccessed(event types.DriveEvent, path string) {
 	for _, handler := range b.accessed.snapshot() {
-		handler(ctx, path)
+		handler(event, path)
 	}
 }
 
-func (b *bus) PublishEntryUpdated(ctx types.DriveListenerContext, path string, includeDescendants bool) {
+func (b *bus) PublishEntryUpdated(event types.DriveEvent, path string, includeDescendants bool) {
 	for _, handler := range b.updated.snapshot() {
-		handler(ctx, path, includeDescendants)
+		handler(event, path, includeDescendants)
 	}
 }
 
-func (b *bus) PublishEntryDeleted(ctx types.DriveListenerContext, path string) {
+func (b *bus) PublishEntryDeleted(event types.DriveEvent, path string) {
 	for _, handler := range b.deleted.snapshot() {
-		handler(ctx, path)
+		handler(event, path)
 	}
 }
 

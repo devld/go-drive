@@ -5,9 +5,9 @@ import (
 )
 
 func TestOptionsDAO_GetOrDefault_missingKeyReturnsDefault(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, _, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewOptionsDAO(db, ch)
+	dao := NewOptionsDAO(db)
 	got, e := dao.GetOrDefault("nonexistent_key", "defaultVal")
 	if e != nil {
 		t.Fatalf("GetOrDefault: %v", e)

@@ -7,7 +7,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/event"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/common/utils"
@@ -42,7 +41,7 @@ type Service struct {
 	unsubscribe []event.Unsubscribe
 }
 
-func NewService(ch *registry.ComponentsHolder, config common.Config, od *storage.OptionsDAO,
+func NewService(config common.Config, od *storage.OptionsDAO,
 	rootDrive *drive.RootDrive, runner task.Runner, bus event.Bus) (*Service, error) {
 
 	var s *Service = nil
@@ -72,8 +71,6 @@ func NewService(ch *registry.ComponentsHolder, config common.Config, od *storage
 	} else {
 		s = &Service{}
 	}
-
-	ch.Add(registry.KeySearchService, s)
 	return s, nil
 }
 
@@ -325,7 +322,7 @@ func (s *Service) walk(ctx types.TaskCtx, d types.IDrive, rootPath string,
 	return nil
 }
 
-func (s *Service) onUpdated(dc types.DriveListenerContext, path string, includeDescendants bool) {
+func (s *Service) onUpdated(event types.DriveEvent, path string, includeDescendants bool) {
 	if s.checkEnabled() != nil {
 		return
 	}
@@ -337,7 +334,7 @@ func (s *Service) onUpdated(dc types.DriveListenerContext, path string, includeD
 	} else {
 		logging.For("search").Debugf("index update scheduled path=%s descendants=false", logging.Sanitize(path))
 		if _, e := s.runner.Execute(func(ctx types.TaskCtx) (any, error) {
-			entry, e := dc.Drive.Get(ctx, path)
+			entry, e := event.Drive.Get(ctx, path)
 			if e != nil {
 				return nil, e
 			}
@@ -352,7 +349,7 @@ func (s *Service) onUpdated(dc types.DriveListenerContext, path string, includeD
 	}
 }
 
-func (s *Service) onDeleted(dc types.DriveListenerContext, path string) {
+func (s *Service) onDeleted(event types.DriveEvent, path string) {
 	if s.checkEnabled() != nil {
 		return
 	}

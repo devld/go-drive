@@ -8,7 +8,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/storage"
 	"sync"
@@ -37,8 +36,7 @@ func NewRootDrive(
 	mountStorage *storage.PathMountDAO,
 	dataStorage *storage.DriveDataDAO,
 	driveCacheStorage *storage.DriveCacheDAO,
-	ch *registry.ComponentsHolder) (*RootDrive, error) {
-	driveRegistry := ch.Get(registry.KeyDriveRegistry).(*driveutil.DriveRegistry)
+	driveRegistry *driveutil.DriveRegistry) (*RootDrive, error) {
 	dispatcher := NewDispatcherDrive(config)
 	root := NewPathMountOverlayDrive(dispatcher, mountStorage)
 	r := &RootDrive{
@@ -66,7 +64,6 @@ func NewRootDrive(
 	if e := r.ReloadDrive(ctx, true); e != nil {
 		return nil, e
 	}
-	ch.Add(registry.KeyRootDrive, r)
 	return r, nil
 }
 

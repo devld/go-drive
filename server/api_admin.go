@@ -18,6 +18,7 @@ import (
 func InitAdminRoutes(
 	r gin.IRouter,
 	ch *registry.ComponentsHolder,
+	driveRegistry *driveutil.DriveRegistry,
 	config common.Config,
 	bus event.Bus,
 	runner task.Runner,
@@ -64,7 +65,6 @@ func InitAdminRoutes(
 	// delete group
 	r.DELETE("/groups/:name", gr.deleteGroup)
 
-	driveRegistry := ch.Get(registry.KeyDriveRegistry).(*driveutil.DriveRegistry)
 	dr := &drivesRoute{
 		driveRegistry: driveRegistry,
 		driveDAO:      driveDAO,
@@ -145,7 +145,7 @@ func InitAdminRoutes(
 	scriptDriveRoutesGroup.PUT("/:name/content", sdr.saveDriveScriptContent)
 
 	jobsRoutesGroup := r.Group("/jobs")
-	jr := &jobsRoute{ch, runner, jobExecutor, jobDAO}
+	jr := &jobsRoute{access, runner, jobExecutor, jobDAO}
 	// get all job definitions
 	r.GET("/job-definitions", jr.getJobsDefinitions)
 	// get all created jobs

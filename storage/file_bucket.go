@@ -5,7 +5,6 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 
@@ -17,9 +16,8 @@ type FileBucketDAO struct {
 	cache *utils.KVCache[types.FileBucket]
 }
 
-func NewFileBucketDAO(db *DB, ch *registry.ComponentsHolder) *FileBucketDAO {
+func NewFileBucketDAO(db *DB) *FileBucketDAO {
 	dao := &FileBucketDAO{db: db, cache: utils.NewKVCache[types.FileBucket](0, 0)}
-	ch.Add(registry.KeyFileBucketDAO, dao)
 	dao.reloadBuckets()
 	return dao
 }

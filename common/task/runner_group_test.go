@@ -4,7 +4,6 @@ import (
 	"errors"
 	"go-drive/common"
 	err "go-drive/common/errors"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"sync/atomic"
 	"testing"
@@ -178,7 +177,7 @@ func TestGroupSubmitFailsWhenGlobalQueueIsFull(t *testing.T) {
 
 func newTestRunnerWithConfig(t *testing.T, config common.Config) Runner {
 	t.Helper()
-	runner := NewTaskRunner(config, registry.NewComponentHolder())
+	runner := NewTaskRunner(config)
 	t.Cleanup(func() { _ = runner.Dispose() })
 	return runner
 }

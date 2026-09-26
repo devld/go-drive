@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"go-drive/common"
 	"go-drive/common/logging"
 	"go-drive/common/registry"
 	"net/http"
@@ -15,15 +14,13 @@ import (
 func main() {
 	ch := registry.NewComponentHolder()
 
-	engine, e := Initialize(context.Background(), ch)
+	engine, conf, e := Initialize(context.Background(), ch)
 	if e != nil {
 		logging.For("start").Errorf("initialization failed: %v", e)
 		os.Exit(1)
 	}
 
 	dispose := func() { _ = ch.Dispose() }
-
-	conf := ch.Get(registry.KeyConfig).(common.Config)
 	server := &http.Server{
 		Addr:     conf.Listen,
 		Handler:  engine,

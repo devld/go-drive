@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"go-drive/common/registry"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"sort"
@@ -16,10 +15,8 @@ type PathMetaDAO struct {
 	cache *utils.KVCache[*types.PathMeta]
 }
 
-func NewPathMetaDAO(db *DB, ch *registry.ComponentsHolder) *PathMetaDAO {
-	dao := &PathMetaDAO{db: db, cache: utils.NewKVCache[*types.PathMeta](0, 1*time.Hour)}
-	ch.Add(registry.KeyPathMetaDAO, dao)
-	return dao
+func NewPathMetaDAO(db *DB) *PathMetaDAO {
+	return &PathMetaDAO{db: db, cache: utils.NewKVCache[*types.PathMeta](0, 1*time.Hour)}
 }
 
 func (d *PathMetaDAO) getCached(path string) (*types.PathMeta, bool) {

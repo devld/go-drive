@@ -22,7 +22,7 @@ func (artifactConfigTestComponent) SysConfig() (string, types.M, error) {
 func TestGetConfigUsesUnifiedArtifactNamespace(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	components := registry.NewComponentHolder()
-	components.Add(registry.KeyArtifact, artifactConfigTestComponent{})
+	components.Add(artifactConfigTestComponent{})
 
 	writer := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(writer)

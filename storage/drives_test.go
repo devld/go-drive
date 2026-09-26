@@ -10,9 +10,9 @@ import (
 )
 
 func TestDriveDAO_AddDrive_duplicateReturnsNotAllowed(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, secrets, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewDriveDAO(db, ch)
+	dao := NewDriveDAO(db, secrets)
 	d := types.Drive{Name: "d1", Type: "fs", Enabled: true, Config: "{}"}
 	_, _ = dao.AddDrive(d, nil)
 	_, e := dao.AddDrive(d, nil)
@@ -26,9 +26,9 @@ func TestDriveDAO_AddDrive_duplicateReturnsNotAllowed(t *testing.T) {
 }
 
 func TestDriveDAO_GetDrive_notFoundReturnsNotFound(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, secrets, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewDriveDAO(db, ch)
+	dao := NewDriveDAO(db, secrets)
 	_, e := dao.GetDrive("nonexistent")
 	if e == nil {
 		t.Fatal("expected error for nonexistent drive")
@@ -40,9 +40,9 @@ func TestDriveDAO_GetDrive_notFoundReturnsNotFound(t *testing.T) {
 }
 
 func TestDriveDAOSealsAndOpensConfig(t *testing.T) {
-	db, ch, cleanup := newTestDB(t)
+	db, secrets, cleanup := newTestDB(t)
 	defer cleanup()
-	dao := NewDriveDAO(db, ch)
+	dao := NewDriveDAO(db, secrets)
 	form := []types.FormItem{
 		{Field: "host", Type: "text"},
 		{Field: "password", Type: "password"},
