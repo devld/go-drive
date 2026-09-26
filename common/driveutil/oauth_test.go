@@ -32,6 +32,8 @@ func (b *trackingRequestBody) Close() error {
 	return nil
 }
 
+func (m *memOAuthData) SaveEncrypted(data types.SM) error { return m.Save(data) }
+
 func (m *memOAuthData) Save(data types.SM) error {
 	if m.data == nil {
 		m.data = types.SM{}

@@ -115,7 +115,8 @@ type testDriveDataStore struct {
 	err    error
 }
 
-func (s *testDriveDataStore) Save(types.SM) error { return nil }
+func (s *testDriveDataStore) Save(types.SM) error          { return nil }
+func (s *testDriveDataStore) SaveEncrypted(types.SM) error { return nil }
 
 func (s *testDriveDataStore) Load(key string, keys ...string) (types.SM, error) {
 	keys = append([]string{key}, keys...)

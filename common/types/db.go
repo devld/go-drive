@@ -45,7 +45,7 @@ type Drive struct {
 	Name    string `gorm:"column:name;primaryKey;not null;type:string;size:255" json:"name" binding:"required"`
 	Enabled bool   `gorm:"column:enabled;not null;type:bool" json:"enabled"`
 	Type    string `gorm:"column:type;not null;type:string;size:32" json:"type" binding:"required"`
-	Config  string `gorm:"column:config;not null;type:string;size:4096" json:"config"`
+	Config  string `gorm:"column:config;not null;type:text" json:"config"`
 }
 
 type PathMount struct {
@@ -62,7 +62,7 @@ func (PathMount) TableName() string {
 type DriveData struct {
 	Drive string `gorm:"column:drive;primaryKey;not null;type:string;size:255"`
 	Key   string `gorm:"column:data_key;primaryKey;not null;type:string;size:255"`
-	Value string `gorm:"column:data_value;not null;type:string;size:4096"`
+	Value string `gorm:"column:data_value;not null;type:text"`
 }
 
 func (DriveData) TableName() string {

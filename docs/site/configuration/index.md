@@ -116,6 +116,8 @@ SQLite is suitable for a single application instance. The database is stored at 
 
 MySQL requires at least `type`, `host`, `name`, `user`, and `password`. Values under `db.config` are passed to GORM as DSN parameters. Never commit real passwords to the repository.
 
+Drive passwords, private keys, and OAuth tokens are sealed before they are written to the database. On first startup go-drive creates `data-dir/encryption.key` (mode `0600`) unless `GO_DRIVE_ENCRYPTION_KEY` is set. The environment variable and the file must contain the same secret when both exist. Back up whichever one you use together with the database; without it, stored drive secrets cannot be decrypted and have to be entered again.
+
 ## LDAP
 
 Local password authentication is always available. Add LDAP as follows:

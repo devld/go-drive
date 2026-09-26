@@ -3,7 +3,7 @@ title: 安全指南
 description: 通过修改默认凭据、限制公网暴露、保护密钥和配置可信代理，提高 go-drive 部署的安全性。
 lang: zh-CN
 translation_key: security
-source_hash: 0bb8617bf19c878006a6d2a52ed9d9fdb88191ca2f56795a76300a1074caeb65
+source_hash: fe9de0f0d88c3a9b38edaca9e6a5ef265232461a27172f1ee09cbe2eed0a224f
 ---
 
 # 安全指南
@@ -18,8 +18,8 @@ source_hash: 0bb8617bf19c878006a6d2a52ed9d9fdb88191ca2f56795a76300a1074caeb65
 - 按最小权限配置匿名用户、普通用户、组根路径和路径权限。
 - WebDAV 默认禁止匿名访问。
 - LDAP 使用 LDAPS/StartTLS 并验证证书。
-- 定期备份数据库和数据目录并测试恢复。
-- 不在配置库、日志或 issue 中泄露数据库密码、OAuth Secret、LDAP 密码和文件桶 Token。
+- 定期备份数据库和数据目录并测试恢复。备份中要包含 `data-dir/encryption.key`，或者另行保存 `GO_DRIVE_ENCRYPTION_KEY`。
+- 不在配置库、日志或 issue 中泄露数据库密码、OAuth Secret、LDAP 密码、文件桶 Token 和网盘加密密钥。
 
 ## 身份验证和会话
 

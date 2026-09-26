@@ -6,6 +6,7 @@ func (c componentKey) String() string { return c.k }
 
 var (
 	KeyConfig           = componentKey{k: "config"}
+	KeySecretBox        = componentKey{k: "secretBox"}
 	KeyVersionSysConfig = componentKey{k: "versionSysConfig"}
 	KeyRuntimeStat      = componentKey{k: "runtimeStat"}
 

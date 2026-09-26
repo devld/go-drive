@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"go-drive/common/driveutil"
 	"go-drive/common/logging"
+	"go-drive/common/secretbox"
 	"go-drive/common/types"
 	"strings"
 	"time"
@@ -33,8 +34,16 @@ var dbMigrations = []dbMigration{
 	{version: 4, name: "drop_legacy_job_columns", run: migrateLegacyJobSchema},
 }
 
-func migrateAll(db *gorm.DB) error {
-	return runDBMigrations(db, dbMigrations)
+func migrateAll(db *gorm.DB, secrets *secretbox.Box) error {
+	migrations := append([]dbMigration{}, dbMigrations...)
+	migrations = append(migrations, dbMigration{
+		version: 5,
+		name:    "encrypt_drive_secrets",
+		run: func(db *gorm.DB) error {
+			return migrateEncryptDriveSecrets(db, secrets)
+		},
+	})
+	return runDBMigrations(db, migrations)
 }
 
 func runDBMigrations(db *gorm.DB, migrations []dbMigration) error {
@@ -644,6 +653,123 @@ func migrateOAuthDriveDataRecord(db *gorm.DB, row types.DriveData, newKey string
 		return tx.Where("`drive` = ? AND `data_key` = ?", row.Drive, row.Key).
 			Delete(&types.DriveData{}).Error
 	})
+}
+
+// Fields that were stored in plaintext before encryption at rest.
+// Drives created after this migration seal these fields on save.
+var encryptedDriveConfigFields = map[string][]string{
+	"gdrive":         {"client_secret"},
+	"onedrive":       {"client_secret"},
+	"s3":             {"secret"},
+	"ftp":            {"password"},
+	"webdav":         {"password"},
+	"sftp":           {"password", "priv_key"},
+	"script/dropbox": {"client_secret"},
+	"script/github":  {"token"},
+	"script/qiniu":   {"sk"},
+}
+
+var encryptedDriveDataKeys = map[string]struct{}{
+	driveutil.DsKeyToken:        {},
+	driveutil.DsKeyRefreshToken: {},
+	driveutil.DsKeyState:        {},
+}
+
+func migrateEncryptDriveSecrets(db *gorm.DB, secrets *secretbox.Box) error {
+	if e := migrateEncryptDriveConfigs(db, secrets); e != nil {
+		return e
+	}
+	return migrateEncryptDriveData(db, secrets)
+}
+
+func sealStoredDriveConfig(secrets *secretbox.Box, configJSON string, fields []string) (string, error) {
+	values := types.SM{}
+	if strings.TrimSpace(configJSON) != "" {
+		if e := json.Unmarshal([]byte(configJSON), &values); e != nil {
+			return "", fmt.Errorf("invalid drive config: %w", e)
+		}
+	}
+	if values == nil {
+		values = types.SM{}
+	}
+	changed := false
+	for _, field := range fields {
+		value := values[field]
+		if value == "" || secretbox.IsSealed(value) {
+			continue
+		}
+		sealed, e := secrets.Encrypt(value)
+		if e != nil {
+			return "", e
+		}
+		values[field] = sealed
+		changed = true
+	}
+	if !changed {
+		return configJSON, nil
+	}
+	encoded, e := json.Marshal(values)
+	if e != nil {
+		return "", e
+	}
+	return string(encoded), nil
+}
+
+func migrateEncryptDriveConfigs(db *gorm.DB, secrets *secretbox.Box) error {
+	var drives []types.Drive
+	if e := db.Find(&drives).Error; e != nil {
+		return e
+	}
+	migrated := 0
+	for _, drive := range drives {
+		fields, ok := encryptedDriveConfigFields[drive.Type]
+		if !ok {
+			continue
+		}
+		sealed, e := sealStoredDriveConfig(secrets, drive.Config, fields)
+		if e != nil {
+			return fmt.Errorf("seal config for drive %q: %w", drive.Name, e)
+		}
+		if sealed == drive.Config {
+			continue
+		}
+		if e := db.Model(&types.Drive{}).Where("`name` = ?", drive.Name).
+			Update("config", sealed).Error; e != nil {
+			return fmt.Errorf("save sealed config for drive %q: %w", drive.Name, e)
+		}
+		migrated++
+	}
+	if migrated > 0 {
+		logging.For("db-mgrt").Infof("encrypted %d drive configuration(s)", migrated)
+	}
+	return nil
+}
+
+func migrateEncryptDriveData(db *gorm.DB, secrets *secretbox.Box) error {
+	var rows []types.DriveData
+	if e := db.Find(&rows).Error; e != nil {
+		return e
+	}
+	migrated := 0
+	for _, row := range rows {
+		if _, ok := encryptedDriveDataKeys[row.Key]; !ok || row.Value == "" || secretbox.IsSealed(row.Value) {
+			continue
+		}
+		sealed, e := secrets.Encrypt(row.Value)
+		if e != nil {
+			return fmt.Errorf("seal drive data %q %q: %w", row.Drive, row.Key, e)
+		}
+		if e := db.Model(&types.DriveData{}).
+			Where("`drive` = ? AND `data_key` = ?", row.Drive, row.Key).
+			Update("data_value", sealed).Error; e != nil {
+			return fmt.Errorf("save sealed drive data %q %q: %w", row.Drive, row.Key, e)
+		}
+		migrated++
+	}
+	if migrated > 0 {
+		logging.For("db-mgrt").Infof("encrypted %d drive data field(s)", migrated)
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------

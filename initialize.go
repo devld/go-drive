@@ -8,6 +8,7 @@ import (
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
 	"go-drive/common/registry"
+	"go-drive/common/secretbox"
 	"go-drive/common/task"
 	"go-drive/common/utils"
 	"go-drive/drive"
@@ -58,6 +59,12 @@ func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 		return nil, err
 	}
 	bus := event.NewBus(ch)
+
+	phase = initPhase("encryption key")
+	_, err = secretbox.Open(config.DataDir, ch)
+	if err := phase(err); err != nil {
+		return nil, err
+	}
 
 	phase = initPhase("database")
 	db, err := storage.NewDB(config, ch)

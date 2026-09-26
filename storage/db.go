@@ -4,6 +4,7 @@ import (
 	"go-drive/common"
 	"go-drive/common/logging"
 	"go-drive/common/registry"
+	"go-drive/common/secretbox"
 	"time"
 
 	"gorm.io/gorm"
@@ -32,7 +33,8 @@ func NewDB(config common.Config, ch *registry.ComponentsHolder) (*DB, error) {
 		return nil, e
 	}
 
-	if e := migrateAll(db); e != nil {
+	secrets := ch.Get(registry.KeySecretBox).(*secretbox.Box)
+	if e := migrateAll(db, secrets); e != nil {
 		closeDB(db)
 		return nil, e
 	}

@@ -74,8 +74,8 @@ func (d *RootDrive) Get() types.IDrive {
 	return d.root
 }
 
-func checkAndParseConfig(dc types.Drive, driveRegistry *driveutil.DriveRegistry) (*driveutil.DriveFactory, types.SM, error) {
-	f := driveRegistry.GetDrive(dc.Type)
+func (d *RootDrive) checkAndParseConfig(dc types.Drive) (*driveutil.DriveFactory, types.SM, error) {
+	f := d.driveRegistry.GetDrive(dc.Type)
 	if f == nil {
 		return nil, nil, err.NewBadRequestError(i18n.T("drive.root.invalid_drive_type", dc.Type))
 	}
@@ -117,7 +117,7 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 		if !dc.Enabled {
 			continue
 		}
-		factory, config, e := checkAndParseConfig(dc, d.driveRegistry)
+		factory, config, e := d.checkAndParseConfig(dc)
 		if e != nil {
 			if ignoreFailure {
 				driveLog.Warnf("error parsing drive config for '%s' (%s): %v",
@@ -170,7 +170,7 @@ func (d *RootDrive) DriveInitConfig(ctx context.Context, name string) (*driveuti
 	if e != nil {
 		return nil, e
 	}
-	factory, config, e := checkAndParseConfig(dc, d.driveRegistry)
+	factory, config, e := d.checkAndParseConfig(dc)
 	if e != nil {
 		return nil, e
 	}
@@ -186,7 +186,7 @@ func (d *RootDrive) DriveInit(ctx context.Context, name string, data types.SM) e
 	if e != nil {
 		return e
 	}
-	factory, config, e := checkAndParseConfig(dc, d.driveRegistry)
+	factory, config, e := d.checkAndParseConfig(dc)
 	if e != nil {
 		return e
 	}

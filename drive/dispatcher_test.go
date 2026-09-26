@@ -7,6 +7,7 @@ import (
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/registry"
+	"go-drive/common/secretbox"
 	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/storage"
@@ -38,6 +39,9 @@ func newTestDispatcher(t *testing.T, driveNames []string) (
 	t.Helper()
 	config = testutil.DefaultTestConfig()
 	ch := registry.NewComponentHolder()
+	if _, e := secretbox.Open(config.DataDir, ch); e != nil {
+		t.Fatalf("secretbox.Open: %v", e)
+	}
 	driveutil.NewDriveRegistry(ch)
 	if e := RegisterAllDrives(context.Background(), config, ch); e != nil {
 		t.Fatalf("RegisterAllDrives: %v", e)
@@ -1714,4 +1718,3 @@ func TestDispatcher_FsBackslashTraversalStaysInsideDrive(t *testing.T) {
 		t.Fatalf("backslash traversal deleted the outside victim: %v", e)
 	}
 }
-

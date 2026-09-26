@@ -153,7 +153,7 @@ func OAuthInitConfig(o OAuthRequest, cred OAuthCredentials,
 
 	// use a cryptographically-strong, non-guessable state to mitigate CSRF
 	state := utils.Base64URLEncode(utils.RandSecret(16))
-	if e := ds.Save(types.SM{DsKeyState: state}); e != nil {
+	if e := ds.SaveEncrypted(types.SM{DsKeyState: state}); e != nil {
 		return nil, nil, e
 	}
 	initConfig := &DriveInitConfig{
@@ -236,11 +236,15 @@ func loadToken(ds DriveDataStore) *oauth2.Token {
 }
 
 func storeToken(ds DriveDataStore, token *oauth2.Token) error {
-	return ds.Save(types.SM{
+	if e := ds.Save(types.SM{
+		DsKeyTokenType: token.TokenType,
+		DsKeyExpiresAt: strconv.FormatInt(token.Expiry.Unix(), 10),
+	}); e != nil {
+		return e
+	}
+	return ds.SaveEncrypted(types.SM{
 		DsKeyToken:        token.AccessToken,
-		DsKeyTokenType:    token.TokenType,
 		DsKeyRefreshToken: token.RefreshToken,
-		DsKeyExpiresAt:    strconv.FormatInt(token.Expiry.Unix(), 10),
 	})
 }
 

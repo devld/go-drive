@@ -54,12 +54,20 @@ func (dr *drivesRoute) createDrive(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	d, e := dr.driveDAO.AddDrive(d)
+	f := dr.driveRegistry.GetDrive(d.Type)
+	var form []types.FormItem
+	if f != nil {
+		form = f.ConfigForm
+	}
+	saved, e := dr.driveDAO.AddDrive(d, form)
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, d)
+	if f != nil {
+		saved.Config = escapeDriveConfigSecrets(f.ConfigForm, saved.Config)
+	}
+	SetResult(c, saved)
 }
 
 func (dr *drivesRoute) updateDrive(c *gin.Context) {
@@ -80,7 +88,7 @@ func (dr *drivesRoute) updateDrive(c *gin.Context) {
 		return
 	}
 	d.Config = unescapeDriveConfigSecrets(f.ConfigForm, savedDrive.Config, d.Config)
-	e = dr.driveDAO.UpdateDrive(name, d)
+	e = dr.driveDAO.UpdateDrive(name, d, f.ConfigForm)
 	if e != nil {
 		_ = c.Error(e)
 		return
