@@ -7,6 +7,7 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/logging"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"io"
 	"math"
 	"os"
@@ -21,18 +22,21 @@ import (
 )
 
 const (
-	cacheBlockSize = 10 * 1024 * 1024
-	cacheMapCells  = 20
+	defaultCacheBlockSize = 10 * 1024 * 1024
+	cacheMapCells         = 20
+	cacheFilePrefix       = "cache-"
 )
 
 type ReaderGetter func(context.Context, types.ReaderRange) (io.ReadCloser, error)
 
 // CacheFilePoolOptions controls the number, lifetime, and approximate total
-// size of cached sources. MaxBytes and TTL are zero for no limit.
+// size of cached sources. MaxBytes and TTL are zero for no limit. BlockSize
+// is the aligned fill size; zero uses the 10MiB default.
 type CacheFilePoolOptions struct {
 	MaxEntries   int
 	MaxBytes     int64
 	TTL          time.Duration
+	BlockSize    int64
 	CleanStartup bool
 }
 
@@ -50,7 +54,12 @@ func NewCacheFilePool(dir string, options CacheFilePoolOptions) (*CacheFilePool,
 	if options.CleanStartup {
 		cleanupCacheFiles(dir)
 	}
-	pool := &CacheFilePool{dir: dir, maxBytes: options.MaxBytes, ttl: options.TTL}
+	pool := &CacheFilePool{
+		dir:       dir,
+		maxBytes:  options.MaxBytes,
+		ttl:       options.TTL,
+		blockSize: utils.PositiveOr(options.BlockSize, defaultCacheBlockSize),
+	}
 	pool.entries, e = lru.NewWithEvict(options.MaxEntries, pool.onCacheEvicted)
 	if e != nil {
 		return nil, e
@@ -65,7 +74,7 @@ func cleanupCacheFiles(dir string) {
 		return
 	}
 	for _, entry := range entries {
-		if !strings.HasPrefix(entry.Name(), "cache-") || !entry.Type().IsRegular() {
+		if !strings.HasPrefix(entry.Name(), cacheFilePrefix) || !entry.Type().IsRegular() {
 			continue
 		}
 		_ = os.Remove(filepath.Join(dir, entry.Name()))
@@ -73,13 +82,14 @@ func cleanupCacheFiles(dir string) {
 }
 
 type CacheFilePool struct {
-	dir      string
-	entries  *lru.Cache[string, *cacheFile]
-	maxBytes int64
-	ttl      time.Duration
-	bytesMu  sync.Mutex
-	bytes    int64
-	mu       sync.Mutex
+	dir       string
+	entries   *lru.Cache[string, *cacheFile]
+	maxBytes  int64
+	ttl       time.Duration
+	blockSize int64
+	bytesMu   sync.Mutex
+	bytes     int64
+	mu        sync.Mutex
 }
 
 // Has reports whether a source currently has a live in-memory cache entry.
@@ -132,7 +142,7 @@ func (cfp *CacheFilePool) GetReader(ctx context.Context, key string, size int64,
 	// has active readers, re-requesting the same key would create a new cacheFile
 	// that opens the SAME file with O_TRUNC, truncating the file the old readers
 	// are still reading from.
-	file, e := os.CreateTemp(cfp.dir, "cache-")
+	file, e := os.CreateTemp(cfp.dir, cacheFilePrefix)
 	if e != nil {
 		return nil, e
 	}
@@ -145,6 +155,7 @@ func (cfp *CacheFilePool) GetReader(ctx context.Context, key string, size int64,
 		key:        key,
 		size:       size,
 		createdAt:  time.Now(),
+		blockSize:  cfp.blockSize,
 		getReader:  getReader,
 		fillCtx:    fillCtx,
 		fillCancel: fillCancel,
@@ -238,6 +249,7 @@ type cacheFile struct {
 	key        string
 	size       int64
 	createdAt  time.Time
+	blockSize  int64
 	fetches    atomic.Int64
 	getReader  ReaderGetter
 	fillCtx    context.Context
@@ -371,7 +383,7 @@ func (cf *cacheFile) readRequest(ctx context.Context, start, readLen int64) erro
 		return nil
 	}
 	end := start + readLen
-	blockSize := int64(cacheBlockSize)
+	blockSize := cf.blockSize
 
 	var offset, size int64
 
@@ -630,7 +642,7 @@ func (cf *cacheFile) writeCloseLog(cause error) {
 	if cf.size > 0 {
 		percent = fmt.Sprintf("%.1f%%", float64(downloaded)*100/float64(cf.size))
 	}
-	bar := downloadMap(cf.size, ranges)
+	bar := downloadMap(cf.size, cf.blockSize, ranges)
 	logger := logging.For("f-cache")
 	key := logging.Sanitize(cf.key)
 	fetches := cf.fetches.Load()
@@ -647,15 +659,15 @@ func (cf *cacheFile) writeCloseLog(cause error) {
 // Scaled cells use the intermediate glyphs for a partial download.
 const downloadMapRamp = "_.:-=+*#"
 
-// downloadMap draws downloaded ranges as one character per 10MiB block.
+// downloadMap draws downloaded ranges as one character per fill block.
 // Files longer than 20 blocks are scaled onto 20 characters. An unscaled cell
 // is '#' only when that whole block is downloaded. A scaled cell uses
 // downloadMapRamp to show how much of the cell has been downloaded.
-func downloadMap(size int64, ranges [][]int64) string {
+func downloadMap(size, blockSize int64, ranges [][]int64) string {
 	if size <= 0 {
 		return ""
 	}
-	chunks := (size + cacheBlockSize - 1) / cacheBlockSize
+	chunks := (size + blockSize - 1) / blockSize
 	cells := chunks
 	if cells > cacheMapCells {
 		cells = cacheMapCells
@@ -671,8 +683,8 @@ func downloadMap(size int64, ranges [][]int64) string {
 			start = size * i / cells
 			end = size * (i + 1) / cells
 		} else {
-			start = i * cacheBlockSize
-			end = min(start+cacheBlockSize, size)
+			start = i * blockSize
+			end = min(start+blockSize, size)
 		}
 		buf[i] = downloadGlyph(rangeDownloaded(ranges, start, end), end-start, scaled)
 	}

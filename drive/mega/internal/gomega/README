@@ -1,0 +1,17 @@
+This directory is a modified copy of github.com/t3rm1n4l/go-mega at commit
+4de2f127f34a88bdb3679cf80a70581c4b8fe6e0 (2026-06-30).
+
+The upstream license is the MIT License. LICENSE in this directory is the
+original license text, including:
+
+    Copyright (c) 2019 Sarath Lakshman
+
+Local changes, in mega.go:
+
+- The package name is gomega.
+- File and folder keys are drawn from crypto/rand.
+- Close stops the server-event poller started after login.
+
+Upstream tests, module files, and tooling are not included. This package is
+imported only by go-drive/drive/mega. The repository NOTICE identifies this
+copy, and release archives include this license as LICENSE-mega.

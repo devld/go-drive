@@ -37,7 +37,7 @@ English | [简体中文](README.zh-CN.md)
 
 ## Overview
 
-**go-drive** is a lightweight file-management server written in Go with a Vue/TypeScript frontend. It lets you browse, upload, organize, and share files across many different storage backends — local disks, FTP/SFTP, WebDAV, S3-compatible object storage, OneDrive, Google Drive, and more — all through one clean web interface.
+**go-drive** is a lightweight file-management server written in Go with a Vue/TypeScript frontend. It lets you browse, upload, organize, and share files across many different storage backends — local disks, FTP/SFTP, WebDAV, S3-compatible object storage, OneDrive, Google Drive, MEGA, and more — all through one clean web interface.
 
 The whole application ships as a single self-contained binary (the web UI and i18n assets are embedded), making it trivial to deploy on a server, NAS, or inside a container.
 
@@ -72,6 +72,7 @@ The whole application ships as a single self-contained binary (the web UI and i1
 | S3 | Amazon S3 and S3-compatible object storage |
 | OneDrive | Microsoft OneDrive |
 | Google Drive | Google Drive |
+| MEGA | Client-side encrypted cloud storage |
 | Dropbox | Implemented as a scripted (JavaScript) drive |
 | Qiniu | Qiniu Cloud, implemented as a scripted (JavaScript) drive |
 
@@ -202,3 +203,5 @@ Contributions are welcome! Please:
 go-drive is released under the [MIT License](LICENSE). Copyright © 2020 devld.
 
 `server/webdav` is a modified copy of `golang.org/x/net/webdav`, including that package's internal fork of `encoding/xml`. It remains Copyright The Go Authors and is covered by the BSD-3-Clause license. See [NOTICE](NOTICE).
+
+`drive/mega/internal/gomega` is a modified copy of `github.com/t3rm1n4l/go-mega`. It remains Copyright 2019 Sarath Lakshman and is covered by the MIT License. See [NOTICE](NOTICE).

@@ -37,7 +37,7 @@
 
 ## 项目简介
 
-**go-drive** 是一个使用 Go 编写、前端基于 Vue/TypeScript 的轻量级文件管理服务器。它让你能够通过一个简洁的 Web 界面，在多种存储后端之间浏览、上传、整理和分享文件 —— 包括本地磁盘、FTP/SFTP、WebDAV、S3 兼容对象存储、OneDrive、Google Drive 等等。
+**go-drive** 是一个使用 Go 编写、前端基于 Vue/TypeScript 的轻量级文件管理服务器。它让你能够通过一个简洁的 Web 界面，在多种存储后端之间浏览、上传、整理和分享文件 —— 包括本地磁盘、FTP/SFTP、WebDAV、S3 兼容对象存储、OneDrive、Google Drive、MEGA 等等。
 
 整个应用以单个自包含的二进制文件分发（Web 界面与 i18n 资源已内嵌），因此可以非常方便地部署在服务器、NAS 或容器中。
 
@@ -72,6 +72,7 @@
 | S3 | Amazon S3 及 S3 兼容对象存储 |
 | OneDrive | 微软 OneDrive |
 | Google Drive | 谷歌云端硬盘 |
+| MEGA | 客户端加密的云存储 |
 | Dropbox | 通过脚本（JavaScript）实现 |
 | 七牛云 | 通过脚本（JavaScript）实现 |
 
@@ -202,3 +203,5 @@ npm run build-web  # 生产构建
 go-drive 基于 [MIT 许可证](LICENSE) 发布。版权所有 © 2020 devld。
 
 `server/webdav` 是 `golang.org/x/net/webdav` 的修改副本，包含该包内对 `encoding/xml` 的分叉。这部分代码的版权属于 The Go Authors，适用 BSD-3-Clause 许可证。详见 [NOTICE](NOTICE)。
+
+`drive/mega/internal/gomega` 是 `github.com/t3rm1n4l/go-mega` 的修改副本。这部分代码的版权属于 Sarath Lakshman（2019），适用 MIT 许可证。详见 [NOTICE](NOTICE)。
