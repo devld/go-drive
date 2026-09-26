@@ -410,7 +410,7 @@ func (f *sftpEntry) Name() string {
 	return utils.PathBase(f.path)
 }
 
-func (f *sftpEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+func (f *sftpEntry) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	return utils.NewLazyReader(func() (io.ReadCloser, error) {
 		r, w := io.Pipe()
 		go func() {
@@ -425,15 +425,15 @@ func (f *sftpEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCl
 				return
 			}
 			var readCloser io.ReadCloser = file
-			if start >= 0 {
-				_, e = file.Seek(start, io.SeekStart)
+			if !rg.IsFullRequest() {
+				_, e = file.Seek(rg.Start, io.SeekStart)
 				if e != nil {
 					_ = file.Close()
 					_ = w.CloseWithError(e)
 					return
 				}
-				if size > 0 {
-					readCloser = driveutil.LimitReadCloser(file, size)
+				if rg.Size > 0 {
+					readCloser = driveutil.LimitReadCloser(file, rg.Size)
 				}
 			}
 			defer func() { _ = file.Close() }()

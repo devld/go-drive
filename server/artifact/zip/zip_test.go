@@ -223,7 +223,7 @@ func (e *zipEntry) Drive() types.IDrive { return e.d }
 func (e *zipEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return nil, err.NewUnsupportedError()
 }
-func (e *zipEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (e *zipEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewReader(e.d.files[e.path])), nil
 }
 

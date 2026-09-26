@@ -5,6 +5,7 @@ import (
 	"context"
 	err "go-drive/common/errors"
 	"go-drive/common/task"
+	"go-drive/common/types"
 	"go-drive/common/utils"
 	"io"
 	"os"
@@ -56,7 +57,7 @@ func TestFsDriveBasicRoundTrip(t *testing.T) {
 	if e != nil {
 		t.Fatalf("Get: %v", e)
 	}
-	reader, e := got.GetReader(ctx, -1, -1)
+	reader, e := got.GetReader(ctx, types.FullReaderRange())
 	if e != nil {
 		t.Fatalf("GetReader: %v", e)
 	}

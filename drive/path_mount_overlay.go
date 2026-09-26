@@ -606,7 +606,7 @@ func (e *pathMountVirtualEntry) Drive() types.IDrive   { return e.drive }
 func (e *pathMountVirtualEntry) Meta() types.EntryMeta {
 	return types.EntryMeta{Readable: true}
 }
-func (e *pathMountVirtualEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (e *pathMountVirtualEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewNotAllowedError()
 }
 func (e *pathMountVirtualEntry) GetURL(context.Context) (*types.ContentURL, error) {

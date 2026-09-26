@@ -411,19 +411,19 @@ func (o *oneDriveEntry) Thumbnail(_ context.Context) (types.IContentReader, erro
 	return driveutil.NewURLContentReader(o.thumbnail, nil, true), nil
 }
 
-func (o *oneDriveEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+func (o *oneDriveEntry) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	u, resp, e := o.get(ctx)
 	if e != nil {
 		return nil, e
 	}
 	if resp != nil {
-		if start >= 0 || size > 0 {
+		if !rg.IsFullRequest() {
 			_ = resp.Dispose()
 			return nil, err.NewUnsupportedError()
 		}
 		return resp.Response().Body, nil
 	}
-	return driveutil.GetURL(ctx, u, nil, start, size)
+	return driveutil.GetURL(ctx, u, nil, rg)
 }
 
 func (o *oneDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {

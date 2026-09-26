@@ -183,16 +183,20 @@ func (e *writeEntry) Meta() types.EntryMeta { return types.EntryMeta{Readable: t
 func (e *writeEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return nil, err.NewUnsupportedError()
 }
-func (e *writeEntry) GetReader(_ context.Context, start, size int64) (io.ReadCloser, error) {
+func (e *writeEntry) GetReader(_ context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	data := e.data
+	if rg.IsFullRequest() {
+		return io.NopCloser(bytes.NewReader(data)), nil
+	}
+	start := rg.Start
 	if start > 0 {
 		if start > int64(len(data)) {
 			start = int64(len(data))
 		}
 		data = data[start:]
 	}
-	if size >= 0 && size < int64(len(data)) {
-		data = data[:size]
+	if rg.Size >= 0 && rg.Size < int64(len(data)) {
+		data = data[:rg.Size]
 	}
 	return io.NopCloser(bytes.NewReader(data)), nil
 }

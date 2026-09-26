@@ -11,7 +11,26 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"go-drive/common/types"
 )
+
+func TestAsValueAcceptsValueOrPointer(t *testing.T) {
+	value, ok := AsValue[types.ReaderRange](types.ReaderRange{Start: 1, Size: 2})
+	if !ok || value.Start != 1 || value.Size != 2 {
+		t.Fatalf("value = %+v ok=%v", value, ok)
+	}
+	value, ok = AsValue[types.ReaderRange](&types.ReaderRange{Start: 3, Size: 4})
+	if !ok || value.Start != 3 || value.Size != 4 {
+		t.Fatalf("pointer = %+v ok=%v", value, ok)
+	}
+	if _, ok = AsValue[types.ReaderRange]((*types.ReaderRange)(nil)); ok {
+		t.Fatal("nil pointer accepted")
+	}
+	if _, ok = AsValue[types.ReaderRange]("range"); ok {
+		t.Fatal("unrelated type accepted")
+	}
+}
 
 func TestTypedNilHostValuesBecomeNull(t *testing.T) {
 	vm := newPoolTestVM(t)
@@ -271,7 +290,7 @@ type readerTestEntry struct {
 	inspectTestEntry
 }
 
-func (e readerTestEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (e readerTestEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader("hi")), nil
 }
 
@@ -288,7 +307,7 @@ func TestHostClassReturnedReadersInstanceOf(t *testing.T) {
 
 	got, e := vm.Run(context.Background(), `
 		var body = http(url).body;
-		var reader = entry.getReader(-1, -1);
+		var reader = entry.getReader(new ReaderRange(-1, -1));
 		var limited = reader.limitReader(1);
 		[
 			body instanceof ReadCloser,

@@ -6,8 +6,90 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
+
+	"go-drive/common/types"
 )
+
+var jsClassReaderRange = JSClass{
+	Name:   "ReaderRange",
+	Handle: jsObjReaderRange{},
+	Construct: func(vm *VM, args Values) any {
+		start := args.Get(0)
+		size := args.Get(1)
+		if !jsInteger(start) || !jsInteger(size) {
+			vm.ThrowTypeError("ReaderRange requires start and size")
+		}
+		return jsObjReaderRange{
+			ClassHost: NewClassHost(vm),
+			r:         types.ReaderRange{Start: start.Integer(), Size: size.Integer()},
+		}
+	},
+	Accepts: func(v any) bool {
+		_, ok := AsValue[types.ReaderRange](v)
+		return ok
+	},
+	Wrap: func(vm *VM, v any) any {
+		r, ok := AsValue[types.ReaderRange](v)
+		if !ok {
+			panic("ReaderRange")
+		}
+		return jsObjReaderRange{ClassHost: NewClassHost(vm), r: r}
+	},
+	Getters: map[string]ClassMethod{
+		"start": func(vm *VM, this *Value, _ Values) any {
+			return This[jsReaderRange](vm, this, "ReaderRange.start").NativeReaderRange().Start
+		},
+		"size": func(vm *VM, this *Value, _ Values) any {
+			return This[jsReaderRange](vm, this, "ReaderRange.size").NativeReaderRange().Size
+		},
+	},
+	Methods: map[string]ClassMethod{
+		"isFullRequest": func(vm *VM, this *Value, _ Values) any {
+			return This[jsReaderRange](vm, this, "ReaderRange.isFullRequest").NativeReaderRange().IsFullRequest()
+		},
+		"buildHttpRangeHeader": func(vm *VM, this *Value, _ Values) any {
+			return This[jsReaderRange](vm, this, "ReaderRange.buildHttpRangeHeader").NativeReaderRange().BuildHTTPRangeHeader()
+		},
+	},
+}
+
+type jsReaderRange interface {
+	NativeReaderRange() types.ReaderRange
+}
+
+type jsObjReaderRange struct {
+	ClassHost
+	r types.ReaderRange
+}
+
+func (r jsObjReaderRange) NativeReaderRange() types.ReaderRange { return r.r }
+
+func jsInteger(v *Value) bool {
+	if v == nil || !v.IsNumber() {
+		return false
+	}
+	f := v.Float()
+	return !math.IsNaN(f) && !math.IsInf(f, 0) && f == math.Trunc(f)
+}
+
+func (r jsObjReaderRange) ConsoleString() string {
+	return formatGoInspect("ReaderRange", []string{
+		fmt.Sprintf("Start: %d", r.r.Start),
+		fmt.Sprintf("Size: %d", r.r.Size),
+	}, false)
+}
+
+// GetReaderRange reads a JavaScript ReaderRange. required is the TypeError
+// message when v is not one; an empty required leaves a zero range.
+func GetReaderRange(vm *VM, v any, required string) types.ReaderRange {
+	if r, ok := HostAs[jsReaderRange](v); ok {
+		return r.NativeReaderRange()
+	}
+	vm.throwTypeErrorRequired(required)
+	return types.ReaderRange{}
+}
 
 var jsClassBytes = JSClass{
 	Name:   "Bytes",

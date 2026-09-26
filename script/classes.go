@@ -78,6 +78,7 @@ func init() {
 	builtinClasses = newClassSet(
 		&jsClassDrive,
 		&jsClassEntry,
+		&jsClassReaderRange,
 		&jsClassBytes,
 		&jsClassReader,
 		&jsClassReadCloser,
@@ -290,10 +291,9 @@ func AcceptsNonNil[T any]() func(any) bool {
 	}
 }
 
-// HostAs extracts a host capability or concrete handle from a JS value or Go
-// handle. Interface T matches subclass handles; *T is also accepted.
-func HostAs[T any](v any) (T, bool) {
-	switch x := unwrapHost(v).(type) {
+// AsValue accepts T or a non-nil *T and returns the value.
+func AsValue[T any](v any) (T, bool) {
+	switch x := v.(type) {
 	case T:
 		return x, true
 	case *T:
@@ -303,6 +303,12 @@ func HostAs[T any](v any) (T, bool) {
 	}
 	var zero T
 	return zero, false
+}
+
+// HostAs extracts a host capability or concrete handle from a JS value or Go
+// handle. Interface T matches subclass handles; *T is also accepted.
+func HostAs[T any](v any) (T, bool) {
+	return AsValue[T](unwrapHost(v))
 }
 
 func This[T any](vm *VM, this *Value, name string) T {

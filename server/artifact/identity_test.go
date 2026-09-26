@@ -21,7 +21,7 @@ func (e *identityTestEntry) Size() int64           { return e.size }
 func (e *identityTestEntry) ModTime() int64        { return e.modTime }
 func (e *identityTestEntry) Meta() types.EntryMeta { return types.EntryMeta{Readable: true} }
 func (e *identityTestEntry) Drive() types.IDrive   { return nil }
-func (e *identityTestEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (e *identityTestEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, nil
 }
 func (e *identityTestEntry) GetURL(context.Context) (*types.ContentURL, error) { return nil, nil }

@@ -176,6 +176,25 @@ declare class Drive {
 }
 
 /**
+ * Byte range for `Entry.getReader` and script Drive `getReader`.
+ * `new ReaderRange(-1, -1)` requests the full content.
+ */
+declare class ReaderRange {
+  constructor(start: number, size: number);
+  /** Inclusive start offset. A negative value requests the full content. */
+  get start(): number;
+  /** Byte count. A negative value requests the full content. */
+  get size(): number;
+  /** `true` when `start < 0`, `size < 0`, or both are `0`. */
+  isFullRequest(): boolean;
+  /**
+   * HTTP Range header value, such as `"bytes=0-99"` or `"bytes=10-"`.
+   * Empty for a full-content request.
+   */
+  buildHttpRangeHeader(): string;
+}
+
+/**
  * Host entry from `Drive` (getters, not `EntryRecord` fields).
  * Cannot be constructed from JavaScript.
  */
@@ -194,8 +213,11 @@ declare class Entry {
   get drive(): Drive | null;
   /** Throws `UnsupportedError` if not available. */
   getUrl(): ContentURL;
-  /** Range read. Throws `UnsupportedError` if not available. */
-  getReader(start: number, size: number): ReadCloser;
+  /**
+   * Range read. An omitted range is a full-content request.
+   * Throws `UnsupportedError` if not available.
+   */
+  getReader(range?: ReaderRange): ReadCloser;
   /** Shape used by `JSON.stringify`. */
   toJSON(): {
     path: string;

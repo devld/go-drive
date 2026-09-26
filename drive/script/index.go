@@ -480,13 +480,13 @@ type scriptDriveEntry struct {
 }
 
 // GetReader gets the reader of this entry
-func (se *scriptDriveEntry) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
+func (se *scriptDriveEntry) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	if !se.d.has.getReader {
 		return nil, err.NewUnsupportedError()
 	}
 	var result io.ReadCloser
 	e := se.d.withVM(ctx, func(vm *s.VM) error {
-		v, e := se.d.call(ctx, vm, "getReader", se.s, start, size)
+		v, e := se.d.call(ctx, vm, "getReader", se.s, rg)
 		if e != nil {
 			return e
 		}

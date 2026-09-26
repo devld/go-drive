@@ -352,7 +352,7 @@ func (w *webDavEntry) Name() string {
 	return utils.PathBase(w.path)
 }
 
-func (w *webDavEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (w *webDavEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewUnsupportedError()
 }
 

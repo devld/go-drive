@@ -123,9 +123,11 @@ var jsClassEntry = JSClass{
 			return This[jsObjEntry](vm, this, "Entry.getUrl").GetURL()
 		},
 		"getReader": func(vm *VM, this *Value, args Values) any {
-			return This[jsObjEntry](vm, this, "Entry.getReader").GetReader(
-				args.Get(0).Integer(), args.Get(1).Integer(),
-			)
+			rg := types.FullReaderRange()
+			if arg := args.Get(0); !arg.IsNil() {
+				rg = GetReaderRange(vm, arg, "Entry.getReader requires a ReaderRange")
+			}
+			return This[jsObjEntry](vm, this, "Entry.getReader").GetReader(rg)
 		},
 		"toJSON": func(vm *VM, this *Value, _ Values) any {
 			return This[jsObjEntry](vm, this, "Entry.toJSON").jsonShape()
@@ -287,11 +289,11 @@ func (e jsObjEntry) GetURL() any {
 	return e.VM().ToJSValue(r)
 }
 
-func (e jsObjEntry) GetReader(start, size int64) *Value {
+func (e jsObjEntry) GetReader(rg types.ReaderRange) *Value {
 	ctx := e.VM().ExecutionContext()
-	r, err := e.e.GetReader(ctx, start, size)
+	r, err := e.e.GetReader(ctx, rg)
 	if err != nil && apierr.IsUnsupportedError(err) {
-		r, err = driveutil.GetIContentReader(ctx, e.e, start, size)
+		r, err = driveutil.GetIContentReader(ctx, e.e, rg)
 	}
 	if err != nil {
 		e.VM().ThrowError(err)

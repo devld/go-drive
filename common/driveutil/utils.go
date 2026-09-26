@@ -234,16 +234,16 @@ func CopyReaderToTempFile(ctx types.TaskCtx, reader io.Reader, tempDir string) (
 	return file, nil
 }
 
-func GetIContentReader(ctx context.Context, content types.IContentReader, start, size int64) (io.ReadCloser, error) {
+func GetIContentReader(ctx context.Context, content types.IContentReader, rg types.ReaderRange) (io.ReadCloser, error) {
 	u, e := content.GetURL(ctx)
 	if e == nil {
-		return GetURL(ctx, u.URL, u.Header, start, size)
+		return GetURL(ctx, u.URL, u.Header, rg)
 	}
-	return content.GetReader(ctx, start, size)
+	return content.GetReader(ctx, rg)
 }
 
 func CopyIContent(ctx types.TaskCtx, content types.IContentReader, dst io.Writer) error {
-	reader, e := GetIContentReader(ctx, content, -1, -1)
+	reader, e := GetIContentReader(ctx, content, types.FullReaderRange())
 	if e != nil {
 		return e
 	}
@@ -255,7 +255,7 @@ func CopyIContent(ctx types.TaskCtx, content types.IContentReader, dst io.Writer
 }
 
 func CopyIContentToTempFile(ctx types.TaskCtx, content types.IContentReader, tempDir string) (*os.File, error) {
-	reader, e := GetIContentReader(ctx, content, -1, -1)
+	reader, e := GetIContentReader(ctx, content, types.FullReaderRange())
 	if e != nil {
 		return nil, e
 	}
@@ -340,7 +340,7 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 	if !err.IsUnsupportedError(e) {
 		return e
 	}
-	reader, e := content.GetReader(ctx, -1, -1)
+	reader, e := content.GetReader(ctx, types.FullReaderRange())
 	if e != nil {
 		return e
 	}
@@ -628,19 +628,8 @@ func getURL(ctx context.Context, u string, header types.SM) (int, io.ReadCloser,
 	return status, resp.Response().Body, nil
 }
 
-func BuildRangeHeader(start, size int64) string {
-	rangeStr := ""
-	if start >= 0 {
-		rangeStr = fmt.Sprintf("bytes=%d-", start)
-		if size > 0 {
-			rangeStr += fmt.Sprintf("%d", start+size-1)
-		}
-	}
-	return rangeStr
-}
-
-func GetURL(ctx context.Context, u string, header types.SM, start, size int64) (io.ReadCloser, error) {
-	rangeStr := BuildRangeHeader(start, size)
+func GetURL(ctx context.Context, u string, header types.SM, rg types.ReaderRange) (io.ReadCloser, error) {
+	rangeStr := rg.BuildHTTPRangeHeader()
 	if rangeStr != "" {
 		header = utils.MapCopy(header, nil)
 		header["Range"] = rangeStr
@@ -667,8 +656,8 @@ type contentReaderImpl struct {
 	proxy   bool
 }
 
-func (t *contentReaderImpl) GetReader(ctx context.Context, start, size int64) (io.ReadCloser, error) {
-	return GetURL(ctx, t.url, t.headers, start, size)
+func (t *contentReaderImpl) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
+	return GetURL(ctx, t.url, t.headers, rg)
 }
 
 func (t *contentReaderImpl) GetURL(context.Context) (*types.ContentURL, error) {

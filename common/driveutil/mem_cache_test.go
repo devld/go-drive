@@ -16,7 +16,7 @@ type cacheTestEntry struct {
 	path string
 }
 
-func (e cacheTestEntry) GetReader(context.Context, int64, int64) (io.ReadCloser, error) {
+func (e cacheTestEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewUnsupportedError()
 }
 

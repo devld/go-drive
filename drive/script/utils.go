@@ -635,10 +635,10 @@ type readCloserContentReader struct {
 	rc io.ReadCloser
 }
 
-func (r readCloserContentReader) GetReader(_ context.Context, start, size int64) (io.ReadCloser, error) {
-	// The underlying value is a single-shot stream; range requests are not
-	// supported. start < 0 / size < 0 means "the whole content".
-	if start > 0 || size > 0 {
+func (r readCloserContentReader) GetReader(_ context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
+	// The underlying value is a single-shot stream. Only a full-content
+	// request can be served.
+	if !rg.IsFullRequest() {
 		return nil, err.NewUnsupportedError()
 	}
 	return r.rc, nil

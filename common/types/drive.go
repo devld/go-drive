@@ -47,9 +47,10 @@ type ContentURL struct {
 }
 
 type IContentReader interface {
-	// GetReader gets the reader of this entry, the last two arguments are offset and size.
-	// If you don't want to specify the last two parameters, then you must pass both -1.
-	GetReader(context.Context, int64, int64) (io.ReadCloser, error)
+	// GetReader returns a reader for this entry's content.
+	// ReaderRange.IsFullRequest reports a full-content request; otherwise it is a byte range.
+	// Pass FullReaderRange to read the entire content.
+	GetReader(context.Context, ReaderRange) (io.ReadCloser, error)
 	// GetURL gets the download url of this entry.
 	// This API is optional, returns err.NewUnsupportedError if not supported.
 	GetURL(context.Context) (*ContentURL, error)

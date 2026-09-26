@@ -1295,6 +1295,58 @@ func TestOAuthInitConfigValueReadableFromJS(t *testing.T) {
 	}
 }
 
+func TestScriptDriveGetReaderReceivesReaderRange(t *testing.T) {
+	d := newTestScriptDrive(t, `
+defineDrive(
+  { createInstance: function () { return {}; } },
+  {
+    get: function (path) {
+      return { path: path, isDir: false, size: 8, modTime: -1, meta: { readable: true } };
+    },
+    list: function () { return []; },
+    getReader: function (entry, range) {
+      if (!(range instanceof ReaderRange)) throw new Error("not ReaderRange");
+      var body = new TempFile();
+      if (range.isFullRequest()) {
+        if (range.start !== -1 || range.size !== -1 || range.buildHttpRangeHeader() !== "") {
+          throw new Error("full range");
+        }
+        body.write(Bytes.fromString("full"));
+      } else if (range.start !== 2 || range.size !== 3 || range.buildHttpRangeHeader() !== "bytes=2-4") {
+        throw new Error("partial " + range.start + "," + range.size + "," + range.buildHttpRangeHeader());
+      } else {
+        body.write(Bytes.fromString("part"));
+      }
+      body.seekTo(0, SEEK_START);
+      return body;
+    }
+  }
+);
+`, nil, nil)
+	entry, e := d.Get(context.Background(), "f")
+	if e != nil {
+		t.Fatal(e)
+	}
+	full, e := entry.GetReader(context.Background(), types.FullReaderRange())
+	if e != nil {
+		t.Fatal(e)
+	}
+	got, e := io.ReadAll(full)
+	_ = full.Close()
+	if e != nil || string(got) != "full" {
+		t.Fatalf("full getReader = %q %v", got, e)
+	}
+	part, e := entry.GetReader(context.Background(), types.ReaderRange{Start: 2, Size: 3})
+	if e != nil {
+		t.Fatal(e)
+	}
+	got, e = io.ReadAll(part)
+	_ = part.Close()
+	if e != nil || string(got) != "part" {
+		t.Fatalf("partial getReader = %q %v", got, e)
+	}
+}
+
 func TestScriptDriveGetReaderSurvivesVMReturn(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, "payload")
@@ -1329,7 +1381,7 @@ defineDrive(
 	if e != nil {
 		t.Fatal(e)
 	}
-	rc, e := entry.GetReader(context.Background(), -1, -1)
+	rc, e := entry.GetReader(context.Background(), types.FullReaderRange())
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -1351,7 +1403,7 @@ defineDrive(
 	if e != nil {
 		t.Fatal(e)
 	}
-	trc, e := content.GetReader(context.Background(), -1, -1)
+	trc, e := content.GetReader(context.Background(), types.FullReaderRange())
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -1386,7 +1438,7 @@ defineDrive(
 	if e != nil {
 		t.Fatal(e)
 	}
-	rc, e := entry.GetReader(context.Background(), -1, -1)
+	rc, e := entry.GetReader(context.Background(), types.FullReaderRange())
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -1506,7 +1558,7 @@ func TestScriptDriveLimitedReadersSurvivePoolReturn(t *testing.T) {
 				if e != nil {
 					t.Fatal(e)
 				}
-				r, e := entry.GetReader(context.Background(), -1, -1)
+				r, e := entry.GetReader(context.Background(), types.FullReaderRange())
 				if e != nil {
 					t.Fatal(e)
 				}
@@ -1523,7 +1575,7 @@ func TestScriptDriveLimitedReadersSurvivePoolReturn(t *testing.T) {
 				if e != nil {
 					t.Fatal(e)
 				}
-				r, e = thumb.GetReader(context.Background(), -1, -1)
+				r, e = thumb.GetReader(context.Background(), types.FullReaderRange())
 				if e != nil {
 					t.Fatal(e)
 				}
