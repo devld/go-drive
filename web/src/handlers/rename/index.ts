@@ -1,6 +1,13 @@
 import { moveEntry } from '@/api'
 import { T } from '@go-drive/i18n'
-import { dir, pathClean, pathJoin, taskDone, TASK_CANCELLED } from '@/utils'
+import {
+  dir,
+  filenameStemEnd,
+  pathClean,
+  pathJoin,
+  taskDone,
+  TASK_CANCELLED,
+} from '@/utils'
 import { EntryHandler } from '../types'
 
 export default {
@@ -16,6 +23,7 @@ export default {
       input({
         title: T('handler.rename.input_title'),
         text: entry.name,
+        select: { start: 0, end: filenameStemEnd(entry.name, entry.meta.ext) },
         validator: {
           pattern: /^[^/\0:*"<>|]+$/,
           message: T('handler.rename.invalid_filename'),

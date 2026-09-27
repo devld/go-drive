@@ -2,6 +2,7 @@
   <div class="input-dialog__input-wrapper">
     <textarea
       v-if="multipleLine"
+      ref="fieldEl"
       v-model="text"
       v-focus
       class="input-dialog__input"
@@ -10,9 +11,12 @@
       :aria-invalid="validationError ? 'true' : undefined"
       :aria-describedby="validationError ? validationId : undefined"
       :disabled="!!loading"
+      @focus="onFieldFocus"
+      @input="lockSelection"
     ></textarea>
     <input
       v-else
+      ref="fieldEl"
       v-model="text"
       v-focus
       :type="opts.type || 'text'"
@@ -22,6 +26,8 @@
       :aria-invalid="validationError ? 'true' : undefined"
       :aria-describedby="validationError ? validationId : undefined"
       :disabled="!!loading"
+      @focus="onFieldFocus"
+      @input="lockSelection"
     />
     <div
       v-if="validationError"
@@ -54,6 +60,11 @@ const emit = defineEmits<{ (e: 'loading', v?: boolean): void }>()
 
 const text = ref(props.opts.text || '')
 const placeholder = ref(props.opts.placeholder || '')
+const fieldEl = ref<HTMLInputElement | HTMLTextAreaElement | null>(null)
+// Dialog focus is retried after the open transition starts, and an earlier
+// focus() is dropped. Re-apply until the user edits so only the focus that
+// sticks wins, and a later automatic refocus does not clear their edit.
+let selectionLocked = false
 const validationId = `input-dialog-validation-${Math.round(Math.random() * 1000000)}`
 const inputLabel = computed(() =>
   s(props.opts.title || placeholder.value)
@@ -121,6 +132,39 @@ const validationResult = (message: string | Error | null, token?: number) => {
 }
 const clearValidationResult = () => {
   validationError.value = null
+}
+
+const applySelection = (el: HTMLInputElement | HTMLTextAreaElement) => {
+  const range = props.opts.select
+  if (!range) return
+  const length = el.value.length
+  const normalize = (index: number) => {
+    if (!Number.isFinite(index)) return 0
+    return Math.min(length, Math.max(0, Math.trunc(index)))
+  }
+  let start = normalize(range.start)
+  let end = normalize(range.end)
+  if (start > end) {
+    const swap = start
+    start = end
+    end = swap
+  }
+  el.setSelectionRange(start, end)
+}
+
+const lockSelection = () => {
+  selectionLocked = true
+}
+
+const onFieldFocus = () => {
+  if (selectionLocked || !props.opts.select) return
+  const el = fieldEl.value
+  if (!el) return
+  requestAnimationFrame(() => {
+    if (selectionLocked || fieldEl.value !== el) return
+    if (document.activeElement !== el) return
+    applySelection(el)
+  })
 }
 
 watch(
