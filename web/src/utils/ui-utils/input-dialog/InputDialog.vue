@@ -11,9 +11,6 @@
       :aria-invalid="validationError ? 'true' : undefined"
       :aria-describedby="validationError ? validationId : undefined"
       :disabled="!!loading"
-      @focus="onFieldFocus"
-      @pointerdown="lockSelection"
-      @input="lockSelection"
     ></textarea>
     <input
       v-else
@@ -27,9 +24,6 @@
       :aria-invalid="validationError ? 'true' : undefined"
       :aria-describedby="validationError ? validationId : undefined"
       :disabled="!!loading"
-      @focus="onFieldFocus"
-      @pointerdown="lockSelection"
-      @input="lockSelection"
     />
     <div
       v-if="validationError"
@@ -44,7 +38,7 @@
 <script setup lang="ts">
 import { s } from '@go-drive/i18n'
 import { val } from '@/utils'
-import { computed, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
+import { computed, onMounted, ref, unref, watch } from 'vue'
 import { InputDialogOptions, InputDialogValidateFunc } from '.'
 
 const props = defineProps({
@@ -63,12 +57,6 @@ const emit = defineEmits<{ (e: 'loading', v?: boolean): void }>()
 const text = ref(props.opts.text || '')
 const placeholder = ref(props.opts.placeholder || '')
 const fieldEl = ref<HTMLInputElement | HTMLTextAreaElement | null>(null)
-// Dialog focus is retried after the open transition, and an earlier focus()
-// is dropped. Selecting the whole value during that focus is collapsed to a
-// caret, so the range is applied again once focus has settled.
-let selectionLocked = false
-let selectionTimers: number[] = []
-let selectionAttempts = 0
 const validationId = `input-dialog-validation-${Math.round(Math.random() * 1000000)}`
 const inputLabel = computed(() =>
   s(props.opts.title || placeholder.value)
@@ -138,74 +126,29 @@ const clearValidationResult = () => {
   validationError.value = null
 }
 
-const selectionBounds = (length: number) => {
+// The dialog focuses this field on a later frame. Setting a selection that
+// covers the whole value in that same turn is collapsed to a caret, so wait
+// until the frame after that focus.
+const applySelection = () => {
+  const el = fieldEl.value
   const range = props.opts.select
-  if (!range) return
-  const normalize = (index: number) => {
-    if (!Number.isFinite(index)) return 0
-    return Math.min(length, Math.max(0, Math.trunc(index)))
-  }
-  let start = normalize(range.start)
-  let end = normalize(range.end)
-  if (start > end) {
-    const swap = start
-    start = end
-    end = swap
-  }
-  return { start, end }
-}
-
-const applySelection = (el: HTMLInputElement | HTMLTextAreaElement) => {
-  const bounds = selectionBounds(el.value.length)
-  if (!bounds) return
-  el.setSelectionRange(bounds.start, bounds.end)
-}
-
-const clearSelectionTimers = () => {
-  selectionTimers.forEach((id) => window.clearTimeout(id))
-  selectionTimers = []
-}
-
-const lockSelection = () => {
-  selectionLocked = true
-  clearSelectionTimers()
-}
-
-const applySelectionIfFocused = () => {
-  if (selectionLocked || !props.opts.select) return
-  const el = fieldEl.value
-  if (!el || document.activeElement !== el) return
-  applySelection(el)
-}
-
-// Selecting the whole value during the dialog's focus sequence is collapsed
-// to a caret. Repeat briefly after focus settles, and stop if the user edits.
-const selectionMatches = (el: HTMLInputElement | HTMLTextAreaElement) => {
-  const bounds = selectionBounds(el.value.length)
-  if (!bounds) return true
-  return el.selectionStart === bounds.start && el.selectionEnd === bounds.end
-}
-
-const keepSelection = () => {
-  if (selectionLocked || !props.opts.select || selectionAttempts > 8) return
-  const el = fieldEl.value
-  if (el && document.activeElement === el && selectionMatches(el)) return
-  selectionAttempts += 1
-  applySelectionIfFocused()
-  selectionTimers.push(window.setTimeout(keepSelection, 50))
-}
-
-const onFieldFocus = () => {
-  if (selectionLocked || !props.opts.select || selectionAttempts > 0) return
-  keepSelection()
+  if (!el || !range || document.activeElement !== el) return
+  const length = el.value.length
+  const clamp = (index: number) =>
+    Math.min(
+      length,
+      Math.max(0, Number.isFinite(index) ? Math.trunc(index) : 0)
+    )
+  let start = clamp(range.start)
+  let end = clamp(range.end)
+  if (start > end) [start, end] = [end, start]
+  el.setSelectionRange(start, end)
 }
 
 onMounted(() => {
   if (!props.opts.select) return
-  keepSelection()
+  requestAnimationFrame(() => requestAnimationFrame(applySelection))
 })
-
-onBeforeUnmount(clearSelectionTimers)
 
 watch(
   () => text.value,
