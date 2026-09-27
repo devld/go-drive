@@ -4,12 +4,7 @@
     class="preview-image-gallery"
     :class="{ loading: loading }"
   >
-    <LoadingState
-      v-if="loading"
-      variant="overlay"
-      text="Loading"
-      :surface="false"
-    />
+    <LoadingState v-if="loading" variant="overlay" text="Loading" />
   </div>
 </template>
 <script setup lang="ts">

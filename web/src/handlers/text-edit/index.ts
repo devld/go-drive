@@ -1,4 +1,4 @@
-import { wrapAsyncComponent } from '@/components/async'
+import { defineAsyncComponent } from 'vue'
 import { TEXT_EDITOR_MAX_FILE_SIZE } from '@/config'
 import { T } from '@go-drive/i18n'
 import { entryMatches } from '@/utils'
@@ -22,7 +22,7 @@ export default {
   style: { fullscreen: true },
   view: {
     name: 'TextEditView',
-    component: wrapAsyncComponent(() => import('./TextEditView.vue')),
+    component: defineAsyncComponent(() => import('./TextEditView.vue')),
   },
   supports: ({ entry }, { options }) =>
     entry.type === 'file' &&

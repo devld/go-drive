@@ -1,4 +1,4 @@
-import { wrapAsyncComponent } from '@/components/async'
+import { defineAsyncComponent } from 'vue'
 import { T } from '@go-drive/i18n'
 import { isAdmin } from '@/utils'
 import { EntryHandler } from '../types'
@@ -12,7 +12,7 @@ export default {
   },
   view: {
     name: 'PermissionsView',
-    component: wrapAsyncComponent(() => import('./PermissionsView.vue')),
+    component: defineAsyncComponent(() => import('./PermissionsView.vue')),
   },
   supports: (_, { user }) => isAdmin(user),
   order: 2001,

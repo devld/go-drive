@@ -1,4 +1,4 @@
-import { wrapAsyncComponent } from '@/components/async'
+import { defineAsyncComponent } from 'vue'
 import { T } from '@go-drive/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
@@ -13,7 +13,7 @@ export default {
   style: { fullscreen: true },
   view: {
     name: 'ImageView',
-    component: wrapAsyncComponent(() => import('./ImageView.vue')),
+    component: defineAsyncComponent(() => import('./ImageView.vue')),
   },
   supports: ({ entry }, { options }) =>
     entry.type === 'file' &&
