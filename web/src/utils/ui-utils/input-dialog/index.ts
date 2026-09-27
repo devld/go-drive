@@ -12,11 +12,20 @@ export interface InputDialogValidator {
   message?: I18nText
 }
 
+export interface InputDialogSelection {
+  /** Inclusive start offset. */
+  start: number
+  /** Exclusive end offset. */
+  end: number
+}
+
 export interface InputDialogOptions extends BaseDialogOptions {
   type?: string
   text?: string
   placeholder?: I18nText
   multipleLine?: boolean
+  /** Character range selected when the field receives focus. */
+  select?: InputDialogSelection
 
   validator?: InputDialogValidator
 }

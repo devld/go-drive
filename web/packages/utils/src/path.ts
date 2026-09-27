@@ -34,6 +34,35 @@ export function filenameExt(filename?: string) {
   return filename.substring(i + 1).toLowerCase()
 }
 
+/**
+ * Exclusive end index of the filename stem.
+ *
+ * `ext`, when set, is the entry's real extension (for example `meta.ext`).
+ * If `name` ends with that extension, the suffix stays outside the stem.
+ * If it does not, the extension is not part of the stored name and the
+ * whole name is the stem.
+ *
+ * Without `ext`, the stem stops before the last `.`. A dot at the start
+ * (`.gitignore`) belongs to the name, not to an extension.
+ */
+export function filenameStemEnd(name: string, ext?: string): number {
+  if (!name) return 0
+  const normalizedExt = ext?.replace(/^\./, '')
+  if (normalizedExt) {
+    const suffix = `.${normalizedExt}`
+    if (
+      name.length > suffix.length &&
+      name.toLowerCase().endsWith(suffix.toLowerCase())
+    ) {
+      return name.length - suffix.length
+    }
+    return name.length
+  }
+  const dot = name.lastIndexOf('.')
+  if (dot <= 0) return name.length
+  return dot
+}
+
 export function pathJoin(...segments: string[]) {
   return segments.filter(Boolean).join('/').replace(/\/+/g, '/')
 }

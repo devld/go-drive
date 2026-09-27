@@ -2,6 +2,7 @@
   <div class="input-dialog__input-wrapper">
     <textarea
       v-if="multipleLine"
+      ref="fieldEl"
       v-model="text"
       v-focus
       class="input-dialog__input"
@@ -13,6 +14,7 @@
     ></textarea>
     <input
       v-else
+      ref="fieldEl"
       v-model="text"
       v-focus
       :type="opts.type || 'text'"
@@ -36,7 +38,7 @@
 <script setup lang="ts">
 import { s } from '@go-drive/i18n'
 import { val } from '@/utils'
-import { computed, ref, unref, watch } from 'vue'
+import { computed, onMounted, ref, unref, watch } from 'vue'
 import { InputDialogOptions, InputDialogValidateFunc } from '.'
 
 const props = defineProps({
@@ -54,6 +56,7 @@ const emit = defineEmits<{ (e: 'loading', v?: boolean): void }>()
 
 const text = ref(props.opts.text || '')
 const placeholder = ref(props.opts.placeholder || '')
+const fieldEl = ref<HTMLInputElement | HTMLTextAreaElement | null>(null)
 const validationId = `input-dialog-validation-${Math.round(Math.random() * 1000000)}`
 const inputLabel = computed(() =>
   s(props.opts.title || placeholder.value)
@@ -122,6 +125,30 @@ const validationResult = (message: string | Error | null, token?: number) => {
 const clearValidationResult = () => {
   validationError.value = null
 }
+
+// The dialog focuses this field on a later frame. Setting a selection that
+// covers the whole value in that same turn is collapsed to a caret, so wait
+// until the frame after that focus.
+const applySelection = () => {
+  const el = fieldEl.value
+  const range = props.opts.select
+  if (!el || !range || document.activeElement !== el) return
+  const length = el.value.length
+  const clamp = (index: number) =>
+    Math.min(
+      length,
+      Math.max(0, Number.isFinite(index) ? Math.trunc(index) : 0)
+    )
+  let start = clamp(range.start)
+  let end = clamp(range.end)
+  if (start > end) [start, end] = [end, start]
+  el.setSelectionRange(start, end)
+}
+
+onMounted(() => {
+  if (!props.opts.select) return
+  requestAnimationFrame(() => requestAnimationFrame(applySelection))
+})
 
 watch(
   () => text.value,
