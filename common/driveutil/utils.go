@@ -615,7 +615,7 @@ func ProgressReader(reader io.Reader, ctx types.TaskCtx) io.Reader {
 }
 
 func getURL(ctx context.Context, u string, header types.SM) (int, io.ReadCloser, error) {
-	resp, e := httpreq.NewDefaultClient().Get(ctx, u, header)
+	resp, e := httpreq.DefaultClient.Get(ctx, u, header)
 	if e != nil {
 		return 0, nil, e
 	}

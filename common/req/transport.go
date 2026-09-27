@@ -6,61 +6,31 @@ import (
 	"time"
 )
 
-var defaultLoggingClient = NewLoggingClient(defaultClient)
-
-func wrapClient(client *http.Client) *http.Client {
-	if client == nil {
-		return nil
-	}
-	return NewLoggingClient(client)
-}
-
-// NewLoggingClient returns a shallow copy of client whose transport emits a
-// safe request/response trace.
-func NewLoggingClient(client *http.Client) *http.Client {
+// WithDefaultRoundTripper returns a shallow copy of client whose transport
+// sets the default User-Agent and then logs the request. base nil uses
+// http.DefaultTransport. A RoundTripper already installed on client runs
+// after the default User-Agent is written, so it can replace that value.
+// A nil client uses http.DefaultClient.
+func WithDefaultRoundTripper(client *http.Client) *http.Client {
 	if client == nil {
 		client = http.DefaultClient
 	}
 	copy := *client
-	copy.Transport = loggingTransport{base: copy.Transport, log: logging.For("http-c")}
+	copy.Transport = defaultRoundTripper(copy.Transport)
 	return &copy
+}
+
+func defaultRoundTripper(base http.RoundTripper) http.RoundTripper {
+	return userAgentTransport{base: withLogging(base)}
+}
+
+func withLogging(base http.RoundTripper) http.RoundTripper {
+	return loggingTransport{base: base, log: logging.For("http-c")}
 }
 
 type loggingTransport struct {
 	base http.RoundTripper
 	log  *logging.Logger
-}
-
-// HTTPClient is the small interface used by generated SDKs for an HTTP
-// client. NewLoggingHTTPClient adapts those clients without requiring them to
-// use net/http.Client directly.
-type HTTPClient interface {
-	Do(*http.Request) (*http.Response, error)
-}
-
-func NewLoggingHTTPClient(client HTTPClient) HTTPClient {
-	if client == nil {
-		client = http.DefaultClient
-	}
-	return loggingHTTPClient{base: client, log: logging.For("http-c")}
-}
-
-type loggingHTTPClient struct {
-	base HTTPClient
-	log  *logging.Logger
-}
-
-func (c loggingHTTPClient) Do(r *http.Request) (*http.Response, error) {
-	url := SanitizeURL(r.URL.String())
-	started := time.Now()
-	c.log.Debugf("request %s %s", r.Method, url)
-	resp, e := c.base.Do(r)
-	if e != nil {
-		c.log.Debugf("response %s %s error=%s duration=%s", r.Method, url, SanitizeError(e), time.Since(started))
-		return nil, e
-	}
-	c.log.Debugf("response %s %s status=%d duration=%s", r.Method, url, resp.StatusCode, time.Since(started))
-	return resp, nil
 }
 
 func (t loggingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -78,4 +48,22 @@ func (t loggingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	t.log.Debugf("response %s %s status=%d duration=%s", r.Method, url, resp.StatusCode, time.Since(started))
 	return resp, nil
+}
+
+type userAgentTransport struct {
+	base http.RoundTripper
+}
+
+func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	base := t.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	req2 := req.Clone(req.Context())
+	setDefaultUserAgent(req2)
+	return base.RoundTrip(req2)
+}
+
+func setDefaultUserAgent(req *http.Request) {
+	req.Header.Set("User-Agent", DefaultUserAgent)
 }

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"go-drive/common/req"
 	"go-drive/common/types"
 
 	"golang.org/x/oauth2"
@@ -173,8 +174,10 @@ func TestOAuthClientClosesBodyWhenTokenRequestFails(t *testing.T) {
 
 func TestOAuthHolderRefreshUpdatesValidCachedToken(t *testing.T) {
 	var n atomic.Int32
+	var userAgent string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := n.Add(1)
+		userAgent = r.Header.Get("User-Agent")
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"access_token":"new-%d","token_type":"Bearer","expires_in":3600,"refresh_token":"rt-%d"}`, id, id)
 	}))
@@ -215,6 +218,9 @@ func TestOAuthHolderRefreshUpdatesValidCachedToken(t *testing.T) {
 	if tok.AccessToken != "new-1" {
 		t.Fatalf("Refresh = %q", tok.AccessToken)
 	}
+	if userAgent != req.DefaultUserAgent {
+		t.Fatalf("token endpoint User-Agent = %q", userAgent)
+	}
 
 	tok, e = oauthHolder.Token(context.Background())
 	if e != nil {
@@ -254,5 +260,44 @@ func TestOAuthHolderRefreshRequiresRefreshToken(t *testing.T) {
 	_, e = oauthHolder.Refresh(context.Background())
 	if e == nil {
 		t.Fatal("expected missing refresh token to fail")
+	}
+}
+
+func TestOAuthClientReplacesUserAgent(t *testing.T) {
+	var got string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.Header.Get("User-Agent")
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(srv.Close)
+
+	ds := &memOAuthData{}
+	expiry := time.Now().Add(time.Hour).Unix()
+	if e := ds.Save(types.SM{
+		DsKeyToken:     "access",
+		DsKeyTokenType: "Bearer",
+		DsKeyExpiresAt: strconv.FormatInt(expiry, 10),
+	}); e != nil {
+		t.Fatal(e)
+	}
+	oauthHolder, e := OAuthLoad(OAuthRequest{
+		Endpoint: oauth2.Endpoint{TokenURL: "http://127.0.0.1:1/unused"},
+	}, OAuthCredentials{ClientID: "id", ClientSecret: "secret"}, ds)
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	reqHTTP, e := http.NewRequest(http.MethodGet, srv.URL, nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	reqHTTP.Header.Set("User-Agent", "google-api-go-client/0.5")
+	resp, e := req.WithDefaultRoundTripper(oauthHolder.Client()).Do(reqHTTP)
+	if e != nil {
+		t.Fatal(e)
+	}
+	_ = resp.Body.Close()
+	if got != req.DefaultUserAgent {
+		t.Fatalf("User-Agent = %q", got)
 	}
 }

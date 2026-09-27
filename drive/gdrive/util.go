@@ -64,7 +64,7 @@ func InitConfig(ctx context.Context, config types.SM,
 	if oauthHolder == nil {
 		return initConfig, nil
 	}
-	httpClient := req.NewLoggingClient(oauthHolder.Client())
+	httpClient := req.WithDefaultRoundTripper(oauthHolder.Client())
 	service, e := gOauth.NewService(ctx, option.WithHTTPClient(httpClient))
 	if e != nil {
 		return nil, e
@@ -86,7 +86,7 @@ func InitConfig(ctx context.Context, config types.SM,
 func buildInitForm(ctx context.Context, oauthHolder *driveutil.OAuthHolder,
 	driveUtils driveutil.DriveUtils, initConfig *driveutil.DriveInitConfig) error {
 	// get shared drives
-	driveSrv, e := drive.NewService(ctx, option.WithHTTPClient(req.NewLoggingClient(oauthHolder.Client())))
+	driveSrv, e := drive.NewService(ctx, option.WithHTTPClient(req.WithDefaultRoundTripper(oauthHolder.Client())))
 	if e != nil {
 		return e
 	}

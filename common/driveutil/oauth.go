@@ -5,6 +5,7 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
+	httpreq "go-drive/common/req"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"net/http"
@@ -72,7 +73,7 @@ func (o *OAuthHolder) Token(ctx context.Context) (*oauth2.Token, error) {
 	}
 
 	logging.For("oauth").Debugf("OAuth token refresh started")
-	newTok, e := o.conf.TokenSource(ctx, o.t).Token()
+	newTok, e := o.conf.TokenSource(withHTTPClient(ctx), o.t).Token()
 	if e != nil {
 		logging.For("oauth").Warnf("OAuth token refresh failed: %v", e)
 		return nil, e
@@ -104,7 +105,7 @@ func (o *OAuthHolder) Refresh(ctx context.Context) (*oauth2.Token, error) {
 	}
 
 	stale := &oauth2.Token{RefreshToken: o.t.RefreshToken}
-	newTok, e := o.conf.TokenSource(ctx, stale).Token()
+	newTok, e := o.conf.TokenSource(withHTTPClient(ctx), stale).Token()
 	if e != nil {
 		logging.For("oauth").Warnf("OAuth forced refresh failed: %v", e)
 		return nil, e
@@ -192,7 +193,7 @@ func OAuthInit(ctx context.Context, o OAuthRequest, data types.SM,
 		logging.For("oauth").Warnf("OAuth callback rejected reason=state_mismatch")
 		return nil, err.NewNotAllowedMessageError(i18n.T("oauth.state_mismatch"))
 	}
-	t, e := oauthConf.Exchange(ctx, code)
+	t, e := oauthConf.Exchange(withHTTPClient(ctx), code)
 	if e != nil {
 		logging.For("oauth").Warnf("OAuth code exchange failed: %v", e)
 		return nil, e
@@ -246,6 +247,10 @@ func storeToken(ds DriveDataStore, token *oauth2.Token) error {
 		DsKeyToken:        token.AccessToken,
 		DsKeyRefreshToken: token.RefreshToken,
 	})
+}
+
+func withHTTPClient(ctx context.Context) context.Context {
+	return context.WithValue(ctx, oauth2.HTTPClient, httpreq.DefaultHTTPClient)
 }
 
 type oauthTransport struct {

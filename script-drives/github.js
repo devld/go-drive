@@ -1,5 +1,5 @@
 // @name GitHub
-// @version 1.0.4
+// @version 1.0.5
 // @description Map a GitHub repository branch as a read-only virtual drive.
 //
 // Configure the repository owner, repository name, and optionally a branch
@@ -123,7 +123,6 @@ defineDrive(
         url,
         header: {
           Authorization: "Bearer " + this.token,
-          "User-Agent": "go-drive",
         },
         proxy: true,
       };
@@ -334,7 +333,6 @@ function requestJSON(drive, method, path) {
 function request(drive, method, path) {
   const headers = {
     Accept: "application/vnd.github+json",
-    "User-Agent": "go-drive",
     "X-GitHub-Api-Version": "2022-11-28",
   };
   if (drive.token) {

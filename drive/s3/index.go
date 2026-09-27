@@ -91,8 +91,7 @@ func NewDrive(ctx context.Context, config types.SM,
 			req.SanitizeURL(endpoint), logging.Sanitize(bucket), req.SanitizeError(e))
 		return nil, e
 	}
-	s3Cfg.HTTPClient = req.NewLoggingHTTPClient(s3Cfg.HTTPClient)
-	s3Cfg.APIOptions = append(s3Cfg.APIOptions, withRequestHeaders(requestHeaders))
+	s3Cfg.HTTPClient = newServerHTTPClient(s3Cfg.HTTPClient, requestHeaders)
 	client := s3.NewFromConfig(s3Cfg, func(o *s3.Options) { o.UsePathStyle = pathStyle != "" })
 
 	d := &Drive{
@@ -458,11 +457,7 @@ func (s *Drive) Upload(ctx context.Context, path string, size int64,
 }
 
 func (s *Drive) newPresign() *s3.PresignClient {
-	return s3.NewPresignClient(
-		s.c,
-		s3.WithPresignExpires(2*time.Hour),
-		s3.WithPresignClientFromClientOptions(withoutRequestHeaders),
-	)
+	return s3.NewPresignClient(s.c, s3.WithPresignExpires(2*time.Hour))
 }
 
 func buildCompleteUploadBody(etag string) []awsType.CompletedPart {
