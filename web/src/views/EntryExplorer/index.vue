@@ -343,12 +343,10 @@ const onEntryMenuKeydown = (e: KeyboardEvent) => {
 
 const onEntryMenuFocusout = (e: FocusEvent) => {
   const next = e.relatedTarget
-  if (
-    next instanceof Node &&
-    entryMenuEl.value?.contains(next)
-  ) {
-    return
-  }
+  // iOS leaves relatedTarget null while a tap is still turning into a click.
+  // Closing here removes the item before that click. Pointer dismissal is
+  // handled by the overlay; a real relatedTarget means keyboard focus left.
+  if (!(next instanceof Node) || entryMenuEl.value?.contains(next)) return
   closeEntryMenu(false)
 }
 
