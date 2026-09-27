@@ -129,14 +129,22 @@ watch(
         obj = obj ? [obj] : []
       }
       if (maxItems.value === 1) obj.splice(1)
+      const singleFormKey =
+        forms.value.forms.length === 1 ? forms.value.forms[0].key : undefined
       value.value = obj
-        .filter((e: O) => e && typeof e === 'object' && !!e[keyField.value])
-        .map((e: O) => ({
-          typeKey: e[keyField.value],
-          value: valueField.value
-            ? e[valueField.value]
-            : { ...e, [keyField.value]: undefined },
-        }))
+        .filter(
+          (e: O) =>
+            e &&
+            typeof e === 'object' &&
+            (!!e[keyField.value] || !!singleFormKey)
+        )
+        .map((e: O) => {
+          const { [keyField.value]: rawTypeKey, ...fields } = e
+          return {
+            typeKey: rawTypeKey || singleFormKey,
+            value: valueField.value ? e[valueField.value] : fields,
+          }
+        })
     } catch (e) {
       console.error(e)
     }
@@ -146,9 +154,12 @@ watch(
 
 const emitValue = debounce(() => {
   const v = value.value.map((e) => {
+    const fields = valueField.value
+      ? { [valueField.value]: e.value }
+      : e.value
     return {
+      ...fields,
       [keyField.value]: e.typeKey,
-      ...(valueField.value ? { [valueField.value]: e.value } : e.value),
     }
   })
   lastValue = JSON.stringify(maxItems.value === 1 ? v[0] : v)
