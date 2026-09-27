@@ -49,6 +49,8 @@ assets.
 
 - Backend code should use `go-drive/common/logging` instead of the standard
   library `log` package directly.
+- Send outbound HTTP through `go-drive/common/req`. At minimum, wrap the
+  client with `req.WithDefaultRoundTripper`.
 - Do not add logic in non-test code only to accommodate tests. Production code
   should follow the real execution path; tests should set up that path instead
   of requiring extra branches, nil checks, or fallbacks.

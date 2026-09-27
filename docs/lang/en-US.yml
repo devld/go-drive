@@ -184,7 +184,7 @@ drive:
         description: Download files through server proxy
       request_headers:
         label: Request Headers
-        description: Headers added to requests sent by the go-drive server. Direct browser uploads and downloads do not include them; enable the corresponding proxy option if the storage service requires these headers for file transfers. Configured values override existing headers, while S3 signing may replace headers it controls.
+        description: Headers added to requests sent by the go-drive server. Direct browser uploads and downloads do not include them; enable the corresponding proxy option if the storage service requires these headers for file transfers. Values are applied after S3 signing, so they are not part of the signature.
       cache_ttl:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.

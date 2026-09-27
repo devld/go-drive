@@ -19,11 +19,22 @@ const maxReadableBodySize int64 = 10 * 1024 * 1024 // 10MB
 var DefaultUserAgent = fmt.Sprintf("go-drive/%s", common.Version)
 var absoluteURLPattern = regexp.MustCompile("(?i)^https?://")
 
-var defaultClient = &http.Client{
-	CheckRedirect: func(*http.Request, []*http.Request) error {
-		// dont follow redirects
-		return http.ErrUseLastResponse
-	},
+// DefaultHTTPClient follows redirects. Its transport sets the default
+// User-Agent and logs the request. Callers that build requests through
+// Client pass this client to NewClient: that path keeps the redirect policy,
+// sets the User-Agent before caller headers, and only logs on the transport.
+var DefaultHTTPClient = WithDefaultRoundTripper(nil)
+
+// DefaultClient follows redirects. A Client created with a nil *http.Client
+// does not, because API callers need to observe 3xx responses themselves.
+var DefaultClient = newDefaultClient()
+
+func newDefaultClient() *Client {
+	client, e := NewClient("", nil, nil, DefaultHTTPClient)
+	if e != nil {
+		panic(e)
+	}
+	return client
 }
 
 type Client struct {
@@ -48,21 +59,27 @@ func NewClient(
 		u = temp
 	}
 	return &Client{
-		c:       wrapClient(client),
+		c:       prepareHTTPClient(client),
 		baseURL: u,
 		before:  before,
 		after:   after,
 	}, nil
 }
 
-// NewDefaultClient returns a request client backed by net/http's default
-// client.
-func NewDefaultClient() *Client {
-	client, e := NewClient("", nil, nil, http.DefaultClient)
-	if e != nil {
-		panic(e)
+// prepareHTTPClient keeps a caller's redirect policy and adds request logging.
+// DefaultHTTPClient already sets the User-Agent in its transport; Client sets
+// that header itself so caller headers can replace it, and only logging remains.
+func prepareHTTPClient(client *http.Client) *http.Client {
+	if client == nil {
+		return nil
 	}
-	return client
+	copy := *client
+	if client == DefaultHTTPClient {
+		copy.Transport = withLogging(nil)
+		return &copy
+	}
+	copy.Transport = withLogging(copy.Transport)
+	return &copy
 }
 
 func (h *Client) BuildURL(requestURL string) (string, error) {
@@ -105,7 +122,7 @@ func (h *Client) newRequest(method string, requestURL string, headers types.SM,
 	if e != nil {
 		return nil, e
 	}
-	req.Header.Set("User-Agent", DefaultUserAgent)
+	setDefaultUserAgent(req)
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
@@ -123,11 +140,19 @@ func (h *Client) newRequest(method string, requestURL string, headers types.SM,
 	return req, nil
 }
 
+var defaultClientDoNotFollowRedirects = &http.Client{
+	Transport: withLogging(nil),
+	CheckRedirect: func(*http.Request, []*http.Request) error {
+		// dont follow redirects
+		return http.ErrUseLastResponse
+	},
+}
+
 func (h *Client) client() *http.Client {
 	if h.c != nil {
 		return h.c
 	}
-	return defaultLoggingClient
+	return defaultClientDoNotFollowRedirects
 }
 
 func (h *Client) request(req *http.Request) (Response, error) {

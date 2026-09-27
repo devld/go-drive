@@ -162,7 +162,7 @@ func SyncDriveScriptsFromRepository(ctx types.TaskCtx, config common.Config, rep
 	ctx.Total(1, true)
 	ctx.Progress(0, true)
 
-	resp, e := httpreq.NewDefaultClient().Get(ctx, repoURL, nil)
+	resp, e := httpreq.DefaultClient.Get(ctx, repoURL, nil)
 	if e != nil {
 		return DriveScriptRepository{}, e
 	}
@@ -686,7 +686,7 @@ func repositoryUploaderName(value string) string {
 }
 
 func openScriptResponse(ctx context.Context, url string) (httpreq.Response, error) {
-	resp, e := httpreq.NewDefaultClient().Get(ctx, url, nil)
+	resp, e := httpreq.DefaultClient.Get(ctx, url, nil)
 	if e != nil {
 		return nil, e
 	}

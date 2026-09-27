@@ -42,7 +42,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils)
 	if e != nil {
 		return nil, e
 	}
-	service, e := drive.NewService(ctx, option.WithHTTPClient(req.NewLoggingClient(oauthHolder.Client())))
+	service, e := drive.NewService(ctx, option.WithHTTPClient(req.WithDefaultRoundTripper(oauthHolder.Client())))
 	if e != nil {
 		return nil, e
 	}
