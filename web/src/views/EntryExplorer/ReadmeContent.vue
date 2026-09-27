@@ -3,7 +3,6 @@
     <LoadingState
       v-if="readmeLoading"
       variant="panel"
-      :surface="false"
       :text="$t('p.home.readme_loading')"
     />
     <div

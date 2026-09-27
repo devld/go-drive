@@ -2,21 +2,13 @@
   <component
     :is="variant === 'inline' ? 'span' : 'div'"
     class="loading-state"
-    :class="[
-      `loading-state--${variant}`,
-      { 'loading-state--surface': surface },
-    ]"
+    :class="`loading-state--${variant}`"
     role="status"
     aria-live="polite"
     aria-busy="true"
     :aria-label="ariaLabel || displayText || 'Loading'"
   >
-    <span
-      class="loading-state__content"
-      :class="{
-        'glass-surface': surface && variant === 'page',
-      }"
-    >
+    <span class="loading-state__content">
       <LoadingIndicator class="loading-state__indicator" />
       <span v-if="displayText" class="loading-state__text">{{ displayText }}</span>
       <slot />
@@ -29,18 +21,16 @@ import { computed } from 'vue'
 import type { I18nText } from '@go-drive/i18n'
 import LoadingIndicator from './LoadingIndicator.vue'
 
-type LoadingVariant = 'inline' | 'panel' | 'overlay' | 'page' | 'dialog'
+type LoadingVariant = 'inline' | 'panel' | 'overlay' | 'dialog'
 
 const props = withDefaults(
   defineProps<{
     text?: I18nText
     ariaLabel?: string
     variant?: LoadingVariant
-    surface?: boolean
   }>(),
   {
     variant: 'panel',
-    surface: true,
   }
 )
 
@@ -82,7 +72,6 @@ const displayText = computed(() => props.text?.toString() ?? '')
 
 .loading-state--panel,
 .loading-state--overlay,
-.loading-state--page,
 .loading-state--dialog {
   display: flex;
   flex-direction: column;
@@ -103,11 +92,6 @@ const displayText = computed(() => props.text?.toString() ?? '')
   min-height: 96px;
   padding: 24px;
 
-  &.loading-state--surface {
-    background-color: var(--color-bg-elevated);
-    border-radius: var(--radius-dialog);
-  }
-
   .loading-state__indicator {
     width: 24px;
     height: 24px;
@@ -126,24 +110,6 @@ const displayText = computed(() => props.text?.toString() ?? '')
   .loading-state__indicator {
     width: 32px;
     height: 32px;
-  }
-}
-
-.loading-state--page {
-  min-height: 100vh;
-  padding: 24px;
-
-  .loading-state__content {
-    min-width: 176px;
-    max-width: calc(100vw - 48px);
-    padding: 22px 24px;
-    border-radius: var(--radius-dialog);
-    box-shadow: var(--shadow-elevated);
-  }
-
-  .loading-state__indicator {
-    width: 40px;
-    height: 40px;
   }
 }
 

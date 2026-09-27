@@ -18,18 +18,8 @@
         v-if="loading"
         class="archive-view__status"
         variant="panel"
-        :surface="false"
-      >
-        <progress
-          v-if="loadingProgress.total > 0"
-          class="archive-view__progress"
-          :value="loadingProgress.loaded"
-          :max="loadingProgress.total"
-        />
-        <span v-if="loadingPercent !== undefined">
-          {{ loadingPercent }}%
-        </span>
-      </LoadingState>
+        :text="loadingPercentText"
+      />
       <ErrorView
         v-else-if="error"
         class="archive-view__status"
@@ -177,10 +167,10 @@ const loading = ref(false)
 const error = ref<any>()
 const downloadingPath = ref('')
 const loadingProgress = ref<TaskProgress>({ loaded: 0, total: 0 })
-const loadingPercent = computed(() => {
+const loadingPercentText = computed(() => {
   const { loaded, total } = loadingProgress.value
   if (total <= 0) return undefined
-  return Math.min(100, Math.round((loaded / total) * 100))
+  return `${Math.min(100, Math.round((loaded / total) * 100))}%`
 })
 let loadRequest = 0
 let downloadRequest = 0
@@ -454,10 +444,6 @@ onBeforeUnmount(() => {
   .path-bar__segment:last-child .path-bar__path {
     color: var(--color-text);
   }
-}
-
-.archive-view__progress {
-  width: min(260px, 70vw);
 }
 
 .archive-view__status.loading-state,
