@@ -23,7 +23,13 @@ export default {
       input({
         title: T('handler.rename.input_title'),
         text: entry.name,
-        select: { start: 0, end: filenameStemEnd(entry.name, entry.meta.ext) },
+        select: {
+          start: 0,
+          end:
+            entry.type === 'dir'
+              ? entry.name.length
+              : filenameStemEnd(entry.name, entry.meta.ext),
+        },
         validator: {
           pattern: /^[^/\0:*"<>|]+$/,
           message: T('handler.rename.invalid_filename'),
