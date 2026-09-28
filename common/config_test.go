@@ -1,8 +1,11 @@
 package common
 
 import (
-	"go-drive/common/logging"
+	"os"
+	"path/filepath"
 	"testing"
+
+	"go-drive/common/logging"
 )
 
 func TestApplyLoggingConfigDefaultsToInfo(t *testing.T) {
@@ -30,6 +33,27 @@ func TestLoggingLevelEnvironmentOverridesConfig(t *testing.T) {
 	}
 	if logging.Enabled(logging.WarnLevel) || !logging.Enabled(logging.ErrorLevel) {
 		t.Fatal("environment error level should override config debug level")
+	}
+}
+
+func TestGetTempDirCreatesNestedPrivateDir(t *testing.T) {
+	root := t.TempDir()
+	dir, err := (Config{TempDir: root}).GetTempDir(filepath.Join("mega-cache", "cloud"), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dir != filepath.Join(root, "mega-cache", "cloud") {
+		t.Fatalf("dir = %s", dir)
+	}
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0700 {
+		t.Fatalf("mode = %o", info.Mode().Perm())
+	}
+	if _, err = (Config{}).GetTempDir("upload", true); err == nil {
+		t.Fatal("empty temp dir was accepted")
 	}
 }
 

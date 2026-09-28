@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
@@ -19,31 +18,27 @@ import (
 // DriveFS is the process-wide file adapter. It owns the shared source cache
 // used by WebDAV and archive preview. Bind scopes it to one drive.
 type DriveFS struct {
+	// tempDir stages writable opens in the same directory as the content cache.
 	tempDir string
 	cfp     *CacheFilePool
 }
 
 func NewDriveFS(config common.Config) (*DriveFS, error) {
-	tempDir := config.TempDir
-	if tempDir == "" {
-		tempDir = os.TempDir()
-	}
-	dir := filepath.Join(tempDir, "drive-fs")
-	if e := os.MkdirAll(dir, 0700); e != nil {
+	dir, e := config.GetTempDir("drive-fs", true)
+	if e != nil {
 		return nil, e
 	}
 	items := utils.PositiveOr(config.VFS.CacheItems, common.DefaultVFSCacheItems)
 	maxBytes := config.VFS.CacheSize.DataSize(common.DefaultVFSCacheSize.DataSize(0))
-	pool, e := NewCacheFilePool(CacheFilePoolOptions{
+	pool, e := NewCacheFilePool(dir, CacheFilePoolOptions{
 		MaxEntries:   items,
 		MaxBytes:     maxBytes,
-		Dir:          dir,
 		CleanStartup: true,
 	})
 	if e != nil {
 		return nil, e
 	}
-	return &DriveFS{tempDir: tempDir, cfp: pool}, nil
+	return &DriveFS{tempDir: dir, cfp: pool}, nil
 }
 
 func (fs *DriveFS) Bind(ctx context.Context, drive types.IDrive) *BoundDriveFS {
@@ -208,6 +203,7 @@ type driveFSFile struct {
 	replaced    bool
 	writeFailed bool
 	attempted   bool
+	aborted     bool
 	tempDir     string
 	openFlag    int
 }
@@ -218,6 +214,9 @@ func (w *driveFSFile) Close() error {
 
 	if w.reader != nil {
 		_ = w.reader.Close()
+	}
+	if w.aborted {
+		return w.discardFileLocked()
 	}
 
 	// A truncated or newly created file is saved even when Write was never
@@ -453,6 +452,29 @@ func (w *driveFSFile) Stat() (fs.FileInfo, error) {
 		return fileStat{info, 0, info.ModTime()}, nil
 	}
 	return info, nil
+}
+
+// Abort drops this write without saving it. Close after Abort leaves the
+// existing file unchanged, including when no bytes were written.
+func (w *driveFSFile) Abort() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.aborted = true
+	return w.discardFileLocked()
+}
+
+func (w *driveFSFile) discardFileLocked() error {
+	if w.file == nil {
+		return nil
+	}
+	name := w.file.Name()
+	closeErr := w.file.Close()
+	w.file = nil
+	removeErr := os.Remove(name)
+	if closeErr != nil {
+		return closeErr
+	}
+	return removeErr
 }
 
 func (w *driveFSFile) Write(p []byte) (n int, err error) {

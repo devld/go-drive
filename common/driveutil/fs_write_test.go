@@ -95,6 +95,42 @@ func TestDriveFSCreateWithoutTruncKeepsExistingBytes(t *testing.T) {
 	}
 }
 
+func TestDriveFSAbortDoesNotReplaceFile(t *testing.T) {
+	d := newWriteDrive(map[string][]byte{"old.txt": []byte("hello")})
+	fs := (&DriveFS{tempDir: t.TempDir()}).Bind(context.Background(), d)
+
+	partial, e := fs.OpenFile(context.Background(), "old.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = partial.Write([]byte("ab")); e != nil {
+		t.Fatal(e)
+	}
+	if e = partial.(interface{ Abort() error }).Abort(); e != nil {
+		t.Fatal(e)
+	}
+	if e = partial.Close(); e != nil {
+		t.Fatal(e)
+	}
+	if _, ok := d.saved["old.txt"]; ok {
+		t.Fatal("aborted partial write replaced the file")
+	}
+
+	empty, e := fs.OpenFile(context.Background(), "old.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = empty.(interface{ Abort() error }).Abort(); e != nil {
+		t.Fatal(e)
+	}
+	if e = empty.Close(); e != nil {
+		t.Fatal(e)
+	}
+	if _, ok := d.saved["old.txt"]; ok {
+		t.Fatal("aborted empty write replaced the file")
+	}
+}
+
 func TestDriveFSReadWriteCloseWithoutWriteDoesNotSave(t *testing.T) {
 	d := newWriteDrive(map[string][]byte{"old.txt": []byte("hello")})
 	fs := (&DriveFS{tempDir: t.TempDir()}).Bind(context.Background(), d)

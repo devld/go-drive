@@ -12,8 +12,6 @@ import (
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"maps"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -42,11 +40,11 @@ var (
 )
 
 func NewService(config common.Config, runner task.Runner, options OptionReader, files *driveutil.DriveFS) (*Service, error) {
-	tempDir := config.TempDir
-	if tempDir == "" {
-		tempDir = os.TempDir()
+	dir, err := config.GetTempDir("artifacts", true)
+	if err != nil {
+		return nil, fmt.Errorf("create artifact store: %w", err)
 	}
-	store, err := NewStore(filepath.Join(tempDir, "artifacts"))
+	store, err := NewStore(dir)
 	if err != nil {
 		return nil, fmt.Errorf("create artifact store: %w", err)
 	}
