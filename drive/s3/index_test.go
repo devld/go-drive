@@ -42,7 +42,7 @@ func TestRequestHeadersApplyOnlyToServerRequests(t *testing.T) {
 			{"$key":"header","name":"User-Agent","value":"rclone/v1.68.0"},
 			{"$key":"header","name":"X-Data-Space","value":"capsule"}
 		]`,
-	}, driveutil.DriveUtils{})
+	}, driveutil.DriveEnv{})
 	if e != nil {
 		t.Fatalf("NewDrive: %v", e)
 	}
@@ -78,7 +78,7 @@ func TestServerRequestsUseDefaultUserAgent(t *testing.T) {
 		"path_style": "1",
 		"region":     "us-east-1",
 		"endpoint":   server.URL,
-	}, driveutil.DriveUtils{})
+	}, driveutil.DriveEnv{})
 	if e != nil {
 		t.Fatalf("NewDrive: %v", e)
 	}

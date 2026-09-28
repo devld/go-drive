@@ -105,12 +105,12 @@ func itemPath(path string) string {
 }
 
 func InitConfig(ctx context.Context, config types.SM,
-	driveUtils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
-	initConfig, oauthHolder, e := driveutil.OAuthInitConfig(*oauthReq(driveUtils.Config, config),
+	driveEnv driveutil.DriveEnv) (*driveutil.DriveInitConfig, error) {
+	initConfig, oauthHolder, e := driveutil.OAuthInitConfig(*oauthReq(driveEnv.Config, config),
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
-		}, driveUtils.Data)
+		}, driveEnv.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -134,7 +134,7 @@ func InitConfig(ctx context.Context, config types.SM,
 		initConfig.OAuth.Principal = fmt.Sprintf("%s <%s>", user.DisplayName, user.UserPrincipalName)
 	}
 
-	params, e := driveUtils.Data.Load("drive_id", "share_point_id")
+	params, e := driveEnv.Data.Load("drive_id", "share_point_id")
 	if e != nil {
 		return nil, e
 	}
@@ -155,13 +155,13 @@ func InitConfig(ctx context.Context, config types.SM,
 	return initConfig, nil
 }
 
-func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.DriveUtils) error {
-	oReq := *oauthReq(utils.Config, config)
+func Init(ctx context.Context, data types.SM, config types.SM, env driveutil.DriveEnv) error {
+	oReq := *oauthReq(env.Config, config)
 	oauthHolder, e := driveutil.OAuthInit(ctx, oReq, data,
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
-		}, utils.Data)
+		}, env.Data)
 	if e != nil {
 		return e
 	}
@@ -175,7 +175,7 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.D
 				driveutil.OAuthCredentials{
 					ClientID:     config["client_id"],
 					ClientSecret: config["client_secret"],
-				}, utils.Data)
+				}, env.Data)
 			if e != nil {
 				return e
 			}
@@ -195,7 +195,7 @@ func Init(ctx context.Context, data types.SM, config types.SM, utils driveutil.D
 		paramsData = types.SM{"drive_id": data["drive_id"], "share_point_id": ""}
 	}
 
-	return utils.Data.Save(paramsData)
+	return env.Data.Save(paramsData)
 }
 
 func generateDrivesForm(ctx context.Context, reqClient *req.Client,

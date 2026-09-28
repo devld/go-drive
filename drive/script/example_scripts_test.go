@@ -78,7 +78,7 @@ func TestScriptDriveTemplateLifecycle(t *testing.T) {
 				throw new Error("incorrect OAuth arguments");
 			}
 		}
-		const utils = {
+		const env = {
 			config: {oauthRedirectURI: "https://local.test/callback"},
 			createCache() { return {}; },
 			oauthInitConfig(request, credentials) {
@@ -95,10 +95,10 @@ func TestScriptDriveTemplateLifecycle(t *testing.T) {
 				return holder;
 			}
 		};
-		if (!__driveInitConfig(config, utils).configured) throw new Error("initConfig failed");
-		__driveInit({code: "code"}, config, utils);
+		if (!__driveInitConfig(config, env).configured) throw new Error("initConfig failed");
+		__driveInit({code: "code"}, config, env);
 		if (!initialized) throw new Error("init failed");
-		if (__driveCreate(config, utils).entryCacheTTL !== "2h") throw new Error("create failed");
+		if (__driveCreate(config, env).entryCacheTTL !== "2h") throw new Error("create failed");
 		if (__drive_get("file.txt").path !== "file.txt") throw new Error("get path shifted");
 	`, "template-lifecycle.js"); e != nil {
 		t.Fatal(e)

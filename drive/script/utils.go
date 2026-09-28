@@ -110,7 +110,7 @@ func GetDriveScriptConfigForm(ctx context.Context, config common.Config, name st
 	return form, nil
 }
 
-func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (types.IDrive, error) {
+func newScriptDrive(ctx context.Context, config types.SM, driveEnv driveutil.DriveEnv) (types.IDrive, error) {
 	selectedScript, e := scriptFileName(config[scriptConfigField])
 	if e != nil {
 		return nil, e
@@ -121,7 +121,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.D
 		return nil, err.NewNotAllowedMessageError(i18n.T("drive.script.invalid_pool_config", e.Error()))
 	}
 
-	compiled, e := compileDriveScript(driveUtils.Config, selectedScript)
+	compiled, e := compileDriveScript(driveEnv.Config, selectedScript)
 	if e != nil {
 		return nil, e
 	}
@@ -131,7 +131,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.D
 		data:     make(map[string]any),
 		writable: true,
 	}
-	d.cache = driveUtils.CreateCache(d.deserializeEntry)
+	d.cache = driveEnv.CreateCache(d.deserializeEntry)
 
 	var initializeOnce sync.Once
 	var initializeErr error
@@ -141,7 +141,7 @@ func newScriptDrive(ctx context.Context, config types.SM, driveUtils driveutil.D
 		}
 
 		runtimeConfig := vm.ToJSValue(config)
-		scriptUtils := newScriptDriveUtils(vm, driveUtils, &d.oauth, newScriptDriveCache(vm, d.cache))
+		scriptUtils := newScriptDriveEnv(vm, driveEnv, &d.oauth, newScriptDriveCache(vm, d.cache))
 		return vm.Do(vmCtx, func() error {
 			createdVal, e := vm.Call(vmCtx, "__driveCreate", runtimeConfig, scriptUtils)
 			if e != nil {
@@ -241,13 +241,13 @@ func (sd *ScriptDrive) inspectMethods(vm *s.VM) {
 	sd.has.onInterval = sd.hasMethod(vm, "onInterval")
 }
 
-func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
+func initConfig(ctx context.Context, config types.SM, driveEnv driveutil.DriveEnv) (*driveutil.DriveInitConfig, error) {
 	selectedScript, e := scriptFileName(config[scriptConfigField])
 	if e != nil {
 		return nil, e
 	}
 
-	vm, e := createVM(ctx, driveUtils.Config, selectedScript)
+	vm, e := createVM(ctx, driveEnv.Config, selectedScript)
 	if e != nil {
 		return nil, e
 	}
@@ -259,7 +259,7 @@ func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.Drive
 		if e != nil || entry.IsNil() {
 			return e
 		}
-		v, e := vm.Call(ctx, "__driveInitConfig", vm.ToJSValue(config), newScriptDriveUtils(vm, driveUtils, nil, nil))
+		v, e := vm.Call(ctx, "__driveInitConfig", vm.ToJSValue(config), newScriptDriveEnv(vm, driveEnv, nil, nil))
 		if e != nil {
 			return e
 		}
@@ -282,12 +282,12 @@ func initConfig(ctx context.Context, config types.SM, driveUtils driveutil.Drive
 	return vmCfg, nil
 }
 
-func init_(ctx context.Context, data, config types.SM, driveUtils driveutil.DriveUtils) error {
+func init_(ctx context.Context, data, config types.SM, driveEnv driveutil.DriveEnv) error {
 	selectedScript, e := scriptFileName(config[scriptConfigField])
 	if e != nil {
 		return e
 	}
-	vm, e := createVM(ctx, driveUtils.Config, selectedScript)
+	vm, e := createVM(ctx, driveEnv.Config, selectedScript)
 	if e != nil {
 		return e
 	}
@@ -298,7 +298,7 @@ func init_(ctx context.Context, data, config types.SM, driveUtils driveutil.Driv
 		if e != nil || entry.IsNil() {
 			return e
 		}
-		_, e = vm.Call(ctx, "__driveInit", vm.ToJSValue(data), vm.ToJSValue(config), newScriptDriveUtils(vm, driveUtils, nil, nil))
+		_, e = vm.Call(ctx, "__driveInit", vm.ToJSValue(data), vm.ToJSValue(config), newScriptDriveEnv(vm, driveEnv, nil, nil))
 		return e
 	})
 }
@@ -344,18 +344,18 @@ func parsePoolConfig(arg string) (*s.VMPoolConfig, error) {
 	return c, nil
 }
 
-func newScriptDriveUtils(vm *s.VM, utils driveutil.DriveUtils, oauth *oauthHolderShare, cache *scriptDriveCache) *scriptDriveUtils {
-	return &scriptDriveUtils{
+func newScriptDriveEnv(vm *s.VM, env driveutil.DriveEnv, oauth *oauthHolderShare, cache *scriptDriveCache) *scriptDriveEnv {
+	return &scriptDriveEnv{
 		vm:          vm,
-		createCache: utils.CreateCache,
+		createCache: env.CreateCache,
 		cache:       cache,
 		oauth:       oauth,
-		Data:        &driveDataStore{vm, utils.Data},
+		Data:        &driveDataStore{vm, env.Data},
 		Config: rootConfig{
-			OAuthRedirectURI: utils.Config.OAuthRedirectURI,
-			Version:          utils.Config.Version,
-			RevHash:          utils.Config.RevHash,
-			BuildAt:          utils.Config.BuildAt,
+			OAuthRedirectURI: env.Config.OAuthRedirectURI,
+			Version:          env.Config.Version,
+			RevHash:          env.Config.RevHash,
+			BuildAt:          env.Config.BuildAt,
 		},
 	}
 }
@@ -370,7 +370,7 @@ type rootConfig struct {
 	BuildAt          string
 }
 
-type scriptDriveUtils struct {
+type scriptDriveEnv struct {
 	vm          *s.VM
 	createCache driveutil.DriveCacheFactory
 	cache       *scriptDriveCache
@@ -428,11 +428,11 @@ func (c *oauthHolderShare) put(key string, h *driveutil.OAuthHolder) {
 	c.holders[key] = h
 }
 
-func (sdu *scriptDriveUtils) CreateCache(_ *s.VM, _ s.Values) any {
-	if sdu.cache != nil {
-		return sdu.cache
+func (sde *scriptDriveEnv) CreateCache(_ *s.VM, _ s.Values) any {
+	if sde.cache != nil {
+		return sde.cache
 	}
-	return newScriptDriveCache(sdu.vm, sdu.createCache(nil))
+	return newScriptDriveCache(sde.vm, sde.createCache(nil))
 }
 
 func (d *driveDataStore) Save(_ *s.VM, args s.Values) any {
@@ -457,64 +457,64 @@ func (d *driveDataStore) Load(_ *s.VM, args s.Values) any {
 	return r
 }
 
-func (sdu *scriptDriveUtils) OAuthInitConfig(_ *s.VM, args s.Values) any {
+func (sde *scriptDriveEnv) OAuthInitConfig(_ *s.VM, args s.Values) any {
 	req := s.Parse[driveutil.OAuthRequest](args.Get(0))
 	cred := s.Parse[driveutil.OAuthCredentials](args.Get(1))
-	c, holder, e := driveutil.OAuthInitConfig(req, cred, sdu.Data.data)
+	c, holder, e := driveutil.OAuthInitConfig(req, cred, sde.Data.data)
 	if e != nil {
-		sdu.vm.ThrowError(e)
+		sde.vm.ThrowError(e)
 	}
-	if sdu.oauth != nil {
-		holder, e = sdu.oauth.get(oauthShareKey(req, cred), func() (*driveutil.OAuthHolder, error) {
+	if sde.oauth != nil {
+		holder, e = sde.oauth.get(oauthShareKey(req, cred), func() (*driveutil.OAuthHolder, error) {
 			return holder, nil
 		})
 		if e != nil {
-			sdu.vm.ThrowError(e)
+			sde.vm.ThrowError(e)
 		}
 	}
 	result := map[string]any{"config": c}
 	if holder != nil {
-		result["oauthHolder"] = &oauthHolderWrapper{sdu.vm, holder}
+		result["oauthHolder"] = &oauthHolderWrapper{sde.vm, holder}
 	}
 	return result
 }
 
-func (sdu *scriptDriveUtils) OAuthInit(_ *s.VM, args s.Values) any {
+func (sde *scriptDriveEnv) OAuthInit(_ *s.VM, args s.Values) any {
 	req := s.Parse[driveutil.OAuthRequest](args.Get(1))
 	cred := s.Parse[driveutil.OAuthCredentials](args.Get(2))
-	holder, e := driveutil.OAuthInit(sdu.vm.ExecutionContext(), req, args.Get(0).SM(), cred, sdu.Data.data)
+	holder, e := driveutil.OAuthInit(sde.vm.ExecutionContext(), req, args.Get(0).SM(), cred, sde.Data.data)
 	if e != nil {
-		sdu.vm.ThrowError(e)
+		sde.vm.ThrowError(e)
 	}
-	if sdu.oauth != nil {
-		sdu.oauth.put(oauthShareKey(req, cred), holder)
+	if sde.oauth != nil {
+		sde.oauth.put(oauthShareKey(req, cred), holder)
 	}
 	if holder == nil {
 		return nil
 	}
-	return &oauthHolderWrapper{sdu.vm, holder}
+	return &oauthHolderWrapper{sde.vm, holder}
 }
 
-func (sdu *scriptDriveUtils) OAuthLoad(_ *s.VM, args s.Values) any {
+func (sde *scriptDriveEnv) OAuthLoad(_ *s.VM, args s.Values) any {
 	req := s.Parse[driveutil.OAuthRequest](args.Get(0))
 	cred := s.Parse[driveutil.OAuthCredentials](args.Get(1))
 	load := func() (*driveutil.OAuthHolder, error) {
-		return driveutil.OAuthLoad(req, cred, sdu.Data.data)
+		return driveutil.OAuthLoad(req, cred, sde.Data.data)
 	}
 	var holder *driveutil.OAuthHolder
 	var e error
-	if sdu.oauth != nil {
-		holder, e = sdu.oauth.get(oauthShareKey(req, cred), load)
+	if sde.oauth != nil {
+		holder, e = sde.oauth.get(oauthShareKey(req, cred), load)
 	} else {
 		holder, e = load()
 	}
 	if e != nil {
-		sdu.vm.ThrowError(e)
+		sde.vm.ThrowError(e)
 	}
 	if holder == nil {
 		return nil
 	}
-	return &oauthHolderWrapper{sdu.vm, holder}
+	return &oauthHolderWrapper{sde.vm, holder}
 }
 
 type driveDataStore struct {

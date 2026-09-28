@@ -43,8 +43,8 @@ defineDrive(
       entryCacheTTLFormItem("2h"),
     ],
 
-    initConfig(config, utils) {
-      const result = utils.oauthInitConfig(oauthReq(utils.config), {
+    initConfig(config, env) {
+      const result = env.oauthInitConfig(oauthReq(env.config), {
         clientID: config.client_id,
         clientSecret: config.client_secret,
       });
@@ -63,17 +63,17 @@ defineDrive(
       };
     },
 
-    init(data, config, utils) {
-      utils.oauthInit(data, oauthReq(utils.config), {
+    init(data, config, env) {
+      env.oauthInit(data, oauthReq(env.config), {
         clientID: config.client_id,
         clientSecret: config.client_secret,
       });
     },
 
-    createInstance(config, utils) {
+    createInstance(config, env) {
       return {
         entryCacheTTL: config.cache_ttl,
-        oauth: utils.oauthLoad(oauthReq(utils.config), {
+        oauth: env.oauthLoad(oauthReq(env.config), {
           clientID: config.client_id,
           clientSecret: config.client_secret,
         }),

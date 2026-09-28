@@ -64,18 +64,18 @@ type OneDrive struct {
 }
 
 func NewOneDrive(_ context.Context, config types.SM,
-	driveUtils driveutil.DriveUtils) (types.IDrive, error) {
-	oauthHolder, e := driveutil.OAuthLoad(*oauthReq(driveUtils.Config, config),
+	driveEnv driveutil.DriveEnv) (types.IDrive, error) {
+	oauthHolder, e := driveutil.OAuthLoad(*oauthReq(driveEnv.Config, config),
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
-		}, driveUtils.Data)
+		}, driveEnv.Data)
 	if e != nil {
 		return nil, e
 	}
 
 	cacheTTL := config.GetDuration("cache_ttl", -1)
-	params, _ := driveUtils.Data.Load("drive_id", "share_point_id")
+	params, _ := driveEnv.Data.Load("drive_id", "share_point_id")
 	od := &OneDrive{
 		cacheTTL:      cacheTTL,
 		uploadProxy:   config.GetBool("proxy_upload"),
@@ -84,7 +84,7 @@ func NewOneDrive(_ context.Context, config types.SM,
 	if cacheTTL <= 0 {
 		od.cache = driveutil.DummyCache()
 	} else {
-		od.cache = driveUtils.CreateCache(od.deserializeEntry)
+		od.cache = driveEnv.CreateCache(od.deserializeEntry)
 	}
 
 	driveID := params["drive_id"]

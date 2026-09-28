@@ -102,13 +102,13 @@
     global.__driveConfigForm = form;
 
     if (typeof setup.initConfig === "function") {
-      global.__driveInitConfig = (config, utils) => {
+      global.__driveInitConfig = (config, env) => {
         if (!formConfigured(form, config)) {
           return { configured: false };
         }
         const result = rejectPromise(
           "initConfig",
-          setup.initConfig(config, utils)
+          setup.initConfig(config, env)
         );
         if (result?.form) validateForm(result.form, "initConfig form");
         return result === undefined ? null : result;
@@ -118,14 +118,14 @@
     }
 
     if (typeof setup.init === "function") {
-      global.__driveInit = (data, config, utils) => {
-        rejectPromise("init", setup.init(data, config, utils));
+      global.__driveInit = (data, config, env) => {
+        rejectPromise("init", setup.init(data, config, env));
       };
     } else {
       global.__driveInit = null;
     }
 
-    global.__driveCreate = (config, utils) => {
+    global.__driveCreate = (config, env) => {
       if (!formConfigured(form, config)) {
         throw new NotAllowedError("drive not configured");
       }
@@ -135,12 +135,12 @@
 
       const drive = rejectPromise(
         "createInstance",
-        setup.createInstance(config, utils)
+        setup.createInstance(config, env)
       );
       if (!drive || typeof drive !== "object") {
         throw new Error("createInstance must return an object");
       }
-      drive.cache = utils.createCache();
+      drive.cache = env.createCache();
 
       bindDriveMethods(drive, methods);
       bindSharedState(drive);

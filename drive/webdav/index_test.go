@@ -48,7 +48,7 @@ func TestRequestHeadersApplyToWebDAVRequests(t *testing.T) {
 			{"$key":"header","name":"Depth","value":"9"},
 			{"$key":"header","name":"Authorization","value":"Bearer ignored"}
 		]`,
-	}, driveutil.DriveUtils{})
+	}, driveutil.DriveEnv{})
 	if e != nil {
 		t.Fatalf("NewDrive: %v", e)
 	}

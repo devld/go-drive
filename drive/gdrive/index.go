@@ -33,12 +33,12 @@ func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
 	})
 }
 
-func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils) (types.IDrive, error) {
-	oauthHolder, e := driveutil.OAuthLoad(*oauthReq(utils.Config),
+func NewGDrive(ctx context.Context, config types.SM, env driveutil.DriveEnv) (types.IDrive, error) {
+	oauthHolder, e := driveutil.OAuthLoad(*oauthReq(env.Config),
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
-		}, utils.Data)
+		}, env.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -48,7 +48,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils)
 	}
 
 	cacheTTL := config.GetDuration("cache_ttl", -1)
-	params, e := utils.Data.Load("drive_id")
+	params, e := env.Data.Load("drive_id")
 	if e != nil {
 		return nil, e
 	}
@@ -62,7 +62,7 @@ func NewGDrive(ctx context.Context, config types.SM, utils driveutil.DriveUtils)
 	if cacheTTL <= 0 {
 		g.cache = driveutil.DummyCache()
 	} else {
-		g.cache = utils.CreateCache(g.deserializeEntry)
+		g.cache = env.CreateCache(g.deserializeEntry)
 	}
 	return g, nil
 }

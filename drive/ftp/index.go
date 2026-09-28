@@ -41,7 +41,7 @@ func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
 }
 
 func NewDrive(ctx context.Context, config types.SM,
-	driveUtils driveutil.DriveUtils) (types.IDrive, error) {
+	driveEnv driveutil.DriveEnv) (types.IDrive, error) {
 	cacheTTL := config.GetDuration("cache_ttl", -1)
 
 	user, password := config["user"], config["password"]
@@ -66,7 +66,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	if cacheTTL <= 0 {
 		ftp.cache = driveutil.DummyCache()
 	} else {
-		ftp.cache = driveUtils.CreateCache(ftp.deserializeEntry)
+		ftp.cache = driveEnv.CreateCache(ftp.deserializeEntry)
 	}
 
 	_, e := ftp.List(ctx, "")

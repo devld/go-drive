@@ -68,7 +68,7 @@ var _ types.IDrive = (*Drive)(nil)
 
 // NewDrive creates a S3 compatible storage
 func NewDrive(ctx context.Context, config types.SM,
-	driveUtils driveutil.DriveUtils) (types.IDrive, error) {
+	driveEnv driveutil.DriveEnv) (types.IDrive, error) {
 	id := config["id"]
 	secret := config["secret"]
 	bucket := config["bucket"]
@@ -100,12 +100,12 @@ func NewDrive(ctx context.Context, config types.SM,
 		uploadProxy:   config.GetBool("proxy_upload"),
 		downloadProxy: config.GetBool("proxy_download"),
 		cacheTTL:      cacheTTL,
-		tempDir:       driveUtils.Config.TempDir,
+		tempDir:       driveEnv.Config.TempDir,
 	}
 	if cacheTTL <= 0 {
 		d.cache = driveutil.DummyCache()
 	} else {
-		d.cache = driveUtils.CreateCache(d.deserializeEntry)
+		d.cache = driveEnv.CreateCache(d.deserializeEntry)
 	}
 	return d, d.check(ctx)
 }

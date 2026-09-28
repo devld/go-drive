@@ -48,13 +48,13 @@ type fsFile struct {
 
 // NewDrive creates a file system drive
 func NewDrive(_ context.Context, config types.SM,
-	driveUtils driveutil.DriveUtils) (types.IDrive, error) {
+	driveEnv driveutil.DriveEnv) (types.IDrive, error) {
 	path := config["path"]
 	if utils.CleanPath(path) == "" {
 		return nil, err.NewNotAllowedMessageError(fsT("invalid_root_path"))
 	}
 
-	localRoot, e := driveUtils.Config.GetLocalFsDir()
+	localRoot, e := driveEnv.Config.GetLocalFsDir()
 	if e != nil {
 		return nil, e
 	}

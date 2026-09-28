@@ -63,7 +63,7 @@ func createAuthMethods(config types.SM) ([]ssh.AuthMethod, error) {
 	return auth, nil
 }
 
-func NewDrive(_ context.Context, config types.SM, driveUtils driveutil.DriveUtils) (types.IDrive, error) {
+func NewDrive(_ context.Context, config types.SM, driveEnv driveutil.DriveEnv) (types.IDrive, error) {
 	cacheTTL := config.GetDuration("cache_ttl", -1)
 	hostKey := config["host_key"]
 	rootPath := config["root_path"]
@@ -107,7 +107,7 @@ func NewDrive(_ context.Context, config types.SM, driveUtils driveutil.DriveUtil
 	if cacheTTL <= 0 {
 		s.cache = driveutil.DummyCache()
 	} else {
-		s.cache = driveUtils.CreateCache(s.deserializeEntry)
+		s.cache = driveEnv.CreateCache(s.deserializeEntry)
 	}
 
 	_, e = s.getClient()

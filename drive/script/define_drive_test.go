@@ -61,8 +61,8 @@ func (m *memDriveData) Clear() error {
 	return nil
 }
 
-func testDriveUtilEnv(data *memDriveData) driveutil.DriveUtils {
-	return driveutil.DriveUtils{
+func testDriveEnvHost(data *memDriveData) driveutil.DriveEnv {
+	return driveutil.DriveEnv{
 		Data: data,
 		CreateCache: func(driveutil.EntryDeserialize) driveutil.DriveCache {
 			return driveutil.DummyCache()
@@ -71,8 +71,8 @@ func testDriveUtilEnv(data *memDriveData) driveutil.DriveUtils {
 	}
 }
 
-func testDriveUtils(vm *s.VM, data *memDriveData) *scriptDriveUtils {
-	return newScriptDriveUtils(vm, testDriveUtilEnv(data), nil, nil)
+func testDriveEnv(vm *s.VM, data *memDriveData) *scriptDriveEnv {
+	return newScriptDriveEnv(vm, testDriveEnvHost(data), nil, nil)
 }
 
 func newDriveTestVM(t *testing.T) *s.VM {
@@ -188,19 +188,19 @@ defineDrive(
   configForm: [
     { label: "Token", field: "token", type: "text", required: true }
   ],
-  initConfig: function (config, utils) {
-    var data = utils.data.load("step");
+  initConfig: function (config, env) {
+    var data = env.data.load("step");
     return {
       configured: data.step === "done",
       form: [{ label: "Step", field: "step", type: "text", required: true }],
       value: data
     };
   },
-  init: function (data, config, utils) {
-    utils.data.save({ step: data.step, empty: data.empty });
+  init: function (data, config, env) {
+    env.data.save({ step: data.step, empty: data.empty });
   },
-  createInstance: function (config, utils) {
-    var data = utils.data.load("step");
+  createInstance: function (config, env) {
+    var data = env.data.load("step");
     return { entryCacheTTL: config.token, writable: data.step === "done" };
   },
   },
@@ -215,7 +215,7 @@ defineDrive(
 	}
 
 	data := &memDriveData{}
-	utils := testDriveUtils(vm, data)
+	utils := testDriveEnv(vm, data)
 	formValue, e := vm.GetValue("__driveConfigForm")
 	if e != nil {
 		t.Fatal(e)
@@ -835,7 +835,7 @@ func TestDefineDriveRejectsAsyncLifecycle(t *testing.T) {
 			if _, e := vm.Run(context.Background(), js, ""); e != nil {
 				t.Fatal(e)
 			}
-			utils := testDriveUtils(vm, &memDriveData{})
+			utils := testDriveEnv(vm, &memDriveData{})
 			_, e := vm.Call(context.Background(), "__driveCreate", types.SM{}, utils)
 			if e == nil || !strings.Contains(e.Error(), "Promise") {
 				t.Fatalf("%s error = %v", name, e)
@@ -882,7 +882,7 @@ defineDrive(
 `, ""); e != nil {
 		t.Fatal(e)
 	}
-	_, e := vm.Call(context.Background(), "__driveInit", types.SM{}, types.SM{}, testDriveUtils(vm, &memDriveData{}))
+	_, e := vm.Call(context.Background(), "__driveInit", types.SM{}, types.SM{}, testDriveEnv(vm, &memDriveData{}))
 	if e == nil || !strings.Contains(e.Error(), "Promise") {
 		t.Fatalf("init error = %v", e)
 	}
@@ -931,7 +931,7 @@ func buildTestScriptDrive(js string, data types.SM, cacheMgr *driveutil.MemDrive
 		if cacheMgr != nil {
 			cache = newScriptDriveCache(vm, d.cache)
 		}
-		utils := newScriptDriveUtils(vm, testDriveUtilEnv(store), &d.oauth, cache)
+		utils := newScriptDriveEnv(vm, testDriveEnvHost(store), &d.oauth, cache)
 		return vm.Do(ctx, func() error {
 			createdVal, e := vm.Call(ctx, "__driveCreate", types.SM{}, utils)
 			if e != nil {
@@ -992,12 +992,12 @@ func TestOAuthHolderToken(t *testing.T) {
 		t.Fatal(e)
 	}
 	vm := newDriveTestVM(t)
-	mustDefineGlobal(t, vm, "utils", testDriveUtils(vm, ds))
+	mustDefineGlobal(t, vm, "env", testDriveEnv(vm, ds))
 	mustDefineGlobal(t, vm, "req", driveutil.OAuthRequest{
 		Endpoint: oauth2.Endpoint{TokenURL: "http://127.0.0.1:1/unused"},
 	})
 	mustDefineGlobal(t, vm, "cred", driveutil.OAuthCredentials{ClientID: "id", ClientSecret: "secret"})
-	v, e := vm.Run(context.Background(), `utils.oauthLoad(req, cred).token().accessToken`, "")
+	v, e := vm.Run(context.Background(), `env.oauthLoad(req, cred).token().accessToken`, "")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -1026,10 +1026,10 @@ func TestOAuthHolderRefreshFromJS(t *testing.T) {
 		t.Fatal(e)
 	}
 	vm := newDriveTestVM(t)
-	mustDefineGlobal(t, vm, "utils", testDriveUtils(vm, ds))
+	mustDefineGlobal(t, vm, "env", testDriveEnv(vm, ds))
 	mustDefineGlobal(t, vm, "req", driveutil.OAuthRequest{Endpoint: oauth2.Endpoint{TokenURL: srv.URL}})
 	mustDefineGlobal(t, vm, "cred", driveutil.OAuthCredentials{ClientID: "id", ClientSecret: "secret"})
-	if _, e := vm.Run(context.Background(), `holder = utils.oauthLoad(req, cred)`, ""); e != nil {
+	if _, e := vm.Run(context.Background(), `holder = env.oauthLoad(req, cred)`, ""); e != nil {
 		t.Fatal(e)
 	}
 
@@ -1074,22 +1074,22 @@ func TestOAuthLoadSharesHolderAcrossVMs(t *testing.T) {
 	cred := driveutil.OAuthCredentials{ClientID: "id", ClientSecret: "secret"}
 
 	first := newDriveTestVM(t)
-	firstUtils := testDriveUtils(first, ds)
+	firstUtils := testDriveEnv(first, ds)
 	firstUtils.oauth = share
-	mustDefineGlobal(t, first, "utils", firstUtils)
+	mustDefineGlobal(t, first, "env", firstUtils)
 	mustDefineGlobal(t, first, "req", req)
 	mustDefineGlobal(t, first, "cred", cred)
-	if _, e := first.Run(context.Background(), `holder = utils.oauthLoad(req, cred)`, ""); e != nil {
+	if _, e := first.Run(context.Background(), `holder = env.oauthLoad(req, cred)`, ""); e != nil {
 		t.Fatal(e)
 	}
 
 	second := newDriveTestVM(t)
-	secondUtils := testDriveUtils(second, ds)
+	secondUtils := testDriveEnv(second, ds)
 	secondUtils.oauth = share
-	mustDefineGlobal(t, second, "utils", secondUtils)
+	mustDefineGlobal(t, second, "env", secondUtils)
 	mustDefineGlobal(t, second, "req", req)
 	mustDefineGlobal(t, second, "cred", cred)
-	if _, e := second.Run(context.Background(), `holder = utils.oauthLoad(req, cred)`, ""); e != nil {
+	if _, e := second.Run(context.Background(), `holder = env.oauthLoad(req, cred)`, ""); e != nil {
 		t.Fatal(e)
 	}
 
@@ -1149,15 +1149,15 @@ func TestOAuthLoadDoesNotShareHolderAcrossAuthStyle(t *testing.T) {
 	}}
 
 	vm := newDriveTestVM(t)
-	u := testDriveUtils(vm, ds)
+	u := testDriveEnv(vm, ds)
 	u.oauth = share
-	mustDefineGlobal(t, vm, "utils", u)
+	mustDefineGlobal(t, vm, "env", u)
 	mustDefineGlobal(t, vm, "headerReq", headerReq)
 	mustDefineGlobal(t, vm, "paramsReq", paramsReq)
 	mustDefineGlobal(t, vm, "cred", cred)
 	if _, e := vm.Run(context.Background(), `
-		headerHolder = utils.oauthLoad(headerReq, cred);
-		paramsHolder = utils.oauthLoad(paramsReq, cred);
+		headerHolder = env.oauthLoad(headerReq, cred);
+		paramsHolder = env.oauthLoad(paramsReq, cred);
 	`, ""); e != nil {
 		t.Fatal(e)
 	}
@@ -1175,9 +1175,9 @@ func TestOAuthLoadDoesNotShareHolderAcrossAuthStyle(t *testing.T) {
 
 func TestOAuthInitEmptyData(t *testing.T) {
 	vm := newDriveTestVM(t)
-	mustDefineGlobal(t, vm, "utils", testDriveUtils(vm, &memDriveData{}))
+	mustDefineGlobal(t, vm, "env", testDriveEnv(vm, &memDriveData{}))
 	if _, e := vm.Run(context.Background(), `
-		utils.oauthInit({}, { endpoint: {} }, { clientID: "id", clientSecret: "secret" });
+		env.oauthInit({}, { endpoint: {} }, { clientID: "id", clientSecret: "secret" });
 	`, ""); e != nil {
 		t.Fatal(e)
 	}
@@ -1194,14 +1194,14 @@ func TestOAuthInitConfigResultHolderIsCallable(t *testing.T) {
 		t.Fatal(e)
 	}
 	vm := newDriveTestVM(t)
-	mustDefineGlobal(t, vm, "utils", testDriveUtils(vm, ds))
+	mustDefineGlobal(t, vm, "env", testDriveEnv(vm, ds))
 	mustDefineGlobal(t, vm, "req", driveutil.OAuthRequest{
 		Endpoint:    oauth2.Endpoint{AuthURL: "https://example.com/auth", TokenURL: "https://example.com/token"},
 		RedirectURL: "https://app/cb",
 		Text:        "Connect",
 	})
 	mustDefineGlobal(t, vm, "cred", driveutil.OAuthCredentials{ClientID: "id", ClientSecret: "secret"})
-	if _, e := vm.Run(context.Background(), `result = utils.oauthInitConfig(req, cred)`, ""); e != nil {
+	if _, e := vm.Run(context.Background(), `result = env.oauthInitConfig(req, cred)`, ""); e != nil {
 		t.Fatal(e)
 	}
 

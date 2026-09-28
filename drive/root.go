@@ -124,7 +124,7 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 			return e
 		}
 		driveLog.Infof("creating drive '%s' (%s)", logging.Sanitize(dc.Name), logging.Sanitize(dc.Type))
-		iDrive, e := factory.Create(ctx, config, d.createDriveUtils(dc.Name))
+		iDrive, e := factory.Create(ctx, config, d.createDriveEnv(dc.Name))
 		if e != nil {
 			if ignoreFailure {
 				driveLog.Warnf("error creating drive '%s' (%s): %v",
@@ -174,7 +174,7 @@ func (d *RootDrive) DriveInitConfig(ctx context.Context, name string) (*driveuti
 	if factory.InitConfig == nil {
 		return nil, nil
 	}
-	initConfig, e := factory.InitConfig(ctx, config, d.createDriveUtils(name))
+	initConfig, e := factory.InitConfig(ctx, config, d.createDriveEnv(name))
 	return initConfig, e
 }
 
@@ -190,11 +190,12 @@ func (d *RootDrive) DriveInit(ctx context.Context, name string, data types.SM) e
 	if factory.Init == nil {
 		return nil
 	}
-	return factory.Init(ctx, data, config, d.createDriveUtils(name))
+	return factory.Init(ctx, data, config, d.createDriveEnv(name))
 }
 
-func (d *RootDrive) createDriveUtils(name string) driveutil.DriveUtils {
-	return driveutil.DriveUtils{
+func (d *RootDrive) createDriveEnv(name string) driveutil.DriveEnv {
+	return driveutil.DriveEnv{
+		Name: name,
 		Data: d.driveDataStorage.GetDataStore(name),
 		CreateCache: func(de driveutil.EntryDeserialize) driveutil.DriveCache {
 			return d.driveCacheMgr.GetCacheStore(name, de)

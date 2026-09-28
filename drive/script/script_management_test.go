@@ -626,7 +626,7 @@ func TestLifecycleEntryAccessIsProtected(t *testing.T) {
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 				defer cancel()
-				utils := driveutil.DriveUtils{Config: config}
+				utils := driveutil.DriveEnv{Config: config}
 				if entry == "__driveInitConfig" {
 					_, e = initConfig(ctx, types.SM{scriptConfigField: "probe"}, utils)
 				} else {

@@ -67,11 +67,11 @@ func newTestDispatcher(t *testing.T, driveNames []string) (
 	if cfg == nil {
 		t.Fatal("fs drive not registered")
 	}
-	driveUtils := driveutil.DriveUtils{Config: config}
+	driveEnv := driveutil.DriveEnv{Config: config}
 	drives := make(map[string]types.IDrive, len(driveNames))
 	ctx := context.Background()
 	for _, name := range driveNames {
-		drv, e := cfg.Factory.Create(ctx, types.SM{"path": name}, driveUtils)
+		drv, e := cfg.Factory.Create(ctx, types.SM{"path": name}, driveEnv)
 		if e != nil {
 			t.Fatalf("Create fs drive %s: %v", name, e)
 		}

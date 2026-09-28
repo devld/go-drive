@@ -52,12 +52,12 @@ func oauthReq(c common.Config) *driveutil.OAuthRequest {
 }
 
 func InitConfig(ctx context.Context, config types.SM,
-	utils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
-	initConfig, oauthHolder, e := driveutil.OAuthInitConfig(*oauthReq(utils.Config),
+	env driveutil.DriveEnv) (*driveutil.DriveInitConfig, error) {
+	initConfig, oauthHolder, e := driveutil.OAuthInitConfig(*oauthReq(env.Config),
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
-		}, utils.Data)
+		}, env.Data)
 	if e != nil {
 		return nil, e
 	}
@@ -75,7 +75,7 @@ func InitConfig(ctx context.Context, config types.SM,
 	initConfig.Configured = e == nil
 	if e == nil {
 		initConfig.OAuth.Principal = user.Name
-		if e := buildInitForm(ctx, oauthHolder, utils, initConfig); e != nil {
+		if e := buildInitForm(ctx, oauthHolder, env, initConfig); e != nil {
 			return nil, e
 		}
 	}
@@ -84,7 +84,7 @@ func InitConfig(ctx context.Context, config types.SM,
 }
 
 func buildInitForm(ctx context.Context, oauthHolder *driveutil.OAuthHolder,
-	driveUtils driveutil.DriveUtils, initConfig *driveutil.DriveInitConfig) error {
+	driveEnv driveutil.DriveEnv, initConfig *driveutil.DriveInitConfig) error {
 	// get shared drives
 	driveSrv, e := drive.NewService(ctx, option.WithHTTPClient(req.WithDefaultRoundTripper(oauthHolder.Client())))
 	if e != nil {
@@ -95,7 +95,7 @@ func buildInitForm(ctx context.Context, oauthHolder *driveutil.OAuthHolder,
 		return e
 	}
 
-	params, e := driveUtils.Data.Load("drive_id")
+	params, e := driveEnv.Data.Load("drive_id")
 	if e != nil {
 		return e
 	}
@@ -123,15 +123,15 @@ func buildInitForm(ctx context.Context, oauthHolder *driveutil.OAuthHolder,
 }
 
 func Init(ctx context.Context, data types.SM,
-	config types.SM, utils driveutil.DriveUtils) error {
-	if e := utils.Data.Save(types.SM{"drive_id": data["drive_id"]}); e != nil {
+	config types.SM, env driveutil.DriveEnv) error {
+	if e := env.Data.Save(types.SM{"drive_id": data["drive_id"]}); e != nil {
 		return e
 	}
-	_, e := driveutil.OAuthInit(ctx, *oauthReq(utils.Config), data,
+	_, e := driveutil.OAuthInit(ctx, *oauthReq(env.Config), data,
 		driveutil.OAuthCredentials{
 			ClientID:     config["client_id"],
 			ClientSecret: config["client_secret"],
-		}, utils.Data)
+		}, env.Data)
 	return e
 }
 

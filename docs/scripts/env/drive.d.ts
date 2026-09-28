@@ -140,7 +140,7 @@ declare interface RootConfig {
   readonly buildAt: string;
 }
 
-declare interface DriveUtils extends GoHandle<"DriveUtils"> {
+declare interface DriveEnv extends GoHandle<"DriveEnv"> {
   readonly config: RootConfig;
   data: DriveDataStore;
   /** `defineDrive` already assigns `this.cache`. */
@@ -273,12 +273,12 @@ declare interface DriveSetup<T extends DriveAdapterState = DriveAdapterState> {
   /** Dynamic init UI (OAuth / extra form). */
   initConfig?(
     config: SM,
-    utils: DriveUtils
+    env: DriveEnv
   ): DriveInitConfiguration | undefined;
   /** Persist submitted dynamic init data. */
-  init?(data: SM, config: SM, utils: DriveUtils): void;
+  init?(data: SM, config: SM, env: DriveEnv): void;
   /** Build instance state from static config. Load dynamic data here. */
-  createInstance(config: SM, utils: DriveUtils): T;
+  createInstance(config: SM, env: DriveEnv): T;
 }
 
 /** Keep `this` inferred from `createInstance`, not widened by `methods`. */

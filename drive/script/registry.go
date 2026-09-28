@@ -57,14 +57,14 @@ func scriptPoolFormItem() types.FormItem {
 
 func scriptDriveFactory(name string) driveutil.DriveFactory {
 	return driveutil.DriveFactory{
-		Create: func(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (types.IDrive, error) {
-			return newScriptDrive(ctx, withScriptName(name, config), driveUtils)
+		Create: func(ctx context.Context, config types.SM, driveEnv driveutil.DriveEnv) (types.IDrive, error) {
+			return newScriptDrive(ctx, withScriptName(name, config), driveEnv)
 		},
-		InitConfig: func(ctx context.Context, config types.SM, driveUtils driveutil.DriveUtils) (*driveutil.DriveInitConfig, error) {
-			return initConfig(ctx, withScriptName(name, config), driveUtils)
+		InitConfig: func(ctx context.Context, config types.SM, driveEnv driveutil.DriveEnv) (*driveutil.DriveInitConfig, error) {
+			return initConfig(ctx, withScriptName(name, config), driveEnv)
 		},
-		Init: func(ctx context.Context, data, config types.SM, driveUtils driveutil.DriveUtils) error {
-			return init_(ctx, data, withScriptName(name, config), driveUtils)
+		Init: func(ctx context.Context, data, config types.SM, driveEnv driveutil.DriveEnv) error {
+			return init_(ctx, data, withScriptName(name, config), driveEnv)
 		},
 	}
 }

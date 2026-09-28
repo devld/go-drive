@@ -174,19 +174,19 @@ Define the adapter with `defineDrive(setup, methods)`.
 
 `configForm` is the static admin form. It is always an array, and its field names must not begin with `_`; those names are reserved by the Script Drive wrapper. Required fields are saved as part of the Drive config before initialization.
 
-`initConfig(config, utils)` is optional and is called after the static config has been saved. It returns the same `DriveInitConfiguration` shape as a native Drive, including a dynamic `form`, its current `value`, `configured`, and optional `oauth`. Use `utils.data.load("key", ...)` to inspect only the previously saved dynamic fields needed for the current step and return different forms for later steps. Dynamic form field names must also not begin with `_`.
+`initConfig(config, env)` is optional and is called after the static config has been saved. It returns the same `DriveInitConfiguration` shape as a native Drive, including a dynamic `form`, its current `value`, `configured`, and optional `oauth`. Use `env.data.load("key", ...)` to inspect only the previously saved dynamic fields needed for the current step and return different forms for later steps. Dynamic form field names must also not begin with `_`.
 
-`init(data, config, utils)` is optional and receives the submitted dynamic data. It is responsible for saving dynamic values with `utils.data.save`, or for calling the low-level OAuth helpers. Empty strings are passed through unchanged; saving an empty string clears that key from the data store.
+`init(data, config, env)` is optional and receives the submitted dynamic data. It is responsible for saving dynamic values with `env.data.save`, or for calling the low-level OAuth helpers. Empty strings are passed through unchanged; saving an empty string clears that key from the data store.
 
-OAuth is explicit: call `utils.oauthInitConfig`, `utils.oauthInit`, and `utils.oauthLoad` from `initConfig` / `init` / `createInstance`. There is no automatic OAuth request/principal hook. See `dropbox.js`.
+OAuth is explicit: call `env.oauthInitConfig`, `env.oauthInit`, and `env.oauthLoad` from `initConfig` / `init` / `createInstance`. There is no automatic OAuth request/principal hook. See `dropbox.js`.
 
 `validateConfig(config)` runs before `createInstance` and validates the static config.
 
 Include `entryCacheTTLFormItem("2h")` when users should set the entry cache TTL. Pass the raw form value through as `entryCacheTTL` from `createInstance`; the runtime accepts duration strings or `ms(...)`. Omit / `""` / `undefined` / `null` / `<= 0` disables caching. The form item is not inserted automatically.
 
-### `createInstance(config, utils)` (required)
+### `createInstance(config, env)` (required)
 
-Return instance state from the static config, loading only the dynamic fields needed by the Drive through `utils.data.load("key", ...)`: credentials, clients, `entryCacheTTL: config.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). Optional `intervals` declare Drive-local periodic work (see `onInterval`). The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
+Return instance state from the static config, loading only the dynamic fields needed by the Drive through `env.data.load("key", ...)`: credentials, clients, `entryCacheTTL: config.cache_ttl`, and optional `writable: false` for a read-only Drive (`writable` defaults to `true`). Optional `intervals` declare Drive-local periodic work (see `onInterval`). The runtime attaches `this.cache` and Drive methods, then freezes the object. `$` properties remain shared across VMs. Entry cache lookup, write-path eviction, root `get("")`, copy/move ownership, and default `meta` / `upload` / `getReader` run in Go so cache hits do not occupy a VM.
 
 Required methods: `get` and `list`, plus `getReader` or `getURL`. `upload` defaults to `useLocalProvider`. `getReader` defaults to `new UnsupportedError()` when `getURL` exists. `meta` defaults to `{ writable: this.writable !== false }`.
 
@@ -274,9 +274,9 @@ Return a remote thumbnail response body or URL configuration. When returning the
 Required when `createInstance` returns `intervals`. Go owns the clock; the callback runs on a borrowed VM and must finish within `timeout` (default `30s`). Return `"25m"` or `ms(...)` to choose the next delay; omit to keep `interval`.
 
 ```js
-createInstance: function (config, utils) {
+createInstance: function (config, env) {
   return {
-    oauth: utils.oauthLoad(oauthReq(utils.config), {
+    oauth: env.oauthLoad(oauthReq(env.config), {
       clientID: config.client_id,
       clientSecret: config.client_secret
     }),
@@ -298,8 +298,8 @@ The following runtime surface is safe to depend on. Refer to the two `.d.ts` fil
 
 ### Configuration, state, and cache
 
-- `utils.config`: `oauthRedirectURI`, `version`, `revHash`, and `buildAt`.
-- `utils.data.load(...keys)` / `utils.data.save(map)`: persistent string configuration.
+- `env.config`: `oauthRedirectURI`, `version`, `revHash`, and `buildAt`.
+- `env.data.load(...keys)` / `env.data.save(map)`: persistent string configuration.
 - `this.cache`: entry cache created for the instance. Use it only for extra invalidation; `get`/`list` and write methods are wrapped automatically.
 - `parseDuration(value)`: `ms(...)` or a duration string (`"2s"`, `"2d3h"`). Empty → `0`; invalid throws TypeError.
 - `DriveCache.putEntry`, `putEntries`, and `putChildren` (`ttl` is `ms(...)` or a duration string).
@@ -310,9 +310,9 @@ The following runtime surface is safe to depend on. Refer to the two `.d.ts` fil
 
 ### OAuth
 
-- `utils.oauthInitConfig(request, credentials)`: produce a configuration/OAuth step and possibly an existing `OAuthHolder`. The result is read-only; copy fields into a new object if `initConfig` needs to change `configured` / `oauth.principal`. `OAuthHolder.token` / `refresh` on `oauthHolder` still work.
-- `utils.oauthInit(data, request, credentials)`: handle the OAuth callback during initialization.
-- `utils.oauthLoad(request, credentials)`: construct the runtime `OAuthHolder` from a stored token.
+- `env.oauthInitConfig(request, credentials)`: produce a configuration/OAuth step and possibly an existing `OAuthHolder`. The result is read-only; copy fields into a new object if `initConfig` needs to change `configured` / `oauth.principal`. `OAuthHolder.token` / `refresh` on `oauthHolder` still work.
+- `env.oauthInit(data, request, credentials)`: handle the OAuth callback during initialization.
+- `env.oauthLoad(request, credentials)`: construct the runtime `OAuthHolder` from a stored token.
 - `OAuthHolder.token()`: retrieve an automatically refreshed token.
 - `OAuthHolder.refresh()`: force a token-endpoint exchange even if the access token is still valid. Call this from `onInterval` on the holder created in `createInstance`. Do not call `oauthLoad` again.
 - An OAuth request contains `endpoint`, `redirectUrl`, `scopes`, and `text`; credentials contain `clientID` and `clientSecret`.

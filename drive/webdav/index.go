@@ -42,7 +42,7 @@ func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
 
 // NewDrive creates a webdav drive
 func NewDrive(ctx context.Context, config types.SM,
-	utils driveutil.DriveUtils) (types.IDrive, error) {
+	env driveutil.DriveEnv) (types.IDrive, error) {
 	u := config["url"]
 	username := config["username"]
 	password := config["password"]
@@ -67,7 +67,7 @@ func NewDrive(ctx context.Context, config types.SM,
 	if cacheTTL <= 0 {
 		w.cache = driveutil.DummyCache()
 	} else {
-		w.cache = utils.CreateCache(w.deserializeEntry)
+		w.cache = env.CreateCache(w.deserializeEntry)
 	}
 
 	client, e := req.NewClient(u, w.beforeRequest, w.afterRequest, nil)

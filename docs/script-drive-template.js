@@ -12,13 +12,13 @@
 
 /// <reference path="./scripts/env/drive.d.ts"/>
 
-function oauthRequest(utils) {
+function oauthRequest(env) {
   return {
     endpoint: {
       authUrl: "https://example.com/oauth/authorize",
       tokenUrl: "https://example.com/oauth/token",
     },
-    redirectUrl: utils.config.oauthRedirectURI,
+    redirectUrl: env.config.oauthRedirectURI,
     scopes: ["files.read"],
     text: "Authorize Example Cloud",
   };
@@ -53,26 +53,26 @@ defineDrive(
       entryCacheTTLFormItem("2h"),
     ],
 
-    initConfig(config, utils) {
-      const result = utils.oauthInitConfig(
-        oauthRequest(utils),
+    initConfig(config, env) {
+      const result = env.oauthInitConfig(
+        oauthRequest(env),
         oauthCredentials(config)
       );
       return result.config;
     },
 
-    init(data, config, utils) {
-      utils.oauthInit(
+    init(data, config, env) {
+      env.oauthInit(
         data,
-        oauthRequest(utils),
+        oauthRequest(env),
         oauthCredentials(config)
       );
     },
 
-    createInstance(config, utils) {
+    createInstance(config, env) {
       return {
         entryCacheTTL: config.cache_ttl,
-        oauth: utils.oauthLoad(oauthRequest(utils), oauthCredentials(config)),
+        oauth: env.oauthLoad(oauthRequest(env), oauthCredentials(config)),
       };
     },
   },

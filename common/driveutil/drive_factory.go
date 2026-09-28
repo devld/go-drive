@@ -41,7 +41,9 @@ type DriveDataStore interface {
 	Clear() error
 }
 
-type DriveUtils struct {
+type DriveEnv struct {
+	// Name is the configured drive name. It is a single path segment.
+	Name        string
 	Data        DriveDataStore
 	CreateCache DriveCacheFactory
 	Config      common.Config
@@ -49,9 +51,9 @@ type DriveUtils struct {
 
 type DriveFactory struct {
 	// InitConfig gets the initialization information.
-	InitConfig func(ctx context.Context, config types.SM, driveUtils DriveUtils) (*DriveInitConfig, error)
+	InitConfig func(ctx context.Context, config types.SM, driveEnv DriveEnv) (*DriveInitConfig, error)
 	// Init configures a drive's initial data.
-	Init func(ctx context.Context, data types.SM, config types.SM, driveUtils DriveUtils) error
+	Init func(ctx context.Context, data types.SM, config types.SM, driveEnv DriveEnv) error
 	// Create creates a drive instance by config map
-	Create func(ctx context.Context, config types.SM, driveUtils DriveUtils) (types.IDrive, error)
+	Create func(ctx context.Context, config types.SM, driveEnv DriveEnv) (types.IDrive, error)
 }

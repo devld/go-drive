@@ -346,7 +346,7 @@ func TestDriveAndEntryAreHostClasses(t *testing.T) {
 
 func TestDriveSaveReportsProgressOnce(t *testing.T) {
 	root := t.TempDir()
-	d, e := fs.NewDrive(context.Background(), types.SM{"path": root}, driveutil.DriveUtils{
+	d, e := fs.NewDrive(context.Background(), types.SM{"path": root}, driveutil.DriveEnv{
 		Config: common.Config{FreeFs: true},
 	})
 	if e != nil {
