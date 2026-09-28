@@ -33,6 +33,7 @@ func NewDriveFS(config common.Config) (*DriveFS, error) {
 	pool, e := NewCacheFilePool(dir, CacheFilePoolOptions{
 		MaxEntries:   items,
 		MaxBytes:     maxBytes,
+		TTL:          utils.PositiveOr(config.VFS.CacheTTL, common.DefaultVFSCacheTTL),
 		CleanStartup: true,
 	})
 	if e != nil {

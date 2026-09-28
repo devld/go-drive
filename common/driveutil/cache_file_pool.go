@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
 )
@@ -26,12 +27,12 @@ const (
 
 type ReaderGetter func(context.Context, types.ReaderRange) (io.ReadCloser, error)
 
-// CacheFilePoolOptions controls both the number and the approximate total
-// compressed size of cached sources. MaxBytes is zero for an unlimited byte
-// budget.
+// CacheFilePoolOptions controls the number, lifetime, and approximate total
+// size of cached sources. MaxBytes and TTL are zero for no limit.
 type CacheFilePoolOptions struct {
 	MaxEntries   int
 	MaxBytes     int64
+	TTL          time.Duration
 	CleanStartup bool
 }
 
@@ -49,7 +50,7 @@ func NewCacheFilePool(dir string, options CacheFilePoolOptions) (*CacheFilePool,
 	if options.CleanStartup {
 		cleanupCacheFiles(dir)
 	}
-	pool := &CacheFilePool{dir: dir, maxBytes: options.MaxBytes}
+	pool := &CacheFilePool{dir: dir, maxBytes: options.MaxBytes, ttl: options.TTL}
 	pool.entries, e = lru.NewWithEvict(options.MaxEntries, pool.onCacheEvicted)
 	if e != nil {
 		return nil, e
@@ -75,6 +76,7 @@ type CacheFilePool struct {
 	dir      string
 	entries  *lru.Cache[string, *cacheFile]
 	maxBytes int64
+	ttl      time.Duration
 	bytesMu  sync.Mutex
 	bytes    int64
 	mu       sync.Mutex
@@ -82,8 +84,22 @@ type CacheFilePool struct {
 
 // Has reports whether a source currently has a live in-memory cache entry.
 func (cfp *CacheFilePool) Has(key string) bool {
-	_, ok := cfp.entries.Peek(key)
+	cf, ok := cfp.entries.Peek(key)
+	if !ok || !cfp.expired(cf) {
+		return ok
+	}
+	cfp.mu.Lock()
+	defer cfp.mu.Unlock()
+	cf, ok = cfp.entries.Peek(key)
+	if ok && cfp.expired(cf) {
+		cfp.entries.Remove(key)
+		return false
+	}
 	return ok
+}
+
+func (cfp *CacheFilePool) expired(cf *cacheFile) bool {
+	return cfp.ttl > 0 && time.Since(cf.createdAt) >= cfp.ttl
 }
 
 // GetReader returns a seekable reader backed by the cache pool. ctx belongs to
@@ -94,7 +110,7 @@ func (cfp *CacheFilePool) Has(key string) bool {
 // requested only while a reader is reading. The fill is cancelled when the
 // entry is evicted or the download fails.
 func (cfp *CacheFilePool) GetReader(ctx context.Context, key string, size int64, getReader ReaderGetter) (io.ReadSeekCloser, error) {
-	if cf, ok := cfp.entries.Get(key); ok {
+	if cf, ok := cfp.entries.Get(key); ok && !cfp.expired(cf) {
 		if reader, e := cf.Reader(ctx); e == nil {
 			return reader, nil
 		}
@@ -103,8 +119,10 @@ func (cfp *CacheFilePool) GetReader(ctx context.Context, key string, size int64,
 	defer cfp.mu.Unlock()
 
 	if cf, ok := cfp.entries.Get(key); ok {
-		if reader, e := cf.Reader(ctx); e == nil {
-			return reader, nil
+		if !cfp.expired(cf) {
+			if reader, e := cf.Reader(ctx); e == nil {
+				return reader, nil
+			}
 		}
 		cfp.entries.Remove(key)
 	}
@@ -126,6 +144,7 @@ func (cfp *CacheFilePool) GetReader(ctx context.Context, key string, size int64,
 		name:       name,
 		key:        key,
 		size:       size,
+		createdAt:  time.Now(),
 		getReader:  getReader,
 		fillCtx:    fillCtx,
 		fillCancel: fillCancel,
@@ -218,6 +237,7 @@ type cacheFile struct {
 	name       string
 	key        string
 	size       int64
+	createdAt  time.Time
 	fetches    atomic.Int64
 	getReader  ReaderGetter
 	fillCtx    context.Context

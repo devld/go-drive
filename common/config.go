@@ -66,6 +66,7 @@ const (
 	DefaultSearcher        = "sqlite"
 	DefaultVFSCacheItems   = 1000
 	DefaultVFSCacheSize    = types.SV("4g")
+	DefaultVFSCacheTTL     = 5 * time.Minute
 
 	DefaultCacheType                      = "mem"
 	DefaultCacheCleanPeriod time.Duration = 10 * time.Minute
@@ -214,8 +215,9 @@ type CacheConfig struct {
 
 // VFSConfig limits the DriveFS source cache shared by WebDAV and archive preview.
 type VFSConfig struct {
-	CacheItems int      `yaml:"cache-items"`
-	CacheSize  types.SV `yaml:"cache-size"`
+	CacheItems int           `yaml:"cache-items"`
+	CacheSize  types.SV      `yaml:"cache-size"`
+	CacheTTL   time.Duration `yaml:"cache-ttl"`
 }
 
 func InitConfig() (Config, error) {
@@ -257,6 +259,7 @@ func InitConfig() (Config, error) {
 		VFS: VFSConfig{
 			CacheItems: DefaultVFSCacheItems,
 			CacheSize:  DefaultVFSCacheSize,
+			CacheTTL:   DefaultVFSCacheTTL,
 		},
 		Search: SearchConfig{
 			Type: DefaultSearcher,
@@ -321,6 +324,7 @@ func InitConfig() (Config, error) {
 	if config.VFS.CacheSize == "" {
 		config.VFS.CacheSize = DefaultVFSCacheSize
 	}
+	config.VFS.CacheTTL = utils.PositiveOr(config.VFS.CacheTTL, DefaultVFSCacheTTL)
 	config.Archive.IndexTTL = utils.PositiveOr(config.Archive.IndexTTL, DefaultArchiveIndexTTL)
 	if config.Archive.ContentCacheSize == "" {
 		config.Archive.ContentCacheSize = DefaultArchiveContentCacheSize
