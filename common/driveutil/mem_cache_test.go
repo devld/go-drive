@@ -24,7 +24,6 @@ func (e cacheTestEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return nil, err.NewUnsupportedError()
 }
 
-func (e cacheTestEntry) Name() string          { return e.path }
 func (e cacheTestEntry) Size() int64           { return 0 }
 func (e cacheTestEntry) ModTime() int64        { return 0 }
 func (e cacheTestEntry) Path() string          { return e.path }

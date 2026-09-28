@@ -91,7 +91,6 @@ type mountNameTestEntry struct {
 }
 
 func (e *mountNameTestEntry) Path() string          { return e.path }
-func (e *mountNameTestEntry) Name() string          { return e.path }
 func (e *mountNameTestEntry) Type() types.EntryType { return types.TypeFile }
 func (e *mountNameTestEntry) Size() int64           { return 0 }
 func (e *mountNameTestEntry) Meta() types.EntryMeta { return types.EntryMeta{} }

@@ -8,7 +8,6 @@ import (
 	"go-drive/common/types"
 	"go-drive/server/artifact"
 	"io"
-	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -22,7 +21,6 @@ type testThumbnailEntry struct {
 }
 
 func (e *testThumbnailEntry) Path() string          { return e.path }
-func (e *testThumbnailEntry) Name() string          { return filepath.Base(e.path) }
 func (e *testThumbnailEntry) Type() types.EntryType { return types.TypeFile }
 func (e *testThumbnailEntry) Size() int64           { return e.size }
 func (e *testThumbnailEntry) ModTime() int64        { return e.modTime }

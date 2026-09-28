@@ -547,10 +547,6 @@ func (s *s3Entry) Drive() types.IDrive {
 	return s.c
 }
 
-func (s *s3Entry) Name() string {
-	return utils.PathBase(s.key)
-}
-
 func (s *s3Entry) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	var awsRange *string
 	if rangeStr := rg.BuildHTTPRangeHeader(); rangeStr != "" {

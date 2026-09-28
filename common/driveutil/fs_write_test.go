@@ -210,7 +210,6 @@ type writeEntry struct {
 }
 
 func (e *writeEntry) Path() string          { return e.path }
-func (e *writeEntry) Name() string          { return e.path }
 func (e *writeEntry) Type() types.EntryType { return types.TypeFile }
 func (e *writeEntry) Size() int64           { return int64(len(e.data)) }
 func (e *writeEntry) ModTime() int64        { return 1 }

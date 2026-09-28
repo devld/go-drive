@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"io"
 	pathpkg "path"
 	"strings"
@@ -50,7 +51,7 @@ func (s *Previewer) openSourceAndFormat(ctx types.TaskCtx, entry types.IEntry) (
 		_ = file.Close()
 		return nil, nil, errors.New("archive source is not seekable")
 	}
-	format, e := s.detectFormat(entry.Name(), ras, size)
+	format, e := s.detectFormat(utils.PathBase(entry.Path()), ras, size)
 	if e != nil {
 		_ = file.Close()
 		return nil, nil, e

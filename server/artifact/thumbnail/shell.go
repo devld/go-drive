@@ -9,6 +9,7 @@ import (
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"io"
 	"os/exec"
 	"runtime"
@@ -97,7 +98,7 @@ func (s *shellThumbnailTypeHandler) CreateThumbnail(ctx context.Context, entry T
 		"GO_DRIVE_ENTRY_TYPE="+string(entry.Type()),
 		"GO_DRIVE_ENTRY_REAL_PATH="+entry.GetRealPath(),
 		"GO_DRIVE_ENTRY_PATH="+entry.Path(),
-		"GO_DRIVE_ENTRY_NAME="+entry.Name(),
+		"GO_DRIVE_ENTRY_NAME="+utils.PathBase(entry.Path()),
 		"GO_DRIVE_ENTRY_SIZE="+strconv.FormatInt(entry.Size(), 10),
 		"GO_DRIVE_ENTRY_MOD_TIME="+strconv.FormatInt(entry.ModTime(), 10),
 		"GO_DRIVE_ENTRY_URL="+entry.GetExternalURL())

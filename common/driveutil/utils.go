@@ -287,12 +287,12 @@ func setContentDispositionHeaderIfNeeded(respHeader http.Header, filename string
 	respHeader.Del("Content-Disposition")
 }
 
-func DownloadIContent(ctx context.Context, content types.IContent,
+func DownloadEntry(ctx context.Context, entry types.IEntry,
 	w http.ResponseWriter, req *http.Request, forceProxy bool) error {
-	u, e := content.GetURL(ctx)
+	u, e := entry.GetURL(ctx)
 
 	// Compute download filename once
-	downloadFilename := content.Name()
+	downloadFilename := utils.PathBase(entry.Path())
 	if e == nil && u.DownloadFileName != "" {
 		downloadFilename = u.DownloadFileName
 	}
@@ -340,7 +340,7 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 	if !err.IsUnsupportedError(e) {
 		return e
 	}
-	reader, e := content.GetReader(ctx, types.FullReaderRange())
+	reader, e := entry.GetReader(ctx, types.FullReaderRange())
 	if e != nil {
 		return e
 	}
@@ -351,11 +351,11 @@ func DownloadIContent(ctx context.Context, content types.IContent,
 	if ok {
 		http.ServeContent(
 			w, req, downloadFilename,
-			utils.Time(content.ModTime()),
+			utils.Time(entry.ModTime()),
 			readSeeker)
 		return nil
 	}
-	size := content.Size()
+	size := entry.Size()
 	if size >= 0 {
 		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	}

@@ -93,9 +93,6 @@ var jsClassEntry = JSClass{
 		"path": func(vm *VM, this *Value, _ Values) any {
 			return This[jsObjEntry](vm, this, "Entry.path").Path()
 		},
-		"name": func(vm *VM, this *Value, _ Values) any {
-			return This[jsObjEntry](vm, this, "Entry.name").Name()
-		},
 		"type": func(vm *VM, this *Value, _ Values) any {
 			return This[jsObjEntry](vm, this, "Entry.type").Type()
 		},
@@ -254,10 +251,6 @@ func (e jsObjEntry) Path() string {
 	return e.e.Path()
 }
 
-func (e jsObjEntry) Name() string {
-	return e.e.Name()
-}
-
 func (e jsObjEntry) Type() types.EntryType {
 	return e.e.Type()
 }
@@ -338,7 +331,6 @@ func (e jsObjEntry) ConsoleString() string {
 	return formatGoInspect("Entry", []string{
 		"Path: " + strconv.Quote(e.e.Path()),
 		"Type: " + strconv.Quote(string(e.e.Type())),
-		"Name: " + strconv.Quote(e.e.Name()),
 		fmt.Sprintf("Size: %d", e.e.Size()),
 	}, true)
 }
@@ -349,7 +341,6 @@ func (e jsObjEntry) jsonShape() any {
 	}
 	return types.M{
 		"path":    e.e.Path(),
-		"name":    e.e.Name(),
 		"type":    e.e.Type(),
 		"size":    e.e.Size(),
 		"modTime": e.e.ModTime(),

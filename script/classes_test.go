@@ -296,7 +296,7 @@ func (e readerTestEntry) GetReader(context.Context, types.ReaderRange) (io.ReadC
 
 func TestHostClassReturnedReadersInstanceOf(t *testing.T) {
 	vm := newPoolTestVM(t)
-	entry := jsObjEntry{ClassHost: NewClassHost(vm), e: readerTestEntry{inspectTestEntry{path: "f", name: "f", typ: "file"}}}
+	entry := jsObjEntry{ClassHost: NewClassHost(vm), e: readerTestEntry{inspectTestEntry{path: "f", typ: "file"}}}
 	mustDefineGlobal(t, vm, "entry", entry)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

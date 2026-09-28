@@ -455,10 +455,6 @@ func (g *gdriveEntry) Drive() types.IDrive {
 	return g.d
 }
 
-func (g *gdriveEntry) Name() string {
-	return utils.PathBase(g.path)
-}
-
 func (g *gdriveEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewUnsupportedError()
 }
@@ -488,7 +484,7 @@ func (g *gdriveEntry) GetURL(ctx context.Context) (*types.ContentURL, error) {
 	// Add extension for Google format files in download filename
 	downloadFilename := ""
 	if ext, ok := mimeTypeExtensionsMap[g.mimeType()]; ok {
-		name := g.Name()
+		name := utils.PathBase(g.path)
 		if !strings.HasSuffix(name, "."+ext) {
 			downloadFilename = name + "." + ext
 		}

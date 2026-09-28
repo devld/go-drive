@@ -247,7 +247,7 @@ func (s *Previewer) produceIndex(ctx types.TaskCtx, entry types.IEntry, out arti
 		return err
 	}
 	if err := out.WriteMeta(artifact.Meta{
-		Name:     entry.Name() + ".index.json",
+		Name:     utils.PathBase(entry.Path()) + ".index.json",
 		MimeType: "application/json",
 		ModTime:  time.UnixMilli(entry.ModTime()),
 	}); err != nil {

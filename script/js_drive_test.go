@@ -37,7 +37,6 @@ var (
 
 type inspectTestEntry struct {
 	path    string
-	name    string
 	typ     types.EntryType
 	size    int64
 	modTime int64
@@ -62,7 +61,6 @@ func (e inspectTestEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return &types.ContentURL{URL: "https://example.com/file.txt", Proxy: true}, nil
 }
 
-func (e inspectTestEntry) Name() string          { return e.name }
 func (e inspectTestEntry) Size() int64           { return e.size }
 func (e inspectTestEntry) ModTime() int64        { return e.modTime }
 func (e inspectTestEntry) Path() string          { return e.path }
@@ -73,7 +71,6 @@ func (e inspectTestEntry) Drive() types.IDrive   { return nil }
 func sampleInspectEntry() jsObjEntry {
 	return jsObjEntry{e: inspectTestEntry{
 		path:    "dir/file.txt",
-		name:    "file.txt",
 		typ:     types.TypeFile,
 		size:    12,
 		modTime: 1700000000000,
@@ -83,7 +80,7 @@ func sampleInspectEntry() jsObjEntry {
 
 func TestEntryConsoleString(t *testing.T) {
 	got := sampleInspectEntry().ConsoleString()
-	want := `Entry { Path: "dir/file.txt", Type: "file", Name: "file.txt", Size: 12, ... }`
+	want := `Entry { Path: "dir/file.txt", Type: "file", Size: 12, ... }`
 	if got != want {
 		t.Fatalf("ConsoleString = %s, want %s", got, want)
 	}
@@ -97,7 +94,7 @@ func TestEntryMarshalJSON(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	want := `{"path":"dir/file.txt","name":"file.txt","type":"file","size":12,"modTime":1700000000000,"meta":{"readable":true,"writable":true,"hasThumbnail":true,"props":null}}`
+	want := `{"path":"dir/file.txt","type":"file","size":12,"modTime":1700000000000,"meta":{"readable":true,"writable":true,"hasThumbnail":true,"props":null}}`
 	if !jsonEqual(string(got), want) {
 		t.Fatalf("MarshalJSON = %s, want %s", got, want)
 	}
@@ -121,7 +118,7 @@ func TestEntryGetReaderFallsBackToURL(t *testing.T) {
 	entry := jsObjEntry{
 		ClassHost: NewClassHost(vm),
 		e: urlFallbackEntry{
-			inspectTestEntry: inspectTestEntry{path: "f", name: "f", typ: types.TypeFile},
+			inspectTestEntry: inspectTestEntry{path: "f", typ: types.TypeFile},
 			url:              srv.URL,
 		},
 	}
@@ -144,7 +141,7 @@ func TestEntryGetReaderFallsBackToURL(t *testing.T) {
 
 func TestEntryGetReaderDefaultsToFullRange(t *testing.T) {
 	vm := newPoolTestVM(t)
-	entry := &rangeCaptureEntry{inspectTestEntry: inspectTestEntry{path: "f", name: "f", typ: types.TypeFile}}
+	entry := &rangeCaptureEntry{inspectTestEntry: inspectTestEntry{path: "f", typ: types.TypeFile}}
 	mustDefineGlobal(t, vm, "entry", entry)
 	got, e := vm.Run(context.Background(), `entry.getReader().readAsString()`, "")
 	if e != nil {
@@ -412,7 +409,6 @@ func TestConvertEntryTreeNodeMaterializesChildren(t *testing.T) {
 	rootEntry := sampleInspectEntry().e
 	childEntry := inspectTestEntry{
 		path: "dir/child.txt",
-		name: "child.txt",
 		typ:  types.TypeFile,
 	}
 	tree := convertEntryTreeNode(vm, driveutil.EntryTreeNode{

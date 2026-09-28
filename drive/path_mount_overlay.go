@@ -578,7 +578,6 @@ type pathMountEntry struct {
 }
 
 func (e *pathMountEntry) Path() string            { return e.path }
-func (e *pathMountEntry) Name() string            { return utils.PathBase(e.path) }
 func (e *pathMountEntry) Drive() types.IDrive     { return e.drive }
 func (e *pathMountEntry) GetIEntry() types.IEntry { return e.IEntry }
 func (e *pathMountEntry) Meta() types.EntryMeta {
@@ -598,7 +597,6 @@ type pathMountVirtualEntry struct {
 }
 
 func (e *pathMountVirtualEntry) Path() string          { return e.path }
-func (e *pathMountVirtualEntry) Name() string          { return utils.PathBase(e.path) }
 func (e *pathMountVirtualEntry) Type() types.EntryType { return types.TypeDir }
 func (e *pathMountVirtualEntry) Size() int64           { return -1 }
 func (e *pathMountVirtualEntry) ModTime() int64        { return -1 }

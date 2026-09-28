@@ -118,7 +118,7 @@ func (m *Maker) Produce(ctx types.TaskCtx, request artifact.Request, out artifac
 		return thumbnailProduceError(err)
 	}
 	if err := out.WriteMeta(artifact.Meta{
-		Name:     thumbnailArtifactName(entry.Name(), handler.MimeType()),
+		Name:     thumbnailArtifactName(utils.PathBase(entry.Path()), handler.MimeType()),
 		MimeType: handler.MimeType(),
 		ModTime:  time.UnixMilli(entry.ModTime()),
 	}); err != nil {

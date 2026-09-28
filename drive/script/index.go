@@ -523,10 +523,6 @@ func (se *scriptDriveEntry) GetURL(ctx context.Context) (*types.ContentURL, erro
 	return &r, nil
 }
 
-func (se *scriptDriveEntry) Name() string {
-	return utils.PathBase(se.s.Path)
-}
-
 func (se *scriptDriveEntry) Size() int64 {
 	return se.s.Size
 }
