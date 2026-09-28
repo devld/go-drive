@@ -431,12 +431,13 @@ func (c Config) GetDir(name string, create bool) (string, error) {
 }
 
 func (c Config) GetTempDir(name string, create bool) (string, error) {
+	if c.TempDir == "" {
+		return "", errors.New("temp dir is empty")
+	}
 	name = filepath.Join(c.TempDir, name)
 	if create {
-		if _, e := os.Stat(name); os.IsNotExist(e) {
-			if e := os.Mkdir(name, 0755); e != nil {
-				return "", e
-			}
+		if e := os.MkdirAll(name, 0700); e != nil {
+			return "", e
 		}
 	}
 	return name, nil

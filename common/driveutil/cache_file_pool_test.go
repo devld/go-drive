@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -141,9 +142,30 @@ func TestRangeLock_ReleaseCancelsAcquire(t *testing.T) {
 	}
 }
 
+func TestCacheFilePoolRequiresDir(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("empty cache directory was accepted")
+		}
+	}()
+	_, _ = NewCacheFilePool("", CacheFilePoolOptions{MaxEntries: 1})
+}
+
+func TestCacheFilePoolRejectsUnusableDir(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, []byte("x"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, dir := range []string{file, filepath.Join(t.TempDir(), "missing")} {
+		if _, err := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 1}); err == nil {
+			t.Fatalf("directory %q was accepted", dir)
+		}
+	}
+}
+
 func TestCacheFilePool_ReadFull(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
+	pool, e := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 8})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -165,7 +187,7 @@ func TestCacheFilePool_ReadFull(t *testing.T) {
 
 func TestCacheFilePool_SeekRead(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
+	pool, e := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 8})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -191,7 +213,7 @@ func TestCacheFilePool_SeekRead(t *testing.T) {
 
 func TestCacheFilePool_ReadAtDoesNotChangePosition(t *testing.T) {
 	dir := t.TempDir()
-	p, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 2, Dir: dir})
+	p, e := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 2})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -224,7 +246,7 @@ func TestCacheFilePool_ReadAtDoesNotChangePosition(t *testing.T) {
 
 func TestCacheFilePool_ReturnsSourceErrorToWaitingReaders(t *testing.T) {
 	dir := t.TempDir()
-	p, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 2, Dir: dir})
+	p, e := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 2})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -258,7 +280,7 @@ func TestCacheFilePool_ReturnsSourceErrorToWaitingReaders(t *testing.T) {
 
 func TestCacheFilePool_CancelDoesNotInterruptOtherReaders(t *testing.T) {
 	dir := t.TempDir()
-	pool, err := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
+	pool, err := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 8})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +342,7 @@ func TestCacheFilePool_CancelDoesNotInterruptOtherReaders(t *testing.T) {
 
 func TestCacheFilePool_LastReaderKeepsInFlightFill(t *testing.T) {
 	dir := t.TempDir()
-	pool, err := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
+	pool, err := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 8})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,7 +429,7 @@ func (r *releaseReader) Close() error { return nil }
 
 func TestCacheFilePool_ConcurrentReaders(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 8, Dir: dir})
+	pool, e := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 8})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -445,10 +467,9 @@ func TestCacheFilePool_ConcurrentReaders(t *testing.T) {
 func TestCacheFilePool_MaxBytesEvictsOldest(t *testing.T) {
 	dir := t.TempDir()
 	data := []byte("cached content")
-	p, err := NewCacheFilePool(CacheFilePoolOptions{
+	p, err := NewCacheFilePool(dir, CacheFilePoolOptions{
 		MaxEntries: 4,
 		MaxBytes:   int64(len(data)),
-		Dir:        dir,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -478,7 +499,7 @@ func TestCacheFilePool_MaxBytesEvictsOldest(t *testing.T) {
 // once an idle entry is evicted from the pool.
 func TestCacheFilePool_EvictionRemovesFile(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 1, Dir: dir})
+	pool, e := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 1})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -508,7 +529,7 @@ func TestCacheFilePool_EvictionRemovesFile(t *testing.T) {
 // truncating/leaking), and that the file is removed once the reader closes.
 func TestCacheFilePool_EvictionKeepsFileWhileActive(t *testing.T) {
 	dir := t.TempDir()
-	pool, e := NewCacheFilePool(CacheFilePoolOptions{MaxEntries: 1, Dir: dir})
+	pool, e := NewCacheFilePool(dir, CacheFilePoolOptions{MaxEntries: 1})
 	if e != nil {
 		t.Fatal(e)
 	}

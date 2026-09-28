@@ -32,15 +32,12 @@ type ReaderGetter func(context.Context, types.ReaderRange) (io.ReadCloser, error
 type CacheFilePoolOptions struct {
 	MaxEntries   int
 	MaxBytes     int64
-	Dir          string
 	CleanStartup bool
 }
 
-func NewCacheFilePool(options CacheFilePoolOptions) (*CacheFilePool, error) {
-	maxCache := options.MaxEntries
-	dir := options.Dir
+func NewCacheFilePool(dir string, options CacheFilePoolOptions) (*CacheFilePool, error) {
 	if dir == "" {
-		dir = os.TempDir()
+		panic("cache directory is required")
 	}
 	info, e := os.Stat(dir)
 	if e != nil {
@@ -53,7 +50,7 @@ func NewCacheFilePool(options CacheFilePoolOptions) (*CacheFilePool, error) {
 		cleanupCacheFiles(dir)
 	}
 	pool := &CacheFilePool{dir: dir, maxBytes: options.MaxBytes}
-	pool.entries, e = lru.NewWithEvict(maxCache, pool.onCacheEvicted)
+	pool.entries, e = lru.NewWithEvict(options.MaxEntries, pool.onCacheEvicted)
 	if e != nil {
 		return nil, e
 	}

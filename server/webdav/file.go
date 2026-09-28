@@ -639,6 +639,13 @@ func moveFiles(ctx context.Context, fs FileSystem, src, dst string, overwrite bo
 	return http.StatusNoContent, nil
 }
 
+// abortFile discards a partial write when the body was not fully copied.
+func abortFile(f File) {
+	if a, ok := f.(interface{ Abort() error }); ok {
+		_ = a.Abort()
+	}
+}
+
 func copyProps(dst, src File) error {
 	d, ok := dst.(DeadPropsHolder)
 	if !ok {
@@ -736,6 +743,9 @@ func copyFiles(ctx context.Context, fs FileSystem, src, dst string, overwrite bo
 
 		}
 		_, copyErr := io.Copy(dstFile, srcFile)
+		if copyErr != nil {
+			abortFile(dstFile)
+		}
 		propsErr := copyProps(dstFile, srcFile)
 		closeErr := dstFile.Close()
 		if copyErr != nil {
