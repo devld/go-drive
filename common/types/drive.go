@@ -42,7 +42,7 @@ type ContentURL struct {
 	// otherwise just a http.StatusFound redirection will be sent to client.
 	Proxy bool
 	// DownloadFileName is the filename to use in the Content-Disposition header.
-	// If empty, the original Name() will be used.
+	// If empty, the last segment of the entry path is used.
 	DownloadFileName string
 }
 
@@ -56,19 +56,9 @@ type IContentReader interface {
 	GetURL(context.Context) (*ContentURL, error)
 }
 
-// IContent is the extension of IEntry for file
-type IContent interface {
-	IContentReader
-
-	// Name is filename of this entry
-	Name() string
-	Size() int64
-	ModTime() int64
-}
-
 // IEntry is the abstraction of file and directory
 type IEntry interface {
-	IContent
+	IContentReader
 
 	Path() string
 	Type() EntryType

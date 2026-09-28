@@ -683,10 +683,6 @@ func (c *createdEntry) Drive() types.IDrive {
 	return c.drive
 }
 
-func (c *createdEntry) Name() string {
-	return utils.PathBase(c.path)
-}
-
 func (c *createdEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewNotAllowedError()
 }

@@ -400,10 +400,6 @@ func (o *oneDriveEntry) Drive() types.IDrive {
 	return o.d
 }
 
-func (o *oneDriveEntry) Name() string {
-	return utils.PathBase(o.path)
-}
-
 func (o *oneDriveEntry) Thumbnail(_ context.Context) (types.IContentReader, error) {
 	if o.thumbnail == "" {
 		return nil, err.NewUnsupportedError()

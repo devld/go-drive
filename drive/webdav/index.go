@@ -348,10 +348,6 @@ func (w *webDavEntry) Drive() types.IDrive {
 	return w.d
 }
 
-func (w *webDavEntry) Name() string {
-	return utils.PathBase(w.path)
-}
-
 func (w *webDavEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {
 	return nil, err.NewUnsupportedError()
 }

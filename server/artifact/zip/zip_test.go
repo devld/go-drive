@@ -197,12 +197,6 @@ type zipEntry struct {
 }
 
 func (e *zipEntry) Path() string { return e.path }
-func (e *zipEntry) Name() string {
-	if i := lastSlash(e.path); i >= 0 {
-		return e.path[i+1:]
-	}
-	return e.path
-}
 func (e *zipEntry) Type() types.EntryType {
 	if e.dir {
 		return types.TypeDir

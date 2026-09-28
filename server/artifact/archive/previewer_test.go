@@ -33,7 +33,6 @@ type testEntry struct {
 }
 
 func (e *testEntry) Path() string                               { return e.path }
-func (e *testEntry) Name() string                               { return filepath.Base(e.path) }
 func (e *testEntry) Type() types.EntryType                      { return types.TypeFile }
 func (e *testEntry) Size() int64                                { return e.size }
 func (e *testEntry) ModTime() int64                             { return e.modTime }

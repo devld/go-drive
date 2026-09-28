@@ -254,7 +254,7 @@ func (fr *fileBucketRoute) get(c *gin.Context) {
 	} else {
 		c.Header("Cache-Control", "no-cache")
 	}
-	if e := driveutil.DownloadIContent(c.Request.Context(), entry, c.Writer, c.Request, false); e != nil {
+	if e := driveutil.DownloadEntry(c.Request.Context(), entry, c.Writer, c.Request, false); e != nil {
 		logging.For("f-bkt").Warnf("bucket download failed bucket=%s path=%s: %v",
 			logging.Sanitize(bucket.Name), logging.Sanitize(path), e)
 		fr.abortWithError(c, e)

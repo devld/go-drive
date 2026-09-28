@@ -15,7 +15,6 @@ type identityTestEntry struct {
 }
 
 func (e *identityTestEntry) Path() string          { return e.path }
-func (e *identityTestEntry) Name() string          { return e.path }
 func (e *identityTestEntry) Type() types.EntryType { return types.TypeFile }
 func (e *identityTestEntry) Size() int64           { return e.size }
 func (e *identityTestEntry) ModTime() int64        { return e.modTime }

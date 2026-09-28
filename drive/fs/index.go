@@ -333,10 +333,6 @@ func (f *fsFile) Drive() types.IDrive {
 	return f.drive
 }
 
-func (f *fsFile) Name() string {
-	return utils.PathBase(f.path)
-}
-
 func (f *fsFile) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	if !f.Type().IsFile() {
 		return nil, err.NewNotAllowedError()

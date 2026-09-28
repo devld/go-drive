@@ -9,6 +9,7 @@ import (
 	"go-drive/common/secretbox"
 	"go-drive/common/task"
 	"go-drive/common/types"
+	"go-drive/common/utils"
 	"go-drive/storage"
 	"go-drive/testutil"
 	"os"
@@ -101,8 +102,8 @@ func TestDispatcher_Get_ResolvePathToDrive(t *testing.T) {
 	if e != nil {
 		t.Fatalf("Get root: %v", e)
 	}
-	if ent.Path() != "" || ent.Name() != "" {
-		t.Errorf("root entry path=%q name=%q", ent.Path(), ent.Name())
+	if ent.Path() != "" || utils.PathBase(ent.Path()) != "" {
+		t.Errorf("root entry path=%q name=%q", ent.Path(), utils.PathBase(ent.Path()))
 	}
 
 	// Resolve to drive root
@@ -278,7 +279,7 @@ func TestPathMountOverlay_ListMountCreatedInsideMountedDirectory(t *testing.T) {
 	}
 	var nested types.IEntry
 	for _, entry := range entries {
-		if entry.Name() == "nested" {
+		if utils.PathBase(entry.Path()) == "nested" {
 			nested = entry
 			break
 		}
@@ -513,7 +514,7 @@ func TestDispatcher_List_Root_ReturnsDrives(t *testing.T) {
 	}
 	names := make(map[string]bool)
 	for _, e := range entries {
-		names[e.Name()] = true
+		names[utils.PathBase(e.Path())] = true
 	}
 	if !names["driveA"] || !names["driveB"] {
 		t.Errorf("entries %v", names)
@@ -531,9 +532,9 @@ func TestDispatcher_List_DriveNoMount_ReturnsDriveContents(t *testing.T) {
 	}
 	var listNames []string
 	for _, ent := range entries {
-		listNames = append(listNames, ent.Name())
+		listNames = append(listNames, utils.PathBase(ent.Path()))
 	}
-	if len(entries) != 1 || entries[0].Name() != "foo" {
+	if len(entries) != 1 || utils.PathBase(entries[0].Path()) != "foo" {
 		t.Errorf("List listOnly: got %d entries, names %v", len(entries), listNames)
 	}
 }
@@ -564,7 +565,7 @@ func TestDispatcher_List_DriveWithMount_IncludesMountedEntry(t *testing.T) {
 	}
 	names := make(map[string]bool)
 	for _, ent := range entries {
-		names[ent.Name()] = true
+		names[utils.PathBase(ent.Path())] = true
 	}
 	if !names["real"] {
 		t.Error("expected entry real")
@@ -572,7 +573,7 @@ func TestDispatcher_List_DriveWithMount_IncludesMountedEntry(t *testing.T) {
 	// Mounted entry m1 (MountAt listB/sub) should appear when path_mount path matches list path.
 	if names["m1"] {
 		for _, ent := range entries {
-			if ent.Name() == "m1" {
+			if utils.PathBase(ent.Path()) == "m1" {
 				if ent.Meta().Props["mountAt"] != "listB/sub" {
 					t.Errorf("m1 mountAt=%v", ent.Meta().Props["mountAt"])
 				}
@@ -603,7 +604,7 @@ func TestDispatcher_List_MountTargetNotFound_SkipsWithoutPanic(t *testing.T) {
 	}
 	// m1 should not appear (Get returns NotFound for driveB/nonexistent)
 	for _, ent := range entries {
-		if ent.Name() == "m1" {
+		if utils.PathBase(ent.Path()) == "m1" {
 			t.Error("m1 should not appear when MountAt target does not exist")
 			break
 		}
@@ -647,7 +648,7 @@ func TestOverlay_List_MountPoint_ExclusiveNoLower(t *testing.T) {
 	}
 	names := make(map[string]bool)
 	for _, ent := range entries {
-		names[ent.Name()] = true
+		names[utils.PathBase(ent.Path())] = true
 	}
 	if !names["mount_file.txt"] {
 		t.Error("expected mount_file.txt from mount target")
@@ -695,7 +696,7 @@ func TestOverlay_List_MountSubpath_ExclusiveNoLower(t *testing.T) {
 	}
 	names := make(map[string]bool)
 	for _, ent := range entries {
-		names[ent.Name()] = true
+		names[utils.PathBase(ent.Path())] = true
 	}
 	if !names["upper.txt"] {
 		t.Error("expected upper.txt from mount target subpath")
@@ -724,7 +725,7 @@ func setupMount(t *testing.T, d *PathMountOverlayDrive, mountDAO *storage.PathMo
 func entryNames(entries []types.IEntry) map[string]bool {
 	m := make(map[string]bool, len(entries))
 	for _, e := range entries {
-		m[e.Name()] = true
+		m[utils.PathBase(e.Path())] = true
 	}
 	return m
 }
@@ -1096,7 +1097,7 @@ func TestOverlay_List_PhantomDir(t *testing.T) {
 	}
 	found := false
 	for _, ent := range entries {
-		if ent.Name() == "phantom" {
+		if utils.PathBase(ent.Path()) == "phantom" {
 			found = true
 			if !ent.Type().IsDir() {
 				t.Error("synthesized phantom should be a directory")
@@ -1115,7 +1116,7 @@ func TestOverlay_List_PhantomDir(t *testing.T) {
 	}
 	found = false
 	for _, ent := range entries {
-		if ent.Name() == "m1" {
+		if utils.PathBase(ent.Path()) == "m1" {
 			found = true
 			break
 		}

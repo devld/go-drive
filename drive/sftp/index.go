@@ -406,10 +406,6 @@ func (f *sftpEntry) Drive() types.IDrive {
 	return f.d
 }
 
-func (f *sftpEntry) Name() string {
-	return utils.PathBase(f.path)
-}
-
 func (f *sftpEntry) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	return utils.NewLazyReader(func() (io.ReadCloser, error) {
 		r, w := io.Pipe()

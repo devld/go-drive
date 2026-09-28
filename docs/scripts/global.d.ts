@@ -200,7 +200,6 @@ declare class ReaderRange {
  */
 declare class Entry {
   get path(): string;
-  get name(): string;
   get type(): EntryType;
   /** Size in bytes, or `-1` if unknown. */
   get size(): number;
@@ -221,7 +220,6 @@ declare class Entry {
   /** Shape used by `JSON.stringify`. */
   toJSON(): {
     path: string;
-    name: string;
     type: EntryType;
     size: number;
     modTime: number;

@@ -109,7 +109,7 @@ func (d *DispatcherDrive) mapResultEntry(requestedPath, driveName string, entry 
 
 func (d *DispatcherDrive) Get(ctx context.Context, path string) (types.IEntry, error) {
 	if utils.IsRootPath(path) {
-		return &driveEntry{d: d, path: "", name: "", meta: types.DriveMeta{
+		return &driveEntry{d: d, path: "", meta: types.DriveMeta{
 			Writable: false,
 		}}, nil
 	}
@@ -286,7 +286,7 @@ func (d *DispatcherDrive) List(ctx context.Context, path string) ([]types.IEntry
 			if e != nil {
 				return nil, e
 			}
-			driveEntries = append(driveEntries, &driveEntry{d: d, path: k, name: k, meta: meta})
+			driveEntries = append(driveEntries, &driveEntry{d: d, path: k, meta: meta})
 		}
 		entries = driveEntries
 	} else {
@@ -387,10 +387,6 @@ func (d *entryWrapper) Path() string {
 	return d.path
 }
 
-func (d *entryWrapper) Name() string {
-	return utils.PathBase(d.path)
-}
-
 func (d *entryWrapper) Meta() types.EntryMeta {
 	return d.IEntry.Meta()
 }
@@ -416,7 +412,6 @@ var _ types.IEntry = (*driveEntry)(nil)
 type driveEntry struct {
 	d    *DispatcherDrive
 	path string
-	name string
 	meta types.DriveMeta
 }
 
@@ -438,10 +433,6 @@ func (d *driveEntry) Meta() types.EntryMeta {
 
 func (d *driveEntry) ModTime() int64 {
 	return -1
-}
-
-func (d *driveEntry) Name() string {
-	return d.name
 }
 
 func (d *driveEntry) GetReader(context.Context, types.ReaderRange) (io.ReadCloser, error) {

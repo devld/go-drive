@@ -321,10 +321,6 @@ func (f *ftpEntry) Drive() types.IDrive {
 	return f.d
 }
 
-func (f *ftpEntry) Name() string {
-	return utils.PathBase(f.path)
-}
-
 func (f *ftpEntry) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCloser, error) {
 	if !rg.IsFullRequest() {
 		return nil, err.NewUnsupportedError()

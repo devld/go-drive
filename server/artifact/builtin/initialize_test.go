@@ -58,7 +58,6 @@ func TestInitializeRegistersBuiltInArtifactProcessors(t *testing.T) {
 type initTestEntry struct{}
 
 func (initTestEntry) Path() string                               { return "file" }
-func (initTestEntry) Name() string                               { return "file" }
 func (initTestEntry) Type() types.EntryType                      { return types.TypeFile }
 func (initTestEntry) Size() int64                                { return 1 }
 func (initTestEntry) ModTime() int64                             { return 1 }

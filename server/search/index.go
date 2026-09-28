@@ -12,7 +12,6 @@ import (
 	"go-drive/common/utils"
 	"go-drive/drive"
 	"go-drive/storage"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -264,7 +263,7 @@ func (s *Service) loadFilters() ([]string, error) {
 }
 
 func (s *Service) mapEntry(e types.IEntry) types.EntrySearchItem {
-	name := filepath.Base(e.Path())
+	name := utils.PathBase(e.Path())
 	return types.EntrySearchItem{
 		Path:    e.Path(),
 		Name:    name,

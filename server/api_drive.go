@@ -363,7 +363,7 @@ func (dr *driveRoute) getContent(c *gin.Context) {
 	if proxyMaxSize > 0 && file.Size() > proxyMaxSize {
 		useProxy = false
 	}
-	if e := driveutil.DownloadIContent(c.Request.Context(), file, c.Writer, c.Request, useProxy); e != nil {
+	if e := driveutil.DownloadEntry(c.Request.Context(), file, c.Writer, c.Request, useProxy); e != nil {
 		_ = c.Error(e)
 		return
 	}

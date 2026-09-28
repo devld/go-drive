@@ -53,14 +53,14 @@ func init() {
 					_, e = root.Move(
 						opCtx,
 						fromEntry,
-						utils.CleanPath(path.Join(dest, fromEntry.Name())),
+						utils.CleanPath(path.Join(dest, utils.PathBase(fromEntry.Path()))),
 						override)
 				} else {
 					log(fmt.Sprintf("  copy '%s'", fromEntry.Path()))
 					_, e = root.Copy(
 						opCtx,
 						fromEntry,
-						utils.CleanPath(path.Join(dest, fromEntry.Name())),
+						utils.CleanPath(path.Join(dest, utils.PathBase(fromEntry.Path()))),
 						override)
 				}
 				if e != nil {
