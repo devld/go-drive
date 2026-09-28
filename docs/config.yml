@@ -63,6 +63,9 @@ vfs:
   cache-items: 1000
   # Maximum total bytes kept in that cache. Default is 4g.
   cache-size: 4g
+  # Maximum time to reuse a cached source, measured from its creation. Default is 5m.
+  # Existing readers can finish after expiry; a new reader starts with a fresh cache entry.
+  cache-ttl: 5m
 
 # Concurrent running tasks, such as copy, move, and delete.
 # The same number of tasks may wait. Further submissions are rejected.
