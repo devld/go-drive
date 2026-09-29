@@ -46,7 +46,7 @@ func TestTaskResponseErrorTranslated(t *testing.T) {
 	c, _ := gin.CreateTestContext(response)
 	c.Request = httptest.NewRequest(http.MethodGet, "/tasks/test", nil)
 	c.Request.Header.Set("Accept-Language", "zh-CN,en-US;q=0.8")
-	SetMessageSource(c, responseTestMessages{})
+	setMessageSource(c, responseTestMessages{})
 	writeJSON(c, http.StatusOK, failed)
 	var body struct {
 		Error struct {
@@ -67,8 +67,8 @@ func TestJobExecutionErrorTranslatedForResponse(t *testing.T) {
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	c.Request = httptest.NewRequest(http.MethodGet, "/jobs/test", nil)
 	c.Request.Header.Set("Accept-Language", "zh-CN")
-	SetMessageSource(c, responseTestMessages{})
-	localized := GetTranslator(c).TranslateV(view).(jobExecutionView)
+	setMessageSource(c, responseTestMessages{})
+	localized := getTranslator(c).translateV(view).(jobExecutionView)
 	if localized.ErrorMsg != "任务失败" {
 		t.Fatalf("response error = %q", localized.ErrorMsg)
 	}
@@ -81,10 +81,10 @@ func TestTranslatorCapturesRequestLanguage(t *testing.T) {
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	c.Request = httptest.NewRequest(http.MethodGet, "/jobs/test", nil)
 	c.Request.Header.Set("Accept-Language", "zh-CN,en-US;q=0.8")
-	SetMessageSource(c, responseTestMessages{})
-	translator := GetTranslator(c)
+	setMessageSource(c, responseTestMessages{})
+	translator := getTranslator(c)
 	c.Request.Header.Set("Accept-Language", "en-US")
-	if got := translator.TranslateT(i18n.T("job_failed")); got != "任务失败" {
+	if got := translator.translateT(i18n.T("job_failed")); got != "任务失败" {
 		t.Fatalf("translated text = %q", got)
 	}
 }
@@ -94,7 +94,7 @@ func TestFileBucketErrorUsesRequestTranslation(t *testing.T) {
 	c, _ := gin.CreateTestContext(response)
 	c.Request = httptest.NewRequest(http.MethodGet, "/f/test/file", nil)
 	c.Request.Header.Set("Accept-Language", "zh-CN,en-US;q=0.8")
-	SetMessageSource(c, responseTestMessages{})
+	setMessageSource(c, responseTestMessages{})
 
 	fr := &fileBucketRoute{}
 	fr.abortWithError(c, apierr.NewNotAllowedMessageError(i18n.T("move_across_not_supported")))

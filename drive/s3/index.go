@@ -60,8 +60,6 @@ type Drive struct {
 	downloadProxy bool
 	cache         driveutil.DriveCache
 	cacheTTL      time.Duration
-
-	tempDir string
 }
 
 var _ types.IDrive = (*Drive)(nil)
@@ -100,7 +98,6 @@ func NewDrive(ctx context.Context, config types.SM,
 		uploadProxy:   config.GetBool("proxy_upload"),
 		downloadProxy: config.GetBool("proxy_download"),
 		cacheTTL:      cacheTTL,
-		tempDir:       driveEnv.Config.TempDir,
 	}
 	if cacheTTL <= 0 {
 		d.cache = driveutil.DummyCache()

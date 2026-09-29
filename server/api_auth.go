@@ -15,7 +15,7 @@ func InitAuthRoutes(r gin.IRouter, ua *auth.UserAuth,
 
 	ar := authRoute{ua, tokenStore}
 
-	authGroup := r.Group("/auth", TokenAuth(tokenStore))
+	authGroup := r.Group("/auth", tokenAuthMiddleware(tokenStore))
 	{
 		authGroup.POST("/:provider/start", ar.start)
 
@@ -46,7 +46,7 @@ func (a *authRoute) start(c *gin.Context) {
 		return
 	}
 	logging.For("auth").Debugf("authentication start provider=%s", logging.Sanitize(provider))
-	SetResult(c, result)
+	setResult(c, result)
 }
 
 func (a *authRoute) callback(c *gin.Context) {
@@ -66,7 +66,7 @@ func (a *authRoute) callback(c *gin.Context) {
 	}
 	logging.For("auth").Debugf("authentication succeeded provider=%s user=%s",
 		logging.Sanitize(provider), logging.Sanitize(user.Username))
-	SetResult(c, token)
+	setResult(c, token)
 }
 
 // readAuthFormData reads the submitted credentials/parameters from the JSON body.
@@ -80,7 +80,7 @@ func readAuthFormData(c *gin.Context) types.SM {
 }
 
 func (a *authRoute) logout(c *gin.Context) {
-	if token := GetToken(c); token != "" {
+	if token := getToken(c); token != "" {
 		if e := a.tokenStore.Revoke(token); e != nil {
 			logging.For("auth").Warnf("session revoke failed: %v", e)
 		} else {
@@ -90,13 +90,13 @@ func (a *authRoute) logout(c *gin.Context) {
 }
 
 func (a *authRoute) getUser(c *gin.Context) {
-	principal := GetPrincipal(c)
+	principal := getPrincipal(c)
 	if !principal.IsAnonymous() {
 		u := principal.User
 		u.Password = ""
 		u.RootPath = ""
-		SetResult(c, u)
+		setResult(c, u)
 	} else {
-		SetResult(c, nil)
+		setResult(c, nil)
 	}
 }

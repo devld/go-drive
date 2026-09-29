@@ -29,7 +29,7 @@ func TestGetConfigUsesUnifiedArtifactNamespace(t *testing.T) {
 	context.Request = httptest.NewRequest(http.MethodGet, "/config", nil)
 
 	(&commonRoute{ch: components}).getConfig(context)
-	result, ok := GetResult(context)
+	result, ok := getResult(context)
 	if !ok {
 		t.Fatal("getConfig() did not set a result")
 	}

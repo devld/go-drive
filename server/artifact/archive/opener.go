@@ -31,7 +31,7 @@ type readerAtSeeker interface {
 	io.Seeker
 }
 
-func (s *Previewer) openSourceAndFormat(ctx types.TaskCtx, entry types.IEntry) (*source, archives.Extractor, error) {
+func (s *previewer) openSourceAndFormat(ctx types.TaskCtx, entry types.IEntry) (*source, archives.Extractor, error) {
 	if entry.Type() != types.TypeFile {
 		return nil, nil, notFound("archive entry is not a file")
 	}
@@ -59,7 +59,7 @@ func (s *Previewer) openSourceAndFormat(ctx types.TaskCtx, entry types.IEntry) (
 	return &source{reader: ras, closer: file, size: size}, format, nil
 }
 
-func (s *Previewer) detectFormat(name string, reader readerAtSeeker, size int64) (archives.Extractor, error) {
+func (s *previewer) detectFormat(name string, reader readerAtSeeker, size int64) (archives.Extractor, error) {
 	var format archives.Extractor
 	switch strings.ToLower(pathpkg.Ext(name)) {
 	case ".zip":

@@ -27,10 +27,10 @@ var helperScript []byte
 var helperProgram = s.MustCompile("helper.js", helperScript)
 
 const (
-	DefaultPoolMaxTotal = 100
-	DefaultPoolMaxIdle  = 50
-	DefaultPoolMinIdle  = 10
-	DefaultPoolIdleTime = time.Duration(30 * time.Minute)
+	defaultPoolMaxTotal = 100
+	defaultPoolMaxIdle  = 50
+	defaultPoolMinIdle  = 10
+	defaultPoolIdleTime = time.Duration(30 * time.Minute)
 )
 
 var t = i18n.TPrefix("drive.script.")
@@ -76,8 +76,8 @@ func validateScriptForm(form []types.FormItem) error {
 	return nil
 }
 
-// GetDriveScriptConfigForm returns the static form declared by a script.
-func GetDriveScriptConfigForm(ctx context.Context, config common.Config, name string) ([]types.FormItem, error) {
+// getDriveScriptConfigForm returns the static form declared by a script.
+func getDriveScriptConfigForm(ctx context.Context, config common.Config, name string) ([]types.FormItem, error) {
 	file, e := scriptFileName(name)
 	if e != nil {
 		return nil, e
@@ -307,23 +307,23 @@ func init_(ctx context.Context, data, config types.SM, driveEnv driveutil.DriveE
 func parsePoolConfig(arg string) (*s.VMPoolConfig, error) {
 	args := strings.Split(strings.ReplaceAll(arg, " ", ""), ",")
 	c := &s.VMPoolConfig{
-		MaxTotal: DefaultPoolMaxTotal,
-		MaxIdle:  DefaultPoolMaxIdle,
-		MinIdle:  DefaultPoolMinIdle,
-		IdleTime: DefaultPoolIdleTime,
+		MaxTotal: defaultPoolMaxTotal,
+		MaxIdle:  defaultPoolMaxIdle,
+		MinIdle:  defaultPoolMinIdle,
+		IdleTime: defaultPoolIdleTime,
 	}
 
 	if len(args) > 0 {
-		c.MaxTotal = types.SV(args[0]).Int(DefaultPoolMaxTotal)
+		c.MaxTotal = types.SV(args[0]).Int(defaultPoolMaxTotal)
 	}
 	if len(args) > 1 {
-		c.MaxIdle = types.SV(args[1]).Int(DefaultPoolMaxIdle)
+		c.MaxIdle = types.SV(args[1]).Int(defaultPoolMaxIdle)
 	}
 	if len(args) > 2 {
-		c.MinIdle = types.SV(args[2]).Int(DefaultPoolMinIdle)
+		c.MinIdle = types.SV(args[2]).Int(defaultPoolMinIdle)
 	}
 	if len(args) > 3 {
-		c.IdleTime = types.SV(args[3]).Duration(DefaultPoolIdleTime)
+		c.IdleTime = types.SV(args[3]).Duration(defaultPoolIdleTime)
 	}
 
 	if c.MaxIdle < c.MinIdle {

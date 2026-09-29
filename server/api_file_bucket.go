@@ -128,7 +128,7 @@ func (fr *fileBucketRoute) upload(c *gin.Context) {
 		fileSize = multipartFile.Size
 		filename = multipartFile.Filename
 	} else {
-		savedFile, size, e := ReadRequestBodyToTempFile(c, fr.config.TempDir)
+		savedFile, size, e := readRequestBodyToTempFile(c, fr.config.TempDir)
 		if e != nil {
 			fr.abortWithError(c, e)
 			return
@@ -263,7 +263,7 @@ func (fr *fileBucketRoute) get(c *gin.Context) {
 
 func (fr *fileBucketRoute) abortWithError(c *gin.Context, e error) {
 	if ge, ok := e.(err.Error); ok {
-		fr.abortWithMessage(c, ge.Code(), GetTranslator(c).TranslateT(ge.Error()))
+		fr.abortWithMessage(c, ge.Code(), getTranslator(c).translateT(ge.Error()))
 		return
 	}
 	logging.For("f-bkt").Errorf("unknown error: %v", e)
@@ -279,7 +279,7 @@ func (fr *fileBucketRoute) generateURL(template string, values urlTemplateValues
 	if strings.TrimSpace(template) == "" {
 		template = "{origin}/f/{bucket}/{key}"
 	}
-	template = strings.ReplaceAll(template, "{origin}", GetRequestOrigin(values.ctx)+fr.config.APIPath)
+	template = strings.ReplaceAll(template, "{origin}", getRequestOrigin(values.ctx)+fr.config.APIPath)
 	template = strings.ReplaceAll(template, "{bucket}", url.PathEscape(values.bucketName))
 	template = strings.ReplaceAll(template, "{key}", utils.URLEncodePath(values.key))
 	template = anyVariableRegexp.ReplaceAllString(template, "")

@@ -38,7 +38,7 @@ func InitAdminRoutes(
 	jobDAO *storage.JobDAO,
 	fileBucketDAO *storage.FileBucketDAO) error {
 
-	r = r.Group("/admin", TokenAuth(tokenStore), AdminGroupRequired())
+	r = r.Group("/admin", tokenAuthMiddleware(tokenStore), adminGroupRequired())
 	r.GET("/tasks", (&tasksRoute{runner: runner}).getTasks)
 
 	ur := &usersRoute{userDAO}
@@ -192,5 +192,5 @@ func (tr *tasksRoute) getTasks(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, tasks)
+	setResult(c, tasks)
 }

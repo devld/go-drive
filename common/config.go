@@ -35,15 +35,15 @@ const (
 )
 
 const (
-	DBFilename = "data.db"
-	LocalFsDir = "local"
+	dbFilename = "data.db"
+	localFSDir = "local"
 
-	TempDir = "temp"
+	tempDirName = "temp"
 
 	DefaultListen                  = ":8089"
 	DefaultAPIPath                 = ""
 	DefaultWebPath                 = ""
-	DefaultDataDir                 = "./data"
+	defaultDataDir                 = "./data"
 	DefaultOAuthRedirectURI        = "https://go-drive.top/oauth_callback"
 	DefaultMaxConcurrentTask       = 100
 	DefaultFreeFs                  = false
@@ -72,7 +72,7 @@ const (
 	DefaultCacheCleanPeriod time.Duration = 10 * time.Minute
 	DefaultLoggingLevel                   = "info"
 
-	DefaultConfigFile = "config.yml"
+	defaultConfigFile = "config.yml"
 
 	DefaultDrivesDir          = "script-drives"
 	DefaultDriveUploadersDir  = "drive-uploaders"
@@ -225,7 +225,7 @@ func InitConfig() (Config, error) {
 		Listen:  DefaultListen,
 		APIPath: DefaultAPIPath,
 		WebPath: DefaultWebPath,
-		DataDir: DefaultDataDir,
+		DataDir: defaultDataDir,
 		Logging: LoggingConfig{Level: DefaultLoggingLevel},
 
 		DrivesDir:          DefaultDrivesDir,
@@ -285,9 +285,9 @@ func InitConfig() (Config, error) {
 	}
 
 	if *configFile == "" {
-		_, e := os.Stat(DefaultConfigFile)
+		_, e := os.Stat(defaultConfigFile)
 		if e == nil {
-			*configFile = DefaultConfigFile
+			*configFile = defaultConfigFile
 		}
 	}
 
@@ -345,7 +345,7 @@ func InitConfig() (Config, error) {
 	}
 
 	if config.TempDir == "" {
-		tempDir, e := config.GetDir(TempDir, true)
+		tempDir, e := config.GetDir(tempDirName, true)
 		if e != nil {
 			return config, e
 		}
@@ -379,7 +379,7 @@ func parseDBConfig(c *DBConfig) error {
 	switch c.Type {
 	case "sqlite":
 		if c.Name == "" {
-			c.Name = DBFilename
+			c.Name = dbFilename
 		}
 	case "mysql":
 		if c.Port <= 0 {
@@ -451,7 +451,7 @@ func (c Config) GetLocalFsDir() (string, error) {
 	if c.FreeFs {
 		return "", nil
 	}
-	return c.GetDir(LocalFsDir, true)
+	return c.GetDir(localFSDir, true)
 }
 
 type versionSysConfig struct {

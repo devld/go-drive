@@ -29,7 +29,7 @@ func selectedMemberSet(members []string) (map[string]struct{}, error) {
 	return selected, nil
 }
 
-func (s *Previewer) collectExtractItems(archiveFS fs.FS, selected map[string]struct{}) ([]extractItem, error) {
+func (s *previewer) collectExtractItems(archiveFS fs.FS, selected map[string]struct{}) ([]extractItem, error) {
 	items := make([]extractItem, 0)
 	hit := make(map[string]struct{}, len(selected))
 	err := fs.WalkDir(archiveFS, ".", func(name string, item fs.DirEntry, walkErr error) error {

@@ -34,8 +34,8 @@ func TestExecuteTaskStreamingWritesWhileActive(t *testing.T) {
 	response := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(response)
 	c.Request = httptest.NewRequest(http.MethodGet, "/jobs/test", nil)
-	SetMessageSource(c, responseTestMessages{})
-	err := ExecuteTaskStreaming(c, runner, func(_ types.TaskCtx, stream io.Writer) (any, error) {
+	setMessageSource(c, responseTestMessages{})
+	err := executeTaskStreaming(c, runner, func(_ types.TaskCtx, stream io.Writer) (any, error) {
 		if _, err := stream.Write([]byte("ready\n")); err != nil {
 			return nil, err
 		}
@@ -71,13 +71,13 @@ func TestExecuteTaskStreamingClosesWriterOnRequestCancel(t *testing.T) {
 	requestCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	c.Request = httptest.NewRequest(http.MethodGet, "/jobs/test", nil).WithContext(requestCtx)
-	SetMessageSource(c, responseTestMessages{})
+	setMessageSource(c, responseTestMessages{})
 
 	started := make(chan struct{})
 	lateWrite := make(chan error, 1)
 	returned := make(chan error, 1)
 	go func() {
-		returned <- ExecuteTaskStreaming(c, runner, func(_ types.TaskCtx, stream io.Writer) (any, error) {
+		returned <- executeTaskStreaming(c, runner, func(_ types.TaskCtx, stream io.Writer) (any, error) {
 			if _, err := stream.Write([]byte("before\n")); err != nil {
 				return nil, err
 			}

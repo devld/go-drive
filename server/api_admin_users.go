@@ -20,7 +20,7 @@ func (ar *usersRoute) listUsers(c *gin.Context) {
 	for i := range users {
 		users[i].Password = ""
 	}
-	SetResult(c, users)
+	setResult(c, users)
 }
 
 func (ar *usersRoute) getUser(c *gin.Context) {
@@ -31,7 +31,7 @@ func (ar *usersRoute) getUser(c *gin.Context) {
 		return
 	}
 	user.Password = ""
-	SetResult(c, user)
+	setResult(c, user)
 }
 
 func (ar *usersRoute) createUser(c *gin.Context) {
@@ -45,7 +45,7 @@ func (ar *usersRoute) createUser(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, addUser)
+	setResult(c, addUser)
 }
 
 func (ar *usersRoute) updateUser(c *gin.Context) {
@@ -80,7 +80,7 @@ func (gr *groupsRoute) listGroups(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, groups)
+	setResult(c, groups)
 }
 
 func (gr *groupsRoute) getGroup(c *gin.Context) {
@@ -90,7 +90,7 @@ func (gr *groupsRoute) getGroup(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, group)
+	setResult(c, group)
 }
 
 func (gr *groupsRoute) createGroup(c *gin.Context) {
@@ -104,7 +104,7 @@ func (gr *groupsRoute) createGroup(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, addGroup)
+	setResult(c, addGroup)
 }
 
 func (gr *groupsRoute) updateGroup(c *gin.Context) {

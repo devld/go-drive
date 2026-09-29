@@ -61,7 +61,7 @@ func (t *taskRunner) RegisterGroup(group string, concurrency int) error {
 	if concurrency <= 0 {
 		return nil
 	}
-	if !IsValidGroup(group) {
+	if !isValidGroup(group) {
 		return fmt.Errorf("invalid task group %q", group)
 	}
 	t.mu.Lock()

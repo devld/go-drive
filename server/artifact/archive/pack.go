@@ -42,7 +42,7 @@ func parsePackMembers(args string) (members []string, key string, err error) {
 	return members, hex.EncodeToString(sum[:]), nil
 }
 
-func (s *Previewer) producePack(ctx types.TaskCtx, entry types.IEntry, members []string, out artifact.Writer) error {
+func (s *previewer) producePack(ctx types.TaskCtx, entry types.IEntry, members []string, out artifact.Writer) error {
 	selected, err := selectedMemberSet(members)
 	if err != nil {
 		return err

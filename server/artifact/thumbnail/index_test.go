@@ -59,7 +59,7 @@ func (h *failingThumbnailHandler) MimeType() string       { return "image/jpeg" 
 func (h *failingThumbnailHandler) Timeout() time.Duration { return -1 }
 
 func TestMakerSpecUsesSortedCommaSeparatedExtensions(t *testing.T) {
-	maker := &Maker{
+	maker := &maker{
 		handlers: map[string]TypeHandler{
 			"png": nil,
 			"/":   nil,
@@ -74,7 +74,7 @@ func TestMakerSpecUsesSortedCommaSeparatedExtensions(t *testing.T) {
 
 func TestMakerUsesEntryThumbnailWhenHasThumbnail(t *testing.T) {
 	calls := &atomic.Int32{}
-	maker := &Maker{
+	maker := &maker{
 		handlers: map[string]TypeHandler{
 			"png": &failingThumbnailHandler{calls: calls},
 		},
@@ -93,7 +93,7 @@ func TestMakerUsesEntryThumbnailWhenHasThumbnail(t *testing.T) {
 func TestMakerMarksGenerationFailureCacheable(t *testing.T) {
 	calls := &atomic.Int32{}
 	entry := &testThumbnailEntry{path: "images/demo.png", real: "drive/images/demo.png", size: 10, modTime: 1}
-	maker := &Maker{
+	maker := &maker{
 		handlers: map[string]TypeHandler{
 			"png": &failingThumbnailHandler{calls: calls},
 		},

@@ -18,8 +18,6 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 )
 
-type IndexFilter = func(entry types.IEntry) bool
-
 const (
 	indexBatchSize  = 1000
 	filterOptionKey = "search.filter"

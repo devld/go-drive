@@ -19,12 +19,12 @@ import (
 	"time"
 )
 
-const FolderType = "/"
+const folderType = "/"
 
 const handlerName = "thumbnail"
 
-type Maker struct {
-	// handlers maps a lowercase file extension (or FolderType) to one handler.
+type maker struct {
+	// handlers maps a lowercase file extension (or folderType) to one handler.
 	// A later config item for the same extension replaces the earlier one.
 	handlers map[string]TypeHandler
 
@@ -35,22 +35,22 @@ type Maker struct {
 }
 
 var (
-	_ artifact.Handler = (*Maker)(nil)
+	_ artifact.Handler = (*maker)(nil)
 )
 
 func init() {
-	artifact.RegisterHandler(handlerName, NewMaker)
+	artifact.RegisterHandler(handlerName, newMaker)
 }
 
-// NewMaker creates a thumbnail artifact processor. Persistence and task
+// newMaker creates a thumbnail artifact processor. Persistence and task
 // scheduling stay in the shared artifact service.
-func NewMaker(deps artifact.HandlerDeps) (artifact.Handler, error) {
+func newMaker(deps artifact.HandlerDeps) (artifact.Handler, error) {
 	handlers, e := createHandlers(deps.Config.Thumbnail.Handlers)
 	if e != nil {
 		return nil, e
 	}
 
-	m := &Maker{
+	m := &maker{
 		handlers:    handlers,
 		apiPath:     deps.Config.APIPath,
 		validity:    deps.Config.Thumbnail.TTL,
@@ -87,7 +87,7 @@ func createHandlers(items []common.ThumbnailHandlerItem) (map[string]TypeHandler
 	return hs, nil
 }
 
-func (m *Maker) Spec() artifact.Spec {
+func (m *maker) Spec() artifact.Spec {
 	return artifact.Spec{
 		Caches:      []artifact.CacheSpec{{Policy: artifact.Policy{TTL: m.validity}}},
 		Concurrency: m.concurrency,
@@ -95,7 +95,7 @@ func (m *Maker) Spec() artifact.Spec {
 	}
 }
 
-func (m *Maker) supportedExtensions() string {
+func (m *maker) supportedExtensions() string {
 	extensions := make([]string, 0, len(m.handlers))
 	for ext := range m.handlers {
 		extensions = append(extensions, ext)
@@ -104,14 +104,14 @@ func (m *Maker) supportedExtensions() string {
 	return strings.Join(extensions, ",")
 }
 
-func (m *Maker) Resolve(request artifact.Request) (artifact.ResolvedRequest, error) {
+func (m *maker) Resolve(request artifact.Request) (artifact.ResolvedRequest, error) {
 	if request.Args != "" {
 		return artifact.ResolvedRequest{}, apierr.NewNotFoundMessageError("invalid thumbnail artifact request")
 	}
 	return artifact.ResolvedRequest{Fingerprint: "v1"}, nil
 }
 
-func (m *Maker) Produce(ctx types.TaskCtx, request artifact.Request, out artifact.Writer) error {
+func (m *maker) Produce(ctx types.TaskCtx, request artifact.Request, out artifact.Writer) error {
 	entry := m.createThumbnailEntry(request.Source)
 	handler, err := m.resolveHandler(entry)
 	if err != nil {
@@ -127,7 +127,7 @@ func (m *Maker) Produce(ctx types.TaskCtx, request artifact.Request, out artifac
 	return thumbnailProduceError(m.createThumbnail(ctx, entry, handler, out))
 }
 
-func (m *Maker) createThumbnail(ctx types.TaskCtx, entry ThumbnailEntry, handler TypeHandler, dest io.Writer) error {
+func (m *maker) createThumbnail(ctx types.TaskCtx, entry ThumbnailEntry, handler TypeHandler, dest io.Writer) error {
 	logging.For("thumbn").Debugf("thumbnail artifact handler started path=%s mime=%s",
 		logging.Sanitize(entry.Path()), handler.MimeType())
 	handlerCtx := context.Context(ctx)
@@ -153,7 +153,7 @@ func thumbnailProduceError(err error) error {
 	return artifact.Cacheable(err)
 }
 
-func (m *Maker) createThumbnailEntry(entry types.IEntry) ThumbnailEntry {
+func (m *maker) createThumbnailEntry(entry types.IEntry) ThumbnailEntry {
 	// IDispatcherEntry supplies GetRealPath for shell handlers and the
 	// download URL used by remote thumbnail generators.
 	dispatcherEntry, ok := driveutil.IEntryAs[types.IDispatcherEntry](entry)
@@ -185,7 +185,7 @@ func (m *Maker) createThumbnailEntry(entry types.IEntry) ThumbnailEntry {
 	return &thumbnailEntry{IEntry: entry, IDispatcherEntry: dispatcherEntry, externalURL: externalURL}
 }
 
-func (m *Maker) resolveHandler(entry ThumbnailEntry) (TypeHandler, error) {
+func (m *maker) resolveHandler(entry ThumbnailEntry) (TypeHandler, error) {
 	if entry.Meta().HasThumbnail {
 		if GetWrappedThumbnailEntry(entry) == nil {
 			return nil, apierr.NewNotFoundMessageError("thumbnail handler not found")
@@ -193,7 +193,7 @@ func (m *Maker) resolveHandler(entry ThumbnailEntry) (TypeHandler, error) {
 		return entryThumbnailTypeHandler, nil
 	}
 
-	fType := FolderType
+	fType := folderType
 	if !entry.Type().IsDir() {
 		fType = utils.PathExt(entry.Path())
 	}

@@ -74,14 +74,14 @@ type Entry struct {
 	Link string `json:"link,omitempty"`
 }
 
-// OpenedMember owns both the decompressed member and the source archive. The
+// openedMember owns both the decompressed member and the source archive. The
 // caller must close it after the response has finished streaming.
-type OpenedMember struct {
+type openedMember struct {
 	Entry
 	Reader io.ReadCloser
 }
 
-type Previewer struct {
+type previewer struct {
 	maxSize       int64
 	maxMemberSize int64
 	maxEntries    int
@@ -95,18 +95,18 @@ type Previewer struct {
 }
 
 var (
-	_ artifact.Handler = (*Previewer)(nil)
+	_ artifact.Handler = (*previewer)(nil)
 )
 
 func init() {
-	artifact.RegisterHandler(handlerName, NewPreviewer)
+	artifact.RegisterHandler(handlerName, newPreviewer)
 }
 
-// NewPreviewer creates the archive preview processor. Persistence, locking, and
+// newPreviewer creates the archive preview processor. Persistence, locking, and
 // task scheduling stay in the shared artifact service. Archive bytes are read
 // through DriveFS, which uses a native file when the entry already provides
 // one and otherwise reads through the source cache pool.
-func NewPreviewer(deps artifact.HandlerDeps) (artifact.Handler, error) {
+func newPreviewer(deps artifact.HandlerDeps) (artifact.Handler, error) {
 	if deps.DriveFS == nil {
 		return nil, errors.New("archive preview requires drive fs")
 	}
@@ -122,7 +122,7 @@ func NewPreviewer(deps artifact.HandlerDeps) (artifact.Handler, error) {
 	contentSize := utils.PositiveOr(config.ContentCacheSize.DataSize(defaultContentSize), defaultContentSize)
 	packTTL := utils.PositiveOr(config.PackTTL, common.DefaultArchivePackTTL)
 
-	s := &Previewer{
+	s := &previewer{
 		maxSize:       maxSize,
 		maxMemberSize: maxMemberSize,
 		maxEntries:    maxEntries,
@@ -137,7 +137,7 @@ func NewPreviewer(deps artifact.HandlerDeps) (artifact.Handler, error) {
 	return s, nil
 }
 
-func (s *Previewer) Spec() artifact.Spec {
+func (s *previewer) Spec() artifact.Spec {
 	return artifact.Spec{
 		Caches: []artifact.CacheSpec{
 			{Name: cacheIndex, Policy: artifact.Policy{TTL: s.indexTTL}},
@@ -187,7 +187,7 @@ func parseArchiveArgs(args string) (kind archiveArgsKind, value string, err erro
 	}
 }
 
-func (s *Previewer) Resolve(request artifact.Request) (artifact.ResolvedRequest, error) {
+func (s *previewer) Resolve(request artifact.Request) (artifact.ResolvedRequest, error) {
 	kind, value, err := parseArchiveArgs(request.Args)
 	if err != nil {
 		return artifact.ResolvedRequest{}, err
@@ -216,7 +216,7 @@ func (s *Previewer) Resolve(request artifact.Request) (artifact.ResolvedRequest,
 	}
 }
 
-func (s *Previewer) Produce(ctx types.TaskCtx, request artifact.Request, out artifact.Writer) error {
+func (s *previewer) Produce(ctx types.TaskCtx, request artifact.Request, out artifact.Writer) error {
 	kind, value, err := parseArchiveArgs(request.Args)
 	if err != nil {
 		return err
@@ -237,7 +237,7 @@ func (s *Previewer) Produce(ctx types.TaskCtx, request artifact.Request, out art
 	}
 }
 
-func (s *Previewer) produceIndex(ctx types.TaskCtx, entry types.IEntry, out artifact.Writer) error {
+func (s *previewer) produceIndex(ctx types.TaskCtx, entry types.IEntry, out artifact.Writer) error {
 	entries, err := s.buildIndex(ctx, entry)
 	if err != nil {
 		return err
@@ -260,7 +260,7 @@ func (s *Previewer) produceIndex(ctx types.TaskCtx, entry types.IEntry, out arti
 	return nil
 }
 
-func (s *Previewer) produceContent(ctx types.TaskCtx, entry types.IEntry, member string, out artifact.Writer) error {
+func (s *previewer) produceContent(ctx types.TaskCtx, entry types.IEntry, member string, out artifact.Writer) error {
 	opened, err := s.openMember(ctx, entry, member)
 	if err != nil {
 		return err
@@ -328,7 +328,7 @@ func (r *contextReader) Read(p []byte) (int, error) {
 // openMember opens one archive member so Produce can copy it into the shared
 // complete-artifact cache. A cache miss reuses the source and ArchiveFS that
 // were opened to rebuild the index.
-func (s *Previewer) openMember(ctx types.TaskCtx, entry types.IEntry, member string) (*OpenedMember, error) {
+func (s *previewer) openMember(ctx types.TaskCtx, entry types.IEntry, member string) (*openedMember, error) {
 	index, ok := s.cachedIndex(entry)
 	var opened *source
 	var archiveFS *archives.ArchiveFS
@@ -371,7 +371,7 @@ func (s *Previewer) openMember(ctx types.TaskCtx, entry types.IEntry, member str
 		reader: readCloser.reader,
 		limit:  s.maxMemberSize,
 	}
-	return &OpenedMember{Entry: item, Reader: readCloser}, nil
+	return &openedMember{Entry: item, Reader: readCloser}, nil
 }
 
 func setArchiveProgressTotal(ctx types.TaskCtx, size int64) {
@@ -438,7 +438,7 @@ func (r *boundedReader) Read(p []byte) (int, error) {
 	return n, e
 }
 
-func (s *Previewer) lookupMember(index []Entry, member string) (Entry, error) {
+func (s *previewer) lookupMember(index []Entry, member string) (Entry, error) {
 	item, ok := findEntry(index, member)
 	if !ok {
 		return Entry{}, notFound(msgMemberNotFound)
@@ -452,7 +452,7 @@ func (s *Previewer) lookupMember(index []Entry, member string) (Entry, error) {
 	return item, nil
 }
 
-func (s *Previewer) cachedIndex(entry types.IEntry) ([]Entry, bool) {
+func (s *previewer) cachedIndex(entry types.IEntry) ([]Entry, bool) {
 	if s.cache == nil {
 		return nil, false
 	}
@@ -478,7 +478,7 @@ func invalidArchiveError(e error) error {
 	return notFound(msgInvalidArchive)
 }
 
-func (s *Previewer) buildIndex(ctx types.TaskCtx, entry types.IEntry) ([]Entry, error) {
+func (s *previewer) buildIndex(ctx types.TaskCtx, entry types.IEntry) ([]Entry, error) {
 	source, format, e := s.openSourceAndFormat(ctx, entry)
 	if e != nil {
 		return nil, e
@@ -487,7 +487,7 @@ func (s *Previewer) buildIndex(ctx types.TaskCtx, entry types.IEntry) ([]Entry, 
 	return s.indexFromFS(s.newArchiveFS(ctx, source, format))
 }
 
-func (s *Previewer) indexFromFS(archiveFS fs.FS) ([]Entry, error) {
+func (s *previewer) indexFromFS(archiveFS fs.FS) ([]Entry, error) {
 	result := make([]Entry, 0)
 	seen := make(map[string]struct{})
 	e := fs.WalkDir(archiveFS, ".", func(name string, item fs.DirEntry, walkErr error) error {
@@ -541,7 +541,7 @@ func (s *Previewer) indexFromFS(archiveFS fs.FS) ([]Entry, error) {
 	return result, nil
 }
 
-func (s *Previewer) newArchiveFS(ctx context.Context, source *source, format archives.Extractor) *archives.ArchiveFS {
+func (s *previewer) newArchiveFS(ctx context.Context, source *source, format archives.Extractor) *archives.ArchiveFS {
 	return &archives.ArchiveFS{
 		Stream:  io.NewSectionReader(source.reader, 0, source.size),
 		Format:  boundedExtractor{inner: format, max: s.maxEntries},

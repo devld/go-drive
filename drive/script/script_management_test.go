@@ -254,9 +254,9 @@ defineDrive({
 		t.Fatal(e)
 	}
 
-	form, e := GetDriveScriptConfigForm(context.Background(), config, "example")
+	form, e := getDriveScriptConfigForm(context.Background(), config, "example")
 	if e != nil {
-		t.Fatalf("GetDriveScriptConfigForm() error = %v", e)
+		t.Fatalf("getDriveScriptConfigForm() error = %v", e)
 	}
 	if len(form) != 1 || form[0].Field != "token" || form[0].Type != "password" {
 		t.Fatalf("form = %#v", form)
@@ -296,7 +296,7 @@ defineDrive({
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 	started := time.Now()
-	_, e := GetDriveScriptConfigForm(ctx, config, "slow")
+	_, e := getDriveScriptConfigForm(ctx, config, "slow")
 	elapsed := time.Since(started)
 	if !errors.Is(e, context.DeadlineExceeded) {
 		t.Fatalf("expected deadline exceeded, got %v after %s", e, elapsed)

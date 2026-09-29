@@ -25,7 +25,7 @@ type jobsRoute struct {
 }
 
 func (jr *jobsRoute) getJobsDefinitions(c *gin.Context) {
-	SetResult(c, types.M{
+	setResult(c, types.M{
 		"triggers": job.GetTriggerDefs(),
 		"actions":  job.GetActionDefs(),
 	})
@@ -49,7 +49,7 @@ func (jr *jobsRoute) getJobs(c *gin.Context) {
 			TriggersInfo: triggersInfo,
 		})
 	}
-	SetResult(c, items)
+	setResult(c, items)
 }
 
 func (jr *jobsRoute) createJob(c *gin.Context) {
@@ -73,7 +73,7 @@ func (jr *jobsRoute) createJob(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, addJob)
+	setResult(c, addJob)
 }
 
 func (jr *jobsRoute) updateJob(c *gin.Context) {
@@ -149,7 +149,7 @@ func (jr *jobsRoute) getExecutions(c *gin.Context) {
 		}
 		results = append(results, view)
 	}
-	SetResult(c, newPageResult(results, total, page, pageSize))
+	setResult(c, newPageResult(results, total, page, pageSize))
 }
 
 func (jr *jobsRoute) executeJob(c *gin.Context) {
@@ -164,14 +164,14 @@ func (jr *jobsRoute) executeJob(c *gin.Context) {
 		return
 	}
 
-	translator := GetTranslator(c)
-	e = ExecuteTaskStreaming(c, jr.runner,
+	translator := getTranslator(c)
+	e = executeTaskStreaming(c, jr.runner,
 		func(ctx types.TaskCtx, stream io.Writer) (any, error) {
 			e := jr.jobExecutor.ExecuteJobSync(ctx, jobObj, job.TriggerEvent{}, func(s string) {
 				_, _ = stream.Write([]byte(s + "\n"))
 			})
 			if e != nil {
-				_, _ = stream.Write([]byte(translator.TranslateT(e.Error())))
+				_, _ = stream.Write([]byte(translator.translateT(e.Error())))
 			}
 			return nil, e
 		},
@@ -241,7 +241,7 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 	if len(taskName) > 20 {
 		taskName = taskName[:20]
 	}
-	e = ExecuteTaskStreaming(c, jr.runner,
+	e = executeTaskStreaming(c, jr.runner,
 		func(ctx types.TaskCtx, stream io.Writer) (any, error) {
 			e := job.ExecuteJobCode(ctx, code, nil, job.JobActionDeps{Access: jr.access}, func(s string) {
 				logging.For("job").Infof("[script eval] %s", s)

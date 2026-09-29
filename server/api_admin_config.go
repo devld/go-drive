@@ -38,7 +38,7 @@ func (cr *configRoute) getPathPermissions(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, permissions)
+	setResult(c, permissions)
 }
 
 func (cr *configRoute) savePathPermissions(c *gin.Context) {
@@ -69,7 +69,7 @@ func (cr *configRoute) getAllPathMeta(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, res)
+	setResult(c, res)
 }
 
 func (cr *configRoute) savePathMeta(c *gin.Context) {
@@ -103,7 +103,7 @@ func (cr *configRoute) deletePathMeta(c *gin.Context) {
 }
 
 func (cr *configRoute) savePathMounts(c *gin.Context) {
-	principal := GetPrincipal(c)
+	principal := getPrincipal(c)
 	to, e := getQueryPath(c, "path")
 	if e != nil {
 		_ = c.Error(e)
@@ -184,7 +184,7 @@ func (cr *configRoute) getOptions(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, value)
+	setResult(c, value)
 }
 
 type fileBucketConfigRoute struct {
@@ -197,7 +197,7 @@ func (fbr *fileBucketConfigRoute) getAllBuckets(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, buckets)
+	setResult(c, buckets)
 }
 
 func (fbr *fileBucketConfigRoute) createBucket(c *gin.Context) {
@@ -207,7 +207,7 @@ func (fbr *fileBucketConfigRoute) createBucket(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	if e := CheckPathSegment(bucket.Name, "api.admin.invalid_file_bucket_name"); e != nil {
+	if e := checkPathSegment(bucket.Name, "api.admin.invalid_file_bucket_name"); e != nil {
 		_ = c.Error(e)
 		return
 	}
@@ -215,7 +215,7 @@ func (fbr *fileBucketConfigRoute) createBucket(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, bucket)
+	setResult(c, bucket)
 }
 
 func (fbr *fileBucketConfigRoute) updateBucket(c *gin.Context) {

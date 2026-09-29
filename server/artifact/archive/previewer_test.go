@@ -92,14 +92,14 @@ func archiveTestConfig() common.ArchiveConfig {
 	}
 }
 
-func newTestPreviewer(t *testing.T, config common.ArchiveConfig, tempDir string) *Previewer {
+func newTestPreviewer(t *testing.T, config common.ArchiveConfig, tempDir string) *previewer {
 	t.Helper()
 	files, err := driveutil.NewDriveFS(common.Config{TempDir: tempDir, VFS: common.VFSConfig{CacheItems: 2, CacheSize: "2m"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = files.Dispose() })
-	handler, err := NewPreviewer(artifact.HandlerDeps{
+	handler, err := newPreviewer(artifact.HandlerDeps{
 		Config:  common.Config{TempDir: tempDir, Archive: config},
 		Cache:   &stubArtifactCache{err: errors.New("missing")},
 		DriveFS: files,
@@ -107,10 +107,10 @@ func newTestPreviewer(t *testing.T, config common.ArchiveConfig, tempDir string)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return handler.(*Previewer)
+	return handler.(*previewer)
 }
 
-func produceBody(t *testing.T, previewer *Previewer, ctx types.TaskCtx, request artifact.Request) []byte {
+func produceBody(t *testing.T, previewer *previewer, ctx types.TaskCtx, request artifact.Request) []byte {
 	t.Helper()
 	if ctx == nil {
 		ctx = task.DummyContext()
@@ -167,7 +167,7 @@ func makeZip(t *testing.T) (string, int64) {
 }
 
 func TestPreviewerCachedIndexUsesOwnCachedArtifact(t *testing.T) {
-	previewer := &Previewer{cache: &stubArtifactCache{body: `[{"path":"a.txt","name":"a.txt","type":"file","size":1}]`}}
+	previewer := &previewer{cache: &stubArtifactCache{body: `[{"path":"a.txt","name":"a.txt","type":"file","size":1}]`}}
 	entries, ok := previewer.cachedIndex(&testEntry{path: "demo.zip"})
 	if !ok {
 		t.Fatal("cached index miss")
@@ -482,7 +482,7 @@ func TestDetectFormat(t *testing.T) {
 		{"7z", []byte("7z\xBC\xAF\x27\x1C"), "archives.SevenZip"},
 		{"rar", []byte("Rar!\x1A\x07\x01\x00"), "archives.Rar"},
 	}
-	previewer := &Previewer{}
+	previewer := &previewer{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := previewer.detectFormat(tt.name, bytes.NewReader(tt.data), int64(len(tt.data)))

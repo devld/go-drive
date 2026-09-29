@@ -27,7 +27,7 @@ func InitCommonRoutes(
 	// get configuration
 	r.GET("/config", cr.getConfig)
 
-	authR := r.Group("/", TokenAuth(tokenStore))
+	authR := r.Group("/", tokenAuthMiddleware(tokenStore))
 	// get task
 	authR.GET("/tasks/:id", cr.getTask)
 	// cancel and delete task
@@ -70,7 +70,7 @@ func (cr *commonRoute) getConfig(c *gin.Context) {
 	}
 	configMap["options"] = optionsMap
 
-	SetResult(c, configMap)
+	setResult(c, configMap)
 }
 
 func (cr *commonRoute) getTask(c *gin.Context) {
@@ -82,7 +82,7 @@ func (cr *commonRoute) getTask(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, t)
+	setResult(c, t)
 }
 
 func (cr *commonRoute) cancelAndDeleteTask(c *gin.Context) {

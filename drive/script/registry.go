@@ -22,7 +22,7 @@ func RegisterAllScriptDrives(ctx context.Context, config common.Config, driveReg
 
 	factories := make([]driveutil.DriveFactoryConfig, 0, len(scripts))
 	for _, script := range scripts {
-		staticForm, e := GetDriveScriptConfigForm(ctx, config, script.Name)
+		staticForm, e := getDriveScriptConfigForm(ctx, config, script.Name)
 		if e != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()

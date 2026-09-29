@@ -52,7 +52,7 @@ const (
 
 var errBadSignature = err.NewBadRequestError("bad signature")
 
-func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequired bool) gin.HandlerFunc {
+func signatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequired bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		signature := c.Query(common.SignatureQueryKey)
 		if signature == "" {
@@ -111,7 +111,7 @@ func SignatureAuth(signer *utils.Signer, userDAO *storage.UserDAO, signatureRequ
 			principal.User = user
 		}
 
-		SetPrincipal(c, principal)
+		setPrincipal(c, principal)
 		c.Next()
 	}
 }
@@ -124,23 +124,12 @@ func getQueryPath(c *gin.Context, key string) (string, error) {
 	return utils.CleanPath(path), nil
 }
 
-func MakeSignature(signer *utils.Signer, path, username string, ttl time.Duration) string {
+func makeSignature(signer *utils.Signer, path, username string, ttl time.Duration) string {
 	signature := signer.Sign(path+signaturePathUserSep+username, time.Now().Add(ttl))
 	return signature + "." + utils.Base64URLEncode([]byte(username))
 }
 
-// TokenAuthWithPostParams get token from Header or FormData
-func TokenAuthWithPostParams(tokenStore types.TokenStore) gin.HandlerFunc {
-	return tokenAuth(tokenStore, func(c *gin.Context) string {
-		t := c.PostForm(common.ParamAuth)
-		if t != "" {
-			return t
-		}
-		return c.GetHeader(common.HeaderAuth)
-	})
-}
-
-func TokenAuth(tokenStore types.TokenStore) gin.HandlerFunc {
+func tokenAuthMiddleware(tokenStore types.TokenStore) gin.HandlerFunc {
 	return tokenAuth(tokenStore, func(c *gin.Context) string {
 		return c.GetHeader(common.HeaderAuth)
 	})
@@ -148,7 +137,7 @@ func TokenAuth(tokenStore types.TokenStore) gin.HandlerFunc {
 
 func tokenAuth(tokenStore types.TokenStore, getToken func(*gin.Context) string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if IsAuthenticated(c) {
+		if isAuthenticated(c) {
 			c.Next()
 			return
 		}
@@ -156,7 +145,7 @@ func tokenAuth(tokenStore types.TokenStore, getToken func(*gin.Context) string) 
 		tokenKey := getToken(c)
 		if tokenKey == "" {
 			// no token: browse as an anonymous session
-			SetPrincipal(c, types.Principal{})
+			setPrincipal(c, types.Principal{})
 			c.Next()
 			return
 		}
@@ -169,16 +158,16 @@ func tokenAuth(tokenStore types.TokenStore, getToken func(*gin.Context) string) 
 			return
 		}
 
-		SetToken(c, token.Token)
-		SetPrincipal(c, token.Value)
+		setToken(c, token.Token)
+		setPrincipal(c, token.Value)
 
 		c.Next()
 	}
 }
 
-func BasicAuth(userAuth *auth.UserAuth, realm string, allowAnonymous bool) gin.HandlerFunc {
+func basicAuth(userAuth *auth.UserAuth, realm string, allowAnonymous bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if IsAuthenticated(c) {
+		if isAuthenticated(c) {
 			c.Next()
 			return
 		}
@@ -211,14 +200,14 @@ func BasicAuth(userAuth *auth.UserAuth, realm string, allowAnonymous bool) gin.H
 			return
 		}
 
-		SetPrincipal(c, principal)
+		setPrincipal(c, principal)
 		c.Next()
 	}
 }
 
-func UserGroupRequired(group string) gin.HandlerFunc {
+func userGroupRequired(group string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		principal := GetPrincipal(c)
+		principal := getPrincipal(c)
 		if principal.HasUserGroup(group) {
 			c.Next()
 			return
@@ -230,8 +219,8 @@ func UserGroupRequired(group string) gin.HandlerFunc {
 	}
 }
 
-func AdminGroupRequired() gin.HandlerFunc {
-	return UserGroupRequired(types.AdminUserGroup)
+func adminGroupRequired() gin.HandlerFunc {
+	return userGroupRequired(types.AdminUserGroup)
 }
 
 type flushingWriter struct {
@@ -246,7 +235,7 @@ func (w flushingWriter) Write(data []byte) (int, error) {
 	return n, err
 }
 
-func ExecuteTaskStreaming(c *gin.Context, runner task.Runner,
+func executeTaskStreaming(c *gin.Context, runner task.Runner,
 	runnable func(types.TaskCtx, io.Writer) (any, error), options ...task.Option) error {
 	reader, writer := io.Pipe()
 	defer reader.Close()
@@ -258,7 +247,7 @@ func ExecuteTaskStreaming(c *gin.Context, runner task.Runner,
 		_ = writer.Close()
 		return e
 	}
-	taskJSON, e := json.Marshal(GetTranslator(c).TranslateV(createdTask))
+	taskJSON, e := json.Marshal(getTranslator(c).translateV(createdTask))
 	if e != nil {
 		stopStreamingTask(runner, createdTask.ID)
 		_ = c.AbortWithError(http.StatusInternalServerError, e)
@@ -282,7 +271,7 @@ func stopStreamingTask(runner task.Runner, id string) {
 	}
 }
 
-func ReadRequestBodyToTempFile(c *gin.Context, tempDir string) (*utils.TempFile, int64, error) {
+func readRequestBodyToTempFile(c *gin.Context, tempDir string) (*utils.TempFile, int64, error) {
 	size := utils.ToInt64(c.GetHeader("Content-Length"), -1)
 	file, e := driveutil.CopyReaderToTempFile(task.NewTaskContext(c.Request.Context()), c.Request.Body, tempDir)
 	if e != nil {
@@ -307,7 +296,7 @@ func ReadRequestBodyToTempFile(c *gin.Context, tempDir string) (*utils.TempFile,
 	return utils.NewTempFile(file), size, nil
 }
 
-func GetRequestOrigin(c *gin.Context) string {
+func getRequestOrigin(c *gin.Context) string {
 	host := c.GetHeader("X-Forwarded-Host")
 	if host == "" {
 		host = c.Request.Host
@@ -324,64 +313,64 @@ func GetRequestOrigin(c *gin.Context) string {
 	return protocol + "://" + host
 }
 
-func SetResult(c *gin.Context, result any) {
+func setResult(c *gin.Context, result any) {
 	c.Set(keyResult, result)
 }
 
-func GetResult(c *gin.Context) (any, bool) {
+func getResult(c *gin.Context) (any, bool) {
 	return c.Get(keyResult)
 }
 
-func GetToken(c *gin.Context) string {
+func getToken(c *gin.Context) string {
 	return c.GetString(keyToken)
 }
 
-func SetToken(c *gin.Context, token string) {
+func setToken(c *gin.Context, token string) {
 	c.Set(keyToken, token)
 }
 
-func IsAuthenticated(c *gin.Context) bool {
+func isAuthenticated(c *gin.Context) bool {
 	_, exists := c.Get(keySession)
 	return exists
 }
 
-func SetMessageSource(c *gin.Context, messageSource i18n.MessageSource) {
+func setMessageSource(c *gin.Context, messageSource i18n.MessageSource) {
 	c.Set(keyMessageSource, messageSource)
 }
 
-func GetMessageSource(c *gin.Context) i18n.MessageSource {
+func getMessageSource(c *gin.Context) i18n.MessageSource {
 	if ms, exists := c.Get(keyMessageSource); exists {
 		return ms.(i18n.MessageSource)
 	}
 	return nil
 }
 
-func GetPrincipal(c *gin.Context) types.Principal {
+func getPrincipal(c *gin.Context) types.Principal {
 	if s, exists := c.Get(keySession); exists {
 		return s.(types.Principal)
 	}
 	return types.Principal{}
 }
 
-func SetPrincipal(c *gin.Context, principal types.Principal) {
+func setPrincipal(c *gin.Context, principal types.Principal) {
 	c.Set(keySession, principal)
 }
 
-type Translator struct {
+type translator struct {
 	language      string
 	messageSource i18n.MessageSource
 }
 
-func GetTranslator(c *gin.Context) Translator {
+func getTranslator(c *gin.Context) translator {
 	language, _, _ := strings.Cut(c.GetHeader("Accept-Language"), ",")
-	return Translator{language: language, messageSource: GetMessageSource(c)}
+	return translator{language: language, messageSource: getMessageSource(c)}
 }
 
-func (t Translator) TranslateV(v any) any {
+func (t translator) translateV(v any) any {
 	return i18n.TranslateV(t.language, t.messageSource, v)
 }
 
-func (t Translator) TranslateT(text string) string {
+func (t translator) translateT(text string) string {
 	return i18n.TranslateT(t.language, t.messageSource, text)
 }
 
@@ -389,13 +378,13 @@ func writeJSON(c *gin.Context, code int, v any) {
 	if c.Writer.Written() {
 		return
 	}
-	result := GetTranslator(c).TranslateV(v)
+	result := getTranslator(c).translateV(v)
 	c.JSON(code, result)
 }
 
 var pathSegmentPattern = regexp.MustCompile("^[^/\\\x00:*\"<>|]+$")
 
-func CheckPathSegment(name string, errI18nKey string) error {
+func checkPathSegment(name string, errI18nKey string) error {
 	if name == "" || name == "." || name == ".." || !pathSegmentPattern.MatchString(name) {
 		return err.NewBadRequestError(i18n.T(errI18nKey, name))
 	}

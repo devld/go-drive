@@ -18,7 +18,7 @@ import (
 func TestSignatureAuthBindsQueryPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	signer := utils.NewSigner()
-	signature := MakeSignature(signer, "a/b", "", time.Minute)
+	signature := makeSignature(signer, "a/b", "", time.Minute)
 
 	tests := []struct {
 		name   string
@@ -43,7 +43,7 @@ func TestSignatureAuthBindsQueryPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			called := false
 			router := gin.New()
-			router.GET("/download", SignatureAuth(signer, nil, true), func(*gin.Context) {
+			router.GET("/download", signatureAuth(signer, nil, true), func(*gin.Context) {
 				called = true
 			})
 			router.ServeHTTP(
@@ -73,7 +73,7 @@ func TestCreateChunkUploadAcceptsJSONBody(t *testing.T) {
 	if len(c.Errors) != 0 {
 		t.Fatalf("createChunkUpload() errors = %v", c.Errors)
 	}
-	result, ok := GetResult(c)
+	result, ok := getResult(c)
 	if !ok {
 		t.Fatal("createChunkUpload() did not set a result")
 	}

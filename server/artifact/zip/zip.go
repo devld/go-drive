@@ -23,13 +23,13 @@ import (
 	"time"
 )
 
-// HandlerName is the /artifact handler that packs selected drive entries.
-const HandlerName = "zip"
+// handlerName is the /artifact handler that packs selected drive entries.
+const handlerName = "zip"
 
 // maxSizeOption is the operator setting for the largest zip this handler packs.
 const maxSizeOption = "zip.maxSize"
 
-func (h *Handler) selectionFrom(request artifact.Request) ([]string, string, error) {
+func (h *zipHandler) selectionFrom(request artifact.Request) ([]string, string, error) {
 	if !request.Source.Type().IsDir() {
 		return nil, "", apierr.NewBadRequestError("")
 	}
@@ -40,7 +40,7 @@ func (h *Handler) selectionFrom(request artifact.Request) ([]string, string, err
 	return paths, utils.CleanPath(request.Source.Path()), nil
 }
 
-func (h *Handler) sizeLimit() (int64, string) {
+func (h *zipHandler) sizeLimit() (int64, string) {
 	if h.options == nil {
 		return -1, ""
 	}
@@ -48,30 +48,30 @@ func (h *Handler) sizeLimit() (int64, string) {
 	return value.DataSize(-1), string(value)
 }
 
-type Handler struct {
+type zipHandler struct {
 	ttl         time.Duration
 	concurrency int
 	options     artifact.OptionReader
 }
 
 func init() {
-	artifact.RegisterHandler(HandlerName, NewHandler)
+	artifact.RegisterHandler(handlerName, newHandler)
 }
 
-func NewHandler(deps artifact.HandlerDeps) (artifact.Handler, error) {
+func newHandler(deps artifact.HandlerDeps) (artifact.Handler, error) {
 	ttl := utils.PositiveOr(deps.Config.Archive.PackTTL, common.DefaultArchivePackTTL)
 	concurrency := utils.PositiveOr(deps.Config.Archive.Concurrent, common.DefaultArchiveConcurrent)
-	return &Handler{ttl: ttl, concurrency: concurrency, options: deps.Options}, nil
+	return &zipHandler{ttl: ttl, concurrency: concurrency, options: deps.Options}, nil
 }
 
-func (h *Handler) Spec() artifact.Spec {
+func (h *zipHandler) Spec() artifact.Spec {
 	return artifact.Spec{
 		Caches:      []artifact.CacheSpec{{Policy: artifact.Policy{TTL: h.ttl}}},
 		Concurrency: h.concurrency,
 	}
 }
 
-func (h *Handler) Resolve(request artifact.Request) (artifact.ResolvedRequest, error) {
+func (h *zipHandler) Resolve(request artifact.Request) (artifact.ResolvedRequest, error) {
 	paths, _, err := h.selectionFrom(request)
 	if err != nil {
 		return artifact.ResolvedRequest{}, err
@@ -83,7 +83,7 @@ func (h *Handler) Resolve(request artifact.Request) (artifact.ResolvedRequest, e
 	}, nil
 }
 
-func (h *Handler) Produce(ctx types.TaskCtx, request artifact.Request, out artifact.Writer) error {
+func (h *zipHandler) Produce(ctx types.TaskCtx, request artifact.Request, out artifact.Writer) error {
 	paths, prefix, parseErr := h.selectionFrom(request)
 	if parseErr != nil {
 		return parseErr

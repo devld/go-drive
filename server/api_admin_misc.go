@@ -32,7 +32,7 @@ func (mr *miscRoute) updateSearcherIndexes(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, t)
+	setResult(c, t)
 }
 
 func (mr *miscRoute) cleanupInvalidPathPermissionsAndMounts(c *gin.Context) {
@@ -89,7 +89,7 @@ func (mr *miscRoute) cleanupInvalidPathPermissionsAndMounts(c *gin.Context) {
 	if reloadPermission {
 		_ = mr.access.ReloadPerm()
 	}
-	SetResult(c, n)
+	setResult(c, n)
 }
 
 func (mr *miscRoute) getSystemStats(c *gin.Context) {
@@ -106,7 +106,7 @@ func (mr *miscRoute) getSystemStats(c *gin.Context) {
 	sort.Slice(res, func(i, j int) bool {
 		return res[i].Name < res[j].Name
 	})
-	SetResult(c, res)
+	setResult(c, res)
 }
 
 func (mr *miscRoute) clearDriveCache(c *gin.Context) {

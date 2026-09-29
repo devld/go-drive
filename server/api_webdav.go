@@ -29,7 +29,7 @@ func InitWebdavAccess(router gin.IRouter, config common.Config,
 		lockSys: webdav.NewMemLS(),
 	}
 
-	withAuth := router.Group(config.WebDav.Prefix, BasicAuth(userAuth, "webdav", config.WebDav.AllowAnonymous))
+	withAuth := router.Group(config.WebDav.Prefix, basicAuth(userAuth, "webdav", config.WebDav.AllowAnonymous))
 	withoutAuth := router.Group(config.WebDav.Prefix)
 
 	for _, method := range webdavHTTPMethods {
@@ -50,7 +50,7 @@ type webdavAccess struct {
 }
 
 func (w *webdavAccess) ServeHTTP(c *gin.Context) {
-	principal := GetPrincipal(c)
+	principal := getPrincipal(c)
 
 	drive, e := w.access.GetDrive(principal)
 	if e != nil {

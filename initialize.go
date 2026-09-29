@@ -37,7 +37,7 @@ func initPhase(name string) func(error) error {
 	}
 }
 
-func Initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine, common.Config, error) {
+func initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine, common.Config, error) {
 	started := time.Now()
 	log := logging.For("start")
 	phase := initPhase("config")

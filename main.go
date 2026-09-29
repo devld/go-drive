@@ -14,7 +14,7 @@ import (
 func main() {
 	ch := registry.NewComponentHolder()
 
-	engine, conf, e := Initialize(context.Background(), ch)
+	engine, conf, e := initialize(context.Background(), ch)
 	if e != nil {
 		logging.For("start").Errorf("initialization failed: %v", e)
 		os.Exit(1)

@@ -16,7 +16,7 @@ import (
 )
 
 func TestZipPackTTLDefaultsToOneMinute(t *testing.T) {
-	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{}})
+	handler, e := newHandler(artifact.HandlerDeps{Config: common.Config{}})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -44,13 +44,13 @@ func TestZipProducePacksDriveFiles(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{Archive: common.ArchiveConfig{PackTTL: time.Minute}}})
+	handler, e := newHandler(artifact.HandlerDeps{Config: common.Config{Archive: common.ArchiveConfig{PackTTL: time.Minute}}})
 	if e != nil {
 		t.Fatal(e)
 	}
 	args := `["a.txt"]`
 	var buf bytes.Buffer
-	if e := handler.(*Handler).Produce(ctx, artifact.Request{Source: source, Args: args}, bufferWriter{Buffer: &buf}); e != nil {
+	if e := handler.(*zipHandler).Produce(ctx, artifact.Request{Source: source, Args: args}, bufferWriter{Buffer: &buf}); e != nil {
 		t.Fatal(e)
 	}
 	reader, e := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
@@ -71,12 +71,12 @@ func TestZipProduceReportsTotalWhileWalking(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{}})
+	handler, e := newHandler(artifact.HandlerDeps{Config: common.Config{}})
 	if e != nil {
 		t.Fatal(e)
 	}
 	ctx := task.NewTaskContext(context.Background())
-	if e := handler.(*Handler).Produce(ctx, artifact.Request{Source: source, Args: `["a.txt"]`}, bufferWriter{Buffer: &bytes.Buffer{}}); e != nil {
+	if e := handler.(*zipHandler).Produce(ctx, artifact.Request{Source: source, Args: `["a.txt"]`}, bufferWriter{Buffer: &bytes.Buffer{}}); e != nil {
 		t.Fatal(e)
 	}
 	if ctx.GetTotal() != 1 {
@@ -94,12 +94,12 @@ func TestZipKeepsMemberPathRelative(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{}})
+	handler, e := newHandler(artifact.HandlerDeps{Config: common.Config{}})
 	if e != nil {
 		t.Fatal(e)
 	}
 	args := `["docs/a.txt"]`
-	errProduce := handler.(*Handler).Produce(task.DummyContext(), artifact.Request{Source: source, Args: args}, bufferWriter{Buffer: &bytes.Buffer{}})
+	errProduce := handler.(*zipHandler).Produce(task.DummyContext(), artifact.Request{Source: source, Args: args}, bufferWriter{Buffer: &bytes.Buffer{}})
 	if !err.IsNotFoundError(errProduce) {
 		t.Fatalf("err = %v, want the prefixed path joined under the directory", errProduce)
 	}
@@ -242,11 +242,11 @@ func TestZipOptionLimitsSelection(t *testing.T) {
 		t.Fatal(e)
 	}
 	source, _ := drive.Get(context.Background(), "")
-	handler, e := NewHandler(artifact.HandlerDeps{Config: common.Config{}, Options: fixedOption("1")})
+	handler, e := newHandler(artifact.HandlerDeps{Config: common.Config{}, Options: fixedOption("1")})
 	if e != nil {
 		t.Fatal(e)
 	}
-	errProduce := handler.(*Handler).Produce(task.NewTaskContext(context.Background()), artifact.Request{
+	errProduce := handler.(*zipHandler).Produce(task.NewTaskContext(context.Background()), artifact.Request{
 		Source: source,
 		Args:   `["a.txt"]`,
 	}, bufferWriter{Buffer: &bytes.Buffer{}})

@@ -25,7 +25,7 @@ type drivesRoute struct {
 }
 
 func (dr *drivesRoute) getDriveFactories(c *gin.Context) {
-	SetResult(c, dr.driveRegistry.GetRegisteredDrives())
+	setResult(c, dr.driveRegistry.GetRegisteredDrives())
 }
 
 func (dr *drivesRoute) getDrives(c *gin.Context) {
@@ -41,7 +41,7 @@ func (dr *drivesRoute) getDrives(c *gin.Context) {
 		}
 		drives[i].Config = escapeDriveConfigSecrets(f.ConfigForm, d.Config)
 	}
-	SetResult(c, drives)
+	setResult(c, drives)
 }
 
 func (dr *drivesRoute) createDrive(c *gin.Context) {
@@ -50,7 +50,7 @@ func (dr *drivesRoute) createDrive(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	if e := CheckPathSegment(d.Name, "api.admin.invalid_drive_name"); e != nil {
+	if e := checkPathSegment(d.Name, "api.admin.invalid_drive_name"); e != nil {
 		_ = c.Error(e)
 		return
 	}
@@ -67,7 +67,7 @@ func (dr *drivesRoute) createDrive(c *gin.Context) {
 	if f != nil {
 		saved.Config = escapeDriveConfigSecrets(f.ConfigForm, saved.Config)
 	}
-	SetResult(c, saved)
+	setResult(c, saved)
 }
 
 func (dr *drivesRoute) updateDrive(c *gin.Context) {
@@ -115,7 +115,7 @@ func (dr *drivesRoute) getDriveInitConfig(c *gin.Context) {
 		return
 	}
 	escapeDriveInitConfigSecrets(data)
-	SetResult(c, data)
+	setResult(c, data)
 }
 
 func (dr *drivesRoute) doDriveInit(c *gin.Context) {
@@ -155,7 +155,7 @@ func (sdr *scriptDrivesRoute) listDriveScripts(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, result)
+	setResult(c, result)
 }
 
 func (sdr *scriptDrivesRoute) syncAvailableDrives(c *gin.Context) {
@@ -170,7 +170,7 @@ func (sdr *scriptDrivesRoute) syncAvailableDrives(c *gin.Context) {
 	if sdr.syncTaskID != "" {
 		existing, e := sdr.runner.GetTask(sdr.syncTaskID)
 		if e == nil && !existing.Finished() {
-			SetResult(c, existing)
+			setResult(c, existing)
 			return
 		}
 	}
@@ -183,7 +183,7 @@ func (sdr *scriptDrivesRoute) syncAvailableDrives(c *gin.Context) {
 		return
 	}
 	sdr.syncTaskID = created.ID
-	SetResult(c, created)
+	setResult(c, created)
 }
 
 func (sdr *scriptDrivesRoute) installDrive(c *gin.Context) {
@@ -213,7 +213,7 @@ func (sdr *scriptDrivesRoute) getDriveScriptContent(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	SetResult(c, content)
+	setResult(c, content)
 }
 
 func (sdr *scriptDrivesRoute) saveDriveScriptContent(c *gin.Context) {

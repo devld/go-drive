@@ -123,10 +123,10 @@ func NewRuntimeStat() types.IStatistics {
 
 func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {
 	return func(c *gin.Context) {
-		SetMessageSource(c, ms)
+		setMessageSource(c, ms)
 		c.Next()
 		if len(c.Errors) == 0 {
-			result, exists := GetResult(c)
+			result, exists := getResult(c)
 			if exists {
 				writeJSON(c, http.StatusOK, result)
 			}
