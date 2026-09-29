@@ -173,7 +173,7 @@ type JobExecution struct {
 	CompletedAt uint64 `gorm:"column:completed_at;type:uint" json:"completedAt"`
 	Status      string `gorm:"column:status;not null;type:string" json:"status"`
 	Logs        string `gorm:"column:logs;type:string" json:"logs"`
-	ErrorMsg    string `gorm:"column:error_msg;type:text" json:"errorMsg"`
+	ErrorMsg    string `gorm:"column:error_msg;type:text" json:"errorMsg" i18n:""`
 }
 
 func UserSubject(username string) string {

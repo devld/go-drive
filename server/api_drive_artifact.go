@@ -112,7 +112,7 @@ func (dr *driveRoute) postArtifact(c *gin.Context) {
 		return
 	}
 	c.Header("Location", fmt.Sprintf("%s/tasks/%s", dr.config.APIPath, result.Task.ID))
-	c.JSON(http.StatusAccepted, result.Task)
+	writeJSON(c, http.StatusAccepted, result.Task)
 }
 
 func streamArtifact(c *gin.Context, file *artifact.Artifact) {

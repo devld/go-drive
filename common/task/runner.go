@@ -501,7 +501,7 @@ func finishTask(w *taskCtx, result any, taskErr error) {
 			w.task.Status = Canceled
 		} else {
 			w.task.Status = Error
-			w.task.Error = jsonError{taskErr}
+			w.task.Error = jsonError{Message: taskErr.Error(), Cause: taskErr}
 		}
 	} else {
 		w.task.Status = Done

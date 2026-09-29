@@ -6,6 +6,7 @@ import (
 	"errors"
 	"go-drive/common"
 	err "go-drive/common/errors"
+	"go-drive/common/i18n"
 	"go-drive/common/types"
 	"strings"
 	"testing"
@@ -301,5 +302,57 @@ func TestFailedTaskJSONUsesPublicErrorPayload(t *testing.T) {
 	}
 	if code, _ := public["code"].(float64); int(code) != want.Code() {
 		t.Fatalf("public code = %#v", public["code"])
+	}
+}
+
+type taskTestMessages struct{}
+
+func (taskTestMessages) Translate(lang, key string, args ...string) string {
+	if lang == "zh-CN" && key == "move_across_not_supported" {
+		return "不支持跨 Drive 移动文件"
+	}
+	if key == "move_across_not_supported" {
+		return "Move across drives is not supported"
+	}
+	return key
+}
+
+func TestFailedTaskErrorTranslatesInResponse(t *testing.T) {
+	runner := newTestRunner(t, 1)
+	want := err.NewNotAllowedMessageError(i18n.T("move_across_not_supported"))
+	created, e := runner.ExecuteAndWait(context.Background(), func(types.TaskCtx) (any, error) {
+		return nil, want
+	}, time.Second)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var public err.NotAllowedError
+	if !errors.As(created.Error, &public) || public.Code() != want.Code() {
+		t.Fatalf("task error no longer wraps original error: %v", created.Error)
+	}
+	for _, test := range []struct{ lang, message string }{
+		{"zh-CN", "不支持跨 Drive 移动文件"},
+		{"en-US", "Move across drives is not supported"},
+	} {
+		localized := i18n.TranslateV(test.lang, taskTestMessages{}, created)
+		payload, e := json.Marshal(localized)
+		if e != nil {
+			t.Fatal(e)
+		}
+		var body struct {
+			Error struct {
+				Message string `json:"message"`
+				Code    int    `json:"code"`
+			} `json:"error"`
+		}
+		if e := json.Unmarshal(payload, &body); e != nil {
+			t.Fatal(e)
+		}
+		if body.Error.Message != test.message || body.Error.Code != want.Code() {
+			t.Fatalf("%s error = %#v, want message %q and code %d", test.lang, body.Error, test.message, want.Code())
+		}
+	}
+	if created.Error.Error() != want.Error() {
+		t.Fatalf("response translation changed task error: %q", created.Error.Error())
 	}
 }

@@ -306,6 +306,7 @@ jobs:
     add_text: Add operation
     ignore_err: Ignore errors
     ignore_err_desc: When this operation fails, ignore the error and continue down the line
+    execution_error_at_step: "Execution error at step {{ 1 }}: {{ 2 }}"
   script:
     name: Script
     desc: Execute JavaScript

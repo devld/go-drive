@@ -5,7 +5,6 @@ import (
 	"go-drive/common"
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
-	"go-drive/common/i18n"
 	"go-drive/common/logging"
 	"go-drive/common/task"
 	"go-drive/common/types"
@@ -35,10 +34,9 @@ func InitFileBucketRoutes(
 	router gin.IRouter,
 	config common.Config,
 	access *drive.Access,
-	fileBucketDAO *storage.FileBucketDAO,
-	messageSource i18n.MessageSource) error {
+	fileBucketDAO *storage.FileBucketDAO) error {
 
-	fr := &fileBucketRoute{config, access, fileBucketDAO, messageSource}
+	fr := &fileBucketRoute{config, access, fileBucketDAO}
 
 	r := router.Group("/f/:name", fr._getBucketDrive)
 
@@ -57,7 +55,6 @@ type fileBucketRoute struct {
 	config        common.Config
 	access        *drive.Access
 	fileBucketDAO *storage.FileBucketDAO
-	messageSource i18n.MessageSource
 }
 
 func (fr *fileBucketRoute) _getBucketDrive(c *gin.Context) {
@@ -266,7 +263,7 @@ func (fr *fileBucketRoute) get(c *gin.Context) {
 
 func (fr *fileBucketRoute) abortWithError(c *gin.Context, e error) {
 	if ge, ok := e.(err.Error); ok {
-		fr.abortWithMessage(c, ge.Code(), TranslateV(c, fr.messageSource, ge.Error()).(string))
+		fr.abortWithMessage(c, ge.Code(), GetTranslator(c).TranslateT(ge.Error()))
 		return
 	}
 	logging.For("f-bkt").Errorf("unknown error: %v", e)

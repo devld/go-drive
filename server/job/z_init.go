@@ -2,10 +2,10 @@ package job
 
 import (
 	"errors"
-	"fmt"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
 	"go-drive/common/types"
+	"strconv"
 )
 
 // executes after all other jobs registered
@@ -55,7 +55,7 @@ func init() {
 				delete(op, "_ignoreErr")
 				e := actionDef.Do(ctx, op, action, logFn)
 				if e != nil && !ignoreError {
-					return fmt.Errorf("flow execution error at step %d: %s", i+1, e.Error())
+					return errors.New(t("execution_error_at_step", strconv.Itoa(i+1), e.Error()))
 				}
 				if e != nil {
 					logging.For("job").Warnf("ignored error at step %d: %s", i+1, e.Error())

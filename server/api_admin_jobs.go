@@ -164,15 +164,14 @@ func (jr *jobsRoute) executeJob(c *gin.Context) {
 		return
 	}
 
-	w := c.Writer
+	translator := GetTranslator(c)
 	e = ExecuteTaskStreaming(c, jr.runner,
-		func(ctx types.TaskCtx) (any, error) {
+		func(ctx types.TaskCtx, stream io.Writer) (any, error) {
 			e := jr.jobExecutor.ExecuteJobSync(ctx, jobObj, job.TriggerEvent{}, func(s string) {
-				_, _ = w.Write([]byte(s + "\n"))
-				w.Flush()
+				_, _ = stream.Write([]byte(s + "\n"))
 			})
 			if e != nil {
-				w.Write([]byte(e.Error()))
+				_, _ = stream.Write([]byte(translator.TranslateT(e.Error())))
 			}
 			return nil, e
 		},
@@ -238,20 +237,18 @@ func (jr *jobsRoute) scriptEval(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	w := c.Writer
 	taskName := regexp.MustCompile(`\s+`).ReplaceAllString(strings.TrimSpace(string(code)), " ")
 	if len(taskName) > 20 {
 		taskName = taskName[:20]
 	}
 	e = ExecuteTaskStreaming(c, jr.runner,
-		func(ctx types.TaskCtx) (any, error) {
+		func(ctx types.TaskCtx, stream io.Writer) (any, error) {
 			e := job.ExecuteJobCode(ctx, code, nil, job.JobActionDeps{Access: jr.access}, func(s string) {
 				logging.For("job").Infof("[script eval] %s", s)
-				_, _ = w.Write([]byte(s + "\n"))
-				w.Flush()
+				_, _ = stream.Write([]byte(s + "\n"))
 			})
 			if e != nil {
-				_, _ = w.Write([]byte("ERROR: " + s.FormatError(e)))
+				_, _ = stream.Write([]byte("ERROR: " + s.FormatError(e)))
 			}
 			return nil, e
 		},

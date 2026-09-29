@@ -42,17 +42,22 @@ type Task struct {
 	Group string `json:"group"`
 }
 
-type jsonError struct{ error }
+type jsonError struct {
+	Message string `i18n:""`
+	Cause   error
+}
+
+func (e jsonError) Error() string { return e.Message }
 
 func (e jsonError) MarshalJSON() ([]byte, error) {
 	payload := types.M{"message": e.Error()}
-	if public, ok := errors.AsType[err.Error](e.error); ok {
+	if public, ok := errors.AsType[err.Error](e.Cause); ok {
 		payload["code"] = public.Code()
 	}
 	return json.Marshal(payload)
 }
 
-func (e jsonError) Unwrap() error { return e.error }
+func (e jsonError) Unwrap() error { return e.Cause }
 
 func (t Task) Finished() bool {
 	return t.Status == Done || t.Status == Error || t.Status == Canceled

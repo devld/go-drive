@@ -98,7 +98,7 @@ func InitServer(config common.Config,
 		return nil, e
 	}
 
-	if e := InitFileBucketRoutes(router, config, driveAccess, fileBucketDAO, messageSource); e != nil {
+	if e := InitFileBucketRoutes(router, config, driveAccess, fileBucketDAO); e != nil {
 		return nil, e
 	}
 
@@ -128,7 +128,7 @@ func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {
 		if len(c.Errors) == 0 {
 			result, exists := GetResult(c)
 			if exists {
-				writeJSON(c, ms, http.StatusOK, result)
+				writeJSON(c, http.StatusOK, result)
 			}
 			return
 		}
@@ -143,7 +143,7 @@ func apiResultHandler(ms i18n.MessageSource) func(*gin.Context) {
 		if red, ok := e.Err.(err.ErrorWithData); ok {
 			result["data"] = red.Data()
 		}
-		writeJSON(c, ms, code, result)
+		writeJSON(c, code, result)
 	}
 }
 
@@ -172,14 +172,6 @@ func configureGinLogging() {
 	gin.DebugPrintRouteFunc = func(method, path, handler string, handlers int) {
 		ginLog.Debugf("%-6s %-25s --> %s (%d handlers)", method, path, handler, handlers)
 	}
-}
-
-func writeJSON(c *gin.Context, ms i18n.MessageSource, code int, v any) {
-	if c.Writer.Written() {
-		return
-	}
-	result := TranslateV(c, ms, v)
-	c.JSON(code, result)
 }
 
 func Logger() gin.HandlerFunc {

@@ -306,6 +306,7 @@ jobs:
     add_text: 작업 추가
     ignore_err: 오류 무시
     ignore_err_desc: 이 작업이 실패하면 오류를 무시하고 다음 작업을 계속 진행합니다
+    execution_error_at_step: "{{ 1 }}번째 단계 실행 오류: {{ 2 }}"
   script:
     name: 스크립트
     desc: JavaScript를 실행합니다

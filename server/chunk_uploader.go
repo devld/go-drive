@@ -115,7 +115,7 @@ func (c *ChunkUploader) CompleteUpload(id string, ctx types.TaskCtx) (*os.File, 
 			return nil, e
 		}
 		if !exists {
-			return nil, err.NewNotAllowedMessageError(i18n.T("missing_chunks"))
+			return nil, err.NewNotAllowedMessageError(i18n.T("api.chunk_uploader.missing_chunks"))
 		}
 	}
 	file, e := os.OpenFile(c.getFile(upload), os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)

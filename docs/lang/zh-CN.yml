@@ -306,6 +306,7 @@ jobs:
     add_text: 添加操作
     ignore_err: 忽略错误
     ignore_err_desc: 当这个操作执行失败时，忽略错误继续向下执行
+    execution_error_at_step: "第 {{ 1 }} 步执行失败：{{ 2 }}"
   script:
     name: 脚本
     desc: 执行 JavaScript 脚本

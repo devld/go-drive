@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"go-drive/common/utils"
 	"go-drive/server/auth"
 	"go-drive/storage"
+	"io"
 	"mime"
 	"net/http"
 	"os"
@@ -232,36 +234,52 @@ func AdminGroupRequired() gin.HandlerFunc {
 	return UserGroupRequired(types.AdminUserGroup)
 }
 
-func ExecuteTaskStreaming(c *gin.Context, runner task.Runner, runnable task.Runnable, options ...task.Option) error {
-	completeChan := make(chan struct{})
-	streamReady := make(chan struct{})
+type flushingWriter struct {
+	writer gin.ResponseWriter
+}
+
+func (w flushingWriter) Write(data []byte) (int, error) {
+	n, err := w.writer.Write(data)
+	if n > 0 {
+		w.writer.Flush()
+	}
+	return n, err
+}
+
+func ExecuteTaskStreaming(c *gin.Context, runner task.Runner,
+	runnable func(types.TaskCtx, io.Writer) (any, error), options ...task.Option) error {
+	reader, writer := io.Pipe()
+	defer reader.Close()
 	createdTask, e := runner.Execute(func(ctx types.TaskCtx) (any, error) {
-		<-streamReady
-		defer close(completeChan)
-		return runnable(ctx)
+		defer writer.Close()
+		return runnable(ctx, writer)
 	}, options...)
 	if e != nil {
+		_ = writer.Close()
 		return e
 	}
-	ms := GetMessageSource(c)
-	taskJSON, e := json.Marshal(TranslateV(c, ms, createdTask))
+	taskJSON, e := json.Marshal(GetTranslator(c).TranslateV(createdTask))
 	if e != nil {
+		stopStreamingTask(runner, createdTask.ID)
 		_ = c.AbortWithError(http.StatusInternalServerError, e)
 		return nil
 	}
 	c.Header("X-Accel-Buffering", "no") // for nginx to not buffer the response
 	c.Header(common.ResponseHeaderKey, string(taskJSON))
-	streamReady <- struct{}{}
+	stopWatching := context.AfterFunc(c.Request.Context(), func() { _ = reader.Close() })
+	defer stopWatching()
 
-	select {
-	case <-c.Request.Context().Done():
-		authLog.Debugf("streaming task canceled by request id=%s", createdTask.ID)
-		if _, stopErr := runner.StopTask(createdTask.ID); stopErr != nil && !errors.Is(stopErr, task.ErrorNotFound) {
-			logging.For("task").Warnf("failed to stop canceled streaming task id=%s: %v", createdTask.ID, stopErr)
-		}
-	case <-completeChan:
+	_, copyErr := io.Copy(flushingWriter{c.Writer}, reader)
+	if copyErr != nil || c.Request.Context().Err() != nil {
+		stopStreamingTask(runner, createdTask.ID)
 	}
 	return nil
+}
+
+func stopStreamingTask(runner task.Runner, id string) {
+	if _, err := runner.StopTask(id); err != nil && !errors.Is(err, task.ErrorNotFound) {
+		logging.For("task").Warnf("failed to stop canceled streaming task id=%s: %v", id, err)
+	}
 }
 
 func ReadRequestBodyToTempFile(c *gin.Context, tempDir string) (*utils.TempFile, int64, error) {
@@ -349,13 +367,30 @@ func SetPrincipal(c *gin.Context, principal types.Principal) {
 	c.Set(keySession, principal)
 }
 
-func TranslateV(c *gin.Context, ms i18n.MessageSource, v any) any {
-	lang := c.GetHeader("accept-language")
-	i := strings.IndexByte(lang, ',')
-	if i >= 0 {
-		lang = lang[:i]
+type Translator struct {
+	language      string
+	messageSource i18n.MessageSource
+}
+
+func GetTranslator(c *gin.Context) Translator {
+	language, _, _ := strings.Cut(c.GetHeader("Accept-Language"), ",")
+	return Translator{language: language, messageSource: GetMessageSource(c)}
+}
+
+func (t Translator) TranslateV(v any) any {
+	return i18n.TranslateV(t.language, t.messageSource, v)
+}
+
+func (t Translator) TranslateT(text string) string {
+	return i18n.TranslateT(t.language, t.messageSource, text)
+}
+
+func writeJSON(c *gin.Context, code int, v any) {
+	if c.Writer.Written() {
+		return
 	}
-	return i18n.TranslateV(lang, ms, v)
+	result := GetTranslator(c).TranslateV(v)
+	c.JSON(code, result)
 }
 
 var pathSegmentPattern = regexp.MustCompile("^[^/\\\x00:*\"<>|]+$")
