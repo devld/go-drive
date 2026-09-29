@@ -75,6 +75,19 @@ func (d NotAllowedError) Data() types.M {
 	return d.data
 }
 
+// ConflictError 409
+type ConflictError struct {
+	msg string
+}
+
+func (c ConflictError) Error() string {
+	return c.msg
+}
+
+func (c ConflictError) Code() int {
+	return http.StatusConflict
+}
+
 // PermissionDeniedError 403
 type PermissionDeniedError struct {
 	msg string
@@ -198,6 +211,10 @@ func NewPermissionDeniedError(msg string) PermissionDeniedError {
 
 func NewNotAllowedMessageError(msg string) NotAllowedError {
 	return NotAllowedError{msg, nil}
+}
+
+func NewConflictError(msg string) ConflictError {
+	return ConflictError{msg}
 }
 
 func NewNotAllowedMessageDataError(msg string, data types.M) NotAllowedError {

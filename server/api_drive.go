@@ -433,7 +433,7 @@ func (dr *driveRoute) uploadChunk(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
-	if e := dr.chunkUploader.ChunkUpload(id, seq, c.Request.Body); e != nil {
+	if e := dr.chunkUploader.ChunkUpload(c.Request.Context(), id, seq, c.Request.Body); e != nil {
 		_ = c.Error(e)
 	}
 }

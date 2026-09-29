@@ -36,13 +36,6 @@ api:
     copy_to_child_path_not_allowed: 不允许复制到子路径
     invalid_file_size: 无效的文件大小
     invalid_size_or_chunk_size: 无效的文件大小或分片大小
-  chunk_uploader:
-    invalid_file_size: 无效的文件大小
-    invalid_chunk_seq: 无效的分片序号
-    chunk_size_cannot_less_than: 分片不可小于 {{ 1 }}
-    expected__bytes_but__bytes: 预期读取 {{ 1 }} bytes, 但实际读取了 {{ 2 }} bytes
-    missing_chunks: 缺失分片
-    invalid_upload_id: 无效的分片上传
   db_token:
     invalid_token: 无效的 token
   permission_wrapper:

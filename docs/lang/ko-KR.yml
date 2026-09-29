@@ -36,13 +36,6 @@ api:
     copy_to_child_path_not_allowed: 하위 경로로 복사하거나 이동할 수 없습니다
     invalid_file_size: 잘못된 파일 크기입니다
     invalid_size_or_chunk_size: 잘못된 크기 또는 청크 크기입니다
-  chunk_uploader:
-    invalid_file_size: 잘못된 파일 크기입니다
-    invalid_chunk_seq: 잘못된 청크 순서입니다
-    chunk_size_cannot_less_than: 청크 크기는 {{ 1 }}보다 작을 수 없습니다
-    expected__bytes_but__bytes: "{{ 1 }} 바이트를 예상했지만 {{ 2 }} 바이트를 받았습니다"
-    missing_chunks: 누락된 청크가 있습니다
-    invalid_upload_id: 잘못된 업로드 ID입니다
   db_token:
     invalid_token: 잘못된 토큰입니다
   permission_wrapper:

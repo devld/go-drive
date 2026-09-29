@@ -138,6 +138,7 @@ func initialize(ctx context.Context, ch *registry.ComponentsHolder) (*gin.Engine
 	if err := phase(err); err != nil {
 		return nil, config, err
 	}
+	ch.Add(chunkUploader)
 	groupDAO := storage.NewGroupDAO(db, userDAO)
 	jobDAO := storage.NewJobDAO(db)
 	fileBucketDAO := storage.NewFileBucketDAO(db)

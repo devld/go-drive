@@ -36,13 +36,6 @@ api:
     copy_to_child_path_not_allowed: Copy or move to child path is not allowed
     invalid_file_size: Invalid file size
     invalid_size_or_chunk_size: Invalid size or chunk_size
-  chunk_uploader:
-    invalid_file_size: Invalid file size
-    invalid_chunk_seq: Invalid chunk seq
-    chunk_size_cannot_less_than: Chunk size cannot be less than {{ 1 }}
-    expected__bytes_but__bytes: Expect {{ 1 }} bytes, but {{ 2 }} bytes received
-    missing_chunks: Missing chunks
-    invalid_upload_id: Invalid upload id
   db_token:
     invalid_token: Invalid token
   permission_wrapper:
