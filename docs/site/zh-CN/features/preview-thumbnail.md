@@ -54,7 +54,7 @@ ZIP、7z 和 RAR 可在浏览器中打开。你可以浏览其中的目录、下
 - `text`：读取文本开头生成 SVG。
 - `shell`：运行外部程序，输出缩略图到 stdout。
 
-部分 Drive 会在条目上设置 `hasThumbnail`（OneDrive、Google Drive，以及实现了 `getThumbnail` 的脚本 Drive）。即使扩展名不在 handler 列表中，界面也会请求缩略图；处理器会调用 `Entry.Thumbnail`，而不走本地 image、text 或 shell handler。
+部分存储适配器会在条目上设置 `hasThumbnail`（OneDrive、Google Drive，以及实现了 `getThumbnail` 的脚本存储扩展）。即使扩展名不在 handler 列表中，界面也会请求缩略图；处理器会调用 `Entry.Thumbnail`，而不走本地 image、text 或 shell handler。
 
 官方 Docker 镜像包含：
 

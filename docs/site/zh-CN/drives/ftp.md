@@ -1,12 +1,12 @@
 ---
-title: FTP Drive
+title: FTP 存储
 description: 将 go-drive 连接到 FTP 服务器，并配置账号、远端根路径、超时、并发和目录缓存。
 lang: zh-CN
 translation_key: drive-ftp
 source_hash: 441e5fecb0efef288cbc05d8843b7de098a7a50d872a489a9874493ce31eac08
 ---
 
-# FTP Drive
+# FTP 存储
 
 | 字段 | 说明 | 默认值 |
 | --- | --- | --- |
@@ -18,6 +18,6 @@ source_hash: 441e5fecb0efef288cbc05d8843b7de098a7a50d872a489a9874493ce31eac08
 | 超时 | 连接/操作超时，Go duration 格式 | `5s` |
 | 缓存 TTL | 目录项缓存时间；不大于零关闭缓存 | 关闭 |
 
-FTP 不提供传输加密，公网环境优先使用 SFTP。文件上传、下载和通用复制会经过 go-drive；同一 FTP Drive 内移动/重命名使用远端 rename。
+FTP 不提供传输加密，公网环境优先使用 SFTP。文件上传、下载和通用复制会经过 go-drive；同一 FTP 存储项内移动/重命名使用远端 rename。
 
-如果服务器限制连接数，将并发数调低。出现列表内容陈旧时清除 Drive 缓存或缩短缓存 TTL。
+如果服务器限制连接数，将并发数调低。出现列表内容陈旧时清除该存储项的缓存或缩短缓存 TTL。

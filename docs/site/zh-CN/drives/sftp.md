@@ -1,12 +1,12 @@
 ---
-title: SFTP Drive
+title: SFTP 存储
 description: 使用密码或 SSH 私钥将 go-drive 连接到 SFTP 服务器，并配置主机密钥校验、根路径和连接参数。
 lang: zh-CN
 translation_key: drive-sftp
 source_hash: 5d2ce79e031982ef842ec7de066aac1dbf021beda62ed4d431aefcb6fd8817c6
 ---
 
-# SFTP Drive
+# SFTP 存储
 
 | 字段 | 说明 | 默认值 |
 | --- | --- | --- |

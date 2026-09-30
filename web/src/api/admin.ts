@@ -67,6 +67,16 @@ export function getDrives() {
   return http.get<Drive[]>('/admin/drives')
 }
 
+export interface DriveReloadStatus {
+  needsReload: boolean
+  reloading: boolean
+  task?: Task<void>
+}
+
+export function getDriveReloadStatus() {
+  return http.get<DriveReloadStatus>('/admin/drives/reload')
+}
+
 export function createDrive(drive: Partial<Drive>) {
   return http.post<Drive>('/admin/drives', drive)
 }
@@ -88,7 +98,7 @@ export function initDrive(name: string, data: O<string>) {
 }
 
 export function reloadDrives() {
-  return http.post<void>('/admin/drives/reload')
+  return http.post<Task<void>>('/admin/drives/reload')
 }
 
 export function getPermissions(path: string) {

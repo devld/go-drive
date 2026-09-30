@@ -70,11 +70,16 @@ func InitAdminRoutes(
 		driveDAO:      driveDAO,
 		driveDataDAO:  driveDataDAO,
 		rootDrive:     rootDrive,
+		runner:        runner,
 	}
 	// get drive factories
 	r.GET("/drive-factories", dr.getDriveFactories)
 	// get drives
 	r.GET("/drives", dr.getDrives)
+	// get drive reload status
+	r.GET("/drives/reload", dr.getDriveReloadStatus)
+	// reload drives
+	r.POST("/drives/reload", dr.reloadDrives)
 	// add drive
 	r.POST("/drives", dr.createDrive)
 	// update drive
@@ -85,8 +90,6 @@ func InitAdminRoutes(
 	r.POST("/drives/:name/init-config", dr.getDriveInitConfig)
 	// init drive
 	r.POST("/drives/:name/init", dr.doDriveInit)
-	// reload drives
-	r.POST("/drives/reload", dr.reloadDrives)
 
 	cr := &configRoute{
 		access:        access,

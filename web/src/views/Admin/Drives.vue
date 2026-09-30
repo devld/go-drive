@@ -15,10 +15,17 @@
           icon="refresh"
           :title="$t('p.admin.drive.reload_tip')"
           :loading="reloading"
+          :disabled="reloading"
           @click="reloadDrives"
         >
           {{ $t('p.admin.drive.reload_drives') }}
+          <template v-if="reloadProgress" #loading>
+            {{ reloadProgress }}
+          </template>
         </SimpleButton>
+        <span v-if="reloadRequired" class="reload-required-tip" role="status">
+          {{ $t('p.admin.drive.reload_required_tip') }}
+        </span>
       </div>
       <table class="simple-table">
         <colgroup>
@@ -157,6 +164,7 @@ import {
   createDrive,
   deleteDrive as deleteDriveApi,
   getDrives,
+  getDriveReloadStatus,
   reloadDrives as reloadDrivesApi,
   updateDrive,
   getDriveInitConfig,
@@ -166,10 +174,16 @@ import {
 import { alert, confirm, loading } from '@/utils/ui-utils'
 
 import OAuthConfigure from './drive-configure/OAuth.vue'
-import { mapOf } from '@/utils'
+import { mapOf, taskDone } from '@/utils'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from '@go-drive/i18n'
-import { Drive, DriveFactoryConfig, DriveInitConfig, FormItem } from '@/types'
+import {
+  Drive,
+  DriveFactoryConfig,
+  DriveInitConfig,
+  FormItem,
+  Task,
+} from '@/types'
 
 const { t } = useI18n()
 
@@ -180,7 +194,10 @@ const saving = ref(false)
 const driveInit = ref<DriveInitConfig | null>(null)
 const driveInitForm = ref<O<string>>({})
 const reloading = ref(false)
+const reloadProgress = ref('')
+const reloadRequired = ref(false)
 const driveFactories = ref<DriveFactoryConfig[]>([])
+let watchingReloadTask = false
 
 const driveFactoriesMap = computed(() =>
   mapOf(driveFactories.value, (f) => f.type)
@@ -216,10 +233,38 @@ const baseForm = computed<FormItem[]>(() => [
   },
 ])
 
-const showReloadingTips = () => {
-  if (!localStorage.getItem('drive-reloading-tips')) {
-    alert(t('p.admin.drive.reload_tips'))
-    localStorage.setItem('drive-reloading-tips', '1')
+const watchReloadTask = async (task: Task<void>) => {
+  if (watchingReloadTask) return
+  watchingReloadTask = true
+  reloading.value = true
+  reloadProgress.value = ''
+  try {
+    await taskDone(task, ({ progress }) => {
+      reloadProgress.value = progress
+        ? `${progress.loaded} / ${progress.total || '-'}`
+        : ''
+    })
+  } catch (e: any) {
+    alert(e.message)
+  } finally {
+    watchingReloadTask = false
+    try {
+      applyReloadStatus(await getDriveReloadStatus())
+    } catch (e: any) {
+      if (!watchingReloadTask) reloading.value = false
+      alert(e.message)
+    }
+  }
+}
+
+const applyReloadStatus = (
+  status: Awaited<ReturnType<typeof getDriveReloadStatus>>
+) => {
+  reloadRequired.value = status.needsReload
+  if (status.reloading && status.task) {
+    void watchReloadTask(status.task)
+  } else if (!watchingReloadTask) {
+    reloading.value = status.reloading
   }
 }
 
@@ -233,9 +278,14 @@ const resetDriveInit = () => {
 
 const loadDrives = async () => {
   try {
-    const factories = await getDriveFactories()
+    const [factories, currentDrives, reloadStatus] = await Promise.all([
+      getDriveFactories(),
+      getDrives(),
+      getDriveReloadStatus(),
+    ])
     driveFactories.value = factories
-    drives.value = await getDrives()
+    drives.value = currentDrives
+    applyReloadStatus(reloadStatus)
   } catch (e: any) {
     alert(e.message)
   }
@@ -311,8 +361,6 @@ const saveDrive = async () => {
       await createDrive(d)
     }
     edit.value = true
-
-    showReloadingTips()
   } catch (e: any) {
     alert(e.message)
     return
@@ -359,7 +407,7 @@ const saveDriveConfig = async () => {
   loading(true)
   try {
     await initDrive(drive.value!.name, driveInitForm.value)
-    showReloadingTips()
+    applyReloadStatus(await getDriveReloadStatus())
   } catch (e: any) {
     alert(e.message)
     return
@@ -371,12 +419,14 @@ const saveDriveConfig = async () => {
 
 const reloadDrives = async () => {
   reloading.value = true
+  reloadProgress.value = ''
   try {
-    await reloadDrivesApi()
+    await watchReloadTask(await reloadDrivesApi())
   } catch (e: any) {
     alert(e.message)
-  } finally {
     reloading.value = false
+  } finally {
+    if (!watchingReloadTask) reloading.value = false
   }
 }
 
@@ -451,10 +501,19 @@ watch(
 
   .actions {
     margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
 
     .add-button {
       display: none;
     }
+  }
+
+  .reload-required-tip {
+    color: var(--color-warning);
+    font-size: 14px;
   }
 
   .user-item {

@@ -29,9 +29,9 @@ oauth-redirect-uri: https://drive.example.com/oauth_callback
 
 Google 控制台中的 URI 必须与配置完全一致。
 
-## 添加 Drive
+## 添加 Google Drive 存储
 
-填写 Client ID、Client Secret 和缓存 TTL，完成 OAuth 后选择个人盘或共享盘，保存并重新加载 Drive。
+填写 Client ID、Client Secret 和缓存 TTL，完成 OAuth 后选择个人云端硬盘或共享云端硬盘，保存并重新加载存储配置。
 
 缓存 TTL 默认 `4h`；外部直接修改文件后可清除缓存。Google 文件缩略图由 go-drive 拉取并写入缩略图缓存。
 

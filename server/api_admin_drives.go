@@ -13,6 +13,8 @@ import (
 	"go-drive/storage"
 	"sort"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +24,32 @@ type drivesRoute struct {
 	driveDAO      *storage.DriveDAO
 	driveDataDAO  *storage.DriveDataDAO
 	rootDrive     *drive.RootDrive
+	runner        task.Runner
+	reloadSubmit  sync.Mutex
+	reloadState   driveReloadState
+}
+
+const driveReloadTaskGroup = "admin/drive-reload"
+
+type driveReloadState struct {
+	version         atomic.Uint64 // latest saved drive configuration version
+	reloadedVersion atomic.Uint64 // latest version applied by a successful reload
+}
+
+func (s *driveReloadState) markDirty() {
+	s.version.Add(1)
+}
+
+func (s *driveReloadState) needsReload() bool {
+	return s.version.Load() != s.reloadedVersion.Load()
+}
+
+func (s *driveReloadState) markReloaded(version uint64) {
+	for current := s.reloadedVersion.Load(); version > current; current = s.reloadedVersion.Load() {
+		if s.reloadedVersion.CompareAndSwap(current, version) {
+			return
+		}
+	}
 }
 
 func (dr *drivesRoute) getDriveFactories(c *gin.Context) {
@@ -44,6 +72,36 @@ func (dr *drivesRoute) getDrives(c *gin.Context) {
 	setResult(c, drives)
 }
 
+func (dr *drivesRoute) getDriveReloadStatus(c *gin.Context) {
+	activeTask, e := dr.getActiveDriveReloadTask()
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	result := types.M{
+		"needsReload": dr.reloadState.needsReload(),
+		"reloading":   activeTask != nil,
+	}
+	if activeTask != nil {
+		result["task"] = activeTask
+	}
+	setResult(c, result)
+}
+
+// getActiveDriveReloadTask returns the pending or running reload task, if any.
+func (dr *drivesRoute) getActiveDriveReloadTask() (*task.Task, error) {
+	tasks, e := dr.runner.GetTasks(driveReloadTaskGroup)
+	if e != nil {
+		return nil, e
+	}
+	for i := range tasks {
+		if !tasks[i].Finished() {
+			return &tasks[i], nil
+		}
+	}
+	return nil, nil
+}
+
 func (dr *drivesRoute) createDrive(c *gin.Context) {
 	d := types.Drive{}
 	if e := c.Bind(&d); e != nil {
@@ -64,6 +122,7 @@ func (dr *drivesRoute) createDrive(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
+	dr.reloadState.markDirty()
 	if f != nil {
 		saved.Config = escapeDriveConfigSecrets(f.ConfigForm, saved.Config)
 	}
@@ -93,6 +152,7 @@ func (dr *drivesRoute) updateDrive(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
+	dr.reloadState.markDirty()
 	_ = dr.rootDrive.ClearDriveCache(name)
 }
 
@@ -105,6 +165,7 @@ func (dr *drivesRoute) deleteDrive(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
+	dr.reloadState.markDirty()
 }
 
 func (dr *drivesRoute) getDriveInitConfig(c *gin.Context) {
@@ -133,12 +194,36 @@ func (dr *drivesRoute) doDriveInit(c *gin.Context) {
 		_ = c.Error(e)
 		return
 	}
+	dr.reloadState.markDirty()
 }
 
 func (dr *drivesRoute) reloadDrives(c *gin.Context) {
-	if e := dr.rootDrive.ReloadDrive(c.Request.Context(), false); e != nil {
+	dr.reloadSubmit.Lock()
+	defer dr.reloadSubmit.Unlock()
+
+	activeTask, e := dr.getActiveDriveReloadTask()
+	if e != nil {
 		_ = c.Error(e)
+		return
 	}
+	if activeTask != nil {
+		setResult(c, *activeTask)
+		return
+	}
+
+	reloadTask, e := dr.runner.ExecuteAndWait(c.Request.Context(), func(ctx types.TaskCtx) (any, error) {
+		reloadVersion := dr.reloadState.version.Load()
+		if e := dr.rootDrive.ReloadDrive(ctx, false); e != nil {
+			return nil, e
+		}
+		dr.reloadState.markReloaded(reloadVersion)
+		return nil, nil
+	}, 2*time.Second, task.WithNameGroup("Reload drives", driveReloadTaskGroup))
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	setResult(c, reloadTask)
 }
 
 type scriptDrivesRoute struct {

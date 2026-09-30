@@ -9,7 +9,7 @@ source_hash: 37fc4fa63bc4e2ddee40b9d8d25fc852612f9a765891ace80d20e9f2920c83d1
 
 # go-drive
 
-go-drive 是一个使用 Go 和 Vue/TypeScript 编写的自托管文件管理服务器。它将本地磁盘、FTP、SFTP、WebDAV、S3、OneDrive、Google Drive、MEGA 和脚本扩展盘统一到一棵虚拟目录树中，并提供权限、搜索、WebDAV、文件桶、缩略图和自动任务等能力。
+go-drive 是一个使用 Go 和 Vue/TypeScript 编写的自托管文件管理服务器。它将本地文件系统、FTP、SFTP、WebDAV、S3、OneDrive、Google Drive、MEGA 和脚本存储扩展统一到一棵虚拟目录树中，并提供权限、搜索、WebDAV、文件桶、缩略图和自动任务等能力。
 
 > 首次启动的默认账号是 `admin`，密码是 `123456`。首次登录后请立即修改密码，并在公开部署前阅读[安全指南](./configuration/security.html)。
 
@@ -35,9 +35,9 @@ docker run -d --name go-drive \
 - 全文文件名搜索、WebDAV 服务、路径挂载和路径属性。
 - 带访问控制、上传 Token、类型/大小限制和防盗链的文件桶。
 - Cron 或文件事件触发的复制、移动、删除和 JavaScript 任务。
-- 使用 JavaScript 安装新的 Drive 和浏览器直传适配器。
+- 使用 JavaScript 安装新的存储适配器和浏览器直传适配器。
 
-## 支持的 Drive
+## 支持的存储类型
 
 | 类型 | 主要用途 | 重要选项 |
 | --- | --- | --- |
@@ -46,12 +46,12 @@ docker run -d --name go-drive \
 | SFTP | SSH 文件服务 | 密码/私钥、主机密钥、根路径 |
 | WebDAV | 其他 WebDAV 服务 | URL、账号、缓存 |
 | S3 | AWS S3 及兼容服务 | endpoint、region、path-style、代理传输 |
-| OneDrive | 个人盘、组织盘、SharePoint | 区域、tenant、代理传输、缓存 |
-| Google Drive | 个人盘和共享盘 | 缓存 |
+| OneDrive | 个人账号、组织账号和 SharePoint | 区域、tenant、代理传输、缓存 |
+| Google Drive | 我的云端硬盘和共享云端硬盘 | 缓存 |
 | MEGA | MEGA 云盘 | 邮箱、密码、根目录、缓存 |
-| Dropbox、七牛云等 | JavaScript 扩展 | 脚本 Drive 仓库 |
+| Dropbox、七牛云等 | JavaScript 扩展 | 脚本存储扩展仓库 |
 
-具体配置和能力限制见 [Drive 总览](./drives/)。
+具体配置和能力限制见[存储概览](./drives/)。
 
 ## 常用操作提示
 

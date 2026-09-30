@@ -118,8 +118,8 @@ func TestAdminRoutesUseNormalizedResources(t *testing.T) {
 		t.Fatalf("InitAdminRoutes() error = %v", e)
 	}
 
-	if got := len(router.Routes()); got != 52 {
-		t.Fatalf("registered admin route count = %d, want 52", got)
+	if got := len(router.Routes()); got != 53 {
+		t.Fatalf("registered admin route count = %d, want 53", got)
 	}
 	assertRegisteredRoutes(t, router,
 		"GET /admin/tasks",
@@ -139,6 +139,7 @@ func TestAdminRoutesUseNormalizedResources(t *testing.T) {
 		"DELETE /admin/drives/:name",
 		"POST /admin/drives/:name/init-config",
 		"POST /admin/drives/:name/init",
+		"GET /admin/drives/reload",
 		"POST /admin/drives/reload",
 		"GET /admin/path-permissions",
 		"PUT /admin/path-permissions",

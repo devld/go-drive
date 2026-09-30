@@ -8,7 +8,7 @@ source_hash: 32877155616e5962830b831342513c071674974370358ccfce07444ba346b869
 
 # OneDrive
 
-OneDrive Drive 支持 Microsoft 全球版、世纪互联版、个人/组织账号以及 SharePoint 站点。
+OneDrive 存储适配器支持 Microsoft 全球版、世纪互联版、个人/组织账号以及 SharePoint 站点。
 
 ## 注册应用
 
@@ -33,7 +33,7 @@ oauth-redirect-uri: https://drive.example.com/oauth_callback
 
 ## 权限
 
-普通个人盘/组织盘需要委托权限：
+普通个人账号或组织账号需要委托权限：
 
 - `User.Read`
 - `Files.ReadWrite`
@@ -53,8 +53,8 @@ oauth-redirect-uri: https://drive.example.com/oauth_callback
 | 代理上传/下载 | 强制流量通过 go-drive |
 | 缓存 TTL | 目录项缓存时间；不大于零关闭缓存 |
 
-世纪互联通常使用 `common` tenant。保存后按界面提示完成 OAuth，再选择要映射的 Drive 或 SharePoint 站点，最后重新加载 Drive。
+世纪互联通常使用 `common` tenant。保存后按界面提示完成 OAuth，再选择要映射的 OneDrive 存储空间或 SharePoint 站点，最后重新加载存储配置。
 
-客户端密钥会过期；到期前在门户创建新密钥并更新 Drive。修改 SharePoint 或盘选择后也应重新加载并清理旧缓存。
+客户端密钥会过期；到期前在门户创建新密钥并更新 OneDrive 存储配置。修改 SharePoint 站点或 OneDrive 存储空间选择后，也应重新加载配置并清理旧缓存。
 
 > Microsoft 门户界面会调整，但权限名称和 go-drive 字段以上述当前实现为准。

@@ -51,7 +51,7 @@ web-dav:
 
 ## 缓存和临时空间
 
-WebDAV 将虚拟 Drive 适配成文件系统接口，并通过共用的 DriveFS 源文件缓存读取文件内容。`vfs.cache-items` 和 `vfs.cache-size` 限制该缓存。大量并发或大文件操作时监控临时目录空间。
+WebDAV 将 go-drive 的虚拟文件系统适配成客户端可用的文件系统接口，并通过共用的 DriveFS 源文件缓存读取文件内容。`vfs.cache-items` 和 `vfs.cache-size` 限制该缓存。大量并发或大文件操作时监控临时目录空间。
 
 ## 客户端示例
 
@@ -66,4 +66,4 @@ rclone config
 
 Windows 映射网络驱动器对 Basic Auth、HTTPS 证书和大文件有额外系统限制；出现问题时先用 curl 或 rclone 验证服务器，再排查 Windows WebClient 配置。
 
-> 将其他 WebDAV 服务接入 go-drive 的说明见 [WebDAV 存储 Drive](../drives/webdav.html)。
+> 将其他 WebDAV 服务接入 go-drive 的说明见 [WebDAV 存储适配器](../drives/webdav.html)。

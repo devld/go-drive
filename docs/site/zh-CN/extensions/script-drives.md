@@ -1,22 +1,22 @@
 ---
-title: 脚本 Drive 开发与安装
-description: 安装第三方脚本 Drive，或使用 JavaScript 开发 go-drive 存储适配器和浏览器直传集成。
+title: 脚本存储扩展开发与安装
+description: 安装第三方脚本存储扩展，或使用 JavaScript 开发 go-drive 存储适配器和浏览器直传集成。
 lang: zh-CN
 translation_key: script-drives
 source_hash: af27b5a45cd7b72677f01a4bbd5e641440d4d702a9ae99d9664d0a1a485b39b5
 ---
 
-# 脚本 Drive 开发与安装
+# 脚本存储扩展开发与安装
 
-JavaScript Drive 可以在不重新编译 go-drive 的情况下添加存储后端。Dropbox、七牛云等扩展就是这种类型。
+JavaScript 存储适配器可以在不重新编译 go-drive 的情况下添加存储后端。Dropbox、七牛云等扩展就是这种类型。
 
-它适用于能通过 HTTP/HTTPS API 把文件和目录映射成路径的存储服务，并不是通用协议运行时。SMB/Samba、SFTP、FTP、本地文件系统，以及依赖原始 socket、原生库、Node.js 包或操作系统命令的服务，应实现内置 Go Drive。
+它适用于能通过 HTTP/HTTPS API 把文件和目录映射成路径的存储服务，并不是通用协议运行时。SMB/Samba、SFTP、FTP、本地文件系统，以及依赖原始 socket、原生库、Node.js 包或操作系统命令的服务，应实现内置 Go 存储适配器。
 
 ## 安装
 
-进入“管理员 → 其他盘”，刷新仓库后选择扩展安装。一个扩展通常包含：
+进入“管理员 → 存储扩展”，刷新仓库后选择扩展安装。一个扩展通常包含：
 
-- `<name>.js`：服务器端 Drive 实现。
+- `<name>.js`：服务器端存储适配器实现。
 - 可选的浏览器上传适配器，由 `@uploader` 声明，安装时复制到 `drive-uploaders/<name>.js`。
 
 默认仓库：
@@ -51,9 +51,9 @@ drive-repository-url: https://example.com/my-drives.json
 // @description Example Cloud REST API adapter.
 ```
 
-刷新仓库会作为后台任务运行。go-drive 会下载 listing 中的每个 `.js`，然后只保留同时声明了 `@name` 和 `@version` 的脚本。上传器仅在 Drive 脚本通过 `@uploader` 引用时保留。文件先写入 `script-drives/.repo/`，安装/更新时再复制到 `script-drives/` 和 `drive-uploaders/`。管理页会根据版本号提供更新按钮，无需先卸载脚本 Drive。如果上传器发生变化，也需要同步提升服务器端脚本版本号。已安装但缺少 `@name` 或 `@version` 的脚本不会出现在列表中。
+刷新仓库会作为后台任务运行。go-drive 会下载 listing 中的每个 `.js`，然后只保留同时声明了 `@name` 和 `@version` 的脚本。上传器仅在脚本存储适配器通过 `@uploader` 引用时保留。文件先写入 `script-drives/.repo/`，安装/更新时再复制到 `script-drives/` 和 `drive-uploaders/`。管理页会根据版本号提供更新按钮，无需先卸载脚本存储扩展。如果上传器发生变化，也需要同步提升服务器端脚本版本号。已安装但缺少 `@name` 或 `@version` 的脚本不会出现在列表中。
 
-安装后在 Drive 管理页创建对应类型并重新加载。
+安装后在存储管理页创建对应类型并重新加载存储配置。
 
 ## 开发入口
 
@@ -68,9 +68,9 @@ drive-repository-url: https://example.com/my-drives.json
 模板通过 TypeScript reference 提供编辑器补全，但运行时仍是服务器端 JavaScript。运行时基于支持 ES6+ 语法的 Goja（`let`/`const`、箭头函数、class、rest/spread 以及较新的数组方法）。Host API 全部同步执行且不会返回 Promise；没有 event loop、异步 HTTP、定时器或 top-level await。旧的 PascalCase Go wrapper API 不兼容；请使用当前 mapper 暴露的 lowerCamel 名称，并在首字母小写前先将 `URL` 转为 `Url`、将 `JSON` 转为 `Json`、将 `OAuth` 转为 `Oauth`。实现应：
 
 - 定义唯一类型名、显示名、说明和配置表单。
-- `configForm` 只用于静态配置；多步动态配置应按照原生 Drive 生命周期实现显式的 `initConfig(config, env)` 和 `init(data, config, env)` 回调。以下划线开头的表单字段名是保留字段。
+- `configForm` 只用于静态配置；多步动态配置应按照内置存储适配器的生命周期实现显式的 `initConfig(config, env)` 和 `init(data, config, env)` 回调。以下划线开头的表单字段名是保留字段。
 - 通过 `env.oauthInitConfig`、`env.oauthInit` 和 `env.oauthLoad` 显式处理 OAuth，没有自动 OAuth 回调。
-- 实现 `createInstance(config, env)`，通过 `env.data.load("key", ...)` 按需读取 Drive 所需的动态初始化字段。
+- 实现 `createInstance(config, env)`，通过 `env.data.load("key", ...)` 按需读取存储适配器所需的动态初始化字段。
 - 用 `defineDrive` 实现 `get`、`list`，以及 `getURL` 或 `getReader`，再按服务能力实现写入、上传、下载和缩略图方法。
 - 原生 `copy` 不可用时返回 Unsupported，调度层会流式复制；`move` 没有 copy-and-delete 回退。
 - Host 操作自动继承当前执行的 context 及其取消信号。使用 `http(url, { timeout })` 设置单次请求的超时。
@@ -87,6 +87,6 @@ drive-repository-url: https://example.com/my-drives.json
 2. 使用专门测试账号和目录。
 3. 设置 `GO_DRIVE_LOGGING_LEVEL=debug` 获取临时调试日志。
 4. 分别测试空文件、大文件、覆盖、目录、取消、网络错误和凭据过期。
-5. 测试完成后移除该环境变量，并重新加载 Drive。
+5. 测试完成后移除该环境变量，并重新加载存储配置。
 
-调用由并发 VM 池执行，普通可变全局变量不是可靠的共享状态；只有可 JSON 序列化的 `$` 实例属性会在 VM 间同步。脚本仍可以访问网络和 Drive 数据；不要把它当作不可信代码沙箱。
+调用由并发 VM 池执行，普通可变全局变量不是可靠的共享状态；只有可 JSON 序列化的 `$` 实例属性会在 VM 间同步。脚本仍可以访问网络和映射的存储数据；不要把它当作不可信代码沙箱。

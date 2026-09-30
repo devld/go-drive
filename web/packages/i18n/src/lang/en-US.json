@@ -145,8 +145,9 @@
         "zip_max_size_desc": "Maximum total size of files allowed to be packaged and downloaded, Units: b, k, m, g, t"
       },
       "drive": {
-        "reload_drives": "Reload drives",
+        "reload_drives": "Reload",
         "reload_tip": "Reload drives to take effect",
+        "reload_required_tip": "Drive configuration changed. Reload to apply",
         "name": "Name",
         "type": "Type",
         "operation": "Operation",
@@ -166,8 +167,7 @@
         "f_enabled": "Enabled",
         "f_type": "Type",
         "delete_drive": "Delete drive",
-        "confirm_delete": "Are you sure to delete drive {n}?",
-        "reload_tips": "You need to reload drives to take effect"
+        "confirm_delete": "Are you sure to delete drive {n}?"
       },
       "extra_drive": {
         "name": "Name",

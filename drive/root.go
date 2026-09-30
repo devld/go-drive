@@ -8,6 +8,7 @@ import (
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
+	"go-drive/common/task"
 	"go-drive/common/types"
 	"go-drive/storage"
 	"sync"
@@ -61,7 +62,7 @@ func NewRootDrive(
 	if e := r.ReloadMounts(); e != nil {
 		return nil, e
 	}
-	if e := r.ReloadDrive(ctx, true); e != nil {
+	if e := r.ReloadDrive(task.NewContextWrapper(ctx), true); e != nil {
 		return nil, e
 	}
 	return r, nil
@@ -84,16 +85,22 @@ func (d *RootDrive) checkAndParseConfig(dc types.Drive) (*driveutil.DriveFactory
 	return &f.Factory, config, nil
 }
 
-func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
+func (d *RootDrive) ReloadDrive(ctx types.TaskCtx, ignoreFailure bool) error {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 	started := time.Now()
+
+	if e := ctx.Err(); e != nil {
+		return e
+	}
 
 	drivesConfig, e := d.driveStorage.GetDrives()
 	if e != nil {
 		logging.For("drive").Errorf("drive reload failed: %v", e)
 		return e
 	}
+	ctx.Total(int64(len(drivesConfig)), true)
+	ctx.Progress(0, true)
 
 	driveLog := logging.For("drive")
 	driveLog.Debugf("drive reload started configured=%d ignore_failure=%t", len(drivesConfig), ignoreFailure)
@@ -111,7 +118,11 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 		}
 	}()
 	for _, dc := range drivesConfig {
+		if e := ctx.Err(); e != nil {
+			return e
+		}
 		if !dc.Enabled {
+			ctx.Progress(1, false)
 			continue
 		}
 		factory, config, e := d.checkAndParseConfig(dc)
@@ -119,6 +130,7 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 			if ignoreFailure {
 				driveLog.Warnf("error parsing drive config for '%s' (%s): %v",
 					logging.Sanitize(dc.Name), logging.Sanitize(dc.Type), e)
+				ctx.Progress(1, false)
 				continue
 			}
 			return e
@@ -126,15 +138,23 @@ func (d *RootDrive) ReloadDrive(ctx context.Context, ignoreFailure bool) error {
 		driveLog.Infof("creating drive '%s' (%s)", logging.Sanitize(dc.Name), logging.Sanitize(dc.Type))
 		iDrive, e := factory.Create(ctx, config, d.createDriveEnv(dc.Name))
 		if e != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return ctxErr
+			}
 			if ignoreFailure {
 				driveLog.Warnf("error creating drive '%s' (%s): %v",
 					logging.Sanitize(dc.Name), logging.Sanitize(dc.Type), e)
+				ctx.Progress(1, false)
 				continue
 			}
 			return err.NewBadRequestError(i18n.T("drive.root.error_create_drive", dc.Name, e.Error()))
 		}
 		driveLog.Infof("created drive '%s' (%s)", logging.Sanitize(dc.Name), logging.Sanitize(dc.Type))
 		drives[dc.Name] = iDrive
+		ctx.Progress(1, false)
+	}
+	if e := ctx.Err(); e != nil {
+		return e
 	}
 	d.dispatcher.setDrives(drives)
 	ok = true

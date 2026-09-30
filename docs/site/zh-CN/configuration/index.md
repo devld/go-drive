@@ -100,12 +100,12 @@ web-path: ""
 | `listen` | `:8089` | HTTP 监听地址 |
 | `logging.level` | `info` | 最低日志级别；`GO_DRIVE_LOGGING_LEVEL` 会覆盖此配置 |
 | `trusted-proxies` | 空 | 可以提供 `X-Forwarded-For` 的代理 IP/CIDR |
-| `data-dir` | `./data` | 数据库、本地盘、脚本、会话、缓存等数据目录 |
+| `data-dir` | `./data` | 数据库、本地存储、脚本、会话、缓存等数据目录 |
 | `temp-dir` | `data-dir/temp` | 上传、复制等临时文件目录 |
 | `vfs.cache-items` | `1000` | WebDAV 与压缩包预览共用的 DriveFS 源文件缓存条目上限 |
 | `vfs.cache-size` | `4g` | 该缓存的总字节上限 |
 | `max-concurrent-task` | `100` | 复制、移动、删除等后台任务并发数。同样数量的任务可以等待，超出后提交会被拒绝 |
-| `free-fs` | `false` | 是否允许本地 Drive 使用绝对路径；风险很高 |
+| `free-fs` | `false` | 是否允许本地存储使用绝对路径；风险很高 |
 | `signature-ttl` | `12h` | 文件内容和缩略图签名 URL 的有效时间 |
 | `oauth-redirect-uri` | 项目回调页 | OneDrive/Google Drive OAuth 回调地址 |
 | `api-path` | 空 | 反向代理子路径，例如 `/drive` |
@@ -119,7 +119,7 @@ SQLite 适合单实例部署。数据库位于 `data-dir/<db.name>`，默认启�
 
 MySQL 至少需要设置 `type`、`host`、`name`、`user` 和 `password`。`db.config` 会作为 DSN 参数传给 GORM；不要把真实密码提交到版本库。
 
-网盘密码、私钥和 OAuth token 写入数据库前会加密。首次启动时，如果没有设置 `GO_DRIVE_ENCRYPTION_KEY`，go-drive 会在 `data-dir/encryption.key` 生成密钥文件（权限 `0600`）。环境变量和文件同时存在时，内容必须一致。请把实际使用的那一份和数据库一起备份；密钥丢失后，已保存的网盘机密无法解密，需要重新填写。
+远端存储的密码、私钥和 OAuth token 写入数据库前会加密。首次启动时，如果没有设置 `GO_DRIVE_ENCRYPTION_KEY`，go-drive 会在 `data-dir/encryption.key` 生成密钥文件（权限 `0600`）。环境变量和文件同时存在时，内容必须一致。请把实际使用的那一份和数据库一起备份；密钥丢失后，已保存的存储凭据无法解密，需要重新填写。
 
 ## LDAP
 

@@ -17,9 +17,9 @@ source_hash: 4def8d4e0b97b85a93fd5e6a283b3c3373dafc43960adb20bc7fa33d5e96d4dd
 
 不要只复制 `data.db`。SQLite 默认使用 WAL，运行期间还可能存在 `data.db-wal` 和 `data.db-shm`；最稳妥的做法是在停止进程后备份整个数据目录。
 
-对于 MySQL，使用数据库自身的一致性备份工具，同时备份 `data-dir` 中的本地文件、脚本 Drive 和其他非数据库数据。
+对于 MySQL，使用数据库自身的一致性备份工具，同时备份 `data-dir` 中的本地文件、脚本存储扩展和其他非数据库数据。
 
-数据库里的网盘机密由 `GO_DRIVE_ENCRYPTION_KEY` 或 `data-dir/encryption.key` 加密。恢复数据库时必须使用同一把密钥。
+数据库里的存储凭据由 `GO_DRIVE_ENCRYPTION_KEY` 或 `data-dir/encryption.key` 加密。恢复数据库时必须使用同一把密钥。
 
 ## Docker 升级
 
@@ -46,7 +46,7 @@ docker compose pull
 docker compose up -d
 ```
 
-升级后检查登录、Drive 加载、权限、搜索和任务。数据库迁移在启动时执行；不要在升级失败后继续写入再直接覆盖旧数据库。
+升级后检查登录、存储配置加载、权限、搜索和任务。数据库迁移在启动时执行；不要在升级失败后继续写入再直接覆盖旧数据库。
 
 ## 恢复
 
@@ -62,4 +62,4 @@ docker compose up -d
 - 如果启用了 `free-fs` 或挂载了宿主机绝对路径，同时迁移这些外部目录。
 - 更新反向代理、DNS、OAuth 回调地址和 S3 CORS/防盗链域名。
 - MySQL 用户需先迁移数据库，再迁移 `data-dir` 中的非数据库文件。
-- 迁移后重新检查 WebDAV 客户端和脚本 Drive 的外部依赖。
+- 迁移后重新检查 WebDAV 客户端和脚本存储扩展的外部依赖。

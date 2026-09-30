@@ -19,7 +19,7 @@ docker run -d --name go-drive \
   devld/go-drive
 ```
 
-`/app/data` 包含数据库、本地盘、会话、缩略图缓存、临时文件和已安装的脚本 Drive。必须将它映射到容器外，否则删除容器时会丢失数据。
+`/app/data` 包含数据库、本地存储、会话、缩略图缓存、临时文件和已安装的脚本存储扩展。必须将它映射到容器外，否则删除容器时会丢失数据。
 
 官方镜像包含 libvips 和 ffmpeg，并自动启用高性能图片、视频帧和音频封面缩略图处理器。
 
@@ -117,6 +117,6 @@ npm run build-web
 ## 下一步
 
 - [配置文件](../configuration/)
-- [添加 Drive](../drives/)
+- [添加存储](../drives/)
 - [用户、组和权限](../administration/access-control.html)
 - [升级、备份与恢复](./upgrade-backup.html)
