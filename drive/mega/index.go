@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -50,7 +51,8 @@ func RegisterDrive(driveRegistry *driveutil.DriveRegistry) {
 }
 
 // InitConfig signs in when the saved session or the password is enough and reports
-// that state as configured. Accounts with two-factor authentication get a one-time code form.
+// that state as configured. A wrong account or password is returned as an error.
+// Accounts with two-factor authentication get a one-time code form.
 func InitConfig(_ context.Context, config types.SM, driveEnv driveutil.DriveEnv) (*driveutil.DriveInitConfig, error) {
 	email, password, credErr := accountCredentials(config)
 	if credErr != nil {
@@ -493,7 +495,7 @@ func mapError(cause error) error {
 	case errors.Is(cause, megaapi.ECIRCULAR):
 		return err.NewNotAllowedMessageError(i18n.T("api.drive.copy_to_child_path_not_allowed"))
 	case errors.Is(cause, megaapi.ESID):
-		return err.NewUnauthorizedError(t("session_expired"))
+		return err.NewRemoteAPIError(http.StatusInternalServerError, t("session_expired"))
 	default:
 		return cause
 	}

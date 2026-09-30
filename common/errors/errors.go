@@ -30,7 +30,9 @@ func (b BadRequestError) Code() int {
 	return http.StatusBadRequest
 }
 
-// UnauthorizedError 401
+// UnauthorizedError is HTTP 401 and means the go-drive session is missing or
+// invalid. The web client drops its login token on this status, so remote
+// drive credential and session failures must use another error type.
 type UnauthorizedError struct {
 	msg string
 }
@@ -73,6 +75,19 @@ func (d NotAllowedError) Code() int {
 
 func (d NotAllowedError) Data() types.M {
 	return d.data
+}
+
+// UnprocessableError 422
+type UnprocessableError struct {
+	msg string
+}
+
+func (u UnprocessableError) Error() string {
+	return u.msg
+}
+
+func (u UnprocessableError) Code() int {
+	return http.StatusUnprocessableEntity
 }
 
 // ConflictError 409
@@ -158,6 +173,11 @@ func IsBadRequestError(e error) bool {
 	return ok
 }
 
+func IsUnprocessableError(e error) bool {
+	_, ok := errors.AsType[UnprocessableError](e)
+	return ok
+}
+
 func IsUnsupportedError(e error) bool {
 	_, ok := errors.AsType[UnsupportedError](e)
 	return ok
@@ -183,6 +203,10 @@ func IsNotAllowedError(e error) bool {
 
 func NewBadRequestError(msg string) BadRequestError {
 	return BadRequestError{msg}
+}
+
+func NewUnprocessableError(msg string) UnprocessableError {
+	return UnprocessableError{msg}
 }
 
 func NewUnauthorizedError(msg string) UnauthorizedError {

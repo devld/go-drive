@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	err "go-drive/common/errors"
 	"go-drive/common/types"
 
 	megaapi "go-drive/drive/mega/internal/gomega"
@@ -76,6 +77,14 @@ func TestProbeSessionAsksForCodeWithoutStoringIt(t *testing.T) {
 	}
 }
 
+func TestProbeSessionRejectsBadCredentials(t *testing.T) {
+	auth := &fakeAuth{loginErr: megaapi.EKEY}
+	cfg, e := probeSession(auth, "user@example.com", "secret", &memData{})
+	if cfg != nil || !err.IsUnprocessableError(e) || err.IsUnauthorizedError(e) {
+		t.Fatalf("config = %#v error = %v", cfg, e)
+	}
+}
+
 func TestProbeSessionCompletesWithoutCode(t *testing.T) {
 	auth := &fakeAuth{}
 	store := &memData{}
@@ -91,15 +100,31 @@ func TestProbeSessionCompletesWithoutCode(t *testing.T) {
 func TestRestoreOrLoginMapsCredentialErrors(t *testing.T) {
 	auth := &fakeAuth{loginErr: megaapi.EMFAREQUIRED}
 	e := restoreOrLogin(auth, "user@example.com", "secret", "", &memData{})
-	var unauthorized interface{ Code() int }
-	if !errors.As(e, &unauthorized) || unauthorized.Code() != 401 {
-		t.Fatalf("error = %v", e)
+	if code := errorCode(t, e); code != 422 || !errors.Is(e, megaapi.EMFAREQUIRED) || err.IsUnauthorizedError(e) {
+		t.Fatalf("mfa error = %v code = %d", e, code)
+	}
+
+	for _, loginErr := range []error{megaapi.ENOENT, megaapi.EKEY} {
+		auth.loginErr = loginErr
+		e = restoreOrLogin(auth, "user@example.com", "secret", "", &memData{})
+		if code := errorCode(t, e); code != 422 || !err.IsUnprocessableError(e) || err.IsUnauthorizedError(e) {
+			t.Fatalf("credential error %v = %v code = %d", loginErr, e, code)
+		}
 	}
 
 	auth.loginErr = megaapi.EAGAIN
 	if e = restoreOrLogin(auth, "user@example.com", "secret", "", &memData{}); !errors.Is(e, megaapi.EAGAIN) {
 		t.Fatalf("temporary error = %v", e)
 	}
+}
+
+func errorCode(t *testing.T, e error) int {
+	t.Helper()
+	var coded interface{ Code() int }
+	if !errors.As(e, &coded) {
+		t.Fatalf("error %v has no HTTP status", e)
+	}
+	return coded.Code()
 }
 
 type fakeAuth struct {

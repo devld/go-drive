@@ -3,6 +3,7 @@ package mega
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -416,6 +417,11 @@ func TestMapError(t *testing.T) {
 	}
 	if !err.IsNotAllowedError(mapError(megaapi.EOVERQUOTA)) {
 		t.Fatal("quota was not mapped to not allowed")
+	}
+	sessionErr := mapError(megaapi.ESID)
+	remote, ok := errors.AsType[err.RemoteAPIError](sessionErr)
+	if !ok || remote.Code() != 500 || err.IsUnauthorizedError(sessionErr) {
+		t.Fatalf("expired session = %v", sessionErr)
 	}
 }
 
