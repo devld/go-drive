@@ -212,7 +212,7 @@ func userGroupRequired(group string) gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		_ = c.Error(err.NewPermissionDeniedError(i18n.T("api.auth.group_permission_required", group)))
+		_ = c.Error(err.NewNotAllowedMessageError(i18n.T("api.auth.group_permission_required", group)))
 		authLog.Debugf("authorization rejected reason=missing_group group=%s path=%s",
 			logging.Sanitize(group), logging.Sanitize(c.Request.URL.Path))
 		c.Abort()

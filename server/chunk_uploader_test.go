@@ -219,9 +219,9 @@ func TestChunkUploader_RejectsConcurrentSameChunk(t *testing.T) {
 	<-reader.started
 
 	e = c.ChunkUpload(context.Background(), upload.ID, 0, io.NopCloser(bytes.NewReader(chunk)))
-	conflict, ok := e.(apierr.ConflictError)
-	if !ok || conflict.Code() != http.StatusConflict {
-		t.Fatalf("concurrent upload error = %v, want HTTP %d conflict", e, http.StatusConflict)
+	notAllowed, ok := e.(apierr.NotAllowedError)
+	if !ok || notAllowed.Code() != http.StatusForbidden {
+		t.Fatalf("concurrent upload error = %v, want NotAllowedError with HTTP %d", e, http.StatusForbidden)
 	}
 
 	_ = reader.Close()

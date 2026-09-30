@@ -167,7 +167,7 @@ func (c *ChunkUploader) uploadChunkAt(ctx context.Context, upload ChunkUpload, s
 	if _, uploading := state.uploading[seq]; uploading {
 		state.mu.Unlock()
 		_ = reader.Close()
-		return err.NewConflictError("chunk is already being uploaded")
+		return err.NewNotAllowedMessageError("chunk is already being uploaded")
 	}
 	state.uploading[seq] = struct{}{}
 	state.mu.Unlock()

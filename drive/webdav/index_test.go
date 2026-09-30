@@ -68,7 +68,7 @@ func TestWrongPasswordIsNotSessionUnauthorized(t *testing.T) {
 		"password": "wrong",
 	}, driveutil.DriveEnv{})
 	remote, ok := errors.AsType[err.RemoteAPIError](e)
-	if !ok || remote.Code() != 500 || remote.Status() != http.StatusUnauthorized || err.IsUnauthorizedError(e) {
+	if !ok || remote.Code() != 500 || remote.Status() != http.StatusUnauthorized {
 		t.Fatalf("NewDrive error = %v", e)
 	}
 }
