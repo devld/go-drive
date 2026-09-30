@@ -5,6 +5,10 @@
     data-handler="permissions"
   >
     <HandlerTitleBar :title="filename" @close="emit('close')">
+      <template #default>
+        <span class="permissions-view__filename">{{ filename }}</span>
+        <AdminDocLinks message-key="p.admin.docs.misc_access_control" />
+      </template>
       <template #actions>
         <SimpleButton
           :loading="saving"
@@ -27,6 +31,7 @@
 <script setup lang="ts">
 import { filename as filenameFn } from '@/utils'
 import PermissionsEditor from '@/views/Admin/PermissionsEditor.vue'
+import AdminDocLinks from '@/views/Admin/AdminDocLinks.vue'
 import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { alert } from '@/utils/ui-utils'
 import { computed, ref } from 'vue'
@@ -83,6 +88,24 @@ const setSaveState = (saved: boolean) => {
     top: 0;
     left: 0;
     right: 0;
+  }
+
+  .handler-title-bar-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  &__filename {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-doc-links {
+    flex: none;
   }
 
   .permissions {

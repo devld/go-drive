@@ -1,6 +1,8 @@
 <template>
-  <div class="section">
-    <h3 class="section-title">{{ $t('p.admin.misc.clean_cache') }}</h3>
+  <div class="maintenance-action">
+    <AdminDocHeading level="subsection">
+      {{ $t('p.admin.misc.clean_cache') }}
+    </AdminDocHeading>
     <SimpleFormItem
       v-model="cacheSelectedDrive"
       class="cache-clean-form-item"
@@ -16,6 +18,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from '../AdminDocHeading.vue'
 import { getDrives, cleanDriveCache as cleanDriveCacheApi } from '@/api/admin'
 import { Drive, FormItem } from '@/types'
 import { alert } from '@/utils/ui-utils'

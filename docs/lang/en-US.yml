@@ -174,7 +174,7 @@ drive:
     unknown_action_status: "Unknown action status: {{ 1 }}"
   fs:
     name: File System
-    readme: Local file system drive
+    readme: Local file system drive, see [Local Drive guide](https://go-drive.top/drives/local.html)
     form:
       path:
         label: Root
@@ -185,7 +185,7 @@ drive:
     cannot_delete_root: Root cannot be deleted
   s3:
     name: S3
-    readme: S3 compatible storage
+    readme: S3 compatible storage, see [S3 Drive guide](https://go-drive.top/drives/s3.html)
     form:
       ak:
         label: AccessKey
@@ -220,7 +220,7 @@ drive:
     bucket_not_exists: Bucket '{{ 1 }}' not found
   webdav:
     name: WebDAV
-    readme: WebDAV protocol drive
+    readme: WebDAV storage, see [WebDAV Drive guide](https://go-drive.top/drives/webdav.html)
     form:
       url:
         label: URL
@@ -241,7 +241,7 @@ drive:
     remote_error: "Remote service error: {{ 1 }}"
   ftp:
     name: FTP
-    readme: FTP drive
+    readme: FTP drive, see [FTP Drive guide](https://go-drive.top/drives/ftp.html)
     form:
       host:
         label: Host
@@ -266,7 +266,7 @@ drive:
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
   sftp:
     name: SFTP
-    readme: SFTP drive <br/> @[Vgbhfive](https://blog.vgbhfive.cn)
+    readme: SFTP drive, see [SFTP Drive guide](https://go-drive.top/drives/sftp.html) <br/> @[Vgbhfive](https://blog.vgbhfive.cn)
     form:
       host:
         label: Host

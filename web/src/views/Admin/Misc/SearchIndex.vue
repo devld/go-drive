@@ -1,6 +1,8 @@
 <template>
   <div class="section">
-    <h3 class="section-title">{{ $t('p.admin.misc.search_index') }}</h3>
+    <AdminDocHeading level="section" message-key="p.admin.docs.misc_search">
+      {{ $t('p.admin.misc.search_index') }}
+    </AdminDocHeading>
 
     <template v-if="searchEnabled">
       <div class="search-index-submit">
@@ -71,6 +73,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from '../AdminDocHeading.vue'
 import { deleteTask } from '@/api'
 import { getOptions, getTasks, searchIndex, setOptions } from '@/api/admin'
 import { useInterval } from '@go-drive/utils'

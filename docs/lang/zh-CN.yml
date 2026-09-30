@@ -83,7 +83,7 @@ drive:
     move_across_not_supported: 不支持跨 Drive 移动文件
   gdrive:
     name: Google Drive
-    readme: Google Drive, 请参阅 [配置 Google Drive](https://go-drive.top/drives/google-drive)
+    readme: Google Drive, 请参阅 [配置 Google Drive](https://go-drive.top/zh-CN/drives/google-drive)
     form:
       client_id:
         label: 客户端 ID
@@ -99,7 +99,7 @@ drive:
     my_drive_name: My Drive
   mega:
     name: MEGA
-    readme: MEGA 云盘，请参阅 [配置 MEGA](https://go-drive.top/drives/mega)
+    readme: MEGA 云盘，请参阅 [配置 MEGA](https://go-drive.top/zh-CN/drives/mega)
     form:
       email:
         label: 邮箱
@@ -135,7 +135,7 @@ drive:
     not_a_directory: 父路径不是文件夹
   onedrive:
     name: OneDrive
-    readme: OneDrive, 请参阅 [配置 OneDrive](https://go-drive.top/drives/onedrive)
+    readme: OneDrive, 请参阅 [配置 OneDrive](https://go-drive.top/zh-CN/drives/onedrive)
     form:
       site:
         label: 账号类型
@@ -174,7 +174,7 @@ drive:
     unknown_action_status: "未知的状态: {{ 1 }}"
   fs:
     name: 本地文件
-    readme: 本地文件系统
+    readme: 本地文件系统，参见[本地存储配置指南](https://go-drive.top/zh-CN/drives/local.html)
     form:
       path:
         label: 根目录
@@ -185,7 +185,7 @@ drive:
     cannot_delete_root: 无法删除根路径
   s3:
     name: S3
-    readme: S3 兼容协议
+    readme: S3 兼容存储，参见 [S3 配置指南](https://go-drive.top/zh-CN/drives/s3.html)
     form:
       ak:
         label: AccessKey
@@ -220,7 +220,7 @@ drive:
     bucket_not_exists: Bucket '{{ 1 }}' 不存在
   webdav:
     name: WebDAV
-    readme: WebDAV 协议
+    readme: WebDAV 存储，参见 [WebDAV 配置指南](https://go-drive.top/zh-CN/drives/webdav.html)
     form:
       url:
         label: URL
@@ -241,7 +241,7 @@ drive:
     remote_error: "远程服务错误: {{ 1 }}"
   ftp:
     name: FTP
-    readme: FTP drive
+    readme: FTP 存储，参见 [FTP 配置指南](https://go-drive.top/zh-CN/drives/ftp.html)
     form:
       host:
         label: 主机
@@ -266,7 +266,7 @@ drive:
         description: 有效单位为 'ms', 's', 'm', 'h', 如果省略则没有缓存
   sftp:
     name: SFTP
-    readme: SFTP drive <br/> @[Vgbhfive](https://blog.vgbhfive.cn)
+    readme: SFTP 存储，参见 [SFTP 配置指南](https://go-drive.top/zh-CN/drives/sftp.html) <br/> @[Vgbhfive](https://blog.vgbhfive.cn)
     form:
       host:
         label: 主机

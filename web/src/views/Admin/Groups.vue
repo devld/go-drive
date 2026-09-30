@@ -1,4 +1,7 @@
 <template>
+  <AdminDocHeading message-key="p.admin.docs.groups">
+    {{ $t('p.admin.t_groups') }}
+  </AdminDocHeading>
   <div class="groups-manager" :class="{ editing: !!group }">
     <div class="groups-list">
       <div class="actions">
@@ -104,6 +107,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from './AdminDocHeading.vue'
 import {
   createGroup,
   deleteGroup as deleteGroupApi,
@@ -241,6 +245,7 @@ loadUsers()
 <style lang="scss">
 .groups-manager {
   display: flex;
+  flex-wrap: wrap;
 
   .group-edit {
     padding: 16px;

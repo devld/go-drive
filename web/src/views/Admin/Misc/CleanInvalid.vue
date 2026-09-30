@@ -1,12 +1,15 @@
 <template>
-  <div class="section">
-    <h3 class="section-title">{{ $t('p.admin.misc.clean_invalid') }}</h3>
+  <div class="maintenance-action">
+    <AdminDocHeading level="subsection">
+      {{ $t('p.admin.misc.clean_invalid') }}
+    </AdminDocHeading>
     <SimpleButton :loading="cleaning" @click="cleanPermissionsAndMounts">
       {{ $t('p.admin.misc.clean') }}
     </SimpleButton>
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from '../AdminDocHeading.vue'
 import { cleanPermissionsAndMounts as cleanPermissionsAndMountsApi } from '@/api/admin'
 import { alert } from '@/utils/ui-utils'
 import { ref } from 'vue'

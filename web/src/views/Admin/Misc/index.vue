@@ -2,14 +2,23 @@
   <div class="misc-settings">
     <RootPermissions />
     <SearchIndex timer />
-    <CleanInvalid />
-    <CleanCache />
+    <div class="section maintenance-section">
+      <AdminDocHeading
+        level="section"
+        message-key="p.admin.docs.misc_maintenance"
+      >
+        {{ $t('p.admin.misc.maintenance') }}
+      </AdminDocHeading>
+      <CleanInvalid />
+      <CleanCache />
+    </div>
   </div>
 </template>
 <script lang="ts">
 export default { name: 'MiscSettings' }
 </script>
 <script setup lang="ts">
+import AdminDocHeading from '../AdminDocHeading.vue'
 import CleanCache from './CleanCache.vue'
 import CleanInvalid from './CleanInvalid.vue'
 import RootPermissions from './RootPermissions.vue'
@@ -29,10 +38,8 @@ import SearchIndex from './SearchIndex.vue'
     }
   }
 
-  .section-title {
-    margin: 0 0 16px;
-    font-size: 20px;
-    font-weight: normal;
+  .maintenance-action + .maintenance-action {
+    margin-top: 24px;
   }
 }
 </style>

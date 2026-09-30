@@ -1,4 +1,7 @@
 <template>
+  <AdminDocHeading message-key="p.admin.docs.jobs">
+    {{ $t('p.admin.t_jobs') }}
+  </AdminDocHeading>
   <div class="jobs-manager" :class="{ editing: !!jobEdit }">
     <div class="jobs-list">
       <div class="actions">
@@ -185,6 +188,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from '../AdminDocHeading.vue'
 import {
   getJobDefinitions,
   getJobs,

@@ -1,15 +1,20 @@
 <template>
   <div class="section">
-    <h3 class="section-title">
+    <AdminDocHeading
+      level="section"
+      message-key="p.admin.docs.misc_access_control"
+    >
       {{ $t('p.admin.misc.permission_of_root') }}
-      <SimpleButton
-        :loading="saving"
-        :disabled="!permissionsCanSave"
-        @click="savePermissions"
-      >
-        {{ $t('p.admin.save') }}
-      </SimpleButton>
-    </h3>
+      <template #actions>
+        <SimpleButton
+          :loading="saving"
+          :disabled="!permissionsCanSave"
+          @click="savePermissions"
+        >
+          {{ $t('p.admin.save') }}
+        </SimpleButton>
+      </template>
+    </AdminDocHeading>
     <PermissionsEditor
       ref="permissionsEditorEl"
       :path="rootPath"
@@ -18,6 +23,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from '../AdminDocHeading.vue'
 import { alert } from '@/utils/ui-utils'
 import { ref } from 'vue'
 import PermissionsEditor from '../PermissionsEditor.vue'

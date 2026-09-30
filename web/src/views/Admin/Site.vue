@@ -1,9 +1,13 @@
 <template>
+  <AdminDocHeading message-key="p.admin.docs.site">
+    {{ $t('p.admin.site.page_title') }}
+  </AdminDocHeading>
   <div class="site-config">
     <OptionsConfigure :forms="configForms" />
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from './AdminDocHeading.vue'
 import {
   DEFAULT_AUDIO_FILE_EXTS,
   DEFAULT_IMAGE_FILE_EXTS,

@@ -1,4 +1,7 @@
 <template>
+  <AdminDocHeading message-key="p.admin.docs.file_buckets">
+    {{ $t('p.admin.t_file_buckets') }}
+  </AdminDocHeading>
   <div class="file-bucket-manager" :class="{ editing: !!fileBucket }">
     <div v-if="fileBucket" class="file-bucket-edit">
       <div class="small-title">
@@ -78,6 +81,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from './AdminDocHeading.vue'
 import {
   getAllFileBuckets,
   createFileBucket,

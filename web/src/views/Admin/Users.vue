@@ -1,4 +1,7 @@
 <template>
+  <AdminDocHeading message-key="p.admin.docs.users">
+    {{ $t('p.admin.t_users') }}
+  </AdminDocHeading>
   <div class="users-manager" :class="{ editing: !!user }">
     <div class="users-list">
       <div class="actions">
@@ -87,6 +90,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from './AdminDocHeading.vue'
 import {
   createUser,
   deleteUser as deleteUserApi,
@@ -238,6 +242,7 @@ loadGroups()
 <style lang="scss">
 .users-manager {
   display: flex;
+  flex-wrap: wrap;
 
   .user-edit {
     padding: 16px;

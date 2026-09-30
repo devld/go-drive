@@ -1,4 +1,7 @@
 <template>
+  <AdminDocHeading message-key="p.admin.docs.extra_drives">
+    {{ $t('p.admin.t_extra_drives') }}
+  </AdminDocHeading>
   <div class="extra-drives-manager">
     <div class="page-actions">
       <SimpleButton :loading="loading" @click="loadData(true)">
@@ -131,6 +134,7 @@
   </div>
 </template>
 <script lang="ts" setup>
+import AdminDocHeading from '../AdminDocHeading.vue'
 import DriveCodeEditor from './DriveCodeEditor.vue'
 import { DriveScript } from '@/types'
 import {

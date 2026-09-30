@@ -1,4 +1,7 @@
 <template>
+  <AdminDocHeading message-key="p.admin.docs.drives">
+    {{ $t('p.admin.t_drives') }}
+  </AdminDocHeading>
   <div class="drives-manager" :class="{ editing: !!drive }">
     <div class="drives-list">
       <div class="actions">
@@ -149,6 +152,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from './AdminDocHeading.vue'
 import {
   createDrive,
   deleteDrive as deleteDriveApi,

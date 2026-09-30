@@ -174,7 +174,7 @@ drive:
     unknown_action_status: "알 수 없는 작업 상태: {{ 1 }}"
   fs:
     name: 파일 시스템
-    readme: 로컬 파일 시스템 드라이브
+    readme: 로컬 파일 시스템 드라이브. [로컬 드라이브 가이드](https://go-drive.top/drives/local.html)를 참고하세요.
     form:
       path:
         label: 루트
@@ -185,7 +185,7 @@ drive:
     cannot_delete_root: 루트는 삭제할 수 없습니다
   s3:
     name: S3
-    readme: S3 호환 스토리지
+    readme: S3 호환 스토리지. [S3 드라이브 가이드](https://go-drive.top/drives/s3.html)를 참고하세요.
     form:
       ak:
         label: AccessKey
@@ -220,7 +220,7 @@ drive:
     bucket_not_exists: 버킷 '{{ 1 }}'을(를) 찾을 수 없습니다
   webdav:
     name: WebDAV
-    readme: WebDAV 프로토콜 드라이브
+    readme: WebDAV 스토리지. [WebDAV 드라이브 가이드](https://go-drive.top/drives/webdav.html)를 참고하세요.
     form:
       url:
         label: URL
@@ -241,7 +241,7 @@ drive:
     remote_error: "원격 서비스 오류: {{ 1 }}"
   ftp:
     name: FTP
-    readme: FTP 드라이브
+    readme: FTP 드라이브. [FTP 드라이브 가이드](https://go-drive.top/drives/ftp.html)를 참고하세요.
     form:
       host:
         label: 호스트
@@ -266,7 +266,7 @@ drive:
         description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
   sftp:
     name: SFTP
-    readme: SFTP 드라이브 <br/> @[Vgbhfive](https://blog.vgbhfive.cn)
+    readme: SFTP 드라이브. [SFTP 드라이브 가이드](https://go-drive.top/drives/sftp.html)를 참고하세요. <br/> @[Vgbhfive](https://blog.vgbhfive.cn)
     form:
       host:
         label: 호스트

@@ -1,4 +1,7 @@
 <template>
+  <AdminDocHeading message-key="p.admin.docs.path_meta">
+    {{ $t('p.admin.t_path_meta') }}
+  </AdminDocHeading>
   <div class="path-meta-manager" :class="{ editing: !!pathMeta }">
     <div v-if="pathMeta" class="path-meta-edit">
       <div class="small-title">
@@ -78,6 +81,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import AdminDocHeading from './AdminDocHeading.vue'
 import {
   getAllPathMeta,
   savePathMeta as savePathMetaApi,
