@@ -489,7 +489,7 @@ func mapError(cause error) error {
 	case errors.Is(cause, megaapi.ENOENT):
 		return err.NewNotFoundError()
 	case errors.Is(cause, megaapi.EACCESS):
-		return err.NewPermissionDeniedError(cause.Error())
+		return err.NewNotAllowedMessageError(cause.Error())
 	case errors.Is(cause, megaapi.EOVERQUOTA), errors.Is(cause, megaapi.EGOINGOVERQUOTA):
 		return err.NewNotAllowedMessageError(t("quota"))
 	case errors.Is(cause, megaapi.ECIRCULAR):

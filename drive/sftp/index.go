@@ -339,7 +339,7 @@ func (f *Drive) handleError(e error) error {
 	case sftp.ErrSSHFxNoSuchFile, os.ErrNotExist:
 		return err.NewNotFoundError()
 	case sftp.ErrSSHFxPermissionDenied:
-		return err.NewPermissionDeniedError(e.Error())
+		return err.NewNotAllowedMessageError(e.Error())
 	case sftp.ErrSSHFxBadMessage:
 		return err.NewRemoteAPIError(500, "Bad Message")
 	case sftp.ErrSSHFxNoConnection:

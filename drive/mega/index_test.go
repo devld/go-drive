@@ -420,7 +420,7 @@ func TestMapError(t *testing.T) {
 	}
 	sessionErr := mapError(megaapi.ESID)
 	remote, ok := errors.AsType[err.RemoteAPIError](sessionErr)
-	if !ok || remote.Code() != 500 || err.IsUnauthorizedError(sessionErr) {
+	if !ok || remote.Code() != 500 {
 		t.Fatalf("expired session = %v", sessionErr)
 	}
 }

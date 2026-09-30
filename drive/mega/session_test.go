@@ -2,6 +2,7 @@ package mega
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 
 	err "go-drive/common/errors"
@@ -80,7 +81,7 @@ func TestProbeSessionAsksForCodeWithoutStoringIt(t *testing.T) {
 func TestProbeSessionRejectsBadCredentials(t *testing.T) {
 	auth := &fakeAuth{loginErr: megaapi.EKEY}
 	cfg, e := probeSession(auth, "user@example.com", "secret", &memData{})
-	if cfg != nil || !err.IsUnprocessableError(e) || err.IsUnauthorizedError(e) {
+	if cfg != nil || !err.IsBadRequestError(e) {
 		t.Fatalf("config = %#v error = %v", cfg, e)
 	}
 }
@@ -100,14 +101,14 @@ func TestProbeSessionCompletesWithoutCode(t *testing.T) {
 func TestRestoreOrLoginMapsCredentialErrors(t *testing.T) {
 	auth := &fakeAuth{loginErr: megaapi.EMFAREQUIRED}
 	e := restoreOrLogin(auth, "user@example.com", "secret", "", &memData{})
-	if code := errorCode(t, e); code != 422 || !errors.Is(e, megaapi.EMFAREQUIRED) || err.IsUnauthorizedError(e) {
+	if code := errorCode(t, e); code != http.StatusBadRequest || !err.IsBadRequestError(e) || !errors.Is(e, megaapi.EMFAREQUIRED) {
 		t.Fatalf("mfa error = %v code = %d", e, code)
 	}
 
 	for _, loginErr := range []error{megaapi.ENOENT, megaapi.EKEY} {
 		auth.loginErr = loginErr
 		e = restoreOrLogin(auth, "user@example.com", "secret", "", &memData{})
-		if code := errorCode(t, e); code != 422 || !err.IsUnprocessableError(e) || err.IsUnauthorizedError(e) {
+		if code := errorCode(t, e); code != http.StatusBadRequest || !err.IsBadRequestError(e) {
 			t.Fatalf("credential error %v = %v code = %d", loginErr, e, code)
 		}
 	}

@@ -71,10 +71,12 @@ func restoreOrLogin(auth authenticator, email, password, multiFactor string, dat
 // mfaRequiredError reports a rejected MEGA login that still needs a code.
 // HTTP 401 is reserved for the go-drive session, which the web client drops.
 type mfaRequiredError struct {
-	err.UnprocessableError
+	err.BadRequestError
 }
 
-func (mfaRequiredError) Unwrap() error { return megaapi.EMFAREQUIRED }
+func (e mfaRequiredError) Unwrap() []error {
+	return []error{megaapi.EMFAREQUIRED, e.BadRequestError}
+}
 
 // probeSession reports whether a saved session or a password login is enough.
 // A completed login is configured and has nothing left to enter.
@@ -112,9 +114,9 @@ func mapLoginError(loginErr error) error {
 	case loginErr == nil:
 		return nil
 	case errors.Is(loginErr, megaapi.ENOENT), errors.Is(loginErr, megaapi.EKEY):
-		return err.NewUnprocessableError(t("bad_credentials"))
+		return err.NewBadRequestError(t("bad_credentials"))
 	case errors.Is(loginErr, megaapi.EMFAREQUIRED):
-		return mfaRequiredError{UnprocessableError: err.NewUnprocessableError(t("mfa_required"))}
+		return mfaRequiredError{BadRequestError: err.NewBadRequestError(t("mfa_required"))}
 	case errors.Is(loginErr, megaapi.EBLOCKED):
 		return err.NewNotAllowedMessageError(t("blocked"))
 	case errors.Is(loginErr, megaapi.EOVERQUOTA), errors.Is(loginErr, megaapi.EGOINGOVERQUOTA):

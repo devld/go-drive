@@ -4,19 +4,26 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
+	"time"
+
 	"go-drive/common"
-	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/logging"
 	"go-drive/common/types"
 	"go-drive/common/utils"
 	"go-drive/storage"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 const sessionCacheMaxEntries = 1000
+
+type sessionUnauthorizedError string
+
+func (e sessionUnauthorizedError) Error() string { return string(e) }
+
+func (sessionUnauthorizedError) Code() int { return http.StatusUnauthorized }
 
 // DBTokenStore is a server-side opaque token store backed by the database.
 //
@@ -63,7 +70,7 @@ func hashToken(token string) string {
 }
 
 func (ts *DBTokenStore) invalidTokenError() error {
-	return err.NewUnauthorizedError(i18n.T("api.db_token.invalid_token"))
+	return sessionUnauthorizedError(i18n.T("api.db_token.invalid_token"))
 }
 
 func (ts *DBTokenStore) Create(value types.Principal) (types.Token, error) {

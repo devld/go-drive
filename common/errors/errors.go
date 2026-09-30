@@ -30,21 +30,6 @@ func (b BadRequestError) Code() int {
 	return http.StatusBadRequest
 }
 
-// UnauthorizedError is HTTP 401 and means the go-drive session is missing or
-// invalid. The web client drops its login token on this status, so remote
-// drive credential and session failures must use another error type.
-type UnauthorizedError struct {
-	msg string
-}
-
-func (i UnauthorizedError) Error() string {
-	return i.msg
-}
-
-func (i UnauthorizedError) Code() int {
-	return http.StatusUnauthorized
-}
-
 // NotFoundError 404
 type NotFoundError struct {
 	msg              string
@@ -75,45 +60,6 @@ func (d NotAllowedError) Code() int {
 
 func (d NotAllowedError) Data() types.M {
 	return d.data
-}
-
-// UnprocessableError 422
-type UnprocessableError struct {
-	msg string
-}
-
-func (u UnprocessableError) Error() string {
-	return u.msg
-}
-
-func (u UnprocessableError) Code() int {
-	return http.StatusUnprocessableEntity
-}
-
-// ConflictError 409
-type ConflictError struct {
-	msg string
-}
-
-func (c ConflictError) Error() string {
-	return c.msg
-}
-
-func (c ConflictError) Code() int {
-	return http.StatusConflict
-}
-
-// PermissionDeniedError 403
-type PermissionDeniedError struct {
-	msg string
-}
-
-func (p PermissionDeniedError) Code() int {
-	return http.StatusForbidden
-}
-
-func (p PermissionDeniedError) Error() string {
-	return p.msg
 }
 
 // UnsupportedError 403
@@ -163,18 +109,8 @@ func (r RemoteAPIError) Status() int {
 	return r.code
 }
 
-func IsUnauthorizedError(e error) bool {
-	_, ok := errors.AsType[UnauthorizedError](e)
-	return ok
-}
-
 func IsBadRequestError(e error) bool {
 	_, ok := errors.AsType[BadRequestError](e)
-	return ok
-}
-
-func IsUnprocessableError(e error) bool {
-	_, ok := errors.AsType[UnprocessableError](e)
 	return ok
 }
 
@@ -205,14 +141,6 @@ func NewBadRequestError(msg string) BadRequestError {
 	return BadRequestError{msg}
 }
 
-func NewUnprocessableError(msg string) UnprocessableError {
-	return UnprocessableError{msg}
-}
-
-func NewUnauthorizedError(msg string) UnauthorizedError {
-	return UnauthorizedError{msg}
-}
-
 func NewNotFoundError() NotFoundError {
 	return NotFoundError{msg: i18n.T("error.not_found")}
 }
@@ -229,16 +157,8 @@ func NewNotAllowedError() NotAllowedError {
 	return NotAllowedError{i18n.T("error.not_allowed"), nil}
 }
 
-func NewPermissionDeniedError(msg string) PermissionDeniedError {
-	return PermissionDeniedError{msg}
-}
-
 func NewNotAllowedMessageError(msg string) NotAllowedError {
 	return NotAllowedError{msg, nil}
-}
-
-func NewConflictError(msg string) ConflictError {
-	return ConflictError{msg}
 }
 
 func NewNotAllowedMessageDataError(msg string, data types.M) NotAllowedError {
