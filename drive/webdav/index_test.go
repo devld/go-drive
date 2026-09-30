@@ -3,11 +3,13 @@ package webdav
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"go-drive/common/driveutil"
+	err "go-drive/common/errors"
 	"go-drive/common/types"
 )
 
@@ -51,5 +53,22 @@ func TestRequestHeadersApplyToWebDAVRequests(t *testing.T) {
 	}, driveutil.DriveEnv{})
 	if e != nil {
 		t.Fatalf("NewDrive: %v", e)
+	}
+}
+
+func TestWrongPasswordIsNotSessionUnauthorized(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	_, e := NewDrive(context.Background(), types.SM{
+		"url":      server.URL,
+		"username": "user",
+		"password": "wrong",
+	}, driveutil.DriveEnv{})
+	remote, ok := errors.AsType[err.RemoteAPIError](e)
+	if !ok || remote.Code() != 500 || remote.Status() != http.StatusUnauthorized || err.IsUnauthorizedError(e) {
+		t.Fatalf("NewDrive error = %v", e)
 	}
 }

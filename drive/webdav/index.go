@@ -280,7 +280,9 @@ func (w *Drive) afterRequest(resp req.Response) error {
 			return errorPreconditionFailed
 		}
 		if resp.Status() == http.StatusUnauthorized {
-			return err.NewUnauthorizedError(davT("wrong_user_or_password"))
+			// RemoteAPIError rewrites a remote 401 to 500 so the web client
+			// does not treat it as an invalid go-drive session.
+			return err.NewRemoteAPIError(resp.Status(), davT("wrong_user_or_password"))
 		}
 		return err.NewRemoteAPIError(500, davT("remote_error", strconv.Itoa(resp.Status())))
 	}

@@ -223,6 +223,14 @@ const showReloadingTips = () => {
   }
 }
 
+let driveInitRequestId = 0
+
+const resetDriveInit = () => {
+  driveInitRequestId++
+  driveInit.value = null
+  driveInitForm.value = {}
+}
+
 const loadDrives = async () => {
   try {
     const factories = await getDriveFactories()
@@ -234,6 +242,7 @@ const loadDrives = async () => {
 }
 
 const addDrive = () => {
+  resetDriveInit()
   drive.value = {
     name: '',
     enabled: '1',
@@ -244,6 +253,7 @@ const addDrive = () => {
 }
 
 const editDrive = (drive_: Drive) => {
+  resetDriveInit()
   const config = JSON.parse(drive_.config)
   drive.value = {
     name: drive_.name,
@@ -320,12 +330,21 @@ const cancelEdit = () => {
 }
 
 const getDriveInitConfigInfo = async () => {
+  const driveName = drive.value?.name
+  if (!driveName) return
+
+  const requestId = ++driveInitRequestId
   loading(true)
   try {
-    driveInit.value = await getDriveInitConfig(drive.value!.name)
+    const config = await getDriveInitConfig(driveName)
+    if (requestId !== driveInitRequestId || drive.value?.name !== driveName) return
+
+    driveInit.value = config
     driveInitForm.value = driveInit.value?.value || {}
   } catch (e: any) {
-    alert(e.message)
+    if (requestId === driveInitRequestId && drive.value?.name === driveName) {
+      alert(e.message)
+    }
   } finally {
     loading()
   }
