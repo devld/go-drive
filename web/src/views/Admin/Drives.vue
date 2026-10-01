@@ -5,24 +5,26 @@
   <div class="drives-manager" :class="{ editing: !!drive }">
     <div class="drives-list">
       <div class="actions">
-        <SimpleButton
-          class="add-button"
-          icon="add"
-          :title="$t('p.admin.drive.add_drive')"
-          @click="addDrive"
-        />
-        <SimpleButton
-          icon="refresh"
-          :title="$t('p.admin.drive.reload_tip')"
-          :loading="reloading"
-          :disabled="reloading"
-          @click="reloadDrives"
-        >
-          {{ $t('p.admin.drive.reload_drives') }}
-          <template v-if="reloadProgress" #loading>
-            {{ reloadProgress }}
-          </template>
-        </SimpleButton>
+        <div class="action-buttons">
+          <SimpleButton
+            class="add-button"
+            icon="add"
+            :title="$t('p.admin.drive.add_drive')"
+            @click="addDrive"
+          />
+          <SimpleButton
+            icon="refresh"
+            :title="$t('p.admin.drive.reload_tip')"
+            :loading="reloading"
+            :disabled="reloading"
+            @click="reloadDrives"
+          >
+            {{ $t('p.admin.drive.reload_drives') }}
+            <template v-if="reloadProgress" #loading>
+              {{ reloadProgress }}
+            </template>
+          </SimpleButton>
+        </div>
         <span v-if="reloadRequired" class="reload-required-tip" role="status">
           {{ $t('p.admin.drive.reload_required_tip') }}
         </span>
@@ -506,6 +508,12 @@ watch(
     flex-wrap: wrap;
     gap: 10px;
 
+    .action-buttons {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
     .add-button {
       display: none;
     }
@@ -536,8 +544,16 @@ watch(
     justify-content: center;
 
     .actions {
+      flex-direction: column;
+      align-items: flex-start;
+
       .add-button {
         display: inline;
+      }
+
+      .reload-required-tip {
+        align-self: stretch;
+        min-width: 0;
       }
     }
 
