@@ -60,7 +60,7 @@
     </DialogView>
 
     <button
-      v-if="taskManagerButtonShowing"
+      v-if="taskManagerButtonShowing && tasks.length > 0"
       class="button-task-manager glass-surface"
       data-ui="button"
       data-variant="plain"
