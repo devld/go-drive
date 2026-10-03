@@ -5,6 +5,7 @@
     :class="{ 'is-idle': controlsHidden }"
     data-ui="preview"
     data-handler="video"
+    @click="onPageClick"
     @mousemove="showControls"
     @mouseleave="scheduleHide"
   >
@@ -19,11 +20,19 @@
       role="button"
       tabindex="0"
       :aria-label="
-        playing ? $t('handler.video.pause') : $t('handler.video.play')
+        usesTouchControls
+          ? $t(
+              controlsHidden
+                ? 'handler.video.show_controls'
+                : 'handler.video.hide_controls'
+            )
+          : playing
+            ? $t('handler.video.pause')
+            : $t('handler.video.play')
       "
-      @click="togglePlay"
-      @dblclick="toggleFullscreen"
-      @keydown.enter.stop.prevent="togglePlay"
+      @click.stop="onPlayerClick"
+      @dblclick="onPlayerDoubleClick"
+      @keydown.enter.stop.prevent="onPlayerClick"
     >
       <video
         ref="videoEl"
@@ -39,7 +48,12 @@
       />
     </div>
 
-    <div class="video-controls" @click.stop>
+    <div
+      class="video-controls"
+      @click.stop="onControlsClick"
+      @pointerdown="onControlsPointerActivity"
+      @pointermove="onControlsPointerActivity"
+    >
       <div
         ref="progressEl"
         class="video-controls__bar"
@@ -223,6 +237,7 @@ const muted = ref(false)
 const isFullscreen = ref(false)
 const controlsHidden = ref(false)
 const supportsPip = ref(false)
+const usesTouchControls = ref(false)
 
 let hideTimer = 0
 
@@ -250,6 +265,49 @@ const togglePlay = () => {
   if (!el) return
   if (el.paused) el.play().catch(() => undefined)
   else el.pause()
+}
+
+const toggleTouchControls = () => {
+  if (!usesTouchControls.value) return
+  clearTimeout(hideTimer)
+  controlsHidden.value = !controlsHidden.value
+  if (!controlsHidden.value) scheduleHide()
+}
+
+const onPageClick = () => {
+  toggleTouchControls()
+}
+
+const onPlayerClick = () => {
+  if (usesTouchControls.value) {
+    toggleTouchControls()
+    return
+  }
+  togglePlay()
+}
+
+const onPlayerDoubleClick = () => {
+  if (!usesTouchControls.value) toggleFullscreen()
+}
+
+const onControlsClick = (event: MouseEvent) => {
+  if (!usesTouchControls.value) return
+  const target = event.target
+  if (
+    target instanceof Element &&
+    target.closest(
+      '.video-controls__btn, .video-controls__bar, .video-controls__volume-bar'
+    )
+  ) {
+    scheduleHide()
+    return
+  }
+  clearTimeout(hideTimer)
+  controlsHidden.value = true
+}
+
+const onControlsPointerActivity = () => {
+  if (usesTouchControls.value && !controlsHidden.value) scheduleHide()
 }
 
 const onTimeUpdate = () => {
@@ -344,6 +402,7 @@ const togglePip = async () => {
 }
 
 const showControls = () => {
+  if (usesTouchControls.value) return
   controlsHidden.value = false
   scheduleHide()
 }
@@ -351,7 +410,7 @@ const showControls = () => {
 const scheduleHide = () => {
   clearTimeout(hideTimer)
   hideTimer = window.setTimeout(() => {
-    if (playing.value) controlsHidden.value = true
+    if (usesTouchControls.value || playing.value) controlsHidden.value = true
   }, 3000)
 }
 
@@ -363,6 +422,7 @@ const seekStep = computed(() => {
 
 const onKeyDown = (e: KeyboardEvent) => {
   if (!videoEl.value) return
+  if (usesTouchControls.value && !controlsHidden.value) scheduleHide()
   switch (e.key) {
     case ' ':
     case 'k':
@@ -404,6 +464,10 @@ const onKeyDown = (e: KeyboardEvent) => {
 
 onMounted(() => {
   applyVolume()
+  usesTouchControls.value = window.matchMedia(
+    '(hover: none) and (pointer: coarse)'
+  ).matches
+  if (usesTouchControls.value) scheduleHide()
   supportsPip.value =
     'pictureInPictureEnabled' in document && document.pictureInPictureEnabled
   document.addEventListener('fullscreenchange', onFullscreenChange)
@@ -421,9 +485,12 @@ onUnmounted(() => {
 .video-view-page {
   position: relative;
   width: 100%;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   background-color: #000;
   color: #fff;
 
@@ -457,12 +524,14 @@ onUnmounted(() => {
 }
 
 .video-player {
-  flex: 1;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: min(100%, 960px, 133.333vh);
+  aspect-ratio: 4 / 3;
   min-height: 0;
+  background-color: #000;
   cursor: pointer;
 
   &:focus-visible {
@@ -471,16 +540,12 @@ onUnmounted(() => {
   }
 
   &__video {
-    max-width: 100%;
-    max-height: 80vh;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
     outline: none;
   }
 
-  .video-view-page:fullscreen & {
-    &__video {
-      max-height: 100vh;
-    }
-  }
 }
 
 .video-controls {
