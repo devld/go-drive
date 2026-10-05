@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@go-drive/utils": "0.0.0",
-    "dompurify": "^3.4.15",
+    "dompurify": "^3.4.16",
     "github-markdown-css": "^5.9.0",
     "highlight.js": "^11.11.1",
     "marked": "^18.0.5",
