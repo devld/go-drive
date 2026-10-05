@@ -1,7 +1,7 @@
-import { defineAsyncComponent } from 'vue'
 import { T } from '@go-drive/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
+import AudioView from './AudioView.vue'
 
 export default {
   name: 'audio',
@@ -12,7 +12,7 @@ export default {
   },
   view: {
     name: 'AudioView',
-    component: defineAsyncComponent(() => import('./AudioView.vue')),
+    component: AudioView,
   },
   supports: ({ entry }, { options }) =>
     entry.type === 'file' &&

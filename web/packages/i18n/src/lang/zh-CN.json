@@ -496,6 +496,8 @@
       "desc": "播放视频",
       "play": "播放",
       "pause": "暂停",
+      "show_controls": "显示控制栏",
+      "hide_controls": "隐藏控制栏",
       "progress": "播放进度",
       "volume": "音量",
       "mute": "静音",
