@@ -496,6 +496,8 @@
       "desc": "Play video",
       "play": "Play",
       "pause": "Pause",
+      "show_controls": "Show controls",
+      "hide_controls": "Hide controls",
       "progress": "Playback position",
       "volume": "Volume",
       "mute": "Mute",

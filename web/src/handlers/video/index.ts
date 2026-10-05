@@ -1,7 +1,7 @@
-import { defineAsyncComponent } from 'vue'
 import { T } from '@go-drive/i18n'
 import { filenameExt } from '@/utils'
 import { EntryHandler } from '../types'
+import VideoView from './VideoView.vue'
 
 export default {
   name: 'video',
@@ -13,7 +13,7 @@ export default {
   style: { fullscreen: true },
   view: {
     name: 'VideoView',
-    component: defineAsyncComponent(() => import('./VideoView.vue')),
+    component: VideoView,
   },
   supports: ({ entry }, { options }) =>
     entry.type === 'file' &&

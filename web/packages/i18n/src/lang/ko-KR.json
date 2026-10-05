@@ -496,6 +496,8 @@
       "desc": "동영상 재생",
       "play": "재생",
       "pause": "일시정지",
+      "show_controls": "컨트롤 표시",
+      "hide_controls": "컨트롤 숨기기",
       "progress": "재생 위치",
       "volume": "볼륨",
       "mute": "음소거",

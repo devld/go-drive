@@ -5,6 +5,7 @@
     :show="showing"
     :fullscreen="dialogStyle.fullscreen"
     :accessible-label="dialogLabel"
+    :class="{ 'entry-handler-dialog--closing': !showing }"
   >
     <HandlerView ref="view" v-bind="events" />
   </DialogView>
@@ -83,5 +84,9 @@ defineExpose(handle)
     backdrop-filter: none;
     outline: none;
   }
+}
+
+.entry-handler-dialog--closing {
+  pointer-events: none;
 }
 </style>

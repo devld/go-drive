@@ -2,9 +2,15 @@
   <div
     ref="containerEl"
     class="video-view-page"
-    :class="{ 'is-idle': controlsHidden }"
+    :class="{
+      'is-idle': controlsHidden,
+      'is-swipe-dragging': isSwipeDragging,
+      'is-dismissing': isDismissing,
+    }"
+    :style="swipeStyle"
     data-ui="preview"
     data-handler="video"
+    @click="onPageClick"
     @mousemove="showControls"
     @mouseleave="scheduleHide"
   >
@@ -19,11 +25,24 @@
       role="button"
       tabindex="0"
       :aria-label="
-        playing ? $t('handler.video.pause') : $t('handler.video.play')
+        usesTouchControls
+          ? $t(
+              controlsHidden
+                ? 'handler.video.show_controls'
+                : 'handler.video.hide_controls'
+            )
+          : playing
+            ? $t('handler.video.pause')
+            : $t('handler.video.play')
       "
-      @click="togglePlay"
-      @dblclick="toggleFullscreen"
-      @keydown.enter.stop.prevent="togglePlay"
+      @pointerup.stop="onPlayerPointerUp"
+      @pointerdown="onPlayerPointerDown"
+      @pointermove="onPlayerPointerMove"
+      @pointercancel="onPlayerPointerCancel"
+      @click.stop="onPlayerClick"
+      @dblclick="onPlayerDoubleClick"
+      @keydown.enter.stop.prevent="onPlayerKeyboardActivate"
+      @keydown.space.stop.prevent="onPlayerKeyboardActivate"
     >
       <video
         ref="videoEl"
@@ -34,12 +53,17 @@
         @durationchange="syncDuration"
         @progress="onProgress"
         @ended="playing = false"
-        @play="playing = true"
+        @play="onPlaybackStarted"
         @pause="playing = false"
       />
     </div>
 
-    <div class="video-controls" @click.stop>
+    <div
+      class="video-controls"
+      @click.stop="onControlsClick"
+      @pointerdown="onControlsPointerActivity"
+      @pointermove="onControlsPointerActivity"
+    >
       <div
         ref="progressEl"
         class="video-controls__bar"
@@ -198,6 +222,7 @@ import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { Entry } from '@/types'
 import { createDrag } from '@go-drive/utils'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useVideoInteraction } from './useVideoInteraction'
 
 defineProps({
   entry: {
@@ -215,16 +240,14 @@ const progressEl = ref<HTMLElement>()
 const volumeEl = ref<HTMLElement>()
 
 const playing = ref(false)
+const hasPlaybackStarted = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
 const loaded = ref(0)
 const volume = ref(1)
 const muted = ref(false)
 const isFullscreen = ref(false)
-const controlsHidden = ref(false)
 const supportsPip = ref(false)
-
-let hideTimer = 0
 
 const playedRatio = computed(() =>
   duration.value > 0 ? currentTime.value / duration.value : 0
@@ -250,6 +273,37 @@ const togglePlay = () => {
   if (!el) return
   if (el.paused) el.play().catch(() => undefined)
   else el.pause()
+}
+
+const {
+  controlsHidden,
+  usesTouchControls,
+  onPageClick,
+  onPlayerPointerUp,
+  onPlayerPointerDown,
+  onPlayerPointerMove,
+  onPlayerPointerCancel,
+  onPlayerClick,
+  onPlayerDoubleClick,
+  onPlayerKeyboardActivate,
+  onControlsClick,
+  onControlsPointerActivity,
+  showControls,
+  scheduleHide,
+  swipeStyle,
+  isSwipeDragging,
+  isDismissing,
+} = useVideoInteraction(
+  containerEl,
+  videoEl,
+  hasPlaybackStarted,
+  togglePlay,
+  () => emit('close')
+)
+
+const onPlaybackStarted = () => {
+  playing.value = true
+  hasPlaybackStarted.value = true
 }
 
 const onTimeUpdate = () => {
@@ -343,18 +397,6 @@ const togglePip = async () => {
   }
 }
 
-const showControls = () => {
-  controlsHidden.value = false
-  scheduleHide()
-}
-
-const scheduleHide = () => {
-  clearTimeout(hideTimer)
-  hideTimer = window.setTimeout(() => {
-    if (playing.value) controlsHidden.value = true
-  }, 3000)
-}
-
 const seekStep = computed(() => {
   const d = duration.value
   if (d <= 0) return 5
@@ -363,6 +405,7 @@ const seekStep = computed(() => {
 
 const onKeyDown = (e: KeyboardEvent) => {
   if (!videoEl.value) return
+  if (usesTouchControls.value && !controlsHidden.value) scheduleHide()
   switch (e.key) {
     case ' ':
     case 'k':
@@ -412,7 +455,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   videoEl.value?.pause()
-  clearTimeout(hideTimer)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
   window.removeEventListener('keydown', onKeyDown)
 })
@@ -421,11 +463,27 @@ onUnmounted(() => {
 .video-view-page {
   position: relative;
   width: 100%;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   background-color: #000;
   color: #fff;
+  transition:
+    transform 180ms var(--motion-easing-exit),
+    opacity 180ms var(--motion-easing-exit);
+
+  &.is-swipe-dragging {
+    will-change: transform, opacity;
+    transition: none;
+  }
+
+  &.is-dismissing {
+    pointer-events: none;
+    transition-duration: 120ms;
+  }
 
   &__title {
     position: absolute;
@@ -462,8 +520,18 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   width: 100%;
+  min-width: 0;
   min-height: 0;
+  background-color: #000;
   cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+
+  &:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+  }
 
   &:focus-visible {
     outline: 3px solid var(--color-focus-ring);
@@ -471,15 +539,12 @@ onUnmounted(() => {
   }
 
   &__video {
+    width: auto;
+    height: auto;
     max-width: 100%;
-    max-height: 80vh;
+    max-height: 100%;
+    object-fit: contain;
     outline: none;
-  }
-
-  .video-view-page:fullscreen & {
-    &__video {
-      max-height: 100vh;
-    }
   }
 }
 
