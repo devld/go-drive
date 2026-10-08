@@ -1,5 +1,39 @@
 import type { Ref } from 'vue'
 
+const nonEditableInputTypes = new Set([
+  'button',
+  'checkbox',
+  'color',
+  'file',
+  'hidden',
+  'image',
+  'radio',
+  'range',
+  'reset',
+  'submit',
+])
+
+export function isEditableElement(element: Element | null): boolean {
+  if (!element) return false
+
+  if (element instanceof HTMLInputElement) {
+    return (
+      !element.disabled &&
+      !element.readOnly &&
+      !nonEditableInputTypes.has(element.type)
+    )
+  }
+
+  if (element instanceof HTMLTextAreaElement) {
+    return !element.disabled && !element.readOnly
+  }
+
+  if (!(element instanceof HTMLElement)) return false
+  if (element.isContentEditable) return true
+
+  return isEditableElement(element.shadowRoot?.activeElement ?? null)
+}
+
 const ratioFromEvent = (el: HTMLElement, event: PointerEvent) => {
   const rect = el.getBoundingClientRect()
   return Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))

@@ -128,6 +128,7 @@ onMounted(initEditor)
 .code-editor {
   height: 0;
   position: relative;
+  background-color: var(--color-bg-code-editor, var(--color-bg-elevated));
 }
 
 .code-editor__inner {

@@ -526,6 +526,11 @@
       "view_name": "查看",
       "edit_desc": "编辑这个文件",
       "view_desc": "查看这个文件"
+    },
+    "markdown": {
+      "name": "Markdown",
+      "edit_desc": "编辑这个 Markdown 文件",
+      "view_desc": "查看这个 Markdown 文件"
     }
   }
 }

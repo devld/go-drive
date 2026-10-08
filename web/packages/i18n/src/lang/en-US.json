@@ -526,6 +526,11 @@
       "view_name": "View",
       "edit_desc": "Edit this file",
       "view_desc": "View this file"
+    },
+    "markdown": {
+      "name": "Markdown",
+      "edit_desc": "Edit this Markdown file",
+      "view_desc": "View this Markdown file"
     }
   }
 }

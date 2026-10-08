@@ -25,3 +25,25 @@ export function addPreferColorListener(listener: ColorPreferenceListener) {
 export function removePreferColorListener(listener: ColorPreferenceListener) {
   arrayRemove(listeners, (value) => value === listener)
 }
+
+export function observeThemeChanges(
+  listener: ColorPreferenceListener,
+  target?: Element
+) {
+  addPreferColorListener(listener)
+
+  if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
+    return () => removePreferColorListener(listener)
+  }
+
+  const observer = new MutationObserver(listener)
+  observer.observe(target ?? document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'data-theme', 'style'],
+  })
+
+  return () => {
+    observer.disconnect()
+    removePreferColorListener(listener)
+  }
+}

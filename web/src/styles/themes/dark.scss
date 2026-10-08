@@ -3,6 +3,7 @@ $theme-dark: (
   color-bg-canvas: #16181d,
   color-bg-surface: #1d2026,
   color-bg-elevated: #252931,
+  color-bg-code-editor: var(--color-bg-elevated),
   color-bg-glass: rgba(37, 41, 49, 0.58),
   // Interaction backgrounds are overlays so custom page backgrounds remain visible.
   color-bg-hover: rgba(255, 255, 255, 0.08),

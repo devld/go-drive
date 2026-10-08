@@ -526,6 +526,11 @@
       "view_name": "보기",
       "edit_desc": "이 파일 편집",
       "view_desc": "이 파일 보기"
+    },
+    "markdown": {
+      "name": "Markdown",
+      "edit_desc": "이 Markdown 파일 편집",
+      "view_desc": "이 Markdown 파일 보기"
     }
   }
 }

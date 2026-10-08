@@ -8,17 +8,33 @@ import {
   setupJavaScript,
 } from './utils'
 import './workers'
-import { KeyCode, KeyMod } from 'monaco-editor'
+import * as monaco from 'monaco-editor'
 
 const language = queries['lang']
 
 const editor = createEditor(language)
 emit('ready', undefined)
 
+let editorTheme: 'vs' | 'vs-dark' = 'vs'
+let editorBackground = '#ffffff'
+const updateTheme = () => {
+  const themeName = `go-drive-${editorTheme}`
+  monaco.editor.defineTheme(themeName, {
+    base: editorTheme,
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': editorBackground,
+      'editorGutter.background': editorBackground,
+    },
+  })
+  editor.updateOptions({ theme: themeName })
+}
+
 editor.getModel()!.onDidChangeContent(() => {
   emit('change', editor.getValue())
 })
-editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
+editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
   emit('save', undefined)
 })
 
@@ -33,7 +49,14 @@ const messageHandlers: EditorInMessageHandlers = {
     editor.updateOptions({ readOnly: disabled })
   },
   setTheme: (theme) => {
-    editor.updateOptions({ theme })
+    if (theme !== 'vs' && theme !== 'vs-dark') return
+    editorTheme = theme
+    updateTheme()
+  },
+  setBackground: (background) => {
+    if (!background.startsWith('#')) return
+    editorBackground = background
+    updateTheme()
   },
 }
 
