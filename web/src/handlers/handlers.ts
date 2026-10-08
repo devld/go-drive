@@ -1,10 +1,13 @@
 import { Entry } from '@/types'
 import { mapOf } from '@/utils'
+import { entryMatches } from '@go-drive/utils'
 import {
   EntryHandler,
+  EntryHandlerSupportsConfig,
   EntryHandlerContext,
   EntryHandlerExecutionParams,
   EntryHandlerSupportsParams,
+  EntrySupportsFunc,
 } from './types'
 
 export const HANDLERS: Readonly<EntryHandler[]> = Object.freeze(
@@ -57,11 +60,47 @@ export function isHandlerSupports(
   const entries = Array.isArray(entry) ? entry : [entry]
   if (entries.length === 0) return false
   if (!handler.multiple && entries.length > 1) return false
-  if (handler.multiple) {
-    return handler.supports({ entry: entries, parent: data.parent }, ctx)
-  } else {
-    return handler.supports({ entry: entries[0], parent: data.parent }, ctx)
+  const supports = handler.supports
+  if (typeof supports === 'function') {
+    if (handler.multiple) {
+      return (supports as EntrySupportsFunc<Entry[]>)({
+        entry: entries,
+        parent: data.parent,
+      }, ctx)
+    }
+    return (supports as EntrySupportsFunc<Entry>)({
+      entry: entries[0],
+      parent: data.parent,
+    }, ctx)
   }
+  return entries.every((entry) =>
+    matchesEntryHandlerSupports(entry, supports)
+  )
+}
+
+function matchesEntryHandlerSupports(
+  entry: Entry,
+  supports: EntryHandlerSupportsConfig
+) {
+  const [types, extensions, maxSize] = supports
+  const supportedTypes = Array.isArray(types) ? types : types ? [types] : []
+  if (types !== undefined && !supportedTypes.includes(entry.type)) {
+    return false
+  }
+  if (
+    extensions &&
+    (entry.type !== 'file' ||
+      !entryMatches(
+        entry,
+        extensions.split(',').map((extension) => extension.trim())
+      ))
+  ) {
+    return false
+  }
+  if (maxSize !== undefined && entry.type === 'file' && entry.size > maxSize) {
+    return false
+  }
+  return true
 }
 
 export function resolveEntryHandler(
