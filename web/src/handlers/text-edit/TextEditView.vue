@@ -22,7 +22,7 @@
         @save="!readonly && saveFile()"
       />
       <CodeMirrorEditor
-        v-else
+        v-else-if="!useMonacoEditor"
         v-model="content"
         :filename="filename"
         :disabled="readonly"
@@ -46,8 +46,9 @@ import HandlerTitleBar from '@/components/HandlerTitleBar.vue'
 import { Entry } from '@/types'
 import { entryMatches, filename as filenameFn, filenameExt } from '@/utils'
 import { HttpError } from '@/utils/http'
-import { isPrimaryModifierPressed, LoadingState } from '@go-drive/utils'
+import { isPrimaryModifierPressed } from '@go-drive/utils'
 import { alert } from '@/utils/ui-utils'
+import { LoadingState } from '@go-drive/utils'
 import { computed, nextTick, ref, watch } from 'vue'
 import { EntryHandlerContext } from '../types'
 

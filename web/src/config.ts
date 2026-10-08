@@ -7,6 +7,8 @@ export const DEFAULT_TEXT_FILE_EXTS =
 
 export const DEFAULT_IMAGE_FILE_EXTS = 'jpg,jpeg,png,gif'
 
+export const PREVIEW_FILE_MAX_SIZE = 50 * 1024 * 1024
+
 export const DEFAULT_AUDIO_FILE_EXTS = 'mp3,m4a,flac'
 
 export const DEFAULT_VIDEO_FILE_EXTS = 'mp4,ogg'
