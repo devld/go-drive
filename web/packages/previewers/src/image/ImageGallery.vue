@@ -4,14 +4,22 @@
     class="preview-image-gallery"
     :class="{ loading: loading }"
   >
-    <LoadingState v-if="loading" variant="overlay" text="Loading" />
+    <LoadingState
+      v-if="loading"
+      variant="overlay"
+      :text="t('preview.loading')"
+      :surface="false"
+    />
   </div>
 </template>
 <script setup lang="ts">
+import { useI18n } from '@go-drive/i18n'
 import { onMounted, onUnmounted, ref } from 'vue'
 import PhotoSwipe from 'photoswipe'
 import 'photoswipe/dist/photoswipe.css'
 import { LoadingState } from '@go-drive/utils'
+
+const { t } = useI18n({ useScope: 'global' })
 
 export interface GalleryImage {
   src: string
