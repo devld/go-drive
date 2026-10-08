@@ -8,7 +8,6 @@
       v-if="loading"
       variant="overlay"
       :text="t('preview.loading')"
-      :surface="false"
     />
   </div>
 </template>
