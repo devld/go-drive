@@ -1,7 +1,6 @@
 import {
-  addPreferColorListener,
-  isDarkMode,
-  removePreferColorListener,
+  observeThemeChanges,
+  resolveCssColor,
 } from '@go-drive/utils'
 import { onMounted, onUnmounted, type Ref } from 'vue'
 import {
@@ -57,13 +56,22 @@ export const useEditorSetup = (
 }
 
 export const useEditorTheme = (emit: EditorEmit) => {
+  let stopObservingTheme: (() => void) | undefined
   const setTheme = () => {
-    emit('setTheme', isDarkMode() ? 'vs-dark' : 'vs')
+    const root = document.documentElement
+    const styles = getComputedStyle(root)
+    const colorScheme = styles.colorScheme.split(/\s+/)
+    const isDark = colorScheme.includes('dark')
+    const background = styles.getPropertyValue('--color-bg-code-editor').trim()
+    emit('setTheme', isDark ? 'vs-dark' : 'vs')
+    emit('setBackground', resolveCssColor(background, root) ?? '#ffffff')
   }
 
-  addPreferColorListener(setTheme)
+  onMounted(() => {
+    stopObservingTheme = observeThemeChanges(setTheme)
+  })
   onUnmounted(() => {
-    removePreferColorListener(setTheme)
+    stopObservingTheme?.()
   })
 
   return [setTheme]

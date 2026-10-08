@@ -19,6 +19,7 @@ export interface EditorInMessageTypes {
   setupJs: JavaScriptSetupOptions
   setDisabled: boolean
   setTheme: string
+  setBackground: string
 }
 
 export interface EditorOutMessageTypes {

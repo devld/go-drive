@@ -6,6 +6,7 @@
   "description": "Browser file preview components for the go-drive web application",
   "exports": {
     "./markdown": "./src/markdown/index.ts",
+    "./markdown/editor": "./src/markdown/editor/index.ts",
     "./markdown/styles.scss": "./src/markdown/styles.scss",
     "./markdown/dark.scss": "./src/markdown/dark.scss",
     "./image": "./src/image/index.ts"
@@ -14,12 +15,19 @@
     "vue": "^3.5.0"
   },
   "dependencies": {
+    "@codemirror/language": "^6.11.3",
+    "@codemirror/language-data": "^6.3.1",
+    "@floating-ui/dom": "^1.8.0",
+    "@go-drive/i18n": "0.0.0",
     "@go-drive/utils": "0.0.0",
+    "@milkdown/crepe": "^7.22.2",
+    "@milkdown/kit": "^7.22.2",
     "dompurify": "^3.4.16",
     "github-markdown-css": "^5.9.0",
     "highlight.js": "^11.11.1",
     "marked": "^18.0.5",
     "marked-highlight": "^2.2.4",
+    "mermaid": "^12.1.0",
     "photoswipe": "^5.4.4"
   }
 }

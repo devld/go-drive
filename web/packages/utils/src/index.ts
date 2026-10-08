@@ -1,6 +1,7 @@
 export * from './types'
 export * from './path'
 export * from './format'
+export * from './color'
 export * from './functions'
 export * from './dom'
 export * from './file'
