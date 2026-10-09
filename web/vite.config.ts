@@ -48,16 +48,30 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     cssCodeSplit: false,
-    rollupOptions: {
+    rolldownOptions: {
       plugins: [visualizer()],
       output: {
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('vue') || id.includes('pinia')) return 'vue'
-          }
+        codeSplitting: {
+          includeDependenciesRecursively: false,
+          groups: [
+            {
+              name: 'vue',
+              test: /\/node_modules\/(?:@vue\/|@intlify\/|vue(?:-router|-i18n)?\/|pinia\/)/,
+            },
+            {
+              debugName: 'diagram-utils',
+              test: /\/node_modules\/(?:d3-(?:array|format|interpolate|path|scale|shape)\/|khroma\/|internmap\/)/,
+              minShareCount: 2,
+              name: (id, context) => {
+                // Aggregate small shared helpers without capturing diagram/layout entries.
+                const code = context.getModuleInfo(id)?.code
+                if (code && code.length < 20_000) return 'diagram-utils'
+              },
+            },
+          ],
         },
       },
     },

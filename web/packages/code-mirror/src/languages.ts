@@ -1,3 +1,5 @@
+import { LanguageDescription } from '@codemirror/language'
+
 export const languages = {
   cpp: () => import('@codemirror/lang-cpp').then((m) => m.cpp()),
   css: () => import('@codemirror/lang-css').then((m) => m.css()),
@@ -50,6 +52,33 @@ const mapping: { [k in keyof typeof languages]: string[] } = {
   sql: ['sql'],
   xml: ['xml', 'ant', 'plist', 'xsd'],
 }
+
+const languageNames: Record<keyof typeof languages, string> = {
+  cpp: 'C++',
+  css: 'CSS',
+  html: 'HTML',
+  java: 'Java',
+  javascript: 'JavaScript',
+  typescript: 'TypeScript',
+  json: 'JSON',
+  markdown: 'Markdown',
+  php: 'PHP',
+  python: 'Python',
+  sql: 'SQL',
+  xml: 'XML',
+}
+
+export const languageDescriptions = Object.entries(languages).map(
+  ([language, load]) => {
+    const key = language as keyof typeof languages
+    return LanguageDescription.of({
+      name: languageNames[key],
+      alias: [key, ...mapping[key]],
+      extensions: mapping[key],
+      load,
+    })
+  }
+)
 
 const extMapping: Record<string, keyof typeof languages> = {}
 Object.entries(mapping).forEach(([language, extensions]) => {
