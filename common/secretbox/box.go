@@ -71,17 +71,17 @@ func Open(dataDir string) (*Box, error) {
 	case env != "" && fileExists && env != fileSecret:
 		return nil, fmt.Errorf("encryption key in %s does not match %s", keyFileName, EnvKey)
 	case env != "":
-		logging.For("secretbox").Debugf("encryption key loaded from environment")
+		logging.For("sec-box").Debugf("encryption key loaded from environment")
 		box, e = New(env)
 	case fileExists:
-		logging.For("secretbox").Debugf("encryption key loaded from file")
+		logging.For("sec-box").Debugf("encryption key loaded from file")
 		box, e = New(fileSecret)
 	default:
 		secret, writeErr := writeSecretFile(path)
 		if writeErr != nil {
 			return nil, writeErr
 		}
-		logging.For("secretbox").Infof("generated encryption key at %s", path)
+		logging.For("sec-box").Infof("generated encryption key at %s", path)
 		box, e = New(secret)
 	}
 	return box, e

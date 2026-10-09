@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+	"unicode/utf8"
 )
 
 const (
@@ -173,7 +174,12 @@ func (l *Logger) Printf(format string, args ...any) {
 }
 
 func formatComponent(component string) string {
-	padding := logComponentContentWidth - len(component)
+	length := utf8.RuneCountInString(component)
+	if length > logComponentContentWidth {
+		component = string([]rune(component)[:logComponentContentWidth])
+		length = logComponentContentWidth
+	}
+	padding := logComponentContentWidth - length
 	if padding <= 0 {
 		return "[" + component + "]"
 	}

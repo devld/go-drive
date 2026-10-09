@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var artifactLog = logging.For("artifact")
+var artifactLog = logging.For("artfct")
 
 // cleanInterval is how often expired artifacts are removed from disk. Pack
 // downloads stay fetchable for archive.pack-ttl (default one minute) even
