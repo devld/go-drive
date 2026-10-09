@@ -1,4 +1,5 @@
 import {
+  isDarkMode,
   observeThemeChanges,
   resolveCssColor,
 } from '@go-drive/utils'
@@ -57,14 +58,14 @@ export const useEditorSetup = (
 
 export const useEditorTheme = (emit: EditorEmit) => {
   let stopObservingTheme: (() => void) | undefined
-  const setTheme = () => {
+  const setTheme = (isDark = isDarkMode()) => {
     const root = document.documentElement
     const styles = getComputedStyle(root)
-    const colorScheme = styles.colorScheme.split(/\s+/)
-    const isDark = colorScheme.includes('dark')
     const background = styles.getPropertyValue('--color-bg-code-editor').trim()
-    emit('setTheme', isDark ? 'vs-dark' : 'vs')
-    emit('setBackground', resolveCssColor(background, root) ?? '#ffffff')
+    emit('setTheme', {
+      base: isDark ? 'vs-dark' : 'vs',
+      background: resolveCssColor(background, root) ?? '#ffffff',
+    })
   }
 
   onMounted(() => {

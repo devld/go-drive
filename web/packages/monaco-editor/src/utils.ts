@@ -2,7 +2,7 @@ import * as monaco from 'monaco-editor'
 import {
   MenuId,
   MenuRegistry,
-} from 'monaco-editor/esm/vs/platform/actions/common/actions'
+} from 'monaco-editor/platform/actions/common/actions'
 import {
   EditorOutMessageTypes,
   JavaScriptLibItem,

@@ -116,9 +116,9 @@ async function renderMermaid(content: string) {
 }
 
 onMounted(async () => {
-  const updateTheme = () => {
+  const updateTheme = (isDark?: boolean) => {
     if (!editorRoot.value) return
-    const theme = getMermaidTheme(editorRoot.value)
+    const theme = getMermaidTheme(editorRoot.value, isDark)
     if (JSON.stringify(theme) !== JSON.stringify(mermaidTheme.value)) {
       mermaidTheme.value = theme
     }

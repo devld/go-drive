@@ -15,22 +15,6 @@ const language = queries['lang']
 const editor = createEditor(language)
 emit('ready', undefined)
 
-let editorTheme: 'vs' | 'vs-dark' = 'vs'
-let editorBackground = '#ffffff'
-const updateTheme = () => {
-  const themeName = `go-drive-${editorTheme}`
-  monaco.editor.defineTheme(themeName, {
-    base: editorTheme,
-    inherit: true,
-    rules: [],
-    colors: {
-      'editor.background': editorBackground,
-      'editorGutter.background': editorBackground,
-    },
-  })
-  editor.updateOptions({ theme: themeName })
-}
-
 editor.getModel()!.onDidChangeContent(() => {
   emit('change', editor.getValue())
 })
@@ -48,15 +32,20 @@ const messageHandlers: EditorInMessageHandlers = {
   setDisabled: (disabled) => {
     editor.updateOptions({ readOnly: disabled })
   },
-  setTheme: (theme) => {
-    if (theme !== 'vs' && theme !== 'vs-dark') return
-    editorTheme = theme
-    updateTheme()
-  },
-  setBackground: (background) => {
+  setTheme: ({ base, background }) => {
+    if (base !== 'vs' && base !== 'vs-dark') return
     if (!background.startsWith('#')) return
-    editorBackground = background
-    updateTheme()
+    const themeName = `go-drive-${base}`
+    monaco.editor.defineTheme(themeName, {
+      base,
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': background,
+        'editorGutter.background': background,
+      },
+    })
+    editor.updateOptions({ theme: themeName })
   },
 }
 
