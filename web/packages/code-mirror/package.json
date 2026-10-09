@@ -5,7 +5,8 @@
   "type": "module",
   "description": "CodeMirror editor components used by the go-drive web application",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./languages": "./src/languages.ts"
   },
   "peerDependencies": {
     "vue": "^3.5.0"

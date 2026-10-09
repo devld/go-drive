@@ -10,7 +10,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { languages } from '@codemirror/language-data'
+import { languageDescriptions } from '@go-drive/code-mirror/languages'
 import {
   LanguageDescription,
   LanguageSupport,
@@ -66,7 +66,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n({ useScope: 'global' })
 const codeLanguages = [
-  ...languages,
+  ...languageDescriptions,
   LanguageDescription.of({
     name: 'Mermaid',
     alias: ['mermaid'],
