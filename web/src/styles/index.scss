@@ -14,6 +14,8 @@
 // this stylesheet to create a custom theme.
 :root {
   color-scheme: light;
+  // Disable the browser's default overlay on tapped controls.
+  -webkit-tap-highlight-color: transparent;
   --radius-control: 8px;
   --radius-popover: 12px;
   --radius-dialog: 16px;
