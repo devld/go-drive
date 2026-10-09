@@ -1,7 +1,10 @@
-import { resolveCssColor } from '@go-drive/utils'
+import { isDarkMode, resolveCssColor } from '@go-drive/utils'
 import type { MermaidConfig } from 'mermaid'
 
-export function getMermaidTheme(scope: HTMLElement): MermaidConfig {
+export function getMermaidTheme(
+  scope: HTMLElement,
+  isDark = isDarkMode(scope)
+): MermaidConfig {
   const color = (value: string) => resolveCssColor(value, scope)
   const background = color('var(--color-bg-code-editor)')
   const text = color('var(--color-text)')
@@ -16,7 +19,7 @@ export function getMermaidTheme(scope: HTMLElement): MermaidConfig {
   return {
     theme: 'base',
     themeVariables: {
-      darkMode: getComputedStyle(scope).colorScheme === 'dark',
+      darkMode: isDark,
       background,
       primaryColor: primary,
       primaryTextColor: text,

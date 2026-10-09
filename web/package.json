@@ -13,22 +13,24 @@
     "build-web": "vue-tsc --noEmit && vite build",
     "build": "npm run build-monaco-editor && npm run build-web",
     "preview": "vite preview",
-    "lint": "vue-tsc --noEmit && eslint"
+    "lint": "vue-tsc --noEmit && eslint ."
   },
   "dependencies": {
     "@go-drive/i18n": "0.0.0",
     "@go-drive/utils": "0.0.0",
     "pinia": "^3.0.4",
-    "vue": "^3.5.38",
+    "vue": "^3.5.43",
     "vue-router": "^5.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24",
     "@vitejs/plugin-vue": "^6.0.7",
-    "@vue/eslint-config-typescript": "^13.0.0",
-    "eslint": "^8.56.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-vue": "^9.28.0",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.11.1",
+    "globals": "^17.13.0",
     "rollup-plugin-visualizer": "^5.12.0",
     "sass": "^1.79.4",
     "typescript": "^5.6.2",

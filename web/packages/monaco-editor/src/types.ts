@@ -18,8 +18,10 @@ export interface EditorInMessageTypes {
   setValue: string
   setupJs: JavaScriptSetupOptions
   setDisabled: boolean
-  setTheme: string
-  setBackground: string
+  setTheme: {
+    base: 'vs' | 'vs-dark'
+    background: string
+  }
 }
 
 export interface EditorOutMessageTypes {

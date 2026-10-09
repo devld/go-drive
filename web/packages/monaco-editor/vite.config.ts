@@ -50,7 +50,7 @@ export default defineConfig({
               name: (id) => {
                 // Keep registrations in the entry and group only lazy grammar modules.
                 const language = id.match(
-                  /\/basic-languages\/([^/]+)\/(?![^/]*contribution)[^/]+\.js$/
+                  /\/languages\/definitions\/([^/]+)\/(?!register\.)[^/]+\.js$/
                 )?.[1]
                 if (!language || ['javascript', 'typescript'].includes(language)) {
                   return

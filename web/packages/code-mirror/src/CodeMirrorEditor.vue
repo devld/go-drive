@@ -17,8 +17,8 @@ export default { name: 'CodeMirrorEditor' }
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { basicSetup, EditorView } from 'codemirror'
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
+import { isDarkMode, observeThemeChanges } from '@go-drive/utils'
 import { languages, getLang, getLangByFilename } from './languages'
-import type { CodeMirrorTheme } from './types'
 import themeLight from './theme-light'
 import themeDark from './theme-dark'
 
@@ -27,7 +27,6 @@ const props = withDefaults(
     modelValue?: string
     filename?: string
     disabled?: boolean
-    theme?: CodeMirrorTheme
   }>(),
   {
     modelValue: '',
@@ -42,18 +41,12 @@ const emit = defineEmits<{
 const editorEl = ref<HTMLDivElement | null>(null)
 let editor: EditorView | undefined
 let currentContent: string | undefined
+let stopThemeChanges: (() => void) | undefined
 
 const readOnlyCompartment = new Compartment()
 const themeCompartment = new Compartment()
 const langCompartment = new Compartment()
 const selectedLang = ref<string>()
-
-const prefersDark = () =>
-  typeof window !== 'undefined' &&
-  typeof window.matchMedia === 'function' &&
-  window.matchMedia('(prefers-color-scheme: dark)').matches
-
-const isDark = () => props.theme === 'dark' || (!props.theme && prefersDark())
 
 const setEditorContent = (content: string) => {
   if (currentContent === content) return
@@ -64,9 +57,9 @@ const setEditorContent = (content: string) => {
   })
 }
 
-const setTheme = () => {
+const setTheme = (isDark = isDarkMode()) => {
   editor?.dispatch({
-    effects: themeCompartment.reconfigure(isDark() ? themeDark : themeLight),
+    effects: themeCompartment.reconfigure(isDark ? themeDark : themeLight),
   })
 }
 
@@ -109,21 +102,16 @@ const initEditor = () => {
   })
 }
 
-const colorScheme =
-  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? window.matchMedia('(prefers-color-scheme: dark)')
-    : undefined
-
 onMounted(() => {
   initEditor()
   setEditorContent(props.modelValue)
   setLanguageByFilename()
   setTheme()
-  colorScheme?.addEventListener('change', setTheme)
+  stopThemeChanges = observeThemeChanges(setTheme)
 })
 
 onBeforeUnmount(() => {
-  colorScheme?.removeEventListener('change', setTheme)
+  stopThemeChanges?.()
   editor?.destroy()
   editor = undefined
 })
@@ -136,7 +124,6 @@ watch(
     })
   }
 )
-watch(() => props.theme, setTheme)
 watch(selectedLang, setLanguage)
 watch(() => props.filename, setLanguageByFilename)
 watch(() => props.modelValue, (value) => setEditorContent(value ?? ''))
