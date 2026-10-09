@@ -40,6 +40,28 @@ func TestComponentViewsShareOutput(t *testing.T) {
 	}
 }
 
+func TestLoggerTruncatesLongComponentNames(t *testing.T) {
+	for _, tt := range []struct {
+		component string
+		want      string
+	}{
+		{"http", "[ http  ]"},
+		{"archive", "[archive]"},
+		{"artifact", "[artifac]"},
+		{"secretbox", "[secretb]"},
+		{"chunk-uploader", "[chunk-u]"},
+		{"abcdeféx", "[abcdefé]"},
+	} {
+		t.Run(tt.component, func(t *testing.T) {
+			var out bytes.Buffer
+			New(&out).For(tt.component).Infof("message")
+			if got := out.String(); !strings.Contains(got, " [INFO] "+tt.want+" message\n") {
+				t.Fatalf("log = %q, want component %q followed by message", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLoggerLevels(t *testing.T) {
 	var out bytes.Buffer
 	logger := New(&out).For("test")

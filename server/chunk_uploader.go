@@ -69,7 +69,7 @@ func (c *ChunkUploader) Dispose() error {
 func (c *ChunkUploader) cleanupExpiredUploads(now time.Time) {
 	entries, e := os.ReadDir(c.dir)
 	if e != nil {
-		logging.For("chunk-uploader").Warnf("read upload directory failed: %v", e)
+		logging.For("chunk-u").Warnf("read upload directory failed: %v", e)
 		return
 	}
 	removed := 0
@@ -83,13 +83,13 @@ func (c *ChunkUploader) cleanupExpiredUploads(now time.Time) {
 		}
 		deleted, e := c.deleteUploadIfExpired(upload, now)
 		if e != nil {
-			logging.For("chunk-uploader").Warnf("remove expired upload failed id=%s: %v", upload.ID, e)
+			logging.For("chunk-u").Warnf("remove expired upload failed id=%s: %v", upload.ID, e)
 		} else if deleted {
 			removed++
 		}
 	}
 	if removed > 0 {
-		logging.For("chunk-uploader").Infof("removed expired uploads count=%d", removed)
+		logging.For("chunk-u").Infof("removed expired uploads count=%d", removed)
 	}
 }
 
