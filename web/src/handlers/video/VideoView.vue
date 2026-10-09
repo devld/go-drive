@@ -525,7 +525,6 @@ onUnmounted(() => {
   background-color: #000;
   cursor: pointer;
   touch-action: none;
-  -webkit-tap-highlight-color: transparent;
   user-select: none;
 
   &:focus:not(:focus-visible) {
