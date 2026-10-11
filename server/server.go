@@ -102,6 +102,12 @@ func InitServer(config common.Config,
 		return nil, e
 	}
 
+	if config.WOPI.DiscoveryURL != "" {
+		if e := InitWOPIRoutes(router, config, driveAccess, tokenStore, userDAO, ch); e != nil {
+			return nil, e
+		}
+	}
+
 	if config.WebDav.Enabled {
 		if e := InitWebdavAccess(engine, config, driveAccess, userAuth, driveFS); e != nil {
 			return nil, e
