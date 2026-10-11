@@ -148,7 +148,7 @@ func Test123PanListPagination(t *testing.T) {
 	if _, e := vm.Run(context.Background(), code, "123pan.js"); e != nil {
 		t.Fatal(e)
 	}
-	mustDefineGlobal(t, vm, "panUtils", testDriveUtils(vm, &memDriveData{}))
+	mustDefineGlobal(t, vm, "panUtils", testDriveEnv(vm, &memDriveData{}))
 	_, e = vm.Run(context.Background(), `
   let panCalls = 0;
   requestPan123 = function(d, method, route, params) {
