@@ -3,6 +3,7 @@
     ref="editorRoot"
     class="markdown-wysiwyg-editor"
     :class="{ 'is-readonly': disabled }"
+    @paste.capture="onPaste"
   >
     <div v-if="failed" class="markdown-wysiwyg-editor__error">
       {{ t('preview.markdown.editor.error') }}
@@ -93,6 +94,14 @@ let stopThemeChanges: (() => void) | undefined
 const mermaidTheme = shallowRef<ReturnType<typeof getMermaidTheme>>()
 let mermaidModule: Promise<typeof import('mermaid').default> | undefined
 let mermaidRenderId = 0
+
+function onPaste(event: ClipboardEvent) {
+  const items = Array.from(event.clipboardData?.items ?? [])
+  if (items.some((item) => item.type.startsWith('image/'))) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+}
 
 function loadMermaid() {
   mermaidModule ??= import('mermaid').then(({ default: mermaid }) => mermaid)
