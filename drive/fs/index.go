@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -102,9 +103,54 @@ func (f *Drive) newFsFile(path string, file os.FileInfo) (types.IEntry, error) {
 	}, nil
 }
 
-func (f *Drive) getPath(path string) string {
+// resolvePath rejects filesystem aliases before any access. Permission rules
+// match the spelling of the virtual path, so existing segments must match the
+// names returned by the filesystem exactly. Only a new leaf may be missing.
+func (f *Drive) resolvePath(path string, allowNewLeaf bool) (string, error) {
 	path = utils.CleanPath(path)
-	return filepath.Join(f.path, filepath.FromSlash(path))
+	current := f.path
+	if path == "" {
+		return current, nil
+	}
+	segments := strings.Split(path, "/")
+	for i, segment := range segments {
+		if !filepath.IsLocal(segment) {
+			return "", err.NewNotFoundError()
+		}
+		if runtime.GOOS == "windows" &&
+			(strings.HasSuffix(segment, ".") || strings.HasSuffix(segment, " ")) {
+			return "", err.NewNotFoundError()
+		}
+		entries, e := os.ReadDir(current)
+		if e != nil {
+			if os.IsNotExist(e) {
+				return "", err.NewNotFoundError()
+			}
+			return "", e
+		}
+		found := false
+		for _, entry := range entries {
+			if entry.Name() == segment {
+				current = filepath.Join(current, entry.Name())
+				found = true
+				break
+			}
+		}
+		if !found {
+			if allowNewLeaf && i == len(segments)-1 {
+				// An apparently new name may still resolve to an existing entry
+				// through case folding, a Windows short name, or another alias.
+				newPath := filepath.Join(current, segment)
+				if _, e := os.Lstat(newPath); os.IsNotExist(e) {
+					return newPath, nil
+				} else if e != nil {
+					return "", e
+				}
+			}
+			return "", err.NewNotFoundError()
+		}
+	}
+	return current, nil
 }
 
 func (f *Drive) isRootPath(path string) bool {
@@ -112,7 +158,10 @@ func (f *Drive) isRootPath(path string) bool {
 }
 
 func (f *Drive) Get(_ context.Context, path string) (types.IEntry, error) {
-	path = f.getPath(path)
+	path, e := f.resolvePath(path, false)
+	if e != nil {
+		return nil, e
+	}
 	stat, e := os.Stat(path)
 	if os.IsNotExist(e) {
 		return nil, err.NewNotFoundError()
@@ -125,8 +174,10 @@ func (f *Drive) Get(_ context.Context, path string) (types.IEntry, error) {
 
 func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, reader io.Reader) (types.IEntry, error) {
 	var fileMode os.FileMode = 0644
-	path = f.getPath(path)
-	var e error
+	path, e := f.resolvePath(path, true)
+	if e != nil {
+		return nil, e
+	}
 
 	fileInfo, e := os.Stat(path)
 	if e != nil {
@@ -175,7 +226,10 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, 
 }
 
 func (f *Drive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	fPath := f.getPath(path)
+	fPath, e := f.resolvePath(path, true)
+	if e != nil {
+		return nil, e
+	}
 	stat, e := os.Stat(fPath)
 	if e != nil && !os.IsNotExist(e) {
 		return nil, e
@@ -205,8 +259,14 @@ func (f *Drive) Move(_ types.TaskCtx, from types.IEntry, to string, override boo
 	if from == nil {
 		return nil, err.NewUnsupportedError()
 	}
-	fromPath := f.getPath(from.(*fsFile).path)
-	toPath := f.getPath(to)
+	fromPath, e := f.resolvePath(from.(*fsFile).path, false)
+	if e != nil {
+		return nil, e
+	}
+	toPath, e := f.resolvePath(to, true)
+	if e != nil {
+		return nil, e
+	}
 	if f.isRootPath(fromPath) || f.isRootPath(toPath) {
 		return nil, err.NewNotAllowedError()
 	}
@@ -236,7 +296,10 @@ func (f *Drive) Move(_ types.TaskCtx, from types.IEntry, to string, override boo
 }
 
 func (f *Drive) List(_ context.Context, path string) ([]types.IEntry, error) {
-	path = f.getPath(path)
+	path, e := f.resolvePath(path, false)
+	if e != nil {
+		return nil, e
+	}
 	isDir, e := utils.IsDir(path)
 	if os.IsNotExist(e) {
 		return nil, err.NewNotFoundError()
@@ -264,7 +327,10 @@ func (f *Drive) List(_ context.Context, path string) ([]types.IEntry, error) {
 }
 
 func (f *Drive) Delete(_ types.TaskCtx, path string) error {
-	path = f.getPath(path)
+	path, e := f.resolvePath(path, false)
+	if e != nil {
+		return e
+	}
 	if f.isRootPath(path) {
 		return err.NewNotAllowedMessageError(fsT("cannot_delete_root"))
 	}
@@ -276,7 +342,10 @@ func (f *Drive) Delete(_ types.TaskCtx, path string) error {
 
 func (f *Drive) Upload(_ context.Context, path string, size int64,
 	override bool, _ types.SM) (*types.DriveUploadConfig, error) {
-	path = f.getPath(path)
+	path, e := f.resolvePath(path, true)
+	if e != nil {
+		return nil, e
+	}
 	if !override {
 		if e := requireFile(path, false); e != nil {
 			return nil, e
@@ -337,7 +406,10 @@ func (f *fsFile) GetReader(ctx context.Context, rg types.ReaderRange) (io.ReadCl
 	if !f.Type().IsFile() {
 		return nil, err.NewNotAllowedError()
 	}
-	path := f.drive.getPath(f.path)
+	path, e := f.drive.resolvePath(f.path, false)
+	if e != nil {
+		return nil, e
+	}
 	exists, e := utils.FileExists(path)
 	if e != nil {
 		return nil, e

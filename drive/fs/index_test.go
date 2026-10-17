@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -170,9 +171,9 @@ func TestFsDriveCleanPathKeepsWritesInsideRoot(t *testing.T) {
 	}
 
 	for _, path := range payloads {
-		resolved := d.getPath(path)
-		if !isInsideRoot(root, resolved) {
-			t.Fatalf("getPath(%q) = %q, want inside %q", path, resolved, root)
+		resolved, e := d.resolvePath(path, true)
+		if e == nil && !isInsideRoot(root, resolved) {
+			t.Fatalf("resolvePath(%q) = %q, want inside %q", path, resolved, root)
 		}
 
 		_, _ = d.Save(taskCtx, path, 4, true, bytes.NewReader([]byte("evil")))
@@ -195,6 +196,117 @@ func TestFsDriveCleanPathKeepsWritesInsideRoot(t *testing.T) {
 	}
 	if len(entries) != 1 || entries[0].Name() != "victim.txt" {
 		t.Fatalf("outside dir changed: %v", names(entries))
+	}
+}
+
+func TestFsDriveRejectsExistingPathAliases(t *testing.T) {
+	d, root, _ := newTestDrive(t)
+	ctx := context.Background()
+	taskCtx := task.DummyContext()
+	if e := os.Mkdir(filepath.Join(root, "privatestorage"), 0755); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.Mkdir(filepath.Join(root, "privatestorage", "subdir"), 0755); e != nil {
+		t.Fatal(e)
+	}
+	secret := filepath.Join(root, "privatestorage", "secret.txt")
+	if e := os.WriteFile(secret, []byte("keep"), 0644); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(filepath.Join(root, "public.txt"), []byte("public"), 0644); e != nil {
+		t.Fatal(e)
+	}
+	public, e := d.Get(ctx, "public.txt")
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, alias := range []string{"PRIVATESTORAGE", "PRIVAT~1", "privatestorage.", "privatestorage "} {
+		t.Run(alias, func(t *testing.T) {
+			path := alias + "/secret.txt"
+			operations := map[string]func() error{
+				"get":  func() error { _, e := d.Get(ctx, path); return e },
+				"list": func() error { _, e := d.List(ctx, alias+"/subdir"); return e },
+				"save": func() error {
+					_, e := d.Save(taskCtx, path, 4, true, strings.NewReader("evil"))
+					return e
+				},
+				"mkdir":            func() error { _, e := d.MakeDir(ctx, alias+"/newdir"); return e },
+				"upload":           func() error { _, e := d.Upload(ctx, path, 4, true, nil); return e },
+				"delete":           func() error { return d.Delete(taskCtx, path) },
+				"move destination": func() error { _, e := d.Move(taskCtx, public, path, true); return e },
+				"move source": func() error {
+					from := &fsFile{drive: d, path: path}
+					_, e := d.Move(taskCtx, from, "moved.txt", true)
+					return e
+				},
+				"reader": func() error {
+					file := &fsFile{drive: d, path: path}
+					reader, e := file.GetReader(ctx, types.FullReaderRange())
+					if reader != nil {
+						_ = reader.Close()
+					}
+					return e
+				},
+			}
+			for name, operation := range operations {
+				t.Run(name, func(t *testing.T) {
+					if e := operation(); !err.IsNotFoundError(e) {
+						t.Fatalf("want not found, got %v", e)
+					}
+				})
+			}
+			if !fileStillContains(secret, "keep") || !fileStillContains(filepath.Join(root, "public.txt"), "public") {
+				t.Fatal("alias operation changed files")
+			}
+		})
+	}
+}
+
+func TestFsDriveNewLeafCannotOverwriteAlias(t *testing.T) {
+	d, root, _ := newTestDrive(t)
+	ctx := context.Background()
+	secret := filepath.Join(root, "secret.txt")
+	if e := os.WriteFile(secret, []byte("keep"), 0644); e != nil {
+		t.Fatal(e)
+	}
+	aliases := []string{"SECRET.TXT", "secret.txt."}
+	for _, alias := range aliases {
+		t.Run(alias, func(t *testing.T) {
+			actual, e := os.Stat(secret)
+			if e != nil {
+				t.Fatal(e)
+			}
+			aliased, e := os.Stat(filepath.Join(root, alias))
+			if e != nil || !os.SameFile(actual, aliased) {
+				t.Skip("filesystem does not resolve this alias")
+			}
+			if _, e := d.Save(task.DummyContext(), alias, 4, true, strings.NewReader("evil")); !err.IsNotFoundError(e) {
+				t.Fatalf("Save alias: %v", e)
+			}
+			if _, e := d.Upload(ctx, alias, 4, true, nil); !err.IsNotFoundError(e) {
+				t.Fatalf("Upload alias: %v", e)
+			}
+			if !fileStillContains(secret, "keep") {
+				t.Fatal("alias overwrote file")
+			}
+		})
+	}
+}
+
+func TestFsDriveRejectsNewWindowsAliasNames(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows filename semantics")
+	}
+	d, _, _ := newTestDrive(t)
+	for _, name := range []string{"new.", "NUL", "COM1", "new /file.txt"} {
+		t.Run(name, func(t *testing.T) {
+			if _, e := d.Save(task.DummyContext(), name, 0, true, strings.NewReader("")); !err.IsNotFoundError(e) {
+				t.Fatalf("Save invalid new name: %v", e)
+			}
+			if _, e := d.MakeDir(context.Background(), name); !err.IsNotFoundError(e) {
+				t.Fatalf("MakeDir invalid new name: %v", e)
+			}
+		})
 	}
 }
 
