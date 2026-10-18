@@ -43,6 +43,8 @@ Each rule contains read and write permissions and an allow or deny policy. Resol
 - At the same matching level, deny takes precedence over allow.
 - User rules are more specific than group rules, and group rules are more specific than `ANY`.
 
+Recursive operations check each configured path in the affected subtree using its effective permissions, including inherited rules and subject precedence. Deleting or moving a directory requires read and write access throughout the subtree. Copying requires read access throughout the source subtree and read and write access throughout the destination subtree. If any path fails the check, the operation is rejected before the storage backend is called; an allow rule on another branch cannot override that restriction.
+
 After changing permissions, test in a private browser window and with a normal test account. Do not test only as an administrator, because administrators see different results.
 
 ## Anonymous access

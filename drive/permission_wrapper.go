@@ -144,6 +144,9 @@ func (p *PermissionWrapperDrive) Delete(ctx types.TaskCtx, path string) error {
 	if _, e := p.requirePathAndParentWritable(path); e != nil {
 		return e
 	}
+	if e := p.requireDescendantPermission(path, types.PermissionReadWrite); e != nil {
+		return e
+	}
 	return p.drive.Delete(ctx, path)
 }
 
