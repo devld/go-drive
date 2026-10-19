@@ -2,6 +2,7 @@ package drive
 
 import (
 	"context"
+	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
 	"go-drive/common/i18n"
 	"go-drive/common/types"
@@ -51,10 +52,11 @@ func (p *PermissionWrapperDrive) Get(ctx context.Context, path string) (types.IE
 
 func (p *PermissionWrapperDrive) Save(ctx types.TaskCtx, path string, size int64,
 	override bool, reader io.Reader) (types.IEntry, error) {
-	permission, e := p.requirePermission(path, types.PermissionReadWrite)
-	if e != nil {
+	if _, e := p.PrepareWrite(ctx, path, driveutil.WriteModeForOverride(override)); e != nil {
 		return nil, e
 	}
+	permission := p.pm.ResolvePath(path)
+
 	entry, e := p.drive.Save(ctx, path, size, override, reader)
 	if e != nil {
 		return nil, e
@@ -63,10 +65,11 @@ func (p *PermissionWrapperDrive) Save(ctx types.TaskCtx, path string, size int64
 }
 
 func (p *PermissionWrapperDrive) MakeDir(ctx context.Context, path string) (types.IEntry, error) {
-	permission, e := p.requirePermission(path, types.PermissionReadWrite)
-	if e != nil {
+	if _, e := p.PrepareWrite(ctx, path, types.WriteOverwrite); e != nil {
 		return nil, e
 	}
+	permission := p.pm.ResolvePath(path)
+
 	entry, e := p.drive.MakeDir(ctx, path)
 	if e != nil {
 		return nil, e
@@ -75,14 +78,14 @@ func (p *PermissionWrapperDrive) MakeDir(ctx context.Context, path string) (type
 }
 
 func (p *PermissionWrapperDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+	if _, e := p.PrepareWrite(ctx, to, driveutil.WriteModeForOverride(override)); e != nil {
+		return nil, e
+	}
 	toPermission, e := p.requirePathAndParentWritable(to)
 	if e != nil {
 		return nil, e
 	}
 	if e := p.requireDescendantPermission(from.Path(), types.PermissionRead); e != nil {
-		return nil, e
-	}
-	if e := p.requireDescendantPermission(to, types.PermissionReadWrite); e != nil {
 		return nil, e
 	}
 	entry, e := p.drive.Copy(ctx, from, to, override)
@@ -93,6 +96,9 @@ func (p *PermissionWrapperDrive) Copy(ctx types.TaskCtx, from types.IEntry, to s
 }
 
 func (p *PermissionWrapperDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+	if _, e := p.PrepareWrite(ctx, to, driveutil.WriteModeForOverride(override)); e != nil {
+		return nil, e
+	}
 	toPermission, e := p.requirePathAndParentWritable(to)
 	if e != nil {
 		return nil, e
@@ -101,9 +107,6 @@ func (p *PermissionWrapperDrive) Move(ctx types.TaskCtx, from types.IEntry, to s
 		return nil, e
 	}
 	if e := p.requireDescendantPermission(from.Path(), types.PermissionReadWrite); e != nil {
-		return nil, e
-	}
-	if e := p.requireDescendantPermission(to, types.PermissionReadWrite); e != nil {
 		return nil, e
 	}
 	entry, e := p.drive.Move(ctx, from, to, override)
@@ -152,10 +155,10 @@ func (p *PermissionWrapperDrive) Delete(ctx types.TaskCtx, path string) error {
 
 func (p *PermissionWrapperDrive) Upload(ctx context.Context, path string, size int64,
 	override bool, config types.SM) (*types.DriveUploadConfig, error) {
-	_, e := p.requirePermission(path, types.PermissionReadWrite)
-	if e != nil {
+	if _, e := p.PrepareWrite(ctx, path, driveutil.WriteModeForOverride(override)); e != nil {
 		return nil, e
 	}
+
 	return p.drive.Upload(ctx, path, size, override, config)
 }
 
@@ -208,4 +211,29 @@ func (p *permissionWrapperEntry) Drive() types.IDrive {
 
 func (p *permissionWrapperEntry) GetIEntry() types.IEntry {
 	return p.IEntry
+}
+
+// PrepareWrite authorizes the final virtual destination and every parent that
+// execution would create. Storage routing and collision selection stay below it.
+func (p *PermissionWrapperDrive) PrepareWrite(ctx context.Context, path string, mode types.WriteMode) (*types.WritePlan, error) {
+	// Keep denied requests from probing raw storage existence through conflicts.
+	if _, e := p.requirePermission(path, types.PermissionReadWrite); e != nil {
+		return nil, e
+	}
+	plan, e := driveutil.PrepareWrite(ctx, p.drive, path, mode)
+	if e != nil {
+		return nil, e
+	}
+	if _, e := p.requirePermission(plan.Path, types.PermissionReadWrite); e != nil {
+		return nil, e
+	}
+	if e := p.requireDescendantPermission(plan.Path, types.PermissionReadWrite); e != nil {
+		return nil, e
+	}
+	for _, parent := range plan.Parents {
+		if _, e := p.requirePermission(parent, types.PermissionReadWrite); e != nil {
+			return nil, e
+		}
+	}
+	return plan, nil
 }

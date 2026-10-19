@@ -45,6 +45,46 @@ type FileSystem interface {
 	Stat(ctx context.Context, name string) (os.FileInfo, error)
 }
 
+// TransferFileSystem delegates complete operations to an adapter that owns
+// authorization. The generic filesystem fallback remains available for Dir/memFS.
+type TransferFileSystem interface {
+	FileSystem
+	Move(context.Context, string, string, bool) error
+	Copy(context.Context, string, string, bool, bool) error
+}
+
+func transferFiles(ctx context.Context, fs TransferFileSystem, src, dst string, overwrite, copy, recursive bool) (int, error) {
+	if _, e := fs.Stat(ctx, src); e != nil {
+		if os.IsNotExist(e) {
+			return http.StatusNotFound, e
+		}
+		return http.StatusForbidden, e
+	}
+	created := false
+	if _, e := fs.Stat(ctx, dst); e == nil {
+		if !overwrite {
+			return http.StatusPreconditionFailed, os.ErrExist
+		}
+	} else if os.IsNotExist(e) {
+		created = true
+	} else {
+		return http.StatusForbidden, e
+	}
+	var e error
+	if copy {
+		e = fs.Copy(ctx, src, dst, overwrite, recursive)
+	} else {
+		e = fs.Move(ctx, src, dst, overwrite)
+	}
+	if e != nil {
+		return http.StatusForbidden, e
+	}
+	if created {
+		return http.StatusCreated, nil
+	}
+	return http.StatusNoContent, nil
+}
+
 // A File is returned by a FileSystem's OpenFile method and can be served by a
 // Handler.
 //
@@ -613,6 +653,9 @@ func (f *memFile) Write(p []byte) (int, error) {
 //
 // See section 9.9.4 for when various HTTP status codes apply.
 func moveFiles(ctx context.Context, fs FileSystem, src, dst string, overwrite bool) (status int, err error) {
+	if fs, ok := fs.(TransferFileSystem); ok {
+		return transferFiles(ctx, fs, src, dst, overwrite, false, true)
+	}
 	created := false
 	if _, err := fs.Stat(ctx, dst); err != nil {
 		if !os.IsNotExist(err) {
@@ -671,6 +714,11 @@ func copyProps(dst, src File) error {
 //
 // See section 9.8.5 for when various HTTP status codes apply.
 func copyFiles(ctx context.Context, fs FileSystem, src, dst string, overwrite bool, depth int, recursion int) (status int, err error) {
+	if recursion == 0 {
+		if transfer, ok := fs.(TransferFileSystem); ok {
+			return transferFiles(ctx, transfer, src, dst, overwrite, true, depth == infiniteDepth)
+		}
+	}
 	if recursion == 1000 {
 		return http.StatusInternalServerError, errRecursionTooDeep
 	}

@@ -367,7 +367,7 @@ func TestDispatcher_ResolveMount_MaxDepthExceeded(t *testing.T) {
 
 // --- 3.3 Copy/Move/Delete with mount points ---
 
-func TestDispatcher_Copy_NoMount_TargetExists_Renames(t *testing.T) {
+func TestDispatcher_Copy_PreparedRename(t *testing.T) {
 	d, _, config, cleanup := newTestDispatcher(t, []string{"driveA", "driveB"})
 	defer cleanup()
 	ctx := context.Background()
@@ -389,7 +389,11 @@ func TestDispatcher_Copy_NoMount_TargetExists_Renames(t *testing.T) {
 	}
 
 	from, _ := d.Get(ctx, "driveA/src.txt")
-	ent, e := d.Copy(taskCtx, from, "driveB/to.txt", false)
+	plan, e := driveutil.PrepareWrite(context.Background(), d, "driveB/to.txt", types.WriteRename)
+	if e != nil {
+		t.Fatal(e)
+	}
+	ent, e := d.Copy(taskCtx, from, plan.Path, plan.Override)
 	if e != nil {
 		t.Fatalf("Copy: %v", e)
 	}
@@ -455,7 +459,7 @@ func TestDispatcher_Move_OrdinaryFile(t *testing.T) {
 
 // --- 3.4 FindNonExistsEntryName / rename when target exists ---
 
-func TestDispatcher_Save_TargetExists_NoOverride_Renames(t *testing.T) {
+func TestDispatcher_Save_PreparedRename(t *testing.T) {
 	d, _, config, cleanup := newTestDispatcher(t, []string{"driveA"})
 	defer cleanup()
 	taskCtx := task.DummyContext()
@@ -466,7 +470,11 @@ func TestDispatcher_Save_TargetExists_NoOverride_Renames(t *testing.T) {
 		t.Fatalf("write file: %v", e)
 	}
 
-	ent, e := d.Save(taskCtx, "driveA/file.txt", 6, false, bytes.NewReader([]byte("newcon")))
+	plan, e := driveutil.PrepareWrite(context.Background(), d, "driveA/file.txt", types.WriteRename)
+	if e != nil {
+		t.Fatal(e)
+	}
+	ent, e := d.Save(taskCtx, plan.Path, 6, plan.Override, bytes.NewReader([]byte("newcon")))
 	if e != nil {
 		t.Fatalf("Save: %v", e)
 	}
@@ -475,7 +483,7 @@ func TestDispatcher_Save_TargetExists_NoOverride_Renames(t *testing.T) {
 	}
 }
 
-func TestDispatcher_Upload_TargetExists_NoOverride_ReturnsNewPath(t *testing.T) {
+func TestDispatcher_Upload_PreparedRename(t *testing.T) {
 	d, _, config, cleanup := newTestDispatcher(t, []string{"driveA"})
 	defer cleanup()
 	ctx := context.Background()
@@ -486,16 +494,18 @@ func TestDispatcher_Upload_TargetExists_NoOverride_ReturnsNewPath(t *testing.T) 
 		t.Fatalf("write file: %v", e)
 	}
 
-	cfg, e := d.Upload(ctx, "driveA/up.txt", 10, false, nil)
+	plan, e := driveutil.PrepareWrite(context.Background(), d, "driveA/up.txt", types.WriteRename)
+	if e != nil {
+		t.Fatal(e)
+	}
+	cfg, e := d.Upload(ctx, plan.Path, 10, plan.Override, nil)
 	if e != nil {
 		t.Fatalf("Upload: %v", e)
 	}
-	if cfg != nil && cfg.Path != "" && cfg.Path != "driveA/up.txt" {
-		// When renamed, Path should be the new path
-		if cfg.Path != "driveA/up_1.txt" {
-			t.Errorf("Upload Path=%q, expect driveA/up_1.txt when renamed", cfg.Path)
-		}
+	if plan.Path != "driveA/up_1.txt" || cfg == nil || cfg.Path != "" {
+		t.Fatalf("prepared path=%q, upload config=%+v", plan.Path, cfg)
 	}
+
 }
 
 // --- 3.5 List ---
@@ -1216,7 +1226,7 @@ func TestPhantom_Delete_RemovesMountsOnly(t *testing.T) {
 	}
 }
 
-func TestMount_Save_ThroughMount_Rename(t *testing.T) {
+func TestMount_Save_ThroughMount_PreparedRename(t *testing.T) {
 	d, mountDAO, config, cleanup := newTestDispatcher(t, []string{"rnA", "rnB"})
 	defer cleanup()
 	taskCtx := task.DummyContext()
@@ -1234,7 +1244,11 @@ func TestMount_Save_ThroughMount_Rename(t *testing.T) {
 	}
 
 	content := []byte("new-content")
-	ent, e := d.Save(taskCtx, "rnA/m1/file.txt", int64(len(content)), false, bytes.NewReader(content))
+	plan, e := driveutil.PrepareWrite(context.Background(), d, "rnA/m1/file.txt", types.WriteRename)
+	if e != nil {
+		t.Fatal(e)
+	}
+	ent, e := d.Save(taskCtx, plan.Path, int64(len(content)), plan.Override, bytes.NewReader(content))
 	if e != nil {
 		t.Fatalf("Save: %v", e)
 	}
@@ -1244,7 +1258,7 @@ func TestMount_Save_ThroughMount_Rename(t *testing.T) {
 	}
 }
 
-func TestMount_Copy_MountPoint_RenamesWholeTreeOnConflict(t *testing.T) {
+func TestMount_Copy_MountPoint_PreparedRename(t *testing.T) {
 	d, mountDAO, _, cleanup := newTestDispatcher(t, []string{"cprA", "cprB"})
 	defer cleanup()
 	ctx := context.Background()
@@ -1265,7 +1279,11 @@ func TestMount_Copy_MountPoint_RenamesWholeTreeOnConflict(t *testing.T) {
 	if e != nil {
 		t.Fatalf("Get source mount: %v", e)
 	}
-	copied, e := d.Copy(task.DummyContext(), from, "cprA/dest", false)
+	plan, e := driveutil.PrepareWrite(context.Background(), d, "cprA/dest", types.WriteRename)
+	if e != nil {
+		t.Fatal(e)
+	}
+	copied, e := d.Copy(task.DummyContext(), from, plan.Path, plan.Override)
 	if e != nil {
 		t.Fatalf("Copy: %v", e)
 	}
@@ -1295,7 +1313,7 @@ func TestMount_Copy_MountPoint_RenamesWholeTreeOnConflict(t *testing.T) {
 	}
 }
 
-func TestMount_Move_MountPoint_ReturnsRenamedDestination(t *testing.T) {
+func TestMount_Move_MountPoint_PreparedRename(t *testing.T) {
 	d, mountDAO, _, cleanup := newTestDispatcher(t, []string{"mvrA", "mvrB"})
 	defer cleanup()
 	ctx := context.Background()
@@ -1315,7 +1333,11 @@ func TestMount_Move_MountPoint_ReturnsRenamedDestination(t *testing.T) {
 	if e != nil {
 		t.Fatalf("Get source mount: %v", e)
 	}
-	moved, e := d.Move(task.DummyContext(), from, "mvrA/dest", false)
+	plan, e := driveutil.PrepareWrite(context.Background(), d, "mvrA/dest", types.WriteRename)
+	if e != nil {
+		t.Fatal(e)
+	}
+	moved, e := d.Move(task.DummyContext(), from, plan.Path, plan.Override)
 	if e != nil {
 		t.Fatalf("Move: %v", e)
 	}
