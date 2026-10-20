@@ -21,3 +21,7 @@ translation_key: drive-sftp
 In production, set **Host public key** to prevent man-in-the-middle attacks. You can use `ssh-keyscan` on a trusted network to obtain a candidate value, but verify its fingerprint through another trusted channel before saving it.
 
 The root path must begin with `/`. File contents pass through go-drive. Move and rename use remote operations, while copy is handled by the generic go-drive job, which reads and uploads the file again.
+
+Overwrite moves require the server to advertise version `1` of the `posix-rename@openssh.com` extension. This requirement applies whenever overwrite mode is requested, even if the destination does not yet exist. Without that extension, go-drive rejects the move before issuing any rename, delete, or staging operation. An extension error is returned directly without a fallback.
+
+Non-overwrite moves and renames use ordinary SFTP rename and reject an existing destination. They remain available without the POSIX rename extension. Moves across filesystems or other server-side restrictions can still fail even when the extension is advertised.
