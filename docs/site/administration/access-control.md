@@ -43,6 +43,10 @@ Each rule contains read and write permissions and an allow or deny policy. Resol
 - At the same matching level, deny takes precedence over allow.
 - User rules are more specific than group rules, and group rules are more specific than `ANY`.
 
+Recursive operations check each configured path in the affected subtree using its effective permissions, including inherited rules and subject precedence. Deleting or moving a directory requires read and write access throughout the subtree. Recursive copying requires read access throughout the source subtree and read and write access throughout the destination subtree. WebDAV `COPY` with `Depth: 0` copies only the directory itself, so it checks source-directory access rather than source descendants; replacing an existing destination still checks its entire subtree. If any path fails the permission check, the operation is rejected before storage changes begin; an allow rule on another branch cannot override that restriction. WebDAV replacement moves also check the source before removing an existing destination.
+
+Write destinations are selected before authorization. File-manager copy/move requests and initial upload requests can choose a new name on conflict; the permissions of that final virtual path and any missing parent directories are checked. Actual save, upload, copy, and move execution uses the chosen path and does not rename again. Upload callbacks retain that path. Preparing a destination does not reserve it: a later conflict can cause an operation to fail, and atomic conflict handling depends on the storage backend.
+
 After changing permissions, test in a private browser window and with a normal test account. Do not test only as an administrator, because administrators see different results.
 
 ## Anonymous access

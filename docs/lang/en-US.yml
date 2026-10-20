@@ -294,6 +294,7 @@ drive:
         label: CacheTTL
         description: Cache time to live, if omitted, no cache. Valid time units are 'ms', 's', 'm', 'h'.
     invalid_root_path: "Root path must starts with '/'"
+    overwrite_move_not_supported: The SFTP server must support posix-rename@openssh.com version 1 for overwrite moves
   script:
     name: Script
     invalid_pool_config: "Invalid Pool configuration: {{ 1 }}"
