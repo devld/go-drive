@@ -22,7 +22,7 @@
     "@go-drive/utils": "0.0.0",
     "@milkdown/crepe": "^7.22.2",
     "@milkdown/kit": "^7.22.2",
-    "dompurify": "^3.4.16",
+    "dompurify": "^3.4.17",
     "github-markdown-css": "^5.9.0",
     "highlight.js": "^11.11.1",
     "marked": "^18.0.5",
