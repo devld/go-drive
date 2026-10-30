@@ -421,19 +421,17 @@ func (d *PathMountOverlayDrive) upload(ctx context.Context, path string, size in
 }
 
 func (d *PathMountOverlayDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+	if !override {
+		if _, e := driveutil.RequireFileNotExists(ctx, d, to); e != nil {
+			return nil, e
+		}
+	}
 	source, mounts, isSelf, e := d.resolveMountTreePath(from.Path(), 0)
 	if e != nil {
 		return nil, e
 	}
 	if isSelf {
-		destination := to
-		if !override {
-			destination, e = driveutil.FindNonExistsEntryName(ctx, d, to)
-			if e != nil {
-				return nil, e
-			}
-		}
-		destinationMountPath, _, _, e := d.resolveMountTreePath(destination, 0)
+		destinationMountPath, _, _, e := d.resolveMountTreePath(to, 0)
 		if e != nil {
 			return nil, e
 		}
@@ -441,7 +439,7 @@ func (d *PathMountOverlayDrive) Copy(ctx types.TaskCtx, from types.IEntry, to st
 		if e := d.replaceMounts(d.destinationMounts(destinationMountPath, override), newMounts); e != nil {
 			return nil, e
 		}
-		return d.Get(ctx, destination)
+		return d.Get(ctx, to)
 	}
 	if len(mounts) == 0 {
 		return d.copyWithoutMountChildren(ctx, from, to, override, 0)
@@ -477,19 +475,17 @@ func (d *PathMountOverlayDrive) copyWithoutMountChildren(ctx types.TaskCtx, from
 }
 
 func (d *PathMountOverlayDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
+	if !override {
+		if _, e := driveutil.RequireFileNotExists(ctx, d, to); e != nil {
+			return nil, e
+		}
+	}
 	source, children, isSelf, e := d.resolveMountTreePath(from.Path(), 0)
 	if e != nil {
 		return nil, e
 	}
 	if len(children) > 0 {
-		destination := to
-		if !override {
-			destination, e = driveutil.FindNonExistsEntryName(ctx, d, to)
-			if e != nil {
-				return nil, e
-			}
-		}
-		destinationMountPath, _, _, e := d.resolveMountTreePath(destination, 0)
+		destinationMountPath, _, _, e := d.resolveMountTreePath(to, 0)
 		if e != nil {
 			return nil, e
 		}
@@ -499,7 +495,7 @@ func (d *PathMountOverlayDrive) Move(ctx types.TaskCtx, from types.IEntry, to st
 			if e := d.replaceMounts(deletes, movedMounts); e != nil {
 				return nil, e
 			}
-			return d.Get(ctx, destination)
+			return d.Get(ctx, to)
 		}
 		if isPathMountVirtualEntry(from) {
 			if override {
@@ -522,7 +518,7 @@ func (d *PathMountOverlayDrive) Move(ctx types.TaskCtx, from types.IEntry, to st
 		if e := d.replaceMounts(deletes, movedMounts); e != nil {
 			return nil, e
 		}
-		return d.Get(ctx, destination)
+		return d.Get(ctx, to)
 	}
 	return d.moveWithoutMountChildren(ctx, from, to, override, 0)
 }
@@ -609,4 +605,8 @@ func (e *pathMountVirtualEntry) GetReader(context.Context, types.ReaderRange) (i
 }
 func (e *pathMountVirtualEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	return nil, err.NewNotAllowedError()
+}
+
+func (d *PathMountOverlayDrive) PrepareWrite(ctx context.Context, path string, mode types.WriteMode) (*types.WritePlan, error) {
+	return driveutil.InspectWrite(ctx, d, path, mode)
 }

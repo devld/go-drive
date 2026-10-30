@@ -3,7 +3,7 @@ title: SFTP 存储
 description: 使用密码或 SSH 私钥将 go-drive 连接到 SFTP 服务器，并配置主机密钥校验、根路径和连接参数。
 lang: zh-CN
 translation_key: drive-sftp
-source_hash: 5d2ce79e031982ef842ec7de066aac1dbf021beda62ed4d431aefcb6fd8817c6
+source_hash: 4cdf296dbbf58c233843791c2fa4b79d49c32987b8b240d21549798c1d19675a
 ---
 
 # SFTP 存储
@@ -22,3 +22,7 @@ source_hash: 5d2ce79e031982ef842ec7de066aac1dbf021beda62ed4d431aefcb6fd8817c6
 生产环境应填写“主机公钥”以防中间人攻击。可在可信网络中使用 `ssh-keyscan` 获取候选值，但必须通过另一可信渠道核对指纹后再保存。
 
 根路径必须以 `/` 开头。文件内容经过 go-drive；移动/重命名使用远端操作，复制由 go-drive 通用任务读取后重新上传。
+
+覆盖移动要求服务端声明支持 `posix-rename@openssh.com` 扩展的版本 `1`。只要请求覆盖模式，即使目标尚不存在，也需要该扩展。缺少此扩展时，go-drive 会在执行任何重命名、删除或暂存操作之前拒绝移动。扩展执行失败时直接返回错误，不再回退。
+
+非覆盖移动和重命名使用普通 SFTP 重命名，目标已存在时拒绝执行；没有 POSIX 重命名扩展时仍可使用。即使服务端声明支持扩展，跨文件系统移动或其他服务端限制仍可能导致失败。

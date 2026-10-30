@@ -69,24 +69,36 @@ func (pm PermMap) ResolvePath(path string) types.Permission {
 	return resolveAcceptedPermissions(items)
 }
 
-// ResolveDescendant resolves permissions of the path's descendant
+// ResolveDescendant returns permissions shared by all configured paths in the subtree,
+// after resolving inheritance and subject precedence independently for each path.
 func (pm PermMap) ResolveDescendant(path string) (types.Permission, bool) {
-	result := make([]*pathPermItem, 0)
-	for _, p := range pm {
-		node, _ := p.Get(path)
+	var result types.Permission
+	defined := false
+	seen := make(map[string]struct{})
+	for _, tree := range pm {
+		node, _ := tree.Get(path)
 		if node == nil {
 			continue
 		}
 		node.Visit(func(n *PathTreeNode[*pathPermItem]) {
-			if n.Data != nil {
-				result = append(result, n.Data)
+			if n.Data == nil {
+				return
+			}
+			rulePath := *n.Data.Path
+			if _, ok := seen[rulePath]; ok {
+				return
+			}
+			seen[rulePath] = struct{}{}
+			resolved := pm.ResolvePath(rulePath)
+			if !defined {
+				result = resolved
+				defined = true
+			} else {
+				result &= resolved
 			}
 		})
 	}
-	if len(result) == 0 {
-		return 0, false
-	}
-	return resolveAcceptedPermissions(result), true
+	return result, defined
 }
 
 type pathPermItem struct {

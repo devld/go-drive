@@ -78,3 +78,7 @@ func (pm *PathMetaWrapper) List(ctx context.Context, path string) ([]types.IEntr
 	}
 	return pm.IDrive.List(ctx, path)
 }
+
+func (pm *PathMetaWrapper) PrepareWrite(ctx context.Context, path string, mode types.WriteMode) (*types.WritePlan, error) {
+	return driveutil.PrepareWrite(ctx, pm.IDrive, path, mode)
+}

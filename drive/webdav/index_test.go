@@ -10,6 +10,7 @@ import (
 
 	"go-drive/common/driveutil"
 	err "go-drive/common/errors"
+	"go-drive/common/task"
 	"go-drive/common/types"
 )
 
@@ -70,5 +71,48 @@ func TestWrongPasswordIsNotSessionUnauthorized(t *testing.T) {
 	remote, ok := errors.AsType[err.RemoteAPIError](e)
 	if !ok || remote.Code() != 500 || remote.Status() != http.StatusUnauthorized {
 		t.Fatalf("NewDrive error = %v", e)
+	}
+}
+
+func TestNativeTransfersReturnRemoteConflict(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "COPY" || r.Method == "MOVE" {
+			if r.Header.Get("Overwrite") != "F" {
+				t.Errorf("Overwrite=%q", r.Header.Get("Overwrite"))
+			}
+			w.WriteHeader(http.StatusPreconditionFailed)
+			return
+		}
+		if r.Method != "PROPFIND" {
+			t.Errorf("unexpected request %s", r.Method)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusMultiStatus)
+		_, _ = w.Write([]byte(`<?xml version="1.0"?><multistatus xmlns="DAV:">
+   <response><href>/</href><propstat><prop><resourcetype><collection/></resourcetype></prop></propstat></response>
+   <response><href>/source.txt</href><propstat><prop><resourcetype/></prop></propstat></response>
+   <response><href>/target.txt</href><propstat><prop><resourcetype/></prop></propstat></response>
+  </multistatus>`))
+	}))
+	t.Cleanup(server.Close)
+	d, e := NewDrive(context.Background(), types.SM{"url": server.URL}, driveutil.DriveEnv{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	source, e := d.Get(context.Background(), "source.txt")
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, move := range []bool{false, true} {
+		if move {
+			_, e = d.Move(task.DummyContext(), source, "target.txt", false)
+		} else {
+			_, e = d.Copy(task.DummyContext(), source, "target.txt", false)
+		}
+		if e == nil {
+			t.Fatalf("move=%v swallowed remote conflict", move)
+		}
 	}
 }

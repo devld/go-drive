@@ -2,6 +2,7 @@ package drive
 
 import (
 	"context"
+	"go-drive/common/driveutil"
 	"go-drive/common/event"
 	"go-drive/common/types"
 	"io"
@@ -80,4 +81,8 @@ func (d *ListenerWrapper) Delete(ctx types.TaskCtx, path string) error {
 		d.bus.PublishEntryDeleted(d.event, path)
 	}
 	return e
+}
+
+func (d *ListenerWrapper) PrepareWrite(ctx context.Context, path string, mode types.WriteMode) (*types.WritePlan, error) {
+	return driveutil.PrepareWrite(ctx, d.IDrive, path, mode)
 }

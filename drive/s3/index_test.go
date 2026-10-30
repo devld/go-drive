@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	"go-drive/common/driveutil"
+	err "go-drive/common/errors"
 	"go-drive/common/req"
+	"go-drive/common/task"
 	"go-drive/common/types"
 )
 
@@ -84,5 +86,37 @@ func TestServerRequestsUseDefaultUserAgent(t *testing.T) {
 	}
 	if got != req.DefaultUserAgent {
 		t.Fatalf("User-Agent = %q", got)
+	}
+}
+
+func TestNativeTransfersRejectExistingTarget(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodHead {
+			t.Errorf("conflict issued %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Last-Modified", "Mon, 19 Oct 2026 00:00:00 GMT")
+		w.Header().Set("Content-Length", "0")
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(server.Close)
+	d, e := NewDrive(context.Background(), types.SM{"id": "key", "secret": "secret", "bucket": "bucket", "path_style": "1", "region": "us-east-1", "endpoint": server.URL}, driveutil.DriveEnv{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	source, e := d.Get(context.Background(), "source.txt")
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, move := range []bool{false, true} {
+		if move {
+			_, e = d.Move(task.DummyContext(), source, "target.txt", false)
+		} else {
+			_, e = d.Copy(task.DummyContext(), source, "target.txt", false)
+		}
+		if !err.IsNotAllowedError(e) {
+			t.Fatalf("move=%v conflict reported success: %v", move, e)
+		}
 	}
 }
