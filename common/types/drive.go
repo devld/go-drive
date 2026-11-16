@@ -91,6 +91,28 @@ type DriveMeta struct {
 	Props M
 }
 
+// WriteMode controls conflicts while preparing a destination. Execution never
+// allocates another name: override=false always rejects an existing target.
+type WriteMode uint8
+
+const (
+	WriteReject WriteMode = iota
+	WriteRename
+	WriteOverwrite
+)
+
+// WritePlan describes a read-only destination inspection in the caller's
+// virtual namespace. It does not reserve the name or create parent directories.
+type WritePlan struct {
+	Path     string
+	Parents  []string
+	Override bool
+}
+
+type WritePreparer interface {
+	PrepareWrite(context.Context, string, WriteMode) (*WritePlan, error)
+}
+
 // IDrive is the main API. It's the abstraction of drives.
 // The path argument in all public API always is valid path that not starts with slash,
 // and the root path is always empty string. Implementations can consider the path to be absolute.
@@ -112,11 +134,11 @@ type IDrive interface {
 	// If the underlying drive does not support copying, Copy can return err.NewUnsupportedError,
 	// then dispatcher drive(see dispatcher.go) will do the copying job.
 	//
-	// If override is false, the entry with the same path encountered during the copy process should be skipped.
+	// If override is false, an existing destination is rejected. No name is allocated.
 	Copy(ctx TaskCtx, from IEntry, to string, override bool) (IEntry, error)
 	// Move moves 'from' to 'to'.
 	//
-	// If override is false, the entry with the same path encountered during the copy process should be skipped.
+	// If override is false, an existing destination is rejected. No name is allocated.
 	Move(ctx TaskCtx, from IEntry, to string, override bool) (IEntry, error)
 	// List gets all children of the path.
 	List(ctx context.Context, path string) ([]IEntry, error)

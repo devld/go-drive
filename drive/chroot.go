@@ -207,3 +207,25 @@ func (c *chrootEntry) Drive() types.IDrive {
 func (c *chrootEntry) GetIEntry() types.IEntry {
 	return c.IEntry
 }
+
+func (c *ChrootWrapper) PrepareWrite(ctx context.Context, path string, mode types.WriteMode) (*types.WritePlan, error) {
+	wrapped, e := c.WrapPath(path)
+	if e != nil {
+		return nil, e
+	}
+	plan, e := driveutil.PrepareWrite(ctx, c.d, wrapped, mode)
+	if e != nil {
+		return nil, e
+	}
+	result := *plan
+	result.Path = c.UnwrapPath(plan.Path)
+	result.Parents = make([]string, len(plan.Parents))
+	for i, parent := range plan.Parents {
+		result.Parents[i] = c.UnwrapPath(parent)
+	}
+	// A renamed path must remain within a name-filtered chroot as well.
+	if _, e := c.WrapPath(result.Path); e != nil {
+		return nil, e
+	}
+	return &result, nil
+}

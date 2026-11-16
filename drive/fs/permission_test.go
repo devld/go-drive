@@ -69,3 +69,68 @@ func TestLocalFsPermissionAliases(t *testing.T) {
 		})
 	}
 }
+
+func TestLocalFsRecursiveDeletePermissions(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		denyWrite    bool
+		allowSibling bool
+	}{
+		{name: "protected descendant", denyWrite: true},
+		{name: "protected descendant with deeper sibling grant", denyWrite: true, allowSibling: true},
+		{name: "writable descendants"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			secret := filepath.Join(root, "sub", "locked", "secret.txt")
+			public := filepath.Join(root, "sub", "public", "file.txt")
+			for _, path := range []string{secret, public} {
+				if e := os.MkdirAll(filepath.Dir(path), 0755); e != nil {
+					t.Fatal(e)
+				}
+				if e := os.WriteFile(path, []byte("original"), 0644); e != nil {
+					t.Fatal(e)
+				}
+			}
+			local, e := fs.NewDrive(context.Background(), types.SM{"path": root}, driveutil.DriveEnv{Config: common.Config{FreeFs: true}})
+			if e != nil {
+				t.Fatal(e)
+			}
+			rootPath, locked, sibling := "", "sub/locked", "sub/public/deeper"
+			rules := []types.PathPermission{
+				{Path: &rootPath, Subject: types.AnySubject, Permission: types.PermissionReadWrite, Policy: types.PolicyAccept},
+			}
+			if tc.denyWrite {
+				rules = append(rules, types.PathPermission{Path: &locked, Subject: types.AnySubject, Permission: types.PermissionWrite, Policy: types.PolicyReject})
+			}
+			if tc.allowSibling {
+				rules = append(rules, types.PathPermission{Path: &sibling, Subject: types.AnySubject, Permission: types.PermissionReadWrite, Policy: types.PolicyAccept})
+			}
+			d := drive.NewPermissionWrapperDrive(local, utils.NewPermMap(rules))
+			if tc.denyWrite {
+				if e := d.Delete(task.DummyContext(), locked); !err.IsPermissionDeniedNotFoundError(e) {
+					t.Fatalf("direct Delete: %v", e)
+				}
+			}
+			e = d.Delete(task.DummyContext(), "sub")
+			if tc.denyWrite {
+				if !err.IsNotAllowedError(e) {
+					t.Fatalf("recursive Delete: %v", e)
+				}
+				for _, path := range []string{secret, public} {
+					body, e := os.ReadFile(path)
+					if e != nil || string(body) != "original" {
+						t.Fatalf("Delete changed %s: %q, %v", path, body, e)
+					}
+				}
+			} else {
+				if e != nil {
+					t.Fatal(e)
+				}
+				if _, e := os.Stat(filepath.Join(root, "sub")); !os.IsNotExist(e) {
+					t.Fatalf("writable directory not deleted: %v", e)
+				}
+			}
+		})
+	}
+}

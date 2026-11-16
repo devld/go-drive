@@ -294,6 +294,7 @@ drive:
         label: 캐시 TTL
         description: "캐시 유지 시간이며, 생략하면 캐시를 사용하지 않습니다. 사용 가능한 시간 단위는 'ms', 's', 'm', 'h'입니다."
     invalid_root_path: "루트 경로는 '/'로 시작해야 합니다"
+    overwrite_move_not_supported: 덮어쓰기 이동에는 SFTP 서버의 posix-rename@openssh.com 버전 1 지원이 필요합니다
   script:
     name: 스크립트
     invalid_pool_config: "잘못된 Pool 설정: {{ 1 }}"

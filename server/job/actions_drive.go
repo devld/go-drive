@@ -47,21 +47,29 @@ func init() {
 			}
 
 			return runEntryOperations(ctx, matched, false, func(fromEntry types.IEntry) error {
-				var e error
+				target := utils.CleanPath(path.Join(dest, utils.PathBase(fromEntry.Path())))
+				mode := types.WriteOverwrite
+				if !override {
+					mode = types.WriteRename
+				}
+				plan, e := driveutil.PrepareWrite(opCtx, root, target, mode)
+				if e != nil {
+					return e
+				}
 				if move {
 					log(fmt.Sprintf("  move '%s'", fromEntry.Path()))
 					_, e = root.Move(
 						opCtx,
 						fromEntry,
-						utils.CleanPath(path.Join(dest, utils.PathBase(fromEntry.Path()))),
-						override)
+						plan.Path,
+						plan.Override)
 				} else {
 					log(fmt.Sprintf("  copy '%s'", fromEntry.Path()))
 					_, e = root.Copy(
 						opCtx,
 						fromEntry,
-						utils.CleanPath(path.Join(dest, utils.PathBase(fromEntry.Path()))),
-						override)
+						plan.Path,
+						plan.Override)
 				}
 				if e != nil {
 					return e

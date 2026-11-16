@@ -235,12 +235,12 @@ func TestPermMap_ResolveDescendant(t *testing.T) {
 		if !defined {
 			t.Fatal("ResolveDescendant(): want defined=true")
 		}
-		// Merges all descendants: at least read, and a has write.
+		// The root is read-only even though a descendant grants write.
 		if !perm.Readable() {
 			t.Errorf("root descendant: want readable, got %v", perm)
 		}
-		if !perm.Writable() {
-			t.Errorf("root descendant: want writable from a, got %v", perm)
+		if perm.Writable() {
+			t.Errorf("root descendant: want read-only intersection, got %v", perm)
 		}
 	})
 
@@ -251,6 +251,86 @@ func TestPermMap_ResolveDescendant(t *testing.T) {
 			t.Error("empty PermMap ResolveDescendant: want defined=false")
 		}
 	})
+}
+
+func TestPermMap_ResolveDescendantEffectivePermissions(t *testing.T) {
+	root, folder, locked, public := "", "folder", "folder/locked", "folder/public/deeper"
+	user, group := types.UserSubject("alice"), types.GroupSubject("users")
+	tests := []struct {
+		name  string
+		rules []types.PathPermission
+		want  types.Permission
+	}{
+		{
+			name: "deeper sibling grant cannot hide rejection",
+			rules: []types.PathPermission{
+				{Path: &locked, Subject: group, Permission: types.PermissionWrite, Policy: types.PolicyReject},
+				{Path: &public, Subject: group, Permission: types.PermissionReadWrite, Policy: types.PolicyAccept},
+			},
+			want: types.PermissionRead,
+		},
+		{
+			name: "child rejection preserves inherited read",
+			rules: []types.PathPermission{
+				{Path: &locked, Subject: group, Permission: types.PermissionWrite, Policy: types.PolicyReject},
+			},
+			want: types.PermissionRead,
+		},
+		{
+			name: "user grant overrides group rejection at same path",
+			rules: []types.PathPermission{
+				{Path: &locked, Subject: group, Permission: types.PermissionWrite, Policy: types.PolicyReject},
+				{Path: &locked, Subject: user, Permission: types.PermissionWrite, Policy: types.PolicyAccept},
+			},
+			want: types.PermissionReadWrite,
+		},
+		{
+			name: "user grant on sibling cannot override group rejection",
+			rules: []types.PathPermission{
+				{Path: &locked, Subject: group, Permission: types.PermissionWrite, Policy: types.PolicyReject},
+				{Path: &public, Subject: user, Permission: types.PermissionWrite, Policy: types.PolicyAccept},
+			},
+			want: types.PermissionRead,
+		},
+		{
+			name: "descendant grant cannot hide restricted ancestor",
+			rules: []types.PathPermission{
+				{Path: &locked, Subject: group, Permission: types.PermissionWrite, Policy: types.PolicyReject},
+				{Path: ptr("folder/locked/open"), Subject: group, Permission: types.PermissionWrite, Policy: types.PolicyAccept},
+			},
+			want: types.PermissionRead,
+		},
+		{
+			name: "unrelated restriction is outside subtree",
+			rules: []types.PathPermission{
+				{Path: ptr("elsewhere"), Subject: group, Permission: types.PermissionReadWrite, Policy: types.PolicyReject},
+				{Path: &locked, Subject: group, Permission: types.PermissionRead, Policy: types.PolicyAccept},
+			},
+			want: types.PermissionReadWrite,
+		},
+		{
+			name: "read and write restricted on separate branches",
+			rules: []types.PathPermission{
+				{Path: &locked, Subject: group, Permission: types.PermissionWrite, Policy: types.PolicyReject},
+				{Path: &public, Subject: group, Permission: types.PermissionRead, Policy: types.PolicyReject},
+			},
+			want: types.PermissionEmpty,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rules := append([]types.PathPermission{
+				{Path: &root, Subject: group, Permission: types.PermissionReadWrite, Policy: types.PolicyAccept},
+			}, tt.rules...)
+			pm := NewPermMap(rules).Filter(types.Principal{User: types.User{
+				Username: "alice", Groups: []types.Group{{Name: "users"}},
+			}})
+			got, defined := pm.ResolveDescendant(folder)
+			if !defined || got != tt.want {
+				t.Fatalf("ResolveDescendant(%q) = %v, %v; want %v, true", folder, got, defined, tt.want)
+			}
+		})
+	}
 }
 
 func newPermItem(path, subject string, perm types.Permission, policy uint8) *pathPermItem {
@@ -453,8 +533,8 @@ func TestPermMap_FilterThenResolve(t *testing.T) {
 	if !defined {
 		t.Fatal("driveA should have descendants")
 	}
-	// docs has write, so merged descendant should have write.
-	if !dp.Writable() {
-		t.Errorf("alice ResolveDescendant(driveA): want writable, got %v", dp)
+	// docs grants write, but driveA itself remains read-only.
+	if dp.Writable() {
+		t.Errorf("alice ResolveDescendant(driveA): want read-only intersection, got %v", dp)
 	}
 }

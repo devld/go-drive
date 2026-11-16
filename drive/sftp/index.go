@@ -245,6 +245,10 @@ func (f *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override b
 		return nil, err.NewUnsupportedError()
 	}
 	fromEntry := from.(*sftpEntry)
+	source, target := f.toRemotePath(fromEntry.path), f.toRemotePath(to)
+	if source == target || utils.IsRootPath(fromEntry.path) {
+		return nil, err.NewNotAllowedError()
+	}
 	if !override {
 		if _, e := driveutil.RequireFileNotExists(ctx, f, to); e != nil {
 			return nil, e
@@ -254,7 +258,18 @@ func (f *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override b
 	if e != nil {
 		return nil, e
 	}
-	e = c.Rename(f.toRemotePath(fromEntry.path), f.toRemotePath(to))
+	if override {
+		if version, supported := c.HasExtension("posix-rename@openssh.com"); !supported || version != "1" {
+			return nil, err.NewNotAllowedMessageError(t("overwrite_move_not_supported"))
+		}
+		// Only the server may replace a destination. Never emulate replacement
+		// with delete or staging operations, including after extension errors.
+		e = c.PosixRename(source, target)
+	} else {
+		// Preserve non-overwrite semantics even if POSIX rename is available.
+		e = c.Rename(source, target)
+	}
+
 	if e != nil {
 		return nil, f.handleError(e)
 	}

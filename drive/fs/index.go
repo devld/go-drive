@@ -197,7 +197,7 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, 
 	}
 	ctx.Total(size, true)
 	fileMoved := false
-	if tf, ok := reader.(*utils.TempFile); ok {
+	if tf, ok := reader.(*utils.TempFile); ok && override {
 		fileMoved, e = tf.TransferTo(path)
 		if e != nil {
 			return nil, e
@@ -208,7 +208,11 @@ func (f *Drive) Save(ctx types.TaskCtx, path string, size int64, override bool, 
 		}
 	}
 	if !fileMoved {
-		file, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fileMode)
+		flags := os.O_CREATE | os.O_RDWR | os.O_TRUNC
+		if !override {
+			flags |= os.O_EXCL
+		}
+		file, e := os.OpenFile(path, flags, fileMode)
 		if e != nil {
 			return nil, e
 		}

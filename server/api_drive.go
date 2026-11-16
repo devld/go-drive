@@ -240,7 +240,15 @@ func (dr *driveRoute) copyEntry(c *gin.Context) {
 	principal := getPrincipal(c)
 	override := utils.ToBool(c.Query("override"))
 	t, e := dr.runner.ExecuteAndWait(c.Request.Context(), func(ctx types.TaskCtx) (any, error) {
-		r, e := drive_.Copy(ctx, fromEntry, to, override)
+		mode := types.WriteOverwrite
+		if !override {
+			mode = types.WriteRename
+		}
+		plan, e := driveutil.PrepareWrite(ctx, drive_, to, mode)
+		if e != nil {
+			return nil, e
+		}
+		r, e := drive_.Copy(ctx, fromEntry, plan.Path, plan.Override)
 		if e != nil {
 			return nil, e
 		}
@@ -279,7 +287,15 @@ func (dr *driveRoute) move(c *gin.Context) {
 	principal := getPrincipal(c)
 	override := utils.ToBool(c.Query("override"))
 	t, e := dr.runner.ExecuteAndWait(c.Request.Context(), func(ctx types.TaskCtx) (any, error) {
-		r, e := drive_.Move(ctx, fromEntry, to, override)
+		mode := types.WriteOverwrite
+		if !override {
+			mode = types.WriteRename
+		}
+		plan, e := driveutil.PrepareWrite(ctx, drive_, to, mode)
+		if e != nil {
+			return nil, e
+		}
+		r, e := drive_.Move(ctx, fromEntry, plan.Path, plan.Override)
 		if e != nil {
 			return nil, e
 		}
@@ -335,13 +351,22 @@ func (dr *driveRoute) upload(c *gin.Context) {
 		return
 	}
 	d := c.MustGet("drive").(types.IDrive)
-	config, e := d.Upload(c.Request.Context(), path, size, override, request)
+	mode := driveutil.WriteModeForOverride(override)
+	if !override && request["action"] == "" {
+		mode = types.WriteRename
+	}
+	plan, e := driveutil.PrepareWrite(c.Request.Context(), d, path, mode)
+	if e != nil {
+		_ = c.Error(e)
+		return
+	}
+	config, e := d.Upload(c.Request.Context(), plan.Path, size, plan.Override, request)
 	if e != nil {
 		_ = c.Error(e)
 		return
 	}
 	if config != nil {
-		setResult(c, uploadConfig{config.Provider, config.Path, config.Config})
+		setResult(c, uploadConfig{config.Provider, plan.Path, config.Config})
 	}
 }
 

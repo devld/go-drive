@@ -2,7 +2,13 @@ package server
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
+	"go-drive/common/utils"
+	"go-drive/drive"
 	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"go-drive/common/driveutil"
@@ -101,4 +107,61 @@ func (e *mountNameTestEntry) GetReader(context.Context, types.ReaderRange) (io.R
 }
 func (e *mountNameTestEntry) GetURL(context.Context) (*types.ContentURL, error) {
 	panic("not used")
+}
+
+func TestUploadPreparesOnceAndAuthorizesBeforeProvider(t *testing.T) {
+	for _, deny := range []bool{false, true} {
+		t.Run(map[bool]string{false: "allowed", true: "denied"}[deny], func(t *testing.T) {
+			provider := &recordingUploadDrive{mountNameTestDrive: &mountNameTestDrive{existing: map[string]bool{"file.txt": true}}}
+			r, forbidden := "", "file_1.txt"
+			rules := []types.PathPermission{{Path: &r, Subject: types.AnySubject, Permission: types.PermissionReadWrite, Policy: types.PolicyAccept}}
+			if deny {
+				rules = append(rules, types.PathPermission{Path: &forbidden, Subject: types.AnySubject, Permission: types.PermissionWrite, Policy: types.PolicyReject})
+			}
+			d := drive.NewPermissionWrapperDrive(provider, utils.NewPermMap(rules))
+			router := gin.New()
+			route := driveRoute{}
+			router.POST("/upload", func(c *gin.Context) {
+				c.Set("drive", d)
+				route.upload(c)
+				if len(c.Errors) > 0 {
+					c.JSON(http.StatusForbidden, gin.H{"error": c.Errors.Last().Error()})
+				} else if result, ok := getResult(c); ok {
+					c.JSON(http.StatusOK, result)
+				}
+			})
+			request := func(url, body string) *httptest.ResponseRecorder {
+				req := httptest.NewRequest(http.MethodPost, url, strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, req)
+				return w
+			}
+			w := request("/upload?path=file.txt&size=1", "{}")
+			if deny {
+				if w.Code != http.StatusForbidden || len(provider.paths) != 0 {
+					t.Fatalf("unauthorized provider called: status=%d paths=%v", w.Code, provider.paths)
+				}
+				return
+			}
+			if w.Code != http.StatusOK || len(provider.paths) != 1 || provider.paths[0] != "file_1.txt" || !strings.Contains(w.Body.String(), `"path":"file_1.txt"`) {
+				t.Fatalf("initial upload: status=%d paths=%v response=%s", w.Code, provider.paths, w.Body.String())
+			}
+			provider.existing["file_1.txt"] = true
+			w = request("/upload?path=file_1.txt&size=1&override=true", `{"action":"CompleteUpload"}`)
+			if w.Code != http.StatusOK || len(provider.paths) != 2 || provider.paths[1] != "file_1.txt" {
+				t.Fatalf("callback changed target: status=%d paths=%v", w.Code, provider.paths)
+			}
+		})
+	}
+}
+
+type recordingUploadDrive struct {
+	*mountNameTestDrive
+	paths []string
+}
+
+func (d *recordingUploadDrive) Upload(_ context.Context, path string, _ int64, _ bool, _ types.SM) (*types.DriveUploadConfig, error) {
+	d.paths = append(d.paths, path)
+	return &types.DriveUploadConfig{Provider: types.S3Provider, Config: types.SM{"url": "https://upload.example.invalid/fixed-target"}}, nil
 }

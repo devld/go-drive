@@ -222,22 +222,16 @@ func (s *Drive) Copy(ctx types.TaskCtx, from types.IEntry, to string, override b
 	if from == nil || from.Type().IsDir() {
 		return nil, err.NewUnsupportedError()
 	}
-	entry, _, e := s.copy(from.(*s3Entry), to, override, ctx)
-	return entry, e
+	return s.copy(from.(*s3Entry), to, override, ctx)
 }
 
-func (s *Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCtx) (*s3Entry, bool, error) {
+func (s *Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCtx) (*s3Entry, error) {
 	if !override {
-		_, e := s.Get(ctx, to)
-		if e == nil {
-			modTime := utils.Time(from.modTime)
-			// skip
-			return s.newS3ObjectEntry(to, &from.size, &modTime), true, nil
-		}
-		if !err.IsNotFoundError(e) {
-			return nil, false, e
+		if _, e := driveutil.RequireFileNotExists(ctx, s, to); e != nil {
+			return nil, e
 		}
 	}
+
 	ctx.Total(from.size, false)
 	obj, e := s.c.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:     s.bucket,
@@ -245,12 +239,12 @@ func (s *Drive) copy(from *s3Entry, to string, override bool, ctx types.TaskCtx)
 		CopySource: aws.String(url.QueryEscape(*s.bucket + "/" + from.key)),
 	})
 	if e != nil {
-		return nil, false, e
+		return nil, e
 	}
 	_ = s.cache.Evict(to, true)
 	_ = s.cache.Evict(utils.PathParent(to), false)
 	ctx.Progress(from.Size(), false)
-	return s.newS3ObjectEntry(to, &from.size, obj.CopyObjectResult.LastModified), false, nil
+	return s.newS3ObjectEntry(to, &from.size, obj.CopyObjectResult.LastModified), nil
 }
 
 func (s *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override bool) (types.IEntry, error) {
@@ -259,15 +253,13 @@ func (s *Drive) Move(ctx types.TaskCtx, from types.IEntry, to string, override b
 		return nil, err.NewUnsupportedError()
 	}
 	fromEntry := from.(*s3Entry)
-	entry, skip, e := s.copy(fromEntry, to, override, ctx)
+	entry, e := s.copy(fromEntry, to, override, ctx)
 	if e != nil {
 		return nil, e
 	}
-	if !skip {
-		e = s.delete(fromEntry.key, task.DummyContext())
-		_ = s.cache.Evict(fromEntry.key, true)
-		_ = s.cache.Evict(utils.PathParent(fromEntry.key), false)
-	}
+	e = s.delete(fromEntry.key, task.DummyContext())
+	_ = s.cache.Evict(fromEntry.key, true)
+	_ = s.cache.Evict(utils.PathParent(fromEntry.key), false)
 	return entry, e
 }
 

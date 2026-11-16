@@ -171,6 +171,58 @@ func (w *BoundDriveFS) Rename(ctx context.Context, oldName, newName string) erro
 	return mapError(e)
 }
 
+// Move keeps source authorization and replacement in one drive operation. In
+// particular, the WebDAV handler must not remove the destination beforehand.
+func (w *BoundDriveFS) Move(ctx context.Context, fromPath, toPath string, override bool) error {
+	fromPath, toPath = utils.CleanPath(fromPath), utils.CleanPath(toPath)
+	if fromPath == toPath || utils.IsPathParent(toPath, fromPath) {
+		return os.ErrPermission
+	}
+	from, e := w.drive.Get(ctx, utils.CleanPath(fromPath))
+	if e != nil {
+		return mapError(e)
+	}
+	plan, e := PrepareWrite(ctx, w.drive, utils.CleanPath(toPath), WriteModeForOverride(override))
+	if e != nil {
+		return mapError(e)
+	}
+	_, e = w.drive.Move(task.NewContextWrapper(ctx), from, plan.Path, plan.Override)
+	return mapError(e)
+}
+
+// Copy uses the drive's subtree authorization before any destination changes.
+// A Depth: 0 directory copy reads only the source directory itself.
+func (w *BoundDriveFS) Copy(ctx context.Context, fromPath, toPath string, override, recursive bool) error {
+	fromPath, toPath = utils.CleanPath(fromPath), utils.CleanPath(toPath)
+	if fromPath == toPath || utils.IsPathParent(toPath, fromPath) {
+		return os.ErrPermission
+	}
+	from, e := w.drive.Get(ctx, fromPath)
+	if e != nil {
+		return mapError(e)
+	}
+	plan, e := PrepareWrite(ctx, w.drive, toPath, WriteModeForOverride(override))
+	if e != nil {
+		return mapError(e)
+	}
+	if recursive || from.Type().IsFile() {
+		_, e = w.drive.Copy(task.NewContextWrapper(ctx), from, plan.Path, plan.Override)
+		return mapError(e)
+	}
+	if _, e := w.drive.Get(ctx, plan.Path); e == nil {
+		if !override {
+			return os.ErrExist
+		}
+		if e := w.drive.Delete(task.NewContextWrapper(ctx), plan.Path); e != nil {
+			return mapError(e)
+		}
+	} else if !err.IsNotFoundError(e) {
+		return mapError(e)
+	}
+	_, e = w.drive.MakeDir(ctx, plan.Path)
+	return mapError(e)
+}
+
 func (w *BoundDriveFS) newDriveFSFile(ctx context.Context, e types.IEntry, flag int) *driveFSFile {
 	var seekPos int64 = 0
 	if flag&os.O_APPEND != 0 && flag&os.O_TRUNC == 0 {

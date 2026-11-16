@@ -45,6 +45,7 @@ jobs:
               - 'script-drives/**'
             fs:
               - 'drive/fs/**'
+              - 'drive/sftp/**'
             web:
               - 'web/**'
             docs:
@@ -70,7 +71,7 @@ jobs:
         run: go test -v ./...
 
   fs-platform-test:
-    name: Local fs tests (${{ matrix.os }})
+    name: Filesystem and SFTP tests (${{ matrix.os }})
     needs: changes
     if: needs.changes.outputs.fs == 'true'
     strategy:
@@ -89,8 +90,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Run local fs tests
-        run: go test -v ./drive/fs
+      - name: Run filesystem and SFTP tests
+        run: go test -v ./drive/fs ./drive/sftp
 
   go-lint:
     name: Go lint

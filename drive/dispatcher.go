@@ -133,16 +133,6 @@ func (d *DispatcherDrive) Save(ctx types.TaskCtx, path string, size int64,
 	if e := d.ensureDir(ctx, driveName, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
-	if !override {
-		realPath, e = driveutil.FindNonExistsEntryName(ctx, drive, realPath)
-		if e != nil {
-			return nil, e
-		}
-		if realPath != utils.CleanPath(path) {
-			dispatcherLog.Debugf("save path renamed drive=%s from=%s to=%s",
-				logging.Sanitize(driveName), logging.Sanitize(path), logging.Sanitize(realPath))
-		}
-	}
 	save, e := drive.Save(ctx, realPath, size, override, reader)
 	if e != nil {
 		return nil, e
@@ -202,12 +192,16 @@ func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 	if e != nil {
 		return nil, e
 	}
+	// Paths can be aliases through mounts; compare the underlying namespace too.
+	if source := driveutil.GetSelfEntry(driveTo, from); source != nil {
+		if source.Path() == pathTo || utils.IsPathParent(pathTo, source.Path()) || utils.IsPathParent(source.Path(), pathTo) {
+			return nil, err.NewNotAllowedError()
+		}
+	}
 	if !override {
-		pathTo, e = driveutil.FindNonExistsEntryName(ctx, driveTo, pathTo)
-		if e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, driveTo, pathTo); e != nil {
 			return nil, e
 		}
-		dispatcherLog.Debugf("copy target resolved drive=%s target=%s", logging.Sanitize(driveName), logging.Sanitize(pathTo))
 	}
 	entry, e := driveTo.Copy(ctx, from, pathTo, override)
 	if e == nil {
@@ -215,6 +209,17 @@ func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 	}
 	if !err.IsUnsupportedError(e) {
 		return nil, e
+	}
+	// Native directory copies replace the destination. Keep the fallback's
+	// overwrite behavior consistent instead of merging stale destination entries.
+	if override && from.Type().IsDir() {
+		if _, getErr := driveTo.Get(ctx, pathTo); getErr == nil {
+			if e := driveTo.Delete(ctx, pathTo); e != nil {
+				return nil, e
+			}
+		} else if !err.IsNotFoundError(getErr) {
+			return nil, getErr
+		}
 	}
 	dispatcherLog.Debugf("copy fallback drive=%s target=%s", logging.Sanitize(driveName), logging.Sanitize(to))
 	e = driveutil.CopyAll(ctx, from, d, to,
@@ -225,20 +230,14 @@ func (d *DispatcherDrive) Copy(ctx types.TaskCtx, from types.IEntry, to string,
 				return e
 			}
 
-			if !override {
-				pathTo, e = driveutil.FindNonExistsEntryName(ctx, driveTo, pathTo)
-				if e != nil {
-					return e
-				}
-			}
-			_, e = driveTo.Copy(ctxWrapper, from, pathTo, true)
+			_, e = driveTo.Copy(ctxWrapper, from, pathTo, override)
 			if e == nil {
 				return nil
 			}
 			if !err.IsUnsupportedError(e) {
 				return e
 			}
-			return driveutil.CopyEntry(ctxWrapper, from, driveTo, pathTo, true, d.tempDir)
+			return driveutil.CopyEntry(ctxWrapper, from, driveTo, pathTo, override, d.tempDir)
 		},
 		nil,
 	)
@@ -257,12 +256,16 @@ func (d *DispatcherDrive) Move(ctx types.TaskCtx, from types.IEntry, to string, 
 	if e != nil {
 		return nil, e
 	}
+	// Paths can be aliases through mounts; compare the underlying namespace too.
+	if source := driveutil.GetSelfEntry(driveTo, from); source != nil {
+		if source.Path() == pathTo || utils.IsPathParent(pathTo, source.Path()) || utils.IsPathParent(source.Path(), pathTo) {
+			return nil, err.NewNotAllowedError()
+		}
+	}
 	if !override {
-		pathTo, e = driveutil.FindNonExistsEntryName(ctx, driveTo, pathTo)
-		if e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, driveTo, pathTo); e != nil {
 			return nil, e
 		}
-		dispatcherLog.Debugf("move target resolved drive=%s target=%s", logging.Sanitize(driveName), logging.Sanitize(pathTo))
 	}
 	move, e := driveTo.Move(ctx, from, pathTo, override)
 	if e != nil {
@@ -325,36 +328,22 @@ func (d *DispatcherDrive) Upload(ctx context.Context, path string, size int64,
 	if e := d.ensureDir(ctx, driveName, drive, utils.PathParent(realPath)); e != nil {
 		return nil, e
 	}
-	var newPath string
 	if !override {
-		p, e := driveutil.FindNonExistsEntryName(ctx, drive, realPath)
-		if e != nil {
+		if _, e := driveutil.RequireFileNotExists(ctx, drive, realPath); e != nil {
 			return nil, e
 		}
-		if realPath != p {
-			newPath = path2.Join(utils.PathParent(path), utils.PathBase(p))
-			dispatcherLog.Debugf("upload path renamed drive=%s from=%s to=%s",
-				logging.Sanitize(driveName), logging.Sanitize(path), logging.Sanitize(newPath))
-		}
-		realPath = p
 	}
 	if size == 0 {
-		r := types.UseLocalProvider(0)
-		if newPath != "" {
-			r.Path = newPath
-		}
-		return r, nil
+		return types.UseLocalProvider(0), nil
 	}
-	r, e := drive.Upload(ctx, realPath, size, override, config)
-	if e != nil {
-		return r, e
+	return drive.Upload(ctx, realPath, size, override, config)
+}
+
+func (d *DispatcherDrive) PrepareWrite(ctx context.Context, path string, mode types.WriteMode) (*types.WritePlan, error) {
+	if _, _, _, e := d.resolve(path); e != nil {
+		return nil, e
 	}
-	if r != nil && newPath != "" {
-		rr := *r
-		rr.Path = newPath
-		r = &rr
-	}
-	return r, nil
+	return driveutil.InspectWrite(ctx, d, path, mode)
 }
 
 func (d *DispatcherDrive) mapDriveEntry(path string, driveName string, entry types.IEntry) types.IEntry {

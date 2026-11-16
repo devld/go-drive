@@ -188,7 +188,7 @@ func (w *Drive) copyOrMove(method string, from types.IEntry, to string,
 		header["Overwrite"] = "F"
 	}
 	resp, e := w.c.Request(ctx, method, wEntry.path, header, nil)
-	if e != nil && (override || e != errorPreconditionFailed) {
+	if e != nil {
 		return nil, e
 	}
 	if e == nil {

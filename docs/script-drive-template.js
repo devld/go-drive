@@ -95,6 +95,7 @@ defineDrive(
     },
 
     save(path, size, override, reader, progress) {
+      // The target is already selected. Reject conflicts when !override; never rename.
       // TODO upload reader.withProgress(progress)
     },
 
@@ -103,10 +104,12 @@ defineDrive(
     },
 
     copy(from, to, override, progress) {
+      // Use the exact target; !override must reject an existing destination.
       throw new UnsupportedError();
     },
 
     move(from, to, override, progress) {
+      // Use the exact target; !override must reject an existing destination.
       throw new UnsupportedError();
     },
 
