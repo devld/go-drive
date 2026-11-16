@@ -265,6 +265,17 @@ func CopyIContentToTempFile(ctx types.TaskCtx, content types.IContentReader, tem
 	return CopyReaderToTempFile(ctx, reader, tempDir)
 }
 
+// SetDownloadSecurityHeaders makes an untrusted file served on the application
+// origin inert: sandbox puts the document in a unique opaque origin so embedded
+// scripts cannot read the application's storage or cookies, and nosniff stops
+// the browser from re-interpreting the declared Content-Type. Applied to every
+// file-serving response so a file uploaded by a low-privileged user can never
+// run script in the application origin.
+func SetDownloadSecurityHeaders(respHeader http.Header) {
+	respHeader.Set("Content-Security-Policy", "sandbox")
+	respHeader.Set("X-Content-Type-Options", "nosniff")
+}
+
 func SetContentDisposition(respHeader http.Header, filename string) {
 	if filename == "" {
 		return
@@ -320,6 +331,7 @@ func DownloadEntry(ctx context.Context, entry types.IEntry,
 				},
 				ModifyResponse: func(r *http.Response) error {
 					setContentDispositionHeaderIfNeeded(r.Header, downloadFilename)
+					SetDownloadSecurityHeaders(r.Header)
 					return nil
 				}}
 
@@ -348,6 +360,7 @@ func DownloadEntry(ctx context.Context, entry types.IEntry,
 	readSeeker, ok := reader.(io.ReadSeeker)
 
 	setContentDispositionHeaderIfNeeded(w.Header(), downloadFilename)
+	SetDownloadSecurityHeaders(w.Header())
 	if ok {
 		http.ServeContent(
 			w, req, downloadFilename,

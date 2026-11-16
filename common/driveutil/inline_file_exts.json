@@ -11,7 +11,6 @@
   ["3gp", "video/3gpp"],
   ["wmv", "video/x-ms-wmv"],
   ["txt", "text/plain"],
-  ["xml", "application/xml"],
   ["mp3", "audio/mpeg"],
   ["wav", "audio/wav"],
   ["ogg", "audio/ogg"],

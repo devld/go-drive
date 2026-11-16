@@ -120,5 +120,6 @@ func streamArtifact(c *gin.Context, file *artifact.Artifact) {
 		c.Header("Content-Type", file.Meta.MimeType)
 	}
 	driveutil.SetContentDisposition(c.Writer.Header(), file.Meta.Name)
+	driveutil.SetDownloadSecurityHeaders(c.Writer.Header())
 	http.ServeContent(c.Writer, c.Request, file.Meta.Name, file.Meta.ModTime, file.Body)
 }
