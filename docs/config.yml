@@ -239,6 +239,10 @@ auth:
 # allow anonymous access?
 #  allow-anonymous: false
 
+# WOPI Office document editing. WOPI is disabled when discovery-url is empty.
+#wopi:
+#  discovery-url: "https://office.example.com/hosting/discovery"
+
 # Search configuration
 search:
   enabled: false

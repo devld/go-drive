@@ -3,7 +3,7 @@ title: 配置文件参考
 description: 查阅 go-drive 的网络、数据库、存储、搜索、WebDAV、缩略图、自动任务和安全配置选项。
 lang: zh-CN
 translation_key: configuration
-source_hash: 8449fb3c1b9c03e25b41c6de2f27a0bd22248dbd8215599f04e65a30cb7391d9
+source_hash: 9d644f46d8c6be96ec5f803bee572b0513efc5b2953ef1161c84728c3ddee59b
 ---
 
 # 配置文件参考
@@ -80,6 +80,9 @@ auth:
 #   enabled: true
 #   prefix: /dav
 #   allow-anonymous: false
+
+# wopi:
+#   discovery-url: https://office.example.com/hosting/discovery
 
 search:
   enabled: false
@@ -166,10 +169,12 @@ auth:
 
 请求达到短等待时间后，压缩包检查仍可在后台继续执行。Web UI 会轮询任务并在产物完成后打开；关闭预览窗口只会停止轮询，不会取消后台处理。
 
-## WebDAV、搜索和缓存
+## WebDAV、WOPI、搜索和缓存
 
 - WebDAV 默认关闭。`allow-anonymous` 仍受路径权限约束；公开启用前务必测试匿名权限。
 - 搜索器当前为 `sqlite`，旧的 `bleve` 配置已经无效。
+
+- `wopi.discovery-url` 为空时关闭 WOPI；该 URL 必须指向 Office 服务的 discovery XML。
 
 更多内容：
 
@@ -177,3 +182,4 @@ auth:
 - [安全指南](./security.html)
 - [搜索与索引](../features/search.html)
 - [WebDAV](../features/webdav.html)
+- [通过 WOPI 编辑 Office 文档](../features/wopi.html)

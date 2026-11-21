@@ -80,6 +80,9 @@ auth:
 #   prefix: /dav
 #   allow-anonymous: false
 
+# wopi:
+#   discovery-url: https://office.example.com/hosting/discovery
+
 search:
   enabled: false
   type: sqlite
@@ -175,10 +178,12 @@ Archive inspection can continue in the background when a request reaches its
 short response wait. The Web UI polls the task and opens the completed
 artifact; closing the view only stops polling.
 
-## WebDAV, search, and cache
+## WebDAV, WOPI, search, and cache
 
 - WebDAV is disabled by default. `allow-anonymous` remains subject to path permissions; test anonymous access before public deployment.
 - The current search engine is `sqlite`; the old `bleve` setting is invalid.
+
+- WOPI is disabled when `wopi.discovery-url` is empty. The URL must point to the Office service discovery XML.
 
 See also:
 
@@ -186,3 +191,4 @@ See also:
 - [Security guide](./security.html)
 - [Search and indexing](../features/search.html)
 - [WebDAV](../features/webdav.html)
+- [Office editing with WOPI](../features/wopi.html)
